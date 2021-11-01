@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Generic;
 
@@ -96,70 +95,82 @@ namespace Boids {
 
 		private static double[] _currentHistory;
 		private static ConsoleExtensions.CharInfo[][] _columns = new ConsoleExtensions.CharInfo[GRAPH_WIDTH][];
-		private static double[] _minValues = Enumerable.Repeat(double.PositiveInfinity, GRAPH_WIDTH).ToArray();
-		private static double[] _maxValues = Enumerable.Repeat(double.NegativeInfinity, GRAPH_WIDTH).ToArray();
+		private static BasicStatisticsInfo[] _columnStats = new BasicStatisticsInfo[GRAPH_WIDTH];
 		public static void DrawFpsGraph(ConsoleExtensions.CharInfo[] buffer, int yOffset = 0) {
 			if (ExecutionManager.FramesRendered > 0) {
 				int frameIdx = (ExecutionManager.FramesRendered - 1) % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
-
 				if (frameIdx == 0) {
 					_columns = ShiftRight(_columns);
-					_minValues = ShiftRight(_minValues);
-					_maxValues = ShiftRight(_maxValues);
-					_columns[0] = new ConsoleExtensions.CharInfo[GRAPH_HEIGHT];
-
+					_columnStats = ShiftRight(_columnStats);
 					_currentHistory = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
 				}
-
 				_currentHistory[frameIdx] = 1d / IterationTime_SMA.LastUpdate.Value;
-				_minValues[0] = _currentHistory.Take(frameIdx + 1).Min();
-				_maxValues[0] = _currentHistory.Take(frameIdx + 1).Max();
+				_columns[0] = new ConsoleExtensions.CharInfo[GRAPH_HEIGHT];
+				_columnStats[0] = new BasicStatisticsInfo(_currentHistory.Take(frameIdx + 1));
 
-				double domainMin = _minValues.Min().RoundDown_Log(1.2);
+				double domainMin, domainMax;
+
+				domainMin = _columnStats.TakeUntil(s => s is null).Min(s => s.Percentile25).RoundDown_Log(1.5);
 				if (domainMin < 1) domainMin = 0;
-				double domainMax = _maxValues.Max().RoundUp_Log(1.2);
+				domainMax = _columnStats.TakeUntil(s => s is null).Max(s => s.Percentile75).RoundUp_Log(1.5);
 				if (domainMin == domainMax) { domainMax++; }
 
 				double
-					yMin = _currentHistory.Take(frameIdx + 1).Min(),
-					yMinCI = 0,
-					yAvg = _currentHistory.Take(frameIdx + 1).Average(),
-					YMaxCI = 0,
-					yMax = _currentHistory.Take(frameIdx + 1).Max();
+					yMin0 = _columnStats[0].Percentile0,
+					yMin10 = _columnStats[0].Percentile10,
+					yMin25 = _columnStats[0].Percentile25,
+					yAvg50 = _columnStats[0].Mean,
+					YMax75 = _columnStats[0].Percentile75,
+					YMax90 = _columnStats[0].Percentile90,
+					yMax100 = _columnStats[0].Percentile100;
 				double
-					yMinScaled = GRAPH_HEIGHT * (yMin - domainMin) / (domainMax - domainMin),
-					yMinCIScaled = GRAPH_HEIGHT * (yMinCI - domainMin) / (domainMax - domainMin),
-					yAvgScaled = GRAPH_HEIGHT * (yAvg - domainMin) / (domainMax - domainMin),
-					YMaxCIScaled = GRAPH_HEIGHT * (YMaxCI - domainMin) / (domainMax - domainMin),
-					yMaxScaled = GRAPH_HEIGHT * (yMax - domainMin) / (domainMax - domainMin);
+					yMin0Scaled = GRAPH_HEIGHT * (yMin0 - domainMin) / (domainMax - domainMin),
+					yMin10caled = GRAPH_HEIGHT * (yMin10 - domainMin) / (domainMax - domainMin),
+					yMin25caled = GRAPH_HEIGHT * (yMin25 - domainMin) / (domainMax - domainMin),
+					yAvg50Scaled = GRAPH_HEIGHT * (yAvg50 - domainMin) / (domainMax - domainMin),
+					YMax75Scaled = GRAPH_HEIGHT * (YMax75 - domainMin) / (domainMax - domainMin),
+					YMax90Scaled = GRAPH_HEIGHT * (YMax90 - domainMin) / (domainMax - domainMin),
+					yMax100Scaled = GRAPH_HEIGHT * (yMax100 - domainMin) / (domainMax - domainMin);
 				
+				int
+					minY = yMin0Scaled < 0 ? 0 : (int)Math.Floor(yMin0Scaled),
+					maxY = yMax100Scaled > GRAPH_HEIGHT ? GRAPH_HEIGHT : (int)Math.Ceiling(yMax100Scaled);
 				ConsoleColor color; char chr;
-				for (int y = (int)yMinScaled; y < yMaxScaled; y++) {
-					if ((int)yMaxScaled == y) {
-						if (yMaxScaled % 1d < 0.5d)
+				for (int y = minY; y < maxY; y++) {
+					if ((int)yMax100Scaled == y) {//top pixel
+						if (yMax100Scaled % 1d < 0.5d)//bottom half
 							chr = Rasterizer.CHAR_BOTTOM;
-						else if (yMinScaled < y + 0.5d)
-							chr = Rasterizer.CHAR_BOTH;
-						else chr = Rasterizer.CHAR_TOP;
-								
-						if (yAvgScaled >= y)
-							color = ChooseFpsColor(yAvg);
-						else color = ConsoleColor.DarkGray;
-					} else if ((int)yMinScaled < y) {
-						chr = Rasterizer.CHAR_BOTH;
-						if (yAvgScaled >= y && yAvgScaled < y + 1)
-							color = ChooseFpsColor(yAvg);
-						else color = ConsoleColor.DarkGray;
-					} else {
-						if (yMinScaled % 1d >= 0.5d)
+						else if (yMin0Scaled >= y + 0.5d)//top half
 							chr = Rasterizer.CHAR_TOP;
-						else if (yMaxScaled >= y + 0.5d)
-							chr = Rasterizer.CHAR_BOTH;
-						else chr = Rasterizer.CHAR_BOTTOM;
-								
-						if (yAvgScaled < y + 1)
-							color = ChooseFpsColor(yAvg);
-						else color = ConsoleColor.DarkGray;
+						else chr = Rasterizer.CHAR_BOTH;
+					} else if ((int)yMin0Scaled == y) {//bottom pixel
+						if (yMin0Scaled % 1d >= 0.5d)//top half
+							 chr = Rasterizer.CHAR_TOP;
+						else if (yMax100Scaled < y + 0.5d)//bottom half
+							chr = Rasterizer.CHAR_BOTTOM;
+						else chr = Rasterizer.CHAR_BOTH;
+					} else chr = Rasterizer.CHAR_BOTH;
+
+					switch (y.CompareTo((int)yAvg50Scaled)) {
+						case -1://bottom stat
+							if ((int)yMin10caled > y)
+								color = ConsoleColor.DarkGray;
+							else if ((int)yMin25caled > y)
+								color = ConsoleColor.Gray;
+							else color = ConsoleColor.White;
+							break;
+						case 0://average
+							color = ChooseFpsColor(yAvg50);
+							break;
+						case 1://top stat
+							if ((int)YMax90Scaled < y)
+								color = ConsoleColor.DarkGray;
+							else if ((int)YMax75Scaled < y)
+								color = ConsoleColor.Gray;
+							else color = ConsoleColor.White;
+							break;
+						default:
+							throw new ImpossibleCompareToException();
 					}
 
 					_columns[0][y] = new ConsoleExtensions.CharInfo(chr, color);

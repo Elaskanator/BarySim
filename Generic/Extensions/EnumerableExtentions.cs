@@ -14,9 +14,14 @@ namespace Generic {
 		}
 		public static IEnumerable<T> Except<T>(this IEnumerable<T> source, T skip)
 		where T :IEquatable<T> {
-			foreach (T element in source) {
+			foreach (T element in source)
 				if (!skip.Equals(element)) yield return element;
-			}
+		}
+
+		public static IEnumerable<T> TakeUntil<T>(this IEnumerable<T> source, Func<T, bool> test) {
+			foreach (T element in source)
+				if (test(element)) yield break;
+				else yield return element;
 		}
 
 		public static IEnumerable<T> SelectMany<T>(this IEnumerable<IEnumerable<T>> source) {

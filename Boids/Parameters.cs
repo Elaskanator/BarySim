@@ -6,12 +6,12 @@ namespace Boids {
 		#region Boids
 		//total number of boids is flocks * boidsPerFlock
 		//significantly affects performance
-		public const int NUM_BOIDS_PER_FLOCK = 3000;
+		public const int NUM_BOIDS_PER_FLOCK = 2000;
 		public const int NUM_FLOCKS = 1;
 		public const int RATED_BOIDS = 3000;
 
 		public const int DESIRED_NEIGHBORS = 10;
-		public const bool ENABLE_COHESION = false;
+		public const bool ENABLE_COHESION = true;
 		public const bool ENABLE_ALIGNMENT = true;
 		public const bool ENABLE_SEPARATION = true;
 		
