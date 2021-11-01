@@ -6,8 +6,8 @@ namespace Boids {
 		#region Boids
 		//total number of boids is flocks * boidsPerFlock
 		//significantly affects performance
-		public const int NUM_BOIDS_PER_FLOCK = 10000;
-		public const int NUM_FLOCKS = 1;
+		public const int NUM_BOIDS_PER_FLOCK = 5000;
+		public const int NUM_FLOCKS = 3;
 		public const int RATED_BOIDS = 3000;
 
 		public const int DESIRED_NEIGHBORS = 10;
@@ -35,7 +35,7 @@ namespace Boids {
 		public const int WIDTH = 160;
 		public const int HEIGHT = 80;
 		//only tangible performance effect from number of characters drawn
-		public const double WORLD_SCALE = 1000;
+		public const double WORLD_SCALE = 800d;
 		public const double WORLD_ASPECT_RATIO = 1d;
 		
 		public static readonly double[] Domain = new double[] { Parameters.WORLD_ASPECT_RATIO, 1d }.Multiply(Parameters.WORLD_SCALE);

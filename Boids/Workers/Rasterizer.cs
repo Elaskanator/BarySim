@@ -59,8 +59,10 @@ namespace Boids {
 			int topCount, bottomCount;
 			double colorCount;
 			char pixelChar;
-			foreach (var xGroup in coordinates.GroupBy(c => (int)(_renderWidth * c[0] / Parameters.Domain[0]))) {
-				foreach (var yGroup in xGroup//subdivide each pixel into two vertical components
+			foreach (IGrouping<int, double[]> xGroup
+			in coordinates.GroupBy(c => (int)(_renderWidth * c[0] / Parameters.Domain[0]))) {
+				foreach (IGrouping<int, double> yGroup
+				in xGroup//subdivide each pixel into two vertical components
 					.Select(c => Parameters.Domain.Length < 2 ? 0 : _renderHeight * c[1] / Parameters.Domain[1] / 2d)
 					.GroupBy(y => (int)y))//preserve floating point value of normalized Y for subdivision
 				{
@@ -124,8 +126,8 @@ namespace Boids {
 						bandValue = (int)orderedCounts[idx];
 						if (bandValue > lastBand) {
 							if (ExecutionManager.FramesRasterized <= 1)
-								PercentileBands[band - 1].Reset(bandValue);
-							else PercentileBands[band - 1].Update(bandValue);
+								PercentileBands[band - 1].Reset();
+							PercentileBands[band - 1].Update(bandValue);
 							lastBand = (int)PercentileBands[band - 1].Current.Value;
 						} else {
 							PercentileBands[band - 1].Update(lastBand + 1);

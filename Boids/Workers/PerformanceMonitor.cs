@@ -7,16 +7,17 @@ namespace Boids {
 		public const int NUMBER_ACCURACY = 2;
 		public const int NUMBER_SPACING = 5;
 
-		public const int GRAPH_WIDTH = 73;
+		public const int GRAPH_WIDTH = 80;
 		public const int GRAPH_HEIGHT = 12;
 
-		public static SampleSMA IterationTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
+		public static SampleSMA IterationTime_SMA = new SampleSMA(0.01);
 		public static SampleSMA FrameTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
-		public static SampleSMA WriteTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
-		public static SampleSMA RefreshTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
-		public static SampleSMA SynchronizeTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
-		public static SampleSMA DelayTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
 		public static SampleSMA UpdateTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
+		public static SampleSMA DelayTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
+		public static SampleSMA SynchronizeTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
+
+		public static SampleSMA WriteTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
+		public static TrackingIncrementalAverage RefreshTime_SMA = new TrackingIncrementalAverage();
 
 		public static SampleSMA SimulationTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
 		public static SampleSMA RasterizeTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
@@ -89,7 +90,7 @@ namespace Boids {
 			};
 
 			int position = 0;
-			for (int i = Parameters.PERF_GRAPH_ENABLE ? 1 : 0; i < DebugBarLabels.Length; i++) {
+			for (int i = 0; i < DebugBarLabels.Length; i++) {
 				for (int j = 0; j < DebugBarLabels[i].Length; j++)
 					buffer[position + j] = new ConsoleExtensions.CharInfo(DebugBarLabels[i][j], ConsoleColor.White);
 				position += DebugBarLabels[i].Length;
@@ -122,15 +123,15 @@ namespace Boids {
 					dataAvg = _columnStats[0].Mean,
 					dataMax = _columnStats[0].Max;
 				if (GRAPH_WIDTH > 2) {
-					dataMin = _columnStats.Skip(numColumns > 2 ? 1 : 0).TakeUntil(s => s is null).Min(s => s.Percentile10);
+					dataMin = _columnStats.Skip(numColumns > 2 ? 1 : 0).TakeUntil(s => s is null).Min(s => s.Percentile25);
 					dataAvg = _columnStats.Skip(numColumns > 2 ? 1 : 0).TakeUntil(s => s is null).Average(s => s.Mean);//faster than true average calculation
-					dataMax = _columnStats.Skip(numColumns > 2 ? 1 : 0).TakeUntil(s => s is null).Max(s => s.Percentile90);
+					dataMax = _columnStats.Skip(numColumns > 2 ? 1 : 0).TakeUntil(s => s is null).Max(s => s.Percentile75);
 					if (dataMin < 1) dataMin = 0;
 					if (dataMin >= dataMax) dataMax = dataMin + 1;
 				}
 
 				bool recompute = _currentMin.NumUpdates == 0
-					|| dataMin != _currentMin.Current.Value || dataMax != _currentMax.Current.Value;
+					|| 0.1 < (Math.Abs(dataMin - _currentMin.Current.Value) + Math.Abs(dataMax - _currentMax.Current.Value)) / (dataMax - dataMin);
 				if (recompute) {
 					_currentMin.Update(dataMin);
 					_currentMax.Update(dataMax);
@@ -181,7 +182,7 @@ namespace Boids {
 					yMin0 = _columnStats[xIdx].Percentile0,
 					yMin10 = _columnStats[xIdx].Percentile10,
 					yMin25 = _columnStats[xIdx].Percentile25,
-					yAvg50 = _columnStats[xIdx].Mean,
+					yAvg50 = _columnStats[xIdx].Percentile50,
 					YMax75 = _columnStats[xIdx].Percentile75,
 					YMax90 = _columnStats[xIdx].Percentile90,
 					yMax100 = _columnStats[xIdx].Percentile100;

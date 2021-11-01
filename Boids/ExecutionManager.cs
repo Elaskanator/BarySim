@@ -116,7 +116,7 @@ namespace Boids {
 
 			double scheduledWaitMs =
 				_targetUpdateTime.Subtract(now).TotalMilliseconds
-				- 1000*(PerformanceMonitor.RefreshTime_SMA.Current ?? 0d);//"rush" it to not be late most the time
+				- 1000*(PerformanceMonitor.RefreshTime_SMA.NumUpdates == 0 ? 0 : PerformanceMonitor.RefreshTime_SMA.History.Max());//"rush" it to not be late most the time
 			double requiredWaitMs =
 				Parameters.MIN_DISPLAY_TIME_MS
 				- now.Subtract(IterationEnd).TotalMilliseconds;

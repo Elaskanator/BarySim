@@ -72,8 +72,8 @@ namespace Generic {
 		#endregion Grouping
 
 		#region Resampling
-		public static WeightedTrackingIncrementalAverage[] Resample(IEnumerable<double> values, int expected, int range) {
-			WeightedTrackingIncrementalAverage[] results = Enumerable.Range(0, range).Select(i => new WeightedTrackingIncrementalAverage()).ToArray();
+		public static TrackingIncrementalAverage[] Resample(IEnumerable<double> values, int expected, int range) {
+			TrackingIncrementalAverage[] results = Enumerable.Range(0, range).Select(i => new TrackingIncrementalAverage()).ToArray();
 
 			double step = (double)range / expected;
 			double startX = 0d, endX = step;
@@ -88,7 +88,7 @@ namespace Generic {
 				endX += step;
 			}
 
-			return results.ToArray();
+			return results;
 		}
 		//public static double?[] Resample2(IEnumerable<double> values, int expected, int range) {
 		//}
