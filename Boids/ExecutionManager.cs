@@ -11,8 +11,8 @@ namespace Boids {
 		public static int FramesSimulated { get; private set; }
 		public static int FramesRasterized { get; private set; }
 		public static int FramesRendered { get; private set; }
-		public static DateTime SimulationStartTime { get; private set; }
-		public static DateTime SimulationEndTime { get; private set; }
+		public static DateTime StartTime { get; private set; }
+		public static DateTime EndTime { get; private set; }
 		public static DateTime IterationStart { get; private set; }
 		public static DateTime IterationEnd { get; private set; }
 
@@ -31,13 +31,6 @@ namespace Boids {
 		private static readonly Mutex _mutex_frameBuffer = new Mutex();//shared access to the monitor window for rendering
 		
 		private static Thread[] _workerThreads;
-
-		private static DateTime _lastWrite = DateTime.MinValue;
-		private static readonly QuadTree<Boid> _tree = new QuadTree<Boid>(Parameters.Domain);
-		private static double[][] _positions;
-		private static Tuple<char, double>[] _rasterization;
-		private static ConsoleExtensions.CharInfo[] _frameData;
-		private static ConsoleExtensions.CharInfo[] _frameBuffer;
 		#endregion Properties
 		
 		#region
@@ -53,7 +46,7 @@ namespace Boids {
 			FramesRasterized = 0;
 			FramesRendered = 0;
 			
-			_frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WIDTH * Parameters.HEIGHT];
+			_onscreenData = new ConsoleExtensions.CharInfo[Parameters.WIDTH * Parameters.HEIGHT];
 			_workerThreads = new Thread[] {
 				new Thread(AutoscaleThread),
 				new Thread(MonitoringThread),
@@ -65,18 +58,18 @@ namespace Boids {
 
 			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);
 
-			//ConsoleExtensions.SetWindowPosition(0, 0);
-#pragma warning disable CA1416//just shut the FUCK up
+			#pragma warning disable CA1416//just shut the FUCK up
 			Console.WindowWidth = Parameters.WIDTH;
 			Console.WindowHeight = Parameters.HEIGHT;
 			ConsoleExtensions.HideScrollbars();
 			ConsoleExtensions.DisableAllResizing();//prevent user from resizing (or maximizing) the window, messing up the console buffer/size and desyncing rendered sprites
+			//ConsoleExtensions.SetWindowPosition(0, 0);
 
 			Console.CursorVisible = false;
 		}
 
 		private static void Start() {
-			SimulationStartTime = IterationStart = DateTime.Now;
+			StartTime = IterationStart = DateTime.Now;
 
 			IsActive = true;
 			
@@ -84,12 +77,12 @@ namespace Boids {
 		}
 
 		private static void Stop() {
-			SimulationEndTime = DateTime.Now;
+			EndTime = DateTime.Now;
 			IsActive = false;
 
 			foreach (Thread t in _workerThreads) t.Join(100);
 
-			if (Parameters.PERF_STATS_ENABLE) PerformanceMonitor.WriteEnd();
+			if (Parameters.DEBUG_ENABLE) PerformanceMonitor.WriteEnd();
 
 			Environment.Exit(0);
 		}
@@ -102,9 +95,18 @@ namespace Boids {
 		}
 		#endregion
 
-		private static void Refresh() {
+		private static DateTime _lastWrite = DateTime.MinValue;
+		private static DateTime _targetUpdateTime = DateTime.MinValue;
+		private static DateTime[] _newDataStarts = new DateTime[4];
+		private static readonly QuadTree<Boid> _tree = new QuadTree<Boid>(Parameters.Domain);
+		private static double[][] _positions;
+		private static Tuple<char, double>[] _rasterization;
+		private static ConsoleExtensions.CharInfo[] _frameBuffer;
+		private static ConsoleExtensions.CharInfo[] _onscreenData;
+
+		private static void WriteConsoleOutput() {
 			DateTime start = DateTime.Now;
-			ConsoleExtensions.RefreshWindow(_frameBuffer);
+			ConsoleExtensions.WriteConsoleOutput(_onscreenData);
 			DateTime end = DateTime.Now;
 			PerformanceMonitor.RefreshTime_SMA.Update(end.Subtract(start).TotalSeconds);
 		}
@@ -144,15 +146,15 @@ namespace Boids {
 			}
 		}
 
-		private static DateTime[] _simStarts = new DateTime[2];
 		private static void SimulateThread() {
 			DateTime start = DateTime.Now, calcStart, end;
 			while (IsActive) {
+				if (FramesSimulated % Parameters.SUBFRAME_MULTIPLE == 0)
+					_newDataStarts[(FramesSimulated / Parameters.SUBFRAME_MULTIPLE) % 4] = DateTime.Now;
 				_event_quadtree_release.WaitOne();
 				calcStart = DateTime.Now;
 
 				Simulator.Update(Program.AllBoids, _tree);
-				//TODODODOD is it faster to pass the full collection of Boids, or use the tree?
 
 				end = DateTime.Now;
 				PerformanceMonitor.SimulationTime_SMA.Update(end.Subtract(calcStart).TotalSeconds);
@@ -168,7 +170,6 @@ namespace Boids {
 					_positions = Program.AllBoids.Select(b => (double[])b.Coordinates.Clone()).ToArray();
 					_event_rasterize.Set();
 
-					_simStarts[(FramesSimulated / Parameters.SUBFRAME_MULTIPLE) % 2] = start;
 					start = DateTime.Now;
 				}
 				
@@ -184,7 +185,7 @@ namespace Boids {
 
 				Tuple<char, double>[] rasterization = Rasterizer.Rasterize(_positions);
 
-				_event_rasterize_release.Set();//release simulation thread
+				_event_rasterize_release.Set();
 
 				if (Parameters.DENSITY_AUTOSCALE_ENABLE && FramesRasterized % Parameters.AUTOSCALING_REFRESH_FRAMES == 0) {
 					_event_autoscale_release.WaitOne();
@@ -204,7 +205,7 @@ namespace Boids {
 				PerformanceMonitor.RasterizeTime_SMA.Update(end.Subtract(start).TotalSeconds);
 
 				_event_syncDraw_release.WaitOne();
-				_frameData = frameData;
+				_frameBuffer = frameData;
 				_event_syncDraw.Set();
 
 				FramesRasterized++;
@@ -225,19 +226,20 @@ namespace Boids {
 			}
 		}
 		
-		private static DateTime _targetUpdateTime = DateTime.MinValue;
 		private static void DrawSynchronizationThread() {
 			DateTime start, overlay, synchronize, end;
 			while (IsActive) {
 				_event_syncDraw.WaitOne();
 				start = DateTime.Now;
 
-				ConsoleExtensions.CharInfo[] frameData = (ConsoleExtensions.CharInfo[])_frameData.Clone();
+				ConsoleExtensions.CharInfo[] frameData = (ConsoleExtensions.CharInfo[])_frameBuffer.Clone();
 				_event_syncDraw_release.Set();
 
 				if (Parameters.LEGEND_ENABLE) Rasterizer.DrawLegend(frameData);
-				if (Parameters.PERF_STATS_ENABLE) PerformanceMonitor.DrawStatsHeader(frameData);
-				if (Parameters.PERF_GRAPH_ENABLE) PerformanceMonitor.DrawFpsGraph(frameData, Parameters.PERF_STATS_ENABLE ? 1 : 0);
+				if (Parameters.DEBUG_ENABLE) {
+					if (Parameters.PERF_STATS_ENABLE) PerformanceMonitor.DrawStatsHeader(frameData);
+					if (Parameters.PERF_GRAPH_ENABLE) PerformanceMonitor.DrawFpsGraph(frameData, Parameters.PERF_STATS_ENABLE ? 1 : 0);
+				}
 
 				overlay = DateTime.Now;
 
@@ -247,8 +249,8 @@ namespace Boids {
 				synchronize = DateTime.Now;
 				_mutex_frameBuffer.WaitOne();
 
-				_frameBuffer = frameData;
-				Refresh();
+				_onscreenData = frameData;
+				WriteConsoleOutput();
 
 				_mutex_frameBuffer.ReleaseMutex();
 				end = IterationEnd = _lastWrite = DateTime.Now;
@@ -257,7 +259,8 @@ namespace Boids {
 				if (_targetUpdateTime < end) _targetUpdateTime = end;
 
 				PerformanceMonitor.DelayTime_SMA.Update(start.Subtract(IterationStart).TotalSeconds);
-				PerformanceMonitor.UpdateTime_SMA.Update(end.Subtract(_simStarts[FramesRendered % 2]).TotalSeconds);
+				PerformanceMonitor.SynchronizeTime_SMA.Update(synchronize.Subtract(overlay).TotalSeconds);
+				PerformanceMonitor.UpdateTime_SMA.Update(end.Subtract(_newDataStarts[FramesRendered % 4]).TotalSeconds);
 				PerformanceMonitor.WriteTime_SMA.Update(end.Subtract(synchronize).Add(overlay.Subtract(start)).TotalSeconds);
 				PerformanceMonitor.FrameTime_SMA.Update(end.Subtract(synchronize).Add(overlay.Subtract(IterationStart)).TotalSeconds);
 				PerformanceMonitor.IterationTime_SMA.Update(end.Subtract(IterationStart).TotalSeconds);
@@ -278,11 +281,15 @@ namespace Boids {
 						if (!anyUpdate) {
 							slowWarningMessage = "No update for "
 								+ (DateTime.Now.Subtract(IterationStart).TotalSeconds.ToString_Number2(2, true) + "s").PadRight(8);
-							if (Parameters.PERF_STATS_ENABLE) PerformanceMonitor.DrawStatsHeader(_frameBuffer);
+							int inc = 0;
+							if (Parameters.DEBUG_ENABLE && Parameters.PERF_STATS_ENABLE) {
+								PerformanceMonitor.DrawStatsHeader(_onscreenData);
+								inc = 1;
+							}
 							for (int i = 0; i < slowWarningMessage.Length; i++)
-								_frameBuffer[i + Parameters.WIDTH] = new ConsoleExtensions.CharInfo(slowWarningMessage[i], ConsoleColor.Red);
+								_onscreenData[i + Parameters.WIDTH*inc] = new ConsoleExtensions.CharInfo(slowWarningMessage[i], ConsoleColor.Red);
 						}
-						Refresh();
+						WriteConsoleOutput();
 						_mutex_frameBuffer.ReleaseMutex();
 						_lastWrite = DateTime.Now;
 					}

@@ -6,7 +6,7 @@ namespace Boids {
 		#region Boids
 		//total number of boids is flocks * boidsPerFlock
 		//significantly affects performance
-		public const int NUM_BOIDS_PER_FLOCK = 2000;
+		public const int NUM_BOIDS_PER_FLOCK = 10000;
 		public const int NUM_FLOCKS = 1;
 		public const int RATED_BOIDS = 3000;
 
@@ -23,10 +23,11 @@ namespace Boids {
 		public const double TARGET_FPS = -1;
 		public const int SUBFRAME_MULTIPLE = 1;
 		public const int RUNTIME_LIMIT_MS = -1;
+
+		public const int QUADTREE_REFRESH_FRAMES = 10;
 		public const int MIN_DISPLAY_TIME_MS = 0;//16
 		public static double UPDATE_INTERVAL_MS { get { return TARGET_FPS <= 0 ? 0 : 1000d / TARGET_FPS; } }
 		public static double NOMINAL_UPDATE_INTERVAL_MS { get { return 1000d / (TARGET_FPS <= 0 ? 30 : TARGET_FPS); } }
-		public const int QUADTREE_REFRESH_FRAMES = 10;
 		#endregion Timing
 
 		#region World
@@ -34,10 +35,10 @@ namespace Boids {
 		public const int WIDTH = 160;
 		public const int HEIGHT = 80;
 		//only tangible performance effect from number of characters drawn
-		public const double WORLD_SCALE = 800;
-		public static readonly double[] Domain = 
-			new double[] { WIDTH / (2d * HEIGHT), 1d }
-			.Multiply(Parameters.WORLD_SCALE);
+		public const double WORLD_SCALE = 1000;
+		public const double WORLD_ASPECT_RATIO = 1d;
+		
+		public static readonly double[] Domain = new double[] { Parameters.WORLD_ASPECT_RATIO, 1d }.Multiply(Parameters.WORLD_SCALE);
 		#endregion World
 
 		#region Legend
@@ -48,10 +49,11 @@ namespace Boids {
 		#endregion Legend
 
 		#region Performance Monitoring
+		public const bool DEBUG_ENABLE = true;
 		public const bool PERF_STATS_ENABLE = true;
 		public const bool PERF_GRAPH_ENABLE = true;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 10;
-		public const double PERF_SMA_ALPHA = 0.1d;
+		public const double PERF_SMA_ALPHA = 0.05d;
 		public const int PERF_MIN_INTERVAL_MS = 125;
 		public const int PERF_MAX_INTERVAL_MS = 1000;
 		#endregion Performance Monitoring

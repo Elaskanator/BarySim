@@ -40,16 +40,16 @@ namespace Boids {
 					_renderWidth = _maxX;
 					_renderHeight = (int)(_maxX * Parameters.Domain[1] / Parameters.Domain[0]);
 					if (_renderHeight < 1) _renderHeight = 1;
-					_renderHeightOffset = (int)(((_maxY) - _renderHeight) / 2d);
+					_renderHeightOffset = (_maxY - _renderHeight) / 4;
 				} else {//tall
 					_renderWidth = (int)(_maxY * Parameters.Domain[0] / Parameters.Domain[1]);
-					_renderHeight = (int)(_maxY);
-					_renderWidthOffset = (int)((_maxX - _renderWidth) / 2d);
+					_renderHeight = _maxY;
+					_renderWidthOffset = (_maxX - _renderWidth) / 2;
 				}
 			} else {
 				_renderWidth = _maxX;
 				_renderHeight = 1;
-				_renderHeightOffset = (int)( _maxY / 2d);
+				_renderHeightOffset = _maxY / 4;
 			}
 		}
 
@@ -103,36 +103,38 @@ namespace Boids {
 					strData = "=" + ((int)PercentileBands[cIdx].Current.Value).ToString("G4");
 				else strData = ">";
 
-				for (int sIdx = 0; sIdx < strData.Length; sIdx++) {
+				for (int sIdx = 0; sIdx < strData.Length; sIdx++)
 					buffer[pixelIdx + sIdx + 1] = new ConsoleExtensions.CharInfo(strData[sIdx], ConsoleColor.White);
-				}
 			}
 		}
 
 		//TODO use a Selection Algorithm to avoid the Order() call?
 		public static void AutoscaleUpdate(Tuple<char, double>[] counts) {
 			double[] orderedCounts = counts.Where(t => !(t is null)).Select(t => t.Item2).Order().ToArray();
+			if (orderedCounts.Length > 0) {
+				int totalBands = DensityColors.Length - 1;
 
-			int totalBands = DensityColors.Length - 1;
+				int lastBand = 0;
+				int idx;
+				int bandValue;
+				for (int band = 1; band <= totalBands; band++) {
+					idx = (int)(((double)orderedCounts.Length * band / (totalBands + 1d)) - 1d);
 
-			int lastBand = 0;
-			int idx;
-			int bandValue;
-			for (int band = 1; band <= totalBands; band++) {
-				idx = (int)(((double)orderedCounts.Length * band / (totalBands + 1d)) - 1d);
-
-				bandValue = (int)orderedCounts[idx];
-
-				if (bandValue > lastBand) {
-					if (ExecutionManager.FramesRasterized <= 1) {
-						PercentileBands[band - 1].Reset(bandValue);
+					if (orderedCounts.Length > idx) {
+						bandValue = (int)orderedCounts[idx];
+						if (bandValue > lastBand) {
+							if (ExecutionManager.FramesRasterized <= 1)
+								PercentileBands[band - 1].Reset(bandValue);
+							else PercentileBands[band - 1].Update(bandValue);
+							lastBand = (int)PercentileBands[band - 1].Current.Value;
+						} else {
+							PercentileBands[band - 1].Update(lastBand + 1);
+							lastBand = lastBand + 1;
+						}
 					} else {
-						PercentileBands[band - 1].Update(bandValue);
+						PercentileBands[band - 1].Update(lastBand + 1);
+						lastBand = lastBand + 1;
 					}
-					lastBand = (int)PercentileBands[band - 1].Current.Value;
-				} else {
-					PercentileBands[band - 1].Update(lastBand + 1);
-					lastBand = lastBand + 1;
 				}
 			}
 		}

@@ -1,9 +1,11 @@
 ﻿using Microsoft.Win32.SafeHandles;
 using System;
+using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
-//using System.Drawing;
-//using System.Windows.Forms;//see https://stackoverflow.com/a/57908260/2799848
+
+//using System.Drawing;           // NOTE: Project + Add Reference required
+//using System.Windows.Forms;     // NOTE: Project + Add Reference required
 
 namespace Generic {
 	#pragma warning disable CA1416//just shut the FUCK up
@@ -23,7 +25,7 @@ namespace Generic {
 			Console.SetCursorPosition(0, line);
 		}
 
-		public static bool WriteConsoleOutput(CharInfo[] buffer) {
+		public static bool RefreshWindow(CharInfo[] buffer) {
 			SafeFileHandle h = CreateFile("CONOUT$", 0x40000000, 2, IntPtr.Zero, FileMode.Open, 0, IntPtr.Zero);
 
 			if (h.IsInvalid) return false;
@@ -52,28 +54,29 @@ namespace Generic {
 			++bufferInfo.srWindow.Bottom;
 			SetConsoleScreenBufferInfoEx(stdHandle, ref bufferInfo);
 		}
-
-		// P-Invoke declarations
+		
+/*
+		// P/Invoke declarations
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool GetWindowRect(IntPtr hWnd, out RECT rc);
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool MoveWindow(IntPtr hWnd, int x, int y, int w, int h, bool repaint);
 
 
-  //      public static IntPtr HWND_BOTTOM = (IntPtr)1;
-  //      public static IntPtr HWND_TOP = (IntPtr)0;
-		//public static void SetWindowPosition(int x, int y)
-		//{
-		//	IntPtr hWin = GetConsoleWindow();
-		//	RECT rc;
-		//	GetWindowRect(hWin, out rc);
-		//	Screen scr = Screen.FromPoint(new Point(rc.Left, rc.Top));
-		//	int left = scr.WorkingArea.Left + (scr.WorkingArea.Width - (rc.Right - rc.Left)) / 2;
-		//	int top = scr.WorkingArea.Top + (scr.WorkingArea.Height - (rc.Bottom - rc.Top)) / 2;
-		//	MoveWindow(hWin, left, top, rc.Right - rc.Left, rc.Bottom - rc.Top, false);
-		//	//SetWindowPos(Handle, IntPtr.Zero, x, y, 0, 0, SWP_NOZORDER | SWP_NOACTIVATE);
-		//}
-
+        public static IntPtr HWND_BOTTOM = (IntPtr)1;
+        public static IntPtr HWND_TOP = (IntPtr)0;
+		public static void SetWindowPosition()
+		{
+			IntPtr hWin = GetConsoleWindow();
+			RECT rc;
+			GetWindowRect(hWin, out rc);
+			Screen scr = Screen.FromPoint(new Point(rc.left, rc.top));
+			int left = scr.WorkingArea.Left + (scr.WorkingArea.Width - (rc.right - rc.left)) / 2;
+			int top = scr.WorkingArea.Top + (scr.WorkingArea.Height - (rc.bottom - rc.top)) / 2;
+			MoveWindow(hWin, left, top, rc.right - rc.left, rc.bottom - rc.top, false);
+			//SetWindowPos(Handle, IntPtr.Zero, x, y, 0, 0, SWP_NOZORDER | SWP_NOACTIVATE);
+		}
+*/
 		//public static void MoveWindow() {
 		//	// Get this console window's hWnd (window handle).
 		//	IntPtr hWnd = GetConsoleWindow();

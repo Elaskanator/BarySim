@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Generic {
-	public static class StringExtensions {
-		public static readonly char[] Base16Chars = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
-
+	static public class StringExtensions {
 		public static string ToString_Number2(this double value, int desiredPrecision, bool includeTrailingZeros, int maxDigits = 7) {
 			if (desiredPrecision < 1) throw new ArgumentOutOfRangeException("desiredPrecision");
 			if (maxDigits < 1) throw new ArgumentOutOfRangeException("maxDigits");
@@ -30,7 +28,7 @@ namespace Generic {
 		public static string ToString_Number2(this double value, int desiredPrecision = 5, int maxDigits = 7) {
 			return ToString_Number2(value, desiredPrecision, false, maxDigits);
 		}
-		public static string ToString_Number3(this double value, int totalLength = 4, bool includeTrailingZeros = false) {
+		public static string ToString_Number3(this double value, int totalLength = 4) {
 			if (value == 0) {
 				return "0";
 			} else {
@@ -38,20 +36,24 @@ namespace Generic {
 				int magnitude = (int)mag;
 
 				int remainingLen;
-				if (includeTrailingZeros) {
-					if (magnitude >= 0) {
-						remainingLen = totalLength - magnitude - (value < 0 ? 3 : 2);
-						if (remainingLen > 0)
-							return value.ToString("N" + remainingLen);
-						else return value.ToString("N0");
-				
+				if (magnitude >= 0) {
+					remainingLen = totalLength - magnitude - (value < 0 ? 3 : 2);
+
+					if (remainingLen > 0) {
+						return value.ToString("N" + remainingLen);
+					} else if (remainingLen == 0) {
+						return ((int)value).ToString();
 					} else {
-						remainingLen = totalLength - (value < 0 ? 3 : 2);
-						if (remainingLen >= 0)
-							return value.ToString("N" + remainingLen);
-						else return value.ToString("N0");
+						return value.ToString("N0");
 					}
-				} else return ((int)value).ToString();
+				} else {
+					remainingLen = totalLength - (value < 0 ? 3 : 2);
+					if (remainingLen >= 0) {
+						return value.ToString("N" + remainingLen);
+					} else {
+						return value.ToString("N0");
+					}
+				}
 			}
 		}
 
@@ -190,12 +192,13 @@ namespace Generic {
 			}
 		}
 
+		private static readonly char[] BaseChars = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 		public static string ToString_Base(this int value, int b) {
 			if (b < 2 || b > 16) throw new Exception();
 			
 			string result = string.Empty;
 			while (value > 0) {
-				result = Base16Chars[value % b] + result;
+				result = BaseChars[value % b] + result;
 				value /= b;
 			}
 			return result;

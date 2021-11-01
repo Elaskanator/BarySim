@@ -1,14 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701,1702,1416</NoWarn>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Active|AnyCPU'">
-    <NoWarn>1701,1702,1416</NoWarn>
+    <TargetFramework>net5.0-windows</TargetFramework>
+    <UseWpf>false</UseWpf>
+    <UseWindowsForms>false</UseWindowsForms>
   </PropertyGroup>
 
 </Project>
