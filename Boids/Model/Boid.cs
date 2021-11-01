@@ -40,7 +40,7 @@ namespace Boids {
 			this.Vision = this.Flock.Separation;
 		}
 
-		public void UpdateDeltas(Boid[] neighbors) {
+		public void UpdateDeltas(IEnumerable<Boid> neighbors) {
 			double[] bias = this.ComputeNeighborhoodBias(neighbors);
 
 			this.Acceleration = bias
@@ -51,32 +51,18 @@ namespace Boids {
 				.Add(this.Acceleration);
 
 			this.Coordinates = this.Coordinates.Add(this.Velocity);
-
-			switch (neighbors.Length.CompareTo(Parameters.DESIRED_NEIGHBORS)) {
-				case -1:
-					this.Vision++;
-					break;
-				case 1:
-					if (this.Vision > 2.0d) this.Vision -= 1.0d;
-					else if (this.Vision > 1.5d) this.Vision -= 0.5d;
-					else if (this.Vision > 1.0d) this.Vision -= 0.25d;
-					else if (this.Vision > 0.5d) this.Vision -= 0.125d;
-					else this.Vision -= 0.1;
-					break;
-			}
 		}
 
 		private IEnumerable<double> BoundPosition(double[] position) {
 			for (int i = 0; i < Parameters.Domain.Length; i++)
 				if (position[i] < 0 || position[i] >= Parameters.Domain[i])
 					yield return position[i].ModuloAbsolute(Parameters.Domain[i]);//wrap around
-				else
-					yield return position[i];
+				else yield return position[i];
 		}
 
 		//TODO rewrite this method entirely
 		//seealso https://swharden.com/CsharpDataVis/boids/boids.md.html
-		private double[] ComputeNeighborhoodBias(Boid[] neighbors) {
+		private double[] ComputeNeighborhoodBias(IEnumerable<Boid> neighbors) {
 			bool anyNeighbors = false;
 			double cohesionBiasWeight = 0d, alignmentBiasWeight = 0d, separationBiasWeight = 0d;
 			double[] cohesionBias, separationBias, alignmentBias;
@@ -86,7 +72,11 @@ namespace Boids {
 			double weight;
 			double[] vect;
 			//double[] positionPrime;
+
+			int count = 0;
 			foreach (Boid other in neighbors) {
+				if (count == Parameters.DESIRED_NEIGHBORS) { count++; break; }
+
 				anyNeighbors = true;
 				
 				//positionPrime = b.GetNearestWrappedPosition(this);
@@ -110,6 +100,21 @@ namespace Boids {
 					vect = this.Coordinates.Subtract(other.Coordinates);
 					separationBias = separationBias.Add(vect.Multiply(weight));
 				}
+
+				++count;
+			}
+
+			switch (count.CompareTo(Parameters.DESIRED_NEIGHBORS)) {
+				case -1:
+					this.Vision++;
+					break;
+				case 1:
+					if (this.Vision > 2.0d) this.Vision -= 1.0d;
+					else if (this.Vision > 1.5d) this.Vision -= 0.5d;
+					else if (this.Vision > 1.0d) this.Vision -= 0.25d;
+					else if (this.Vision > 0.5d) this.Vision -= 0.125d;
+					else this.Vision -= 0.1;
+					break;
 			}
 
 			if (anyNeighbors) {

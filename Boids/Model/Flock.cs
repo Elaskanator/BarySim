@@ -39,7 +39,7 @@ namespace Boids {
 
 		public double SeparationWeight = 2;
 		public double AlignmentWeight = 0.5;
-		public double CohesionWeight = 1;
+		public double CohesionWeight = 0.5;
 
 		public double MaxForce = 0.1;
 		public double MaxAcceleration = 0.05;

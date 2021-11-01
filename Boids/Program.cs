@@ -13,7 +13,9 @@ namespace Boids {
 		public static int TotalBoids { get { return Flocks.Sum(f => f.Boids.Length); } }
 
 		public static void Main(string[] args) {
-			Flocks = Enumerable.Range(0, Parameters.NUM_FLOCKS).Select(i => new Flock(Parameters.NUM_BOIDS_PER_FLOCK, new Random())).ToArray();
+			Random rand = new Random();
+
+			Flocks = Enumerable.Range(0, Parameters.NUM_FLOCKS).Select(i => new Flock(Parameters.NUM_BOIDS_PER_FLOCK, rand)).ToArray();
 
 			/*
 			Console.ForegroundColor = ConsoleColor.White;

@@ -7,7 +7,6 @@ namespace Generic {
 		public virtual double? Current { get { return this._current; } }
 		public virtual int NumUpdates { get; private set; }
 		public double? LastUpdate { get; private set; }
-		protected double _nextUpdate { get; private set; }
 
 		protected virtual double UpdateStrength { get { return 1d / this.NumUpdates; } }
 

@@ -7,8 +7,8 @@ namespace Boids {
 		public const int NUMBER_ACCURACY = 2;
 		public const int NUMBER_SPACING = 5;
 
-		public const int GRAPH_WIDTH = 80;
-		public const int GRAPH_HEIGHT = 12;
+		public static int GRAPH_WIDTH;
+		public static int GRAPH_HEIGHT = 12;
 
 		public static SampleSMA IterationTime_SMA = new SampleSMA(0.01);
 		public static SampleSMA FrameTime_SMA = new SampleSMA(Parameters.PERF_SMA_ALPHA);
@@ -37,6 +37,22 @@ namespace Boids {
 			"| Q",//quadtree rebuild time
 			"A",//chart autoscaling duration
 		};
+		public static readonly int DebugBarWidth;
+		
+		private static double[] _currentColumnData;
+		private static SampleSMA _currentMin;
+		private static SampleSMA _currentMax;
+		private static ConsoleExtensions.CharInfo[][] _columns;
+		private static BasicStatisticsInfo[] _columnStats;
+
+		static PerformanceMonitor() {
+			DebugBarWidth = DebugBarLabels.Sum(l => l.Length + NUMBER_SPACING);
+			GRAPH_WIDTH = DebugBarWidth;
+			_currentMin = new SampleSMA(Parameters.PERF_SMA_ALPHA);
+			_currentMax = new SampleSMA(Parameters.PERF_SMA_ALPHA);
+			_columns = new ConsoleExtensions.CharInfo[GRAPH_WIDTH][];
+			_columnStats = new BasicStatisticsInfo[GRAPH_WIDTH];
+		}
 
 		public static void DrawStatsHeader(ConsoleExtensions.CharInfo[] buffer) {
 			double
@@ -101,11 +117,6 @@ namespace Boids {
 			}
 		}
 
-		private static double[] _currentColumnData;
-		private static SampleSMA _currentMin = new SampleSMA(Parameters.PERF_SMA_ALPHA);
-		private static SampleSMA _currentMax = new SampleSMA(Parameters.PERF_SMA_ALPHA);
-		private static ConsoleExtensions.CharInfo[][] _columns = new ConsoleExtensions.CharInfo[GRAPH_WIDTH][];
-		private static BasicStatisticsInfo[] _columnStats = new BasicStatisticsInfo[GRAPH_WIDTH];
 		public static void DrawFpsGraph(ConsoleExtensions.CharInfo[] buffer, int yOffset = 0) {
 			if (ExecutionManager.FramesRendered > 0) {
 				double numColumns = ExecutionManager.FramesRendered / Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
@@ -143,10 +154,10 @@ namespace Boids {
 				}
 
 				string
-					label_current = (1d / IterationTime_SMA.LastUpdate.Value).ToString_Number3(3) + "fps",
-					label_min = _currentMin.Current.Value.ToString_Number3(4),
-					label_avg = dataAvg.ToString_Number3(4),
-					label_max = _currentMax.Current.Value.ToString_Number3(4);
+					label_current = (1d / IterationTime_SMA.LastUpdate.Value).ToString_Number3(3, true) + "fps",
+					label_min = _currentMin.Current.Value.ToString_Number3(3, true),
+					label_avg = dataAvg.ToString_Number3(3, true),
+					label_max = _currentMax.Current.Value.ToString_Number3(3, true);
 
 				for (int i = 0; i < label_max.Length; i++)
 					buffer[i + Parameters.WIDTH*yOffset] = new ConsoleExtensions.CharInfo(label_max[i], ConsoleColor.Gray);

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+
 using Generic;
 using Generic.Structures;
 
@@ -153,9 +155,25 @@ namespace Boids {
 					_newDataStarts[(FramesSimulated / Parameters.SUBFRAME_MULTIPLE) % 4] = DateTime.Now;
 				_event_quadtree_release.WaitOne();
 				calcStart = DateTime.Now;
-
-				Simulator.Update(Program.AllBoids, _tree);
-
+				if (Parameters.QUADTREE_HYBRID_METHOD) {
+					Parallel.ForEach(
+						_tree.GetLeaves(),
+						leaf => { foreach (Boid b in leaf.AllMembers) b.UpdateDeltas(leaf.GetNeighborsAlt(b, Parameters.QUADTREE_INCREASED_ACCURACY)); });
+				} else {
+					Parallel.ForEach(
+						Program.AllBoids,
+						b => { b.UpdateDeltas(_tree.GetNeighbors(b, b.Vision)); });
+				}
+				
+				/*
+				foreach (Boid b in Program.AllBoids)
+					b.UpdateDeltas(_tree.GetNeighborsAlt(b));
+				*/
+				/*
+				foreach (QuadTree<Boid> leaf in _tree.GetLeaves())
+					foreach (Boid b in leaf.AllMembers)
+						b.UpdateDeltas(leaf.GetNeighborsAlt(b));
+				*/
 				end = DateTime.Now;
 				PerformanceMonitor.SimulationTime_SMA.Update(end.Subtract(calcStart).TotalSeconds);
 				_event_debug.Set();
@@ -231,6 +249,7 @@ namespace Boids {
 			while (IsActive) {
 				_event_syncDraw.WaitOne();
 				start = DateTime.Now;
+				PerformanceMonitor.DelayTime_SMA.Update(start.Subtract(IterationStart).TotalSeconds);
 
 				ConsoleExtensions.CharInfo[] frameData = (ConsoleExtensions.CharInfo[])_frameBuffer.Clone();
 				_event_syncDraw_release.Set();
@@ -244,9 +263,10 @@ namespace Boids {
 				overlay = DateTime.Now;
 
 				DrawSynchronize();
-				if (!IsActive) return;
-
 				synchronize = DateTime.Now;
+				PerformanceMonitor.SynchronizeTime_SMA.Update(synchronize.Subtract(overlay).TotalSeconds);
+
+				if (!IsActive) return;
 				_mutex_frameBuffer.WaitOne();
 
 				_onscreenData = frameData;
@@ -258,8 +278,6 @@ namespace Boids {
 				_targetUpdateTime = _targetUpdateTime.AddMilliseconds(Parameters.UPDATE_INTERVAL_MS);
 				if (_targetUpdateTime < end) _targetUpdateTime = end;
 
-				PerformanceMonitor.DelayTime_SMA.Update(start.Subtract(IterationStart).TotalSeconds);
-				PerformanceMonitor.SynchronizeTime_SMA.Update(synchronize.Subtract(overlay).TotalSeconds);
 				PerformanceMonitor.UpdateTime_SMA.Update(end.Subtract(_newDataStarts[FramesRendered % 4]).TotalSeconds);
 				PerformanceMonitor.WriteTime_SMA.Update(end.Subtract(synchronize).Add(overlay.Subtract(start)).TotalSeconds);
 				PerformanceMonitor.FrameTime_SMA.Update(end.Subtract(synchronize).Add(overlay.Subtract(IterationStart)).TotalSeconds);
@@ -284,10 +302,10 @@ namespace Boids {
 							int inc = 0;
 							if (Parameters.DEBUG_ENABLE && Parameters.PERF_STATS_ENABLE) {
 								PerformanceMonitor.DrawStatsHeader(_onscreenData);
-								inc = 1;
+								inc = PerformanceMonitor.DebugBarWidth;
 							}
 							for (int i = 0; i < slowWarningMessage.Length; i++)
-								_onscreenData[i + Parameters.WIDTH*inc] = new ConsoleExtensions.CharInfo(slowWarningMessage[i], ConsoleColor.Red);
+								_onscreenData[i + inc] = new ConsoleExtensions.CharInfo(slowWarningMessage[i], ConsoleColor.Red);
 						}
 						WriteConsoleOutput();
 						_mutex_frameBuffer.ReleaseMutex();

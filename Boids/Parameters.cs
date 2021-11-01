@@ -6,11 +6,11 @@ namespace Boids {
 		#region Boids
 		//total number of boids is flocks * boidsPerFlock
 		//significantly affects performance
-		public const int NUM_BOIDS_PER_FLOCK = 5000;
-		public const int NUM_FLOCKS = 3;
+		public const int NUM_BOIDS_PER_FLOCK = 3000;
+		public const int NUM_FLOCKS = 1;
 		public const int RATED_BOIDS = 3000;
 
-		public const int DESIRED_NEIGHBORS = 10;
+		public const int DESIRED_NEIGHBORS = 8;
 		public const bool ENABLE_COHESION = true;
 		public const bool ENABLE_ALIGNMENT = true;
 		public const bool ENABLE_SEPARATION = true;
@@ -25,6 +25,8 @@ namespace Boids {
 		public const int RUNTIME_LIMIT_MS = -1;
 
 		public const int QUADTREE_REFRESH_FRAMES = 10;
+		public const bool QUADTREE_HYBRID_METHOD = true;
+		public const bool QUADTREE_INCREASED_ACCURACY = true;
 		public const int MIN_DISPLAY_TIME_MS = 0;//16
 		public static double UPDATE_INTERVAL_MS { get { return TARGET_FPS <= 0 ? 0 : 1000d / TARGET_FPS; } }
 		public static double NOMINAL_UPDATE_INTERVAL_MS { get { return 1000d / (TARGET_FPS <= 0 ? 30 : TARGET_FPS); } }
@@ -35,7 +37,7 @@ namespace Boids {
 		public const int WIDTH = 160;
 		public const int HEIGHT = 80;
 		//only tangible performance effect from number of characters drawn
-		public const double WORLD_SCALE = 800d;
+		public const double WORLD_SCALE = 400d;
 		public const double WORLD_ASPECT_RATIO = 1d;
 		
 		public static readonly double[] Domain = new double[] { Parameters.WORLD_ASPECT_RATIO, 1d }.Multiply(Parameters.WORLD_SCALE);
@@ -54,7 +56,8 @@ namespace Boids {
 		public const bool PERF_GRAPH_ENABLE = true;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 10;
 		public const double PERF_SMA_ALPHA = 0.05d;
-		public const int PERF_MIN_INTERVAL_MS = 125;
+		public const int PERF_MIN_INTERVAL_MS = -1;
+		public const int PERF_GRAPH_INTERVAL_MS = -1;
 		public const int PERF_MAX_INTERVAL_MS = 1000;
 		#endregion Performance Monitoring
 	}
