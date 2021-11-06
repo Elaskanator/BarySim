@@ -29,7 +29,7 @@ namespace Generic.Structures {
 		public QuadTree<T>[] Quadrants { get; private set; }
 		private readonly T[] _members = new T[CAPACITY];
 
-		public QuadTree(double[] x1, double[] x2, QuadTree<T> parent = null) {//make sure all values in x1 are smaller than x2 (the corners of a cubic volume)
+		protected QuadTree(double[] x1, double[] x2, QuadTree<T> parent, IEnumerable<T> init = null) {//make sure all values in x1 are smaller than x2 (the corners of a cubic volume)
 			this.Dimensionality = x1.Length;
 			if (Enumerable.Range(0, this.Dimensionality).All(d => x1[d] == x2[d])) throw new ArgumentException("Domain is zero-dimensional");
 
@@ -41,17 +41,22 @@ namespace Generic.Structures {
 
 			this.NumMembers = 0;
 			this.Center = x1.Zip(x2, (a, b) => (a + b) / 2d).ToArray();//average of each dimension
+
+			if (!(init is null)) this.AddRange(init);
 		}
-		public QuadTree(double[] range, QuadTree<T> parent = null)
-			: this(Enumerable.Repeat(0d, range.Length).ToArray(), range, parent) { }
+		public QuadTree(double[] x1, double[] x2) : this(x1, x2, null, null) { }
+		public QuadTree(IEnumerable<T> init, double[] x1, double[] x2) : this(x1, x2, null, init) { }
+		public QuadTree(IEnumerable<T> init, double[] range) : this(Enumerable.Repeat(0d, range.Length).ToArray(), range, null, init) { }
+		public QuadTree(double[] range) : this(Enumerable.Repeat(0d, range.Length).ToArray(), range, null) { }
+		protected QuadTree(double[] range, QuadTree<T> parent) : this(Enumerable.Repeat(0d, range.Length).ToArray(), range, parent) { }
 
 		public void Clear() {
 			this.NumMembers = 0;
 			this.Quadrants = null;
 		}
 
-		public void Add(params T[] entries) {
-			foreach (T entry in entries) {
+		public void AddRange(IEnumerable<T> entities) {
+			foreach (T entry in entities) {
 				if (this.NumMembers < CAPACITY) this._members[this.NumMembers] = entry;
 				else {
 					if (this.NumMembers == CAPACITY) {//one-time quadrant formation
@@ -63,6 +68,7 @@ namespace Generic.Structures {
 				this.NumMembers++;
 			}
 		}
+		public void Add(params T[] entities) { this.AddRange(entities); }
 
 		public IEnumerable<QuadTree<T>> GetLeaves() {
 			if (this.IsLeaf) yield return this;

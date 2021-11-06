@@ -6,52 +6,26 @@ namespace Generic {
 	public static class StringExtensions {
 		public static readonly char[] Base16Chars = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-		public static string ToString_Number2(this double value, int desiredPrecision, bool includeTrailingZeros, int maxDigits = 7) {
-			if (desiredPrecision < 1) throw new ArgumentOutOfRangeException("desiredPrecision");
-			if (maxDigits < 1) throw new ArgumentOutOfRangeException("maxDigits");
-
-			if (value == 0) {
-				if (maxDigits == 1 || desiredPrecision < 2) return "0";
-				else {
-					int remainder = desiredPrecision - 1;
-					remainder = remainder > desiredPrecision ? desiredPrecision : remainder;
-					if (remainder == 0) return "0.";
-					else return "0." + new string('0', remainder);
-				}
-			} else {
-				int magnitude = (int)value.BaseExponent();
-				int remainder = desiredPrecision - magnitude - 1;
-				remainder = remainder > 0 ? remainder : 0;
-				if (remainder > 0 && includeTrailingZeros)
-					return value.ToString("N" + remainder);
-				else return value.ToString("F0");
-			}
-		}
-		public static string ToString_Number2(this double value, int desiredPrecision = 5, int maxDigits = 7) {
-			return ToString_Number2(value, desiredPrecision, false, maxDigits);
-		}
-		public static string ToString_Number3(this double value, int totalLength = 4, bool includeTrailingZeros = false) {
+		public static string ToStringBetter(this double value, int minAccuracy = 4, int? totalLength = 6) {
 			if (value == 0) {
 				return "0";
 			} else {
 				double mag = value.BaseExponent();
-				int magnitude = (int)mag;
+				int magnitude = (int)Math.Floor(mag);
 
 				int remainingLen;
-				if (includeTrailingZeros) {
-					if (magnitude >= 0) {
-						remainingLen = totalLength - magnitude - (value < 0 ? 3 : 2);
-						if (remainingLen > 0)
-							return value.ToString("N" + remainingLen);
-						else return value.ToString("N0");
-				
-					} else {
-						remainingLen = totalLength - (value < 0 ? 3 : 2);
-						if (remainingLen >= 0)
-							return value.ToString("N" + remainingLen);
-						else return value.ToString("N0");
-					}
-				} else return ((int)value).ToString();
+				string result;
+				remainingLen = minAccuracy - magnitude - (value < 0 ? 2 : 1);
+					
+				if (remainingLen > 0)
+					result = value.ToString("0." + new string('0', remainingLen));
+				else result = ((int)value).ToString();
+
+				if (totalLength.HasValue)
+					return magnitude < 0
+						? new string(result.Take(totalLength.Value).ToArray())
+						: new string(result.Reverse().Take(totalLength.Value).Reverse().ToArray());
+				else return result;
 			}
 		}
 

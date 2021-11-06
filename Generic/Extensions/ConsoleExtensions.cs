@@ -1,7 +1,9 @@
 ﻿using Microsoft.Win32.SafeHandles;
 using System;
+using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 //using System.Drawing;
 //using System.Windows.Forms;//see https://stackoverflow.com/a/57908260/2799848
 
@@ -231,6 +233,41 @@ namespace Generic {
 				this.Attributes = (ushort) ((int)(foreground ?? 0) | (((int)(background ?? 0))<<4));
 			}
 		}
+		
+		public static void Merge(this CharInfo[] source, int width, CharInfo[] additional, int xOffset, int yOffset, bool skipBlank = true) {
+			if (additional is null) return;
+			else if (xOffset == 0 && !skipBlank) Array.Copy(additional, 0, source, xOffset + yOffset*width, additional.Length);
+			else {
+				int row = 0;
+				foreach (CharInfo[] p in additional.Partition(width).Select(p => p.ToArray())) {
+					for (int i = 0; i < p.Length; i++)
+						if (!skipBlank || !Equals(p[i], default(CharInfo)))
+							source[xOffset + width*(row + yOffset)] = p[i];
+					row++;
+				}
+			}
+		}
+		public static void RegionMerge(this CharInfo[] source, int sourceWidth, CharInfo[] additional, int addWidth, int xOffset, int yOffset, bool skipBlank = true) {
+			if (sourceWidth == addWidth) source.Merge(sourceWidth, additional, xOffset, yOffset, skipBlank);
+			else if (additional is null) return;
+			else {
+				int row = 0;
+				foreach (CharInfo[] p in additional.Partition(addWidth).Select(p => p.ToArray())) {
+					if (skipBlank) for (int i = 0; i < p.Length; i++) {
+						if (!Equals(p[i], default(CharInfo)))
+							source[i + xOffset + sourceWidth*(row + yOffset)] = p[i];
+					} else Array.Copy(p, 0, source, xOffset + sourceWidth * (row + yOffset), p.Length);
+					row++;
+				}
+			}
+		}
+
+		public static string ToString(this CharInfo[] characters, int rowWidth) {
+			if (characters == null) return "";
+			else return string.Join(Environment.NewLine,
+				characters.Partition(rowWidth).Select(p =>
+					new string(p.Select(c => c.Char.UnicodeChar == 0 ? (char)c.Char.AsciiChar : c.Char.UnicodeChar).Select(c => c == 0 ? ' ' : c).ToArray())));
+		}
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct SmallRect {
@@ -252,6 +289,9 @@ namespace Generic {
         private static extern IntPtr GetSystemMenu(IntPtr hWnd, bool bRevert);
         [DllImport("kernel32.dll", ExactSpelling = true)]
         private static extern IntPtr GetConsoleWindow();
+		/// <summary>
+		/// Prevents window resizing and maximizing, but does not prevent system window snapping (e.g. Win+Right)
+		/// </summary>
 		public static void DisableAllResizing() {
 			IntPtr handle = GetConsoleWindow();
             IntPtr sysMenu = GetSystemMenu(handle, false);

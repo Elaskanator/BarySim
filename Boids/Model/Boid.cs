@@ -54,9 +54,9 @@ namespace Boids {
 		}
 
 		private IEnumerable<double> BoundPosition(double[] position) {
-			for (int i = 0; i < Parameters.Domain.Length; i++)
-				if (position[i] < 0 || position[i] >= Parameters.Domain[i])
-					yield return position[i].ModuloAbsolute(Parameters.Domain[i]);//wrap around
+			for (int i = 0; i < Parameters.DOMAIN.Length; i++)
+				if (position[i] < 0 || position[i] >= Parameters.DOMAIN[i])
+					yield return position[i].ModuloAbsolute(Parameters.DOMAIN[i]);//wrap around
 				else yield return position[i];
 		}
 
@@ -66,7 +66,7 @@ namespace Boids {
 			bool anyNeighbors = false;
 			double cohesionBiasWeight = 0d, alignmentBiasWeight = 0d, separationBiasWeight = 0d;
 			double[] cohesionBias, separationBias, alignmentBias;
-			cohesionBias = separationBias = alignmentBias = Enumerable.Repeat(0d, Parameters.Domain.Length).ToArray();
+			cohesionBias = separationBias = alignmentBias = Enumerable.Repeat(0d, Parameters.DOMAIN.Length).ToArray();
 
 			double dist;
 			double weight;
@@ -125,14 +125,14 @@ namespace Boids {
 				//separationBias = separationBias.Subtract(this.Velocity);
 
 				return
-					Enumerable.Repeat(0d, Parameters.Domain.Length).ToArray()//for testing
+					Enumerable.Repeat(0d, Parameters.DOMAIN.Length).ToArray()//for testing
 					//.Add(Enumerable.Repeat(0.005d, Parameters.Domain.Length).ToArray())//for testing
 					.Add(cohesionBias.Normalize().Multiply(this.Flock.CohesionWeight))
 					.Add(alignmentBias)
 					.Add(separationBias)
 					.Clamp(this.Flock.MaxForce);
 			} else {
-				return Enumerable.Repeat(0d, Parameters.Domain.Length).ToArray();
+				return Enumerable.Repeat(0d, Parameters.DOMAIN.Length).ToArray();
 			}
 		}
 

@@ -221,7 +221,7 @@ namespace Generic {
 		public static implicit operator double (Fraction f) {
 			return f.AsNumber;
 		}
-		public static implicit operator Fraction (long A) {
+		public static explicit operator Fraction (long A) {
 			return new Fraction(A);
 		}
 

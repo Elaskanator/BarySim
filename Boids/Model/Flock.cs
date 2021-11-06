@@ -13,22 +13,22 @@ namespace Boids {
 			random ??= new Random();
 
 			double[] startingPosition = Enumerable
-				.Range(0, Parameters.Domain.Length)
-				.Select(d => random.NextDouble() * Parameters.Domain[d])
+				.Range(0, Parameters.DOMAIN.Length)
+				.Select(d => random.NextDouble() * Parameters.DOMAIN[d])
 				.ToArray();
 
-			double boidVolume = NumberExtensions.HypersphereVolume(this.Separation * 2, Parameters.Domain.Length);
-			double randomRadius = NumberExtensions.HypersphereRadius(boidVolume * size, Parameters.Domain.Length);
+			double boidVolume = NumberExtensions.HypersphereVolume(this.Separation * 2, Parameters.DOMAIN.Length);
+			double randomRadius = NumberExtensions.HypersphereRadius(boidVolume * size, Parameters.DOMAIN.Length);
 
 			this.Boids = Enumerable
 				.Range(0, size)
 				.Select(d => new Boid(
 					flock: this,
 					startingPosition.Zip(
-						NumberExtensions.Random_Spherical(randomRadius, Parameters.Domain.Length, random),
+						NumberExtensions.Random_Spherical(randomRadius, Parameters.DOMAIN.Length, random),
 						(a, b) => a + b).ToArray(),
 					velocity: Enumerable
-						.Range(0, Parameters.Domain.Length)
+						.Range(0, Parameters.DOMAIN.Length)
 						.Select(d => (random.NextDouble() * 2d) - 1d).ToArray()//random between -1 and +1
 						.Normalize()//unit vector in radom direction (is this uniformly distributed?)
 						.Multiply(random.NextDouble() * this.MaxStartingSpeed)))//scale by a random speed

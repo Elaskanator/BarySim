@@ -2,13 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 
+using Generic.Classes;
+
 namespace Generic {
 	public static class EnumerableExtentions {
 		#region Projections
 		/// <summary>
 		/// Complement of the Where filter, returning only items that do not return true when using the projection
 		/// </summary>
-		public static IEnumerable<T> Except<T>(this IEnumerable<T> source, Func<T, bool> test) {
+		public static IEnumerable<T> Except<T>(this IEnumerable<T> source, Predicate<T> test) {
 			foreach (T element in source)
 				if (!test(element)) yield return element;
 		}
@@ -18,7 +20,7 @@ namespace Generic {
 				if (!skip.Equals(element)) yield return element;
 		}
 
-		public static IEnumerable<T> TakeUntil<T>(this IEnumerable<T> source, Func<T, bool> test) {
+		public static IEnumerable<T> TakeUntil<T>(this IEnumerable<T> source, Predicate<T> test) {
 			foreach (T element in source)
 				if (test(element)) yield break;
 				else yield return element;
@@ -45,6 +47,17 @@ namespace Generic {
 		public static IEnumerable<T> OrderDescending<T>(this IEnumerable<T> source)
 		where T : IComparable<T> {
 			return source.OrderByDescending(x => x);
+		}
+
+		public static IEnumerable<IEnumerable<T>> Partition<T>(this IEnumerable<T> source, int size) {
+			if (size < 1) throw new ArgumentOutOfRangeException(nameof(size), "Must be strictly positive");
+			Enumerator2<T> iterator = new(source);
+			while (!iterator.HasEnded) yield return SubPartition(iterator, size);
+		}
+		private static IEnumerable<T> SubPartition<T>(IEnumerator<T> iterator, int size) {
+			int count = 0;
+			while (count++ < size && iterator.MoveNext())
+				yield return iterator.Current;
 		}
 		#endregion Projections
 
