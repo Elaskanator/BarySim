@@ -34,7 +34,7 @@ namespace Boids {
 			TimeSpan timeSinceLastUpdate = DateTime.Now.Subtract(Program.Step_Rasterizer.LastIerationEnd ?? Program.Manager.StartTime);
 			if (timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS) {
 				buffer ??= new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
-				string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s").PadRight(5);
+				string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s").PadRight(6);
 				for (int i = 0; i < message.Length; i++)
 					buffer[i + xOffset + Parameters.WINDOW_WIDTH*yOffset] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
 			}

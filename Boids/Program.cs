@@ -7,6 +7,7 @@ using Generic.Structures;
 namespace Boids {
 	//TODO add handshake optimization (boids sharing interactions, to compute only half as many)
 	//TODO world wrap interaction: boids look forward only into adjoining quadrant
+	//FOR LATER refactor to support different underlying simulations, and support far-field interactions (e.g. astrophysical simulation)
 	//SEEALSO https://www.youtube.com/watch?v=TrrbshL_0-s
 	public class Program {
 		public const bool ENABLE_DEBUG_LOGGING = false;

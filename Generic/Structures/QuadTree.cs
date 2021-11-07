@@ -118,9 +118,6 @@ namespace Generic.Structures {
 					if (!this.IsRoot) foreach (T member in this.SeekUpward(v, sort).SelectMany(n => n.AllMembers)) yield return member;
 				}
 			}
-
-			/*
-			*/
 		}
 		private IEnumerable<QuadTree<T>> SeekUpward(double[] v, bool sort) {
 			IEnumerable<QuadTree<T>> neighborNodes = this._parent.Quadrants.Except(q => ReferenceEquals(this, q));

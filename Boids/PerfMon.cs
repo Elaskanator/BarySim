@@ -27,6 +27,7 @@ namespace Boids {
 		};
 
 		internal static void AfterRasterize(DateTime start) {
+			//IterationCount is not yet updated
 			int frameIdx = Program.Step_Rasterizer.IterationCount % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 			if (frameIdx == 0) {
 				_currentColumnData = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
@@ -97,25 +98,21 @@ namespace Boids {
 		}
 
 		public static ConsoleExtensions.CharInfo[] GetFpsGraph() {
-			if (_columnStats[0] is null) return null;
+			BasicStatisticsInfo[] columnStats = ((BasicStatisticsInfo[])_columnStats.Clone()).TakeUntil(s => s is null).ToArray();
+			if (columnStats[0] is null) return null;
 			else {
 				ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[Parameters.GRAPH_WIDTH * Parameters.GRAPH_HEIGHT];
 				double numColumns = Program.Step_Rasterizer.IterationCount / Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 
 				double
-					dataMin = _columnStats[0].Min,
-					dataAvg = _columnStats[0].Mean,
-					dataMax = _columnStats[0].Max;
-				if (Parameters.GRAPH_WIDTH > 2) {
-					dataMin = _columnStats.Skip(numColumns > 2 ? 1 : 0).TakeUntil(s => s is null).Min(s => s.Percentile25);
-					dataAvg = _columnStats.Skip(numColumns > 2 ? 1 : 0).TakeUntil(s => s is null).Average(s => s.Mean);//faster than true average calculation
-					dataMax = _columnStats.Skip(numColumns > 2 ? 1 : 0).TakeUntil(s => s is null).Max(s => s.Percentile75);
-					if (dataMin < 1)
-						dataMin = 0;
-					if (dataMin >= dataMax)
-						dataMax = dataMin + 1;
-				}
+					dataMin = columnStats.Min(s => s.Percentile25),
+					dataAvg = columnStats.Average(s => s.Mean),//faster than true average calculation
+					dataMax = columnStats.Max(s => s.Percentile75);
+				if (dataMin < 1) dataMin = 0;
+				if (dataMin >= dataMax)
+					dataMax = dataMin + 1; 
 
+				//autoscaling - ignore very small anomalies
 				bool recompute = _currentMin.NumUpdates == 0
 					|| 0.1 < (Math.Abs(dataMin - _currentMin.Current.Value) + Math.Abs(dataMax - _currentMax.Current.Value)) / (dataMax - dataMin);
 				if (recompute) {
@@ -123,16 +120,16 @@ namespace Boids {
 					_currentMax.Update(dataMax);
 				}
 
-				for (int i = 0; i < Parameters.GRAPH_WIDTH; i++) {
-					if (i == 0 || recompute) ComputeGraphColumn(i);
+				for (int i = 0; i < columnStats.Length; i++) {
+					if (i == 0 || recompute) ComputeGraphColumn(i, columnStats[i]);
 					DrawGraphColumn(result, i);
 				}
 
 				string
-					label_current = (_frameTiming.LastUpdate.Value / 10000d).ToStringBetter(3) + "ms",
-					label_min = _currentMin.Current.Value.ToStringBetter(3),
-					label_avg = dataAvg.ToStringBetter(3),
-					label_max = _currentMax.Current.Value.ToStringBetter(3);
+					label_current = (_frameTiming.LastUpdate.Value / 10000d).ToStringBetter(2) + "ms",
+					label_min = _currentMin.Current.Value.ToStringBetter(2),
+					label_avg = dataAvg.ToStringBetter(2),
+					label_max = _currentMax.Current.Value.ToStringBetter(2);
 
 				for (int i = 0; i < label_max.Length; i++)
 					result[i] = new ConsoleExtensions.CharInfo(label_max[i], ConsoleColor.Gray);
@@ -155,75 +152,72 @@ namespace Boids {
 		}
 
 		private static void DrawGraphColumn(ConsoleExtensions.CharInfo[] buffer, int xIdx) {
-			if (!(_columns[xIdx] is null))
 				for (int yIdx = 0; yIdx < Parameters.GRAPH_HEIGHT; yIdx++)
 					if (!Equals(_columns[xIdx][yIdx], default(ConsoleExtensions.CharInfo)))
 						buffer[xIdx + (Parameters.GRAPH_HEIGHT - yIdx - 1)*Parameters.GRAPH_WIDTH] = _columns[xIdx][yIdx];
 		}
-		private static void ComputeGraphColumn(int xIdx) {
-			if (!(_columnStats[xIdx] is null)) {
-				_columns[xIdx] = new ConsoleExtensions.CharInfo[Parameters.GRAPH_HEIGHT];
+		private static void ComputeGraphColumn(int xIdx, BasicStatisticsInfo columnStats) {
+			_columns[xIdx] = new ConsoleExtensions.CharInfo[Parameters.GRAPH_HEIGHT];
 
-				double
-					y000 = _columnStats[xIdx].Percentile0,
-					y010 = _columnStats[xIdx].Percentile10,
-					y025 = _columnStats[xIdx].Percentile25,
-					y050 = _columnStats[xIdx].Percentile50,
-					Y075 = _columnStats[xIdx].Percentile75,
-					Y090 = _columnStats[xIdx].Percentile90,
-					y100 = _columnStats[xIdx].Percentile100;
-				double
-					y000Scaled = Parameters.GRAPH_HEIGHT * (y000 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-					y010Scaled = Parameters.GRAPH_HEIGHT * (y010 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-					y0205caled = Parameters.GRAPH_HEIGHT * (y025 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-					y050Scaled = Parameters.GRAPH_HEIGHT * (y050 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-					Y075Scaled = Parameters.GRAPH_HEIGHT * (Y075 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-					Y090Scaled = Parameters.GRAPH_HEIGHT * (Y090 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-					y100Scaled = Parameters.GRAPH_HEIGHT * (y100 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value);
+			double
+				y000 = columnStats.Percentile0,
+				y010 = columnStats.Percentile10,
+				y025 = columnStats.Percentile25,
+				y050 = columnStats.Percentile50,
+				Y075 = columnStats.Percentile75,
+				Y090 = columnStats.Percentile90,
+				y100 = columnStats.Percentile100;
+			double
+				y000Scaled = Parameters.GRAPH_HEIGHT * (y000 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
+				y010Scaled = Parameters.GRAPH_HEIGHT * (y010 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
+				y0205caled = Parameters.GRAPH_HEIGHT * (y025 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
+				y050Scaled = Parameters.GRAPH_HEIGHT * (y050 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
+				Y075Scaled = Parameters.GRAPH_HEIGHT * (Y075 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
+				Y090Scaled = Parameters.GRAPH_HEIGHT * (Y090 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
+				y100Scaled = Parameters.GRAPH_HEIGHT * (y100 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value);
 				
-				int
-					minY = y000Scaled < 0 ? 0 : (int)Math.Floor(y000Scaled),
-					maxY = y100Scaled > Parameters.GRAPH_HEIGHT ? Parameters.GRAPH_HEIGHT : (int)Math.Ceiling(y100Scaled);
-				ConsoleColor color; char chr;
-				for (int yIdx = minY; yIdx < maxY; yIdx++) {
-					if ((int)y100Scaled == yIdx) {//top pixel
-						if (y100Scaled % 1d < 0.5d)//bottom half
-							chr = Rasterizer.CHAR_BOTTOM;
-						else if (y000Scaled >= yIdx + 0.5d)//top half
+			int
+				minY = y000Scaled < 0 ? 0 : (int)Math.Floor(y000Scaled),
+				maxY = y100Scaled > Parameters.GRAPH_HEIGHT ? Parameters.GRAPH_HEIGHT : (int)Math.Ceiling(y100Scaled);
+			ConsoleColor color; char chr;
+			for (int yIdx = minY; yIdx < maxY; yIdx++) {
+				if ((int)y100Scaled == yIdx) {//top pixel
+					if (y100Scaled % 1d < 0.5d)//bottom half
+						chr = Rasterizer.CHAR_BOTTOM;
+					else if (y000Scaled >= yIdx + 0.5d)//top half
+						chr = Rasterizer.CHAR_TOP;
+					else chr = Rasterizer.CHAR_BOTH;
+				} else if ((int)y000Scaled == yIdx) {//bottom pixel
+					if (y000Scaled % 1d >= 0.5d)//top half
 							chr = Rasterizer.CHAR_TOP;
-						else chr = Rasterizer.CHAR_BOTH;
-					} else if ((int)y000Scaled == yIdx) {//bottom pixel
-						if (y000Scaled % 1d >= 0.5d)//top half
-								chr = Rasterizer.CHAR_TOP;
-						else if (y100Scaled < yIdx + 0.5d)//bottom half
-							chr = Rasterizer.CHAR_BOTTOM;
-						else chr = Rasterizer.CHAR_BOTH;
-					} else chr = Rasterizer.CHAR_BOTH;
+					else if (y100Scaled < yIdx + 0.5d)//bottom half
+						chr = Rasterizer.CHAR_BOTTOM;
+					else chr = Rasterizer.CHAR_BOTH;
+				} else chr = Rasterizer.CHAR_BOTH;
 
-					switch (yIdx.CompareTo((int)y050Scaled)) {
-						case -1://bottom stat
-							if ((int)y010Scaled > yIdx)
-								color = ConsoleColor.DarkGray;
-							else if ((int)y0205caled > yIdx)
-								color = ConsoleColor.Gray;
-							else color = ConsoleColor.White;
-							break;
-						case 0://average
-							color = ChooseFrameIntervalColor(y050);
-							break;
-						case 1://top stat
-							if ((int)Y090Scaled < yIdx)
-								color = ConsoleColor.DarkGray;
-							else if ((int)Y075Scaled < yIdx)
-								color = ConsoleColor.Gray;
-							else color = ConsoleColor.White;
-							break;
-						default:
-							throw new ImpossibleCompareToException();
-					}
-
-					_columns[xIdx][yIdx] = new ConsoleExtensions.CharInfo(chr, color);
+				switch (yIdx.CompareTo((int)y050Scaled)) {
+					case -1://bottom stat
+						if ((int)y010Scaled > yIdx)
+							color = ConsoleColor.DarkGray;
+						else if ((int)y0205caled > yIdx)
+							color = ConsoleColor.Gray;
+						else color = ConsoleColor.White;
+						break;
+					case 0://average
+						color = ChooseFrameIntervalColor(y050);
+						break;
+					case 1://top stat
+						if ((int)Y090Scaled < yIdx)
+							color = ConsoleColor.DarkGray;
+						else if ((int)Y075Scaled < yIdx)
+							color = ConsoleColor.Gray;
+						else color = ConsoleColor.White;
+						break;
+					default:
+						throw new ImpossibleCompareToException();
 				}
+
+				_columns[xIdx][yIdx] = new ConsoleExtensions.CharInfo(chr, color);
 			}
 		}
 
