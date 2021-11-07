@@ -35,7 +35,7 @@ namespace Boids {
 				_columns[0] = _columns[1];
 				_columnStats = _columnStats.ShiftRight(false);
 			}
-			long currentFrameTimeTicks = (long)(_simulationTimes[Program.Step_Rasterizer.IterationCount] + DateTime.UtcNow.Subtract(startUtc).Ticks);
+			long currentFrameTimeTicks = (long)(_simulationTimes[Program.Step_Rasterizer.IterationCount] + DateTime.UtcNow.Subtract(startUtc).Ticks);//TODO small memory leak
 			_frameTiming.Update(currentFrameTimeTicks);
 			_currentColumnData[frameIdx] = currentFrameTimeTicks / 10000d;
 			_columnStats[0] = new BasicStatisticsInfo(_currentColumnData.Take(frameIdx + 1));
@@ -55,13 +55,9 @@ namespace Boids {
 				Program.Step_Renderer,
 				Program.Step_Autoscaler,
 			};
-			SynchronizedDataBuffer[] datas = new SynchronizedDataBuffer[] {
-				Program.Q_Locations,
-				Program.Q_Rasterization,
-				Program.Q_Tree
-			};
 
-			Tuple<string, double, ConsoleColor>[] values = new Tuple<string, double, ConsoleColor>[steps.Length + (datas.Length*2) + 1];
+			Func<AEvaluationStep, bool> includeQTimingsTester = s => (s is EvaluationStep) && !(s as EvaluationStep).IsOutputOverwrite;
+			Tuple<string, double, ConsoleColor>[] values = new Tuple<string, double, ConsoleColor>[steps.Sum(s => includeQTimingsTester(s) ? 3 : 1) + 1];
 			double fps;
 			if (Parameters.SYNC_SIMULATION)
 				fps = Program.Step_Drawer.IterationTimings_Ticks.Current ?? 0d;
@@ -71,17 +67,18 @@ namespace Boids {
 
 			string label;
 			double timeVal;
-			for (int i = 0; i < steps.Length; i++) {
+			for (int i = 0, k = 1; i < steps.Length; k += includeQTimingsTester(steps[i]) ? 3 : 1, i++) {
 				label = steps[i].Name[0].ToString();
 				timeVal = (steps[i].CalculationTimings_Ticks.Current ?? 0) / 10000d;
-				values[i + 1] = new(label, timeVal, ChooseFrameIntervalColor(timeVal));
-			}
-			for (int i = 0; i < datas.Length; i++) {
-				label = datas[i].Name[0].ToString();
-				timeVal = (datas[i].EnqueueTimings_Ticks.Current ?? 0d) / 10000d;
-				values[2*i + 1 + steps.Length] = new(label, timeVal, ChooseFrameIntervalColor(timeVal));
-				timeVal = (datas[i].DequeueTimings_Ticks.Current ?? 0d) / 10000d;
-				values[2*i + 2 + steps.Length] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
+				values[k] = new(label, timeVal, ChooseFrameIntervalColor(timeVal));
+
+				if (includeQTimingsTester(steps[i])) {
+					timeVal = ((steps[i] as EvaluationStep).OutputResource.EnqueueTimings_Ticks.Current ?? 0d) / 10000d;
+					values[k + 1] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
+
+					timeVal = ((steps[i] as EvaluationStep).OutputResource.DequeueTimings_Ticks.Current ?? 0d) / 10000d;
+					values[k + 2] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
+				}
 			}
 
 			int position = 0;

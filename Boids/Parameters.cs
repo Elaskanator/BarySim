@@ -17,8 +17,9 @@ namespace Boids {
 		public static readonly double MAX_FPS = 60d;
 
 		#region Boids
-		public static readonly int NUM_BOIDS_PER_FLOCK = 1000;//significantly affects performance
-		public static readonly int NUM_FLOCKS = 10;//total number of boids is flocks * boidsPerFlock
+		//TODO for the same number of total boids, more flocks makes it slower?
+		public static readonly int NUM_BOIDS_PER_FLOCK = 10000;//significantly affects performance
+		public static readonly int NUM_FLOCKS = 1;//total number of boids is flocks * boidsPerFlock
 		public static readonly int RATED_BOIDS = 3000;//for a solid 30fps on my system - can do 100k boids at about 1fps
 		public static readonly int SUBFRAME_MULTIPLE = 1;
 
@@ -32,23 +33,30 @@ namespace Boids {
 		#endregion Boids
 
 		#region World
-		public static readonly int WINDOW_WIDTH = 160;//160 x 80 max
+		public static readonly int WINDOW_WIDTH = 160;//160 x 80 max, practical min width of graph width if that is enabled
 		public static readonly int WINDOW_HEIGHT = 80;
-		public static readonly double WORLD_SCALE = 400d;
+		public static readonly double WORLD_SCALE = 500d;
 		public static readonly double WORLD_ASPECT_RATIO = 1d;
 
 		public static readonly ConsoleColor[] DENSITY_COLORS = new ConsoleColor[] {
 			ConsoleColor.DarkGray,
 			ConsoleColor.Gray,
 			ConsoleColor.White,
-			ConsoleColor.Blue,
-			ConsoleColor.DarkBlue,
-			ConsoleColor.Green,
 			ConsoleColor.Yellow,
 			ConsoleColor.Red,
 			ConsoleColor.DarkRed,
-			ConsoleColor.Magenta,
-			ConsoleColor.DarkMagenta,
+			///
+			//ConsoleColor.DarkGray,
+			//ConsoleColor.Gray,
+			//ConsoleColor.White,
+			//ConsoleColor.Blue,
+			//ConsoleColor.DarkBlue,
+			//ConsoleColor.Green,
+			//ConsoleColor.Yellow,
+			//ConsoleColor.Red,
+			//ConsoleColor.DarkRed,
+			//ConsoleColor.Magenta,
+			//ConsoleColor.DarkMagenta,
 		};
 		
 		public static readonly double[] DOMAIN = new double[] { WORLD_ASPECT_RATIO, 1d }.Multiply(WORLD_SCALE);
@@ -60,7 +68,7 @@ namespace Boids {
 		public static readonly int NUMBER_ACCURACY = 2;
 		public static readonly int NUMBER_SPACING = 5;
 
-		public static readonly int GRAPH_WIDTH = 80;
+		public static readonly int GRAPH_WIDTH = 92;
 		public static readonly int GRAPH_HEIGHT = 12;
 		public static readonly int PERF_GRAPH_FRAMES_PER_COLUMN = 10;
 		public static readonly double PERF_SMA_ALPHA = 0.05d;

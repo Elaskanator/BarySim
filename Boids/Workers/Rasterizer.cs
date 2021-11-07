@@ -116,7 +116,7 @@ namespace Boids {
 		}
 
 		public static ConsoleColor ChooseDensityColor(double count, SampleSMA[] bands) {
-			int rank = bands.TakeWhile(b => (int)count > (int)(b.Current ?? 0)).Count();
+			int rank = bands.TakeWhile(b => (int)(2*count) > (int)(2 * (b.Current ?? 0))).Count();
 			return Parameters.DENSITY_COLORS[rank];
 		}
 	}
