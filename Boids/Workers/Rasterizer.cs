@@ -39,9 +39,10 @@ namespace Boids {
 			}
 		}
 
-		public static Tuple<char, double>[] Rasterize(double[][] coordinates) {
-			DateTime startUtc = DateTime.UtcNow;
+		public static Tuple<char, double>[] Rasterize(object[] p) {
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Rasterize - Start");
+			DateTime startUtc = DateTime.UtcNow;
+			double[][] coordinates = (double[][])p[0];
 
 			Tuple<char, double>[] results = new Tuple<char, double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 
@@ -82,8 +83,11 @@ namespace Boids {
 		}
 
 		//TODO use a Selection Algorithm to avoid the Order() call?
-		public static SampleSMA[] Autoscale(SampleSMA[] bands, Tuple<char, double>[] counts) {
+		public static SampleSMA[] Autoscale(object[] p) {
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Autoscale - Start");
+			SampleSMA[] bands = (SampleSMA[])p[0];
+			Tuple<char, double>[] counts = (Tuple<char, double>[])p[1];
+
 			double[] orderedCounts = counts.Where(t => !(t is null)).Select(t => t.Item2).Order().ToArray();
 			if (orderedCounts.Length > 0) {
 				int totalBands = Parameters.DENSITY_COLORS.Length - 1;
@@ -100,15 +104,11 @@ namespace Boids {
 							bands[band - 1].Update(bandValue, Program.Step_Rasterizer.IterationCount <= 1 || bandValue == 1 ? 1d : null);
 							lastBand = (int)bands[band - 1].Current.Value;
 						} else {
-							bands[band - 1].Update(lastBand + 1d);
-							lastBand = lastBand + 1;
+							bands[band - 1].Update(++lastBand);
 						}
 					} else {
-						bands[band - 1].Update(lastBand + 1d);
-						lastBand = lastBand + 1;
+						bands[band - 1].Update(++lastBand);
 					}
-
-					if (lastBand > 1 && (int)bands[band - 1].Current.Value == lastBand) bands[band - 1].Update(lastBand + 1d, 1);
 				}
 			}
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Autoscale - End");
@@ -116,7 +116,7 @@ namespace Boids {
 		}
 
 		public static ConsoleColor ChooseDensityColor(double count, SampleSMA[] bands) {
-			int rank = bands.TakeWhile(b => (int)count > (int)(b.Current ?? 0)).Count();
+			int rank = bands.TakeWhile(b => (int)(2*count) > (int)(2 * (b.Current ?? 0))).Count();
 			return Parameters.DENSITY_COLORS[rank];
 		}
 	}

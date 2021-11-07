@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Generic;
-using Generic.Structures;
 
 namespace Boids {
 	//TODO add handshake optimization (boids sharing interactions, to compute only half as many)
@@ -52,29 +51,29 @@ namespace Boids {
 				.Select(x => new SampleSMA(Parameters.AUTOSCALING_SMA_ALPHA, x)).ToArray());
 
 			Step_TreeManager = new EvaluationStep(Q_Tree,
-				p => Simulator.BuildTree())
+				Simulator.BuildTree)
 				{ Name = "Quadtree Builder" };
 			Step_Simulator = new EvaluationStep(Q_Locations, !Parameters.SYNC_SIMULATION, Parameters.SUBFRAME_MULTIPLE,
-				p => Simulator.Simulate((QuadTree<Boid>)p[0]),
+				Simulator.Simulate,
 				new Prerequisite(Q_Tree, DataConsumptionType.Consume, Parameters.QUADTREE_REFRESH_FRAMES))
 				{ Name = "Simulator" };
 			Step_Autoscaler = new EvaluationStep(Q_Autoscaling, true,//TODO limit the execution frequency
-				p => Rasterizer.Autoscale((SampleSMA[])p[0], (Tuple<char, double>[])p[1]),
+				Rasterizer.Autoscale,
 				new Prerequisite(Q_Autoscaling, DataConsumptionType.ReadDirty),
 				new Prerequisite(Q_Rasterization, DataConsumptionType.OnUpdate))
 				{ Name = "Autoscaler" };
 			Step_Rasterizer = new EvaluationStep(Q_Rasterization, !Parameters.SYNC_SIMULATION,
-				p => Rasterizer.Rasterize((double[][])p[0]),
+				Rasterizer.Rasterize,
 				new Prerequisite(Q_Locations, DataConsumptionType.Consume),
 				new Prerequisite(Q_Autoscaling, DataConsumptionType.Read))
 				{ Name = "Rasterizer" };
 			Step_Renderer = new	EvaluationStep(Q_Frame, !Parameters.SYNC_SIMULATION,
-				p => Renderer.Render((Tuple<char, double>[])p[0], (SampleSMA[])p[1]),
+				Renderer.Render,
 				new Prerequisite(Q_Rasterization, Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.OnUpdate),
 				new Prerequisite(Q_Autoscaling, DataConsumptionType.Read))
 				{ Name = "Renderer" };
 			Step_Drawer = new NonOutputtingEvaluationStep(
-				p => Renderer.Draw((ConsoleExtensions.CharInfo[])p[0], (SampleSMA[])p[1]),
+				Renderer.Draw,
 				new Prerequisite(Q_Frame,
 					Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.ReadDirty,
 					TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS)),
@@ -87,7 +86,7 @@ namespace Boids {
 		private static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+C
 			//args.Cancel = true;//keep master thread alive for results output (if enabled)
 			IsActive = false;
-			Manager.Stop();
+			Manager.Dispose();
 			Environment.Exit(0);
 		}
 	}

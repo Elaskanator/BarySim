@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Generic;
 
 namespace Boids {
-	public class RunManager {
+	public class RunManager :IDisposable {
 		public readonly AEvaluationStep[] Steps;
 		public bool IsActive { get; private set; }
 		public DateTime StartTimeUtc { get; private set; }
@@ -19,10 +19,11 @@ namespace Boids {
 			this.StartTimeUtc = DateTime.UtcNow;
 			Parallel.ForEach(this.Steps, r => r.Start());
 		}
-		public void Stop() {
+		public void Dispose() {
 			this.IsActive = false;
 			this.EndTimeUtc = DateTime.UtcNow;
 			Parallel.ForEach(this.Steps, r => r.Dispose());
+			GC.SuppressFinalize(this);
 		}
 
 		public override string ToString() {

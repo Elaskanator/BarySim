@@ -1,12 +1,15 @@
 ﻿using System;
-using System.Threading;
 using Generic;
 
 namespace Boids {
 	public static class Renderer {
-		private static DateTime _targetStartDrawTimeUtc = DateTime.UtcNow;
-		public static ConsoleExtensions.CharInfo[] Render(Tuple<char, double>[] rasterization, SampleSMA[] bands) {
+		public static readonly Generic.Classes.TimeSynchronizer SYNC = Generic.Classes.TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS);
+
+		public static ConsoleExtensions.CharInfo[] Render(object[] p) {
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Render - Start");
+			Tuple<char, double>[] rasterization = (Tuple<char, double>[])p[0];
+			SampleSMA[] bands = (SampleSMA[])p[1];
+
 			ConsoleExtensions.CharInfo[] frame = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 			if (!(rasterization is null) && !(bands is null)) for (int i = 0; i < rasterization.Length; i++)
 				frame[i] = rasterization[i] is null ? default :
@@ -20,13 +23,16 @@ namespace Boids {
 				if (Parameters.PERF_GRAPH_ENABLE && !(rasterization is null)) frame.RegionMerge(Parameters.WINDOW_WIDTH, PerfMon.GetFpsGraph(), Parameters.GRAPH_WIDTH, 0, Parameters.PERF_STATS_ENABLE ? 1 : 0, true);
 			}
 
-			return frame;
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Render - End");
+			return frame;
 		}
 
-		public static void Draw(ConsoleExtensions.CharInfo[] buffer, SampleSMA[] bands) {
+		public static void Draw(object[] p) {
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Draw - Start");
-			Synchronize();
+			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])p[0];
+			SampleSMA[] bands = (SampleSMA[])p[1];
+
+			SYNC.Synchronize();
 
 			int xOffset = Parameters.DEBUG_ENABLE ? 4 : 0,
 				yOffset = Parameters.DEBUG_ENABLE && Parameters.PERF_STATS_ENABLE ? 1 : 0;
@@ -41,25 +47,6 @@ namespace Boids {
 
 			if (!(buffer is null)) ConsoleExtensions.WriteConsoleOutput(buffer);
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Draw - End");
-		}
-
-		private static void Synchronize() {
-			if (Parameters.MAX_FPS <= 0 && Parameters.TARGET_FPS <= 0) return;
-
-			DateTime nowUtc = DateTime.UtcNow;
-			TimeSpan
-				waitDuration = _targetStartDrawTimeUtc.Subtract(nowUtc),
-				targetFrameInterval = TimeSpan.FromSeconds(1d / (Parameters.TARGET_FPS > 0 ? Parameters.TARGET_FPS : Parameters.MAX_FPS));
-
-			if (waitDuration.Ticks >= 0) _targetStartDrawTimeUtc += targetFrameInterval;
-			else {//missed it
-				if (Parameters.SYNC_FRAMERATE) {
-					int slip = (int)Math.Ceiling(-waitDuration.TotalSeconds / Parameters.TARGET_FPS);
-					_targetStartDrawTimeUtc = _targetStartDrawTimeUtc.Add(targetFrameInterval * slip);
-				} else _targetStartDrawTimeUtc = nowUtc.Add(targetFrameInterval);
-				waitDuration = _targetStartDrawTimeUtc.Subtract(nowUtc);
-			}
-			if (waitDuration >= Parameters.MinSleepDuration) Thread.Sleep(waitDuration - Parameters.MinSleepDuration);
 		}
 
 		private static void DrawLegend(ConsoleExtensions.CharInfo[] buffer, SampleSMA[] bands) {

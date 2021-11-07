@@ -73,6 +73,7 @@ namespace Boids {
 			this.IsActive = false;
 			foreach (Prerequisite prereq in this.Prerequisites) prereq.Resource.Dispose();
 			if (!(this._threads is null)) Parallel.ForEach(this._threads, t => t.Join(0));
+			GC.SuppressFinalize(this);
 		}
 
 		public void AssimilateInput() {
