@@ -6,7 +6,9 @@ using Generic.Abstractions;
 namespace Generic.Structures {
 	public class QuadTree<T> where T : IVector {
 		public const int CAPACITY = 5;
+		public const int MAX_DEPTH = 50;//dividing by 2 enough times WILL reach the sig figs limit of System.Double and cause zero-sized subtrees
 
+		public readonly int Depth;
 		public readonly int Dimensionality;
 		public readonly double[] LeftCorner;
 		public readonly double[] Center;
@@ -15,8 +17,10 @@ namespace Generic.Structures {
 		public bool IsLeaf { get { return this.Quadrants is null; } }
 		public bool IsRoot { get { return this._parent is null; } }
 		public IEnumerable<T> AllMembers { get {
-			if (this.IsLeaf) return this._members.Take(this.NumMembers);
-			else return this.Quadrants.SelectMany(q => q.AllMembers);
+			if (this.IsLeaf) {
+				if (this.Depth < MAX_DEPTH || this.NumMembers < CAPACITY) return this._members.Take(this.NumMembers);
+				else return this._members.Concat(this._leftovers);
+			} else return this.Quadrants.SelectMany(q => q.AllMembers);
 		} }
 		public IEnumerable<QuadTree<T>> AllQuadrants { get {
 			if (this.IsLeaf) return new QuadTree<T>[] { this };
@@ -27,17 +31,19 @@ namespace Generic.Structures {
 
 		private readonly QuadTree<T> _parent;
 		public QuadTree<T>[] Quadrants { get; private set; }
-		private readonly T[] _members = new T[CAPACITY];
+		private readonly T[] _members = new T[CAPACITY];//entries in non-leaves are leftovers that must be ignored
+		private List<T> _leftovers;
 
 		protected QuadTree(double[] x1, double[] x2, QuadTree<T> parent, IEnumerable<T> init = null) {//make sure all values in x1 are smaller than x2 (the corners of a cubic volume)
 			this.Dimensionality = x1.Length;
-			if (Enumerable.Range(0, this.Dimensionality).All(d => x1[d] == x2[d])) throw new ArgumentException("Domain is zero-dimensional");
+			if (Enumerable.Range(0, this.Dimensionality).All(d => x1[d] == x2[d])) throw new ArgumentException("Domain has no volume");
 
 			var orderedCornerPoints = x1.Zip(x2, (a, b) => new { Min = a < b ? a : b, Max = a < b ? b : a }).ToArray();
 
 			this.LeftCorner = orderedCornerPoints.Select(t => t.Min).ToArray();
 			this.RightCorner = orderedCornerPoints.Select(t => t.Max).ToArray();
 			this._parent = parent;
+			if (!(parent is null)) this.Depth = parent.Depth + 1;
 
 			this.NumMembers = 0;
 			this.Center = x1.Zip(x2, (a, b) => (a + b) / 2d).ToArray();//average of each dimension
@@ -60,8 +66,14 @@ namespace Generic.Structures {
 				if (this.NumMembers < CAPACITY) this._members[this.NumMembers] = entry;
 				else {
 					if (this.NumMembers == CAPACITY) {//one-time quadrant formation
-						this.Quadrants = this.FormNodes();
-						foreach (T member in this._members) this.ChooseQuadrant(member.Coordinates).Add(member);
+						if (this.Depth < MAX_DEPTH) {
+							this.Quadrants = this.FormNodes();
+							foreach (T member in this._members)
+								this.ChooseQuadrant(member.Coordinates).Add(member);
+						} else {
+							this._leftovers ??= new List<T>();//one-time
+							this._leftovers.Add(entry);
+						}
 					}
 					this.ChooseQuadrant(entry.Coordinates).Add(entry);
 				}
