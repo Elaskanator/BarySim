@@ -4,7 +4,7 @@ using Generic;
 
 namespace Boids {
 	public static class Renderer {
-		private static DateTime _targetStartDrawTime = DateTime.Now;
+		private static DateTime _targetStartDrawTimeUtc = DateTime.UtcNow;
 		public static ConsoleExtensions.CharInfo[] Render(Tuple<char, double>[] rasterization, SampleSMA[] bands) {
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Render - Start");
 			ConsoleExtensions.CharInfo[] frame = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
@@ -31,7 +31,7 @@ namespace Boids {
 			int xOffset = Parameters.DEBUG_ENABLE ? 4 : 0,
 				yOffset = Parameters.DEBUG_ENABLE && Parameters.PERF_STATS_ENABLE ? 1 : 0;
 
-			TimeSpan timeSinceLastUpdate = DateTime.Now.Subtract(Program.Step_Rasterizer.LastIerationEnd ?? Program.Manager.StartTime);
+			TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(Program.Step_Rasterizer.LastIerationEndUtc ?? Program.Manager.StartTimeUtc);
 			if (timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS) {
 				buffer ??= new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 				string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s").PadRight(6);
@@ -46,18 +46,18 @@ namespace Boids {
 		private static void Synchronize() {
 			if (Parameters.MAX_FPS <= 0 && Parameters.TARGET_FPS <= 0) return;
 
-			DateTime now = DateTime.Now;
+			DateTime nowUtc = DateTime.UtcNow;
 			TimeSpan
-				waitDuration = _targetStartDrawTime.Subtract(now),
+				waitDuration = _targetStartDrawTimeUtc.Subtract(nowUtc),
 				targetFrameInterval = TimeSpan.FromSeconds(1d / (Parameters.TARGET_FPS > 0 ? Parameters.TARGET_FPS : Parameters.MAX_FPS));
 
-			if (waitDuration.Ticks >= 0) _targetStartDrawTime += targetFrameInterval;
+			if (waitDuration.Ticks >= 0) _targetStartDrawTimeUtc += targetFrameInterval;
 			else {//missed it
 				if (Parameters.SYNC_FRAMERATE) {
 					int slip = (int)Math.Ceiling(-waitDuration.TotalSeconds / Parameters.TARGET_FPS);
-					_targetStartDrawTime = _targetStartDrawTime.Add(targetFrameInterval * slip);
-				} else _targetStartDrawTime = now.Add(targetFrameInterval);
-				waitDuration = _targetStartDrawTime.Subtract(now);
+					_targetStartDrawTimeUtc = _targetStartDrawTimeUtc.Add(targetFrameInterval * slip);
+				} else _targetStartDrawTimeUtc = nowUtc.Add(targetFrameInterval);
+				waitDuration = _targetStartDrawTimeUtc.Subtract(nowUtc);
 			}
 			if (waitDuration >= Parameters.MinSleepDuration) Thread.Sleep(waitDuration - Parameters.MinSleepDuration);
 		}

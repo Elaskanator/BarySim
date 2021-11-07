@@ -7,8 +7,8 @@ namespace Boids {
 	public class RunManager {
 		public readonly AEvaluationStep[] Steps;
 		public bool IsActive { get; private set; }
-		public DateTime StartTime { get; private set; }
-		public DateTime EndTime { get; private set; }
+		public DateTime StartTimeUtc { get; private set; }
+		public DateTime EndTimeUtc { get; private set; }
 
 		public RunManager(params AEvaluationStep[] runners) {
 			this.Steps = (runners ?? Array.Empty<AEvaluationStep>()).Except(r => r is null).ToArray();
@@ -16,12 +16,12 @@ namespace Boids {
 
 		public void Start() {
 			this.IsActive = true;
-			this.StartTime = DateTime.Now;
+			this.StartTimeUtc = DateTime.UtcNow;
 			Parallel.ForEach(this.Steps, r => r.Start());
 		}
 		public void Stop() {
 			this.IsActive = false;
-			this.EndTime = DateTime.Now;
+			this.EndTimeUtc = DateTime.UtcNow;
 			Parallel.ForEach(this.Steps, r => r.Dispose());
 		}
 

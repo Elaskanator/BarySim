@@ -40,7 +40,7 @@ namespace Boids {
 		}
 
 		public static Tuple<char, double>[] Rasterize(double[][] coordinates) {
-			DateTime start = DateTime.Now;
+			DateTime startUtc = DateTime.UtcNow;
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Rasterize - Start");
 
 			Tuple<char, double>[] results = new Tuple<char, double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
@@ -76,7 +76,7 @@ namespace Boids {
 				}
 			}
 
-			if (Parameters.DEBUG_ENABLE) PerfMon.AfterRasterize(start);
+			if (Parameters.DEBUG_ENABLE) PerfMon.AfterRasterize(startUtc);
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Rasterize - End");
 			return results;
 		}

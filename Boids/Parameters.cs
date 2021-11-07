@@ -19,12 +19,12 @@ namespace Boids {
 		#region Boids
 		public static readonly int NUM_BOIDS_PER_FLOCK = 1000;//significantly affects performance
 		public static readonly int NUM_FLOCKS = 10;//total number of boids is flocks * boidsPerFlock
-		public static readonly int RATED_BOIDS = 3000;//for a solid 30fps on my system
+		public static readonly int RATED_BOIDS = 3000;//for a solid 30fps on my system - can do 100k boids at about 1fps
 		public static readonly int SUBFRAME_MULTIPLE = 1;
 
 		public static readonly int DESIRED_NEIGHBORS = 8;
-		public static readonly bool ENABLE_COHESION = true;
-		public static readonly bool ENABLE_ALIGNMENT = false;
+		public static readonly bool ENABLE_COHESION = false;
+		public static readonly bool ENABLE_ALIGNMENT = true;
 		public static readonly bool ENABLE_SEPARATION = true;
 		
 		public static readonly int DEFAULT_SEPARATION = 4;
@@ -34,7 +34,7 @@ namespace Boids {
 		#region World
 		public static readonly int WINDOW_WIDTH = 160;//160 x 80 max
 		public static readonly int WINDOW_HEIGHT = 80;
-		public static readonly double WORLD_SCALE = 800d;
+		public static readonly double WORLD_SCALE = 400d;
 		public static readonly double WORLD_ASPECT_RATIO = 1d;
 
 		public static readonly ConsoleColor[] DENSITY_COLORS = new ConsoleColor[] {

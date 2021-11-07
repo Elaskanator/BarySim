@@ -26,7 +26,7 @@ namespace Boids {
 			new Tuple<double, ConsoleColor>(double.NegativeInfinity, ConsoleColor.White)
 		};
 
-		internal static void AfterRasterize(DateTime start) {
+		internal static void AfterRasterize(DateTime startUtc) {
 			//IterationCount is not yet updated
 			int frameIdx = Program.Step_Rasterizer.IterationCount % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 			if (frameIdx == 0) {
@@ -35,15 +35,15 @@ namespace Boids {
 				_columns[0] = _columns[1];
 				_columnStats = _columnStats.ShiftRight(false);
 			}
-			long currentFrameTimeTicks = (long)(_simulationTimes[Program.Step_Rasterizer.IterationCount] + DateTime.Now.Subtract(start).Ticks);
+			long currentFrameTimeTicks = (long)(_simulationTimes[Program.Step_Rasterizer.IterationCount] + DateTime.UtcNow.Subtract(startUtc).Ticks);
 			_frameTiming.Update(currentFrameTimeTicks);
 			_currentColumnData[frameIdx] = currentFrameTimeTicks / 10000d;
 			_columnStats[0] = new BasicStatisticsInfo(_currentColumnData.Take(frameIdx + 1));
 		}
 
-		internal static void AfterSimulate(DateTime start) {
+		internal static void AfterSimulate(DateTime startUtc) {
 			if (Program.Step_Simulator.IterationCount % Parameters.SUBFRAME_MULTIPLE == 0)
-				_simulationTimes[Program.Step_Simulator.IterationCount / Parameters.SUBFRAME_MULTIPLE] = DateTime.Now.Subtract(start).Ticks;
+				_simulationTimes[Program.Step_Simulator.IterationCount / Parameters.SUBFRAME_MULTIPLE] = DateTime.UtcNow.Subtract(startUtc).Ticks;
 		}
 
 		public static void DrawStatsHeader(ConsoleExtensions.CharInfo[] buffer) {
@@ -222,12 +222,12 @@ namespace Boids {
 		}
 
 		public static void WriteEnd() {
-			TimeSpan totalDuration = Program.Manager.EndTime.Subtract(Program.Manager.StartTime);
+			TimeSpan totalDuration = Program.Manager.EndTimeUtc.Subtract(Program.Manager.StartTimeUtc);
 			
 			Console.SetCursorPosition(0, 1);
 			Console.ForegroundColor = ConsoleColor.White;
 			Console.BackgroundColor = ConsoleColor.Black;
-			Console.WriteLine("---END--- Duration {0:G3}s", Program.Manager.EndTime.Subtract(Program.Manager.StartTime).TotalSeconds);
+			Console.WriteLine("---END--- Duration {0:G3}s", Program.Manager.EndTimeUtc.Subtract(Program.Manager.StartTimeUtc).TotalSeconds);
 			
 			Console.Write("Evaluated ");
 			

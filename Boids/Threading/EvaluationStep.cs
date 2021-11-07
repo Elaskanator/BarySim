@@ -16,7 +16,7 @@ namespace Boids {
 		public Prerequisite[] Prerequisites { get; private set; }
 		public bool IsActive { get; internal set; }
 		public int IterationCount { get; private set; }
-		public DateTime? LastIerationEnd { get; private set; }
+		public DateTime? LastIerationEndUtc { get; private set; }
 		public SampleSMA LatencyTimings_Ticks { get; private set; }
 		public SampleSMA IterationTimings_Ticks { get; private set; }
 		public SampleSMA CalculationTimings_Ticks { get; protected set; }
@@ -122,7 +122,7 @@ namespace Boids {
 				this.Refresh(this._buffer);
 
 				this.IterationCount++;
-				this.LastIerationEnd = DateTime.Now;
+				this.LastIerationEndUtc = DateTime.UtcNow;
 				if (this.DoTrackLatency) {
 					this._timer.Stop();
 					this.IterationTimings_Ticks.Update(_timer.ElapsedTicks);

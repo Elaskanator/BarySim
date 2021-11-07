@@ -13,7 +13,7 @@ namespace Boids {
 		}
 
 		public static double[][] Simulate(QuadTree<Boid> tree) {
-			DateTime start = DateTime.Now;
+			DateTime startUtc = DateTime.UtcNow;
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Simulate - Start");
 
 			if (Parameters.QUADTREE_HYBRID_METHOD) {
@@ -26,7 +26,7 @@ namespace Boids {
 				else foreach (QuadTree<Boid> leaf in tree.GetLeaves()) foreach (Boid b in leaf.AllMembers) b.UpdateDeltas(leaf.GetNeighborsAlt(b));
 			}
 
-			if (Parameters.DEBUG_ENABLE) PerfMon.AfterSimulate(start);
+			if (Parameters.DEBUG_ENABLE) PerfMon.AfterSimulate(startUtc);
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Simulate - End");
 			return Program.AllBoids.Select(b => (double[])b.Coordinates.Clone()).ToArray();
 		}
