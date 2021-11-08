@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Generic;
 
-namespace Boids {
+using Generic;
+using Simulation.Boids;
+using Simulation.Threading;
+
+namespace Simulation {
 	//TODO add handshake optimization (boids sharing interactions, to compute only half as many)
 	//TODO world wrap interaction: boids look forward only into adjoining quadrant
 	//FOR LATER refactor to support different underlying simulations, and support far-field interactions (e.g. astrophysical simulation)
@@ -84,9 +87,11 @@ namespace Boids {
 		}
 
 		private static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+C
-			//args.Cancel = true;//keep master thread alive for results output (if enabled)
+			args.Cancel = true;//keep master thread alive for results output (if enabled)
 			IsActive = false;
 			Manager.Dispose();
+			PerfMon.WriteEnd();
+			ConsoleExtensions.WaitForEnter("Press enter to end");
 			Environment.Exit(0);
 		}
 	}

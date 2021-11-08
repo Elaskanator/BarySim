@@ -1,4 +1,4 @@
-﻿namespace Boids {
+﻿namespace Simulation.Threading {
 	public enum DataConsumptionType : int {
 		Consume = 0,
 		OnUpdate = 1,

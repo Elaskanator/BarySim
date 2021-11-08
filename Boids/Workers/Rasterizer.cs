@@ -2,7 +2,7 @@
 using System.Linq;
 using Generic;
 
-namespace Boids {
+namespace Simulation {
 	internal static class Rasterizer {
 		public const char CHAR_TOP = '\u2580';//▀
 		public const char CHAR_BOTTOM = '\u2584';//▄

@@ -1,9 +1,9 @@
 ﻿using System;
 using Generic;
 
-namespace Boids {
+namespace Simulation {
 	public static class Renderer {
-		public static readonly Generic.Classes.TimeSynchronizer SYNC = Generic.Classes.TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS);
+		public static readonly Generic.Models.TimeSynchronizer SYNC = Generic.Models.TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS);
 
 		public static ConsoleExtensions.CharInfo[] Render(object[] p) {
 			if (Program.ENABLE_DEBUG_LOGGING) Generic.DebugExtensions.DebugWriteline("Render - Start");

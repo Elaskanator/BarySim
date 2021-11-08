@@ -1,43 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+
 using Generic;
-using Generic.Abstractions;
 
-namespace Boids {
-	public class Boid : IVector, IEquatable<Boid>, IEqualityComparer<Boid> {
-		private static int _id = 0;
-		public readonly int ID = ++_id;
-
+namespace Simulation.Boids {
+	public class Boid : AParticle {
 		public readonly Flock Flock;
 
 		private double[] _coordinates;
-		public double[] Coordinates {
+		public override double[] Coordinates {
 			get { return this._coordinates; }
 			set { this._coordinates = this.BoundPosition(value).ToArray(); } }
 		private double[] _velocity;
-		public double[] Velocity {
+		public override double[] Velocity {
 			get { return this._velocity; }
-			set { this._velocity = value.Clamp(this.Flock.MaxSpeed); } }
+			set { this._velocity = value.Clamp(Parameters.DEFAULT_MAX_SPEED); } }
 		private double[] _acceleration;
-		public double[] Acceleration {
+		public override double[] Acceleration {
 			get { return this._acceleration; }
-			set { this._acceleration = value.Clamp(this.Flock.MaxAcceleration); } }
+			set { this._acceleration = value.Clamp(Parameters.DEFAULT_MAX_ACCELERATION); } }
 
 		private double _mass;
-		public double Mass {
+		public override double Mass {
 			get { return this._mass; }
 			set { if (value <= 0) throw new ArgumentOutOfRangeException("Mass"); else this._mass = value; } }
 
-		public double Vision { get; private set; }
-
-		public Boid(Flock flock, double[] position, double[] velocity, double mass = 1) {
+		public Boid(Flock flock, double[] position, double[] velocity, double mass = 1)
+		: base(position, velocity, null, mass) {
 			this.Flock = flock;
-			this.Coordinates = position;
-			this.Velocity = velocity;
-			this.Mass = mass;
-			this.Vision = this.Flock.Separation;
 		}
 
 		public void UpdateDeltas(IEnumerable<Boid> neighbors) {
@@ -75,49 +66,33 @@ namespace Boids {
 
 			int count = 0;
 			foreach (Boid other in neighbors) {
-				if (count == Parameters.DESIRED_NEIGHBORS) { count++; break; }
-
-				anyNeighbors = true;
+				if (count++ > Parameters.DESIRED_NEIGHBORS)
+					break;
 				
 				//positionPrime = b.GetNearestWrappedPosition(this);
 				dist = this.Coordinates.Distance(other.Coordinates);
 
-				if (Parameters.ENABLE_COHESION && this.Flock.CohesionWeight > 0d) {
+				if (Parameters.ENABLE_COHESION && Parameters.DEFAULT_COHESION_WEIGHT > 0d) {
 					weight = this.GetCohesionWeight(other, dist);
 					cohesionBiasWeight += weight;
 					cohesionBias = cohesionBias.Add(other.Coordinates.Multiply(weight));
 				}
 
-				if (Parameters.ENABLE_ALIGNMENT && this.Flock.AlignmentWeight > 0d) {
+				if (Parameters.ENABLE_ALIGNMENT && Parameters.DEFAULT_ALIGNMENT_WEIGHT > 0d) {
 					weight = this.GetAlignmentWeight(other, dist);
 					alignmentBiasWeight += weight;
 					alignmentBias = alignmentBias.Add(other.Velocity.Multiply(weight));
 				}
 
-				if (Parameters.ENABLE_SEPARATION && this.Flock.SeparationWeight > 0d && dist < this.Flock.Separation) {
+				if (Parameters.ENABLE_SEPARATION && Parameters.DEFAULT_SEPARATION_WEIGHT > 0d && dist < this.Flock.Separation) {
 					weight = this.GetSeparationWeight(other, dist);
 					separationBiasWeight += weight;
 					vect = this.Coordinates.Subtract(other.Coordinates);
 					separationBias = separationBias.Add(vect.Multiply(weight));
 				}
-
-				++count;
 			}
 
-			switch (count.CompareTo(Parameters.DESIRED_NEIGHBORS)) {
-				case -1:
-					this.Vision++;
-					break;
-				case 1:
-					if (this.Vision > 2.0d) this.Vision -= 1.0d;
-					else if (this.Vision > 1.5d) this.Vision -= 0.5d;
-					else if (this.Vision > 1.0d) this.Vision -= 0.25d;
-					else if (this.Vision > 0.5d) this.Vision -= 0.125d;
-					else this.Vision -= 0.1;
-					break;
-			}
-
-			if (anyNeighbors) {
+			if (count > 0) {
 				if (cohesionBiasWeight > 0) cohesionBias = cohesionBias.Divide(cohesionBiasWeight);
 				if (alignmentBiasWeight > 0) alignmentBias = alignmentBias.Divide(alignmentBiasWeight);
 				if (separationBiasWeight > 0) separationBias = separationBias.Divide(separationBiasWeight);
@@ -127,10 +102,10 @@ namespace Boids {
 				return
 					Enumerable.Repeat(0d, Parameters.DOMAIN.Length).ToArray()//for testing
 					//.Add(Enumerable.Repeat(0.005d, Parameters.Domain.Length).ToArray())//for testing
-					.Add(cohesionBias.Normalize().Multiply(this.Flock.CohesionWeight))
+					.Add(cohesionBias.Normalize().Multiply(Parameters.DEFAULT_COHESION_WEIGHT))
 					.Add(alignmentBias)
 					.Add(separationBias)
-					.Clamp(this.Flock.MaxForce);
+					.Clamp(Parameters.DEFAULT_MAX_FORCE);
 			} else {
 				return Enumerable.Repeat(0d, Parameters.DOMAIN.Length).ToArray();
 			}
@@ -146,10 +121,10 @@ namespace Boids {
 			)
 				result = 0d;
 			else
-				result = this.Flock.CohesionWeight / dist;
+				result = Parameters.DEFAULT_COHESION_WEIGHT / dist;
 
-			if (result > this.Flock.MaxImpulse_Cohesion)
-				return this.Flock.MaxImpulse_Cohesion;
+			if (result > Parameters.DEFAULT_MAX_IMPULSE_COHESION)
+				return Parameters.DEFAULT_MAX_IMPULSE_COHESION;
 			else
 				return result;
 		}
@@ -158,11 +133,11 @@ namespace Boids {
 			if (this.Flock != other.Flock) return 0;
 
 			if (dist == 0d)
-				return this.Flock.MaxImpulse_Alignment;
+				return Parameters.DEFAULT_MAX_IMPULSE_ALIGNMENT;
 			else {
-				double result = this.Flock.AlignmentWeight / Math.Sqrt(dist);
-				if (result > this.Flock.MaxImpulse_Alignment)
-					return this.Flock.MaxImpulse_Alignment;
+				double result = Parameters.DEFAULT_ALIGNMENT_WEIGHT / Math.Sqrt(dist);
+				if (result > Parameters.DEFAULT_MAX_IMPULSE_ALIGNMENT)
+					return Parameters.DEFAULT_MAX_IMPULSE_ALIGNMENT;
 				else
 					return result;
 			}
@@ -170,32 +145,14 @@ namespace Boids {
 
 		public double GetSeparationWeight(Boid other, double dist) {
 			if (dist <= 0d)
-				return this.Flock.MaxImpulse_Separation;
+				return Parameters.DEFAULT_MAX_IMPULSE_SEPARATION;
 			else {
-				double result = this.Flock.SeparationWeight / dist / dist;
-				if (result > this.Flock.MaxImpulse_Separation)
-					return this.Flock.MaxImpulse_Separation;
+				double result = Parameters.DEFAULT_SEPARATION_WEIGHT / dist / dist;
+				if (result > Parameters.DEFAULT_MAX_IMPULSE_SEPARATION)
+					return Parameters.DEFAULT_MAX_IMPULSE_SEPARATION;
 				else
 					return result;
 			}
-		}
-
-		public bool Equals(Boid other) {
-			return this.ID == other.ID;
-		}
-
-		public override string ToString() {
-			return string.Format("Boid<{0}><{1}",
-				string.Join(", ", this.Coordinates.Select(i => i.ToString("G5"))),
-				string.Join(", ", this.Velocity.Select(i => i.ToString("G5"))));
-		}
-
-		public bool Equals([AllowNull] Boid x, [AllowNull] Boid y) {
-			return !(x is null) && !(y is null) && x.ID == y.ID;
-		}
-
-		public int GetHashCode([DisallowNull] Boid obj) {
-			return obj.ID.GetHashCode();
 		}
 	}
 }

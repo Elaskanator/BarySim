@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 
-namespace Generic.Classes {
+namespace Generic.Models {
 	public class Enumerator2<T> : IEnumerator<T> {
 		private readonly IEnumerator<T> _iterator;
 		public Enumerator2(IEnumerable<T> collection) {

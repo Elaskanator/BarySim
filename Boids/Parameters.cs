@@ -1,43 +1,55 @@
 ﻿using System;
 using Generic;
 
-namespace Boids {
+namespace Simulation {
 	public static class Parameters {
 		//NOTE sentinel value is -1 (means default)
-		public static readonly bool LEGEND_ENABLE = true;
-		public static readonly bool DENSITY_AUTOSCALE_ENABLE = true;
-		public static readonly bool DEBUG_ENABLE = true;
-		public static readonly bool PERF_STATS_ENABLE = true;
-		public static readonly bool PERF_GRAPH_ENABLE = true;
+		public const bool LEGEND_ENABLE = true;
+		public const bool DENSITY_AUTOSCALE_ENABLE = true;
+		public const bool DEBUG_ENABLE = true;
+		public const bool PERF_STATS_ENABLE = true;
+		public const bool PERF_GRAPH_ENABLE = true;
 
-		public static readonly bool SYNC_SIMULATION = true;
-		public static readonly double TARGET_FPS = -1;
-		public static readonly double MAX_FPS = 60;
+		public const bool SYNC_SIMULATION = true;
+		public const double TARGET_FPS = -1;
+		public const double MAX_FPS = 60;
 
-		public static readonly bool SIMULATION_ENABLE_PARALLELISM = true;
-		public static readonly int PRECALCULATION_LIMIT = 3;
+		public const int PRECALCULATION_LIMIT = 1;//no benefit to larger values than one
 
 		#region Boids
 		//TODO for the same number of total boids, more flocks makes it slower?
-		public static readonly int NUM_BOIDS_PER_FLOCK = 10000;//significantly affects performance
-		public static readonly int NUM_FLOCKS = 1;//total number of boids is flocks * boidsPerFlock
-		public static readonly int RATED_BOIDS = 3000;//for a solid 30fps on my system - can do 100k boids at about 1fps
-		public static readonly int SUBFRAME_MULTIPLE = 1;
+		public const int NUM_BOIDS_PER_FLOCK = 10000;//significantly affects performance
+		public const int NUM_FLOCKS = 1;//total number of boids is flocks * boidsPerFlock
+		public const int RATED_BOIDS = 3000;//for a solid 30fps on my system - can do 100k boids at about 1fps
+		public const int SUBFRAME_MULTIPLE = 1;
 
-		public static readonly int DESIRED_NEIGHBORS = 8;
-		public static readonly bool ENABLE_COHESION = false;
-		public static readonly bool ENABLE_ALIGNMENT = true;
-		public static readonly bool ENABLE_SEPARATION = true;
+		public const int DESIRED_NEIGHBORS = 8;
+		public const bool ENABLE_COHESION = false;
+		public const bool ENABLE_ALIGNMENT = true;
+		public const bool ENABLE_SEPARATION = true;
 		
-		public static readonly int DEFAULT_SEPARATION = 4;
-		public static readonly double DEFAULT_SPEED_DECAY = 0.1;
+		public const int DEFAULT_SEPARATION = 4;
+		public const double DEFAULT_SPEED_DECAY = 0.1;
+
+		public const double DEFAULT_SEPARATION_WEIGHT = 2;
+		public const double DEFAULT_ALIGNMENT_WEIGHT = 0.5;
+		public const double DEFAULT_COHESION_WEIGHT = 0.5;
+
+		public const double DEFAULT_MAX_FORCE = 0.1;
+		public const double DEFAULT_MAX_ACCELERATION = 0.05;
+		public const double DEFAULT_MAX_SPEED = 0.4;
+		public const double DEFAULT_MAX_STARTING_SPEED = 1;
+
+		public const double DEFAULT_MAX_IMPULSE_COHESION = 1;
+		public const double DEFAULT_MAX_IMPULSE_ALIGNMENT = 0.5;
+		public const double DEFAULT_MAX_IMPULSE_SEPARATION = 2;
 		#endregion Boids
 
 		#region World
-		public static readonly int WINDOW_WIDTH = 160;//160 x 80 max, practical min width of graph width if that is enabled
-		public static readonly int WINDOW_HEIGHT = 80;
-		public static readonly double WORLD_SCALE = 500d;
-		public static readonly double WORLD_ASPECT_RATIO = 1d;
+		public const int WINDOW_WIDTH = 160;//160 x 80 max, practical min width of graph width if that is enabled
+		public const int WINDOW_HEIGHT = 80;
+		public const double WORLD_SCALE = 500d;
+		public const double WORLD_ASPECT_RATIO = 1d;
 
 		public static readonly ConsoleColor[] DENSITY_COLORS = new ConsoleColor[] {
 			ConsoleColor.DarkGray,
@@ -62,23 +74,20 @@ namespace Boids {
 		public static readonly double[] DOMAIN = new double[] { WORLD_ASPECT_RATIO, 1d }.Multiply(WORLD_SCALE);
 		#endregion World
 
-		#region Performance Monitoring
+		#region Aux
 		public const double TARGET_FPS_DEFAULT = 30d;
-		public static readonly int PERF_WARN_MS = 2000;
-		public static readonly int NUMBER_ACCURACY = 2;
-		public static readonly int NUMBER_SPACING = 5;
+		public const int PERF_WARN_MS = 2000;
+		public const int NUMBER_ACCURACY = 2;
+		public const int NUMBER_SPACING = 5;
 
-		public static readonly int GRAPH_WIDTH = 92;
-		public static readonly int GRAPH_HEIGHT = 8;
-		public static readonly int PERF_GRAPH_FRAMES_PER_COLUMN = 10;
-		public static readonly double PERF_SMA_ALPHA = 0.05d;
+		public const int GRAPH_WIDTH = 92;
+		public const int GRAPH_HEIGHT = 8;
+		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 10;
+		public const double PERF_SMA_ALPHA = 0.05d;
 
-		public static readonly int QUADTREE_REFRESH_FRAMES = 10;
-		public static readonly bool QUADTREE_HYBRID_METHOD = true;
-		public static readonly bool QUADTREE_INCREASED_ACCURACY = false;
-
-		public static readonly double AUTOSCALING_REFRESH_FRAMES = 30;
-		public static readonly double AUTOSCALING_SMA_ALPHA = 0.4d;
+		public const int QUADTREE_REFRESH_FRAMES = 10;
+		public const double AUTOSCALING_REFRESH_FRAMES = 30;
+		public const double AUTOSCALING_SMA_ALPHA = 0.4d;
 		#endregion Aux
 	}
 }

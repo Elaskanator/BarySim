@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Generic.Classes {
+namespace Generic.Models {
 	public class TimeSynchronizer {
 		public static readonly TimeSpan THREAD_SLEEP_OVERHEAD = TimeSpan.FromMilliseconds(15);
 

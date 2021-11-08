@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace Generic.Abstractions {
+namespace Generic.Models {
 	public interface IVector{
 		public double[] Coordinates { get; }
 	}
@@ -8,6 +8,7 @@ namespace Generic.Abstractions {
 	public struct SimpleVector : IVector {
 		private double[] _coordinates;
 		public double[] Coordinates { get { return this._coordinates; } }
+		public int Dimensionality { get { return this._coordinates.Length; } }
 
 		public static explicit operator SimpleVector(double[] v) => new SimpleVector() { _coordinates = v };
 		public static implicit operator double[](SimpleVector v) => v.Coordinates;

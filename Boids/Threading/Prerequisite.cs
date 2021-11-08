@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Boids {
+namespace Simulation.Threading {
 	public struct Prerequisite {
 		public readonly SynchronizedDataBuffer Resource;
 		public readonly DataConsumptionType ConsumptionType;

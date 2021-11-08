@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Generic;
 
-namespace Boids {
+namespace Simulation.Threading {
 	public class RunManager :IDisposable {
 		public readonly AEvaluationStep[] Steps;
 		public bool IsActive { get; private set; }

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Generic;
 
-namespace Boids {
+using Generic;
+using Simulation.Threading;
+
+namespace Simulation {
 	internal static class PerfMon {
 		private static SampleSMA _frameTiming = new SampleSMA(Parameters.PERF_SMA_ALPHA);
 		private static Dictionary<int, double> _simulationTimes = new();//TODO this is a bigass memory leak
@@ -264,7 +266,6 @@ namespace Boids {
 
 			Console.WriteLine();
 			Console.ResetColor();
-			ConsoleExtensions.WaitForEnter("Press <Enter> to exit");
 		}
 
 		private static ConsoleColor ChooseColor(double ratioToDesired) {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-using Generic.Classes;
+using Generic.Models;
 
 namespace Generic {
 	public static class EnumerableExtentions {
@@ -62,6 +62,9 @@ namespace Generic {
 		#endregion Projections
 
 		#region Aggregations
+		public static bool None<TSource>(this IEnumerable<TSource> source) { return !source.Any(); }
+		public static bool None<TSource>(this IEnumerable<TSource> source, Predicate<TSource> predicate) { return !source.Any(x => predicate(x)); }
+
 		public static TSource MinBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection)
 		where TProjected :IComparable<TProjected> {
 			if (source is null) throw new ArgumentNullException("source");

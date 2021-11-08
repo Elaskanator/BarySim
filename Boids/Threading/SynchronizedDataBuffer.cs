@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using Generic;
 
-namespace Boids {
+namespace Simulation.Threading {
 	public class SynchronizedDataBuffer : IDisposable, IEquatable<SynchronizedDataBuffer>, IEqualityComparer<SynchronizedDataBuffer> {
 		private static int _id = 0;
 		public int ID { get; private set; }

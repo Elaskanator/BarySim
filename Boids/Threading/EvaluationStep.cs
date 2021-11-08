@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Generic;
 
-namespace Boids {
+namespace Simulation.Threading {
 	public abstract class AEvaluationStep :IEquatable<AEvaluationStep>, IEqualityComparer<AEvaluationStep>, IDisposable {
 		private static int _id = 0;
 		public int ID { get; private set; }

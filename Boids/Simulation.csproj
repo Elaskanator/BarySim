@@ -13,11 +13,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Model\ExecutionManager.cs" />
+    <Compile Remove="Boids\ExecutionManager.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Generic\Generic.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Gravity\" />
   </ItemGroup>
 
 </Project>

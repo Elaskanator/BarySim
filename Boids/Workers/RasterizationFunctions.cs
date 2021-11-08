@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using Generic;
-using Generic.Abstractions;
+using Generic.Models;
 
-namespace Generic {
+namespace Simulation {
 	public static class RasterizationFunctions {
 		#region Grouping
 		public static double[][] GroupToArray(IEnumerable<double> data, int range, double domainBegin, double domainEnd) {
