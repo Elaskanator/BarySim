@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 using Generic.Extensions;
 
-namespace Simulation.Threading {
+namespace ParticleSimulator.Threading {
 	public class RunManager :IDisposable {
 		public readonly AEvaluationStep[] Steps;
 		public bool IsActive { get; private set; }

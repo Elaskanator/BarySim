@@ -1,10 +1,11 @@
 ﻿using System;
 using Generic.Extensions;
 using Generic.Models;
-using Simulation.Boids;
-using Simulation.Threading;
+using ParticleSimulator.Rendering;
+using ParticleSimulator.Simulation;
+using ParticleSimulator.Threading;
 
-namespace Simulation {
+namespace ParticleSimulator {
 	//TODO add handshake optimization (boids sharing interactions, to compute only half as many)
 	//TODO world wrap interaction: boids look forward only into adjoining quadrant
 	//FOR LATER refactor to support different underlying simulations, and support far-field interactions (e.g. astrophysical simulation)
@@ -22,7 +23,8 @@ namespace Simulation {
 		public static void Main(string[] args) {
 			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);
 
-			Simulator = new BoidSimulator();
+			Simulator = new Simulation.Boids.BoidSimulator();
+			//Simulator = new Simulation.Gravity.GravitySimulator();
 			Manager = BuildRunManager();
 			
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
@@ -44,14 +46,14 @@ namespace Simulation {
 			Q_Frame = new SynchronizedDataBuffer("Frame Renderer", Parameters.PRECALCULATION_LIMIT);
 
 			Step_TreeManager = new EvaluationStep(Q_Tree, false, 1,
-				p => Simulator.BuildTree(Simulator.AllParticles))
+				p => Simulator.RebuildTree())
 				{ Name = "Tree Builder" };
 			Step_Simulator = new EvaluationStep(Q_Locations, !Parameters.SYNC_SIMULATION, Parameters.SUBFRAME_MULTIPLE,
 				p => Simulator.Simulate((ITree)p[0]),
 				new Prerequisite(Q_Tree, DataConsumptionType.Consume, Parameters.TREE_REFRESH_FRAMES))
 				{ Name = "Simulator" };
 			Step_Rasterizer = new EvaluationStep(Q_Rasterization, !Parameters.SYNC_SIMULATION, 1,
-				Rasterizer.Rasterize,
+				p => Simulator.RasterizeDensities((Tuple<double[], double>[])p[0]),
 				new Prerequisite(Q_Locations, DataConsumptionType.Consume))
 				{ Name = "Rasterizer" };
 			Step_Autoscaler = new NonOutputtingEvaluationStep(
@@ -64,7 +66,7 @@ namespace Simulation {
 				new Prerequisite(Q_Rasterization, Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.OnUpdate))
 				{ Name = "Renderer" };
 			Step_Drawer = new NonOutputtingEvaluationStep(
-				Renderer.Draw,
+				p => Renderer.FlushScreenBuffer((ConsoleExtensions.CharInfo[])p[0]),
 				TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS),
 				new Prerequisite(Q_Frame,
 					Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.ReadDirty,

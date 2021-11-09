@@ -4,9 +4,10 @@ using System.Linq;
 
 using Generic.Extensions;
 using Generic.Models;
-using Simulation.Threading;
+using ParticleSimulator.Rendering;
+using ParticleSimulator.Threading;
 
-namespace Simulation {
+namespace ParticleSimulator {
 	internal static class PerfMon {
 		private static SampleSMA _frameTiming = new SampleSMA(Parameters.PERF_SMA_ALPHA);
 		private static Dictionary<int, double> _simulationTimes = new();//TODO this is a bigass memory leak
@@ -189,17 +190,17 @@ namespace Simulation {
 			for (int yIdx = minY; yIdx < maxY; yIdx++) {
 				if ((int)y100Scaled == yIdx) {//top pixel
 					if (y100Scaled % 1d < 0.5d)//bottom half
-						chr = Rasterizer.CHAR_BOTTOM;
+						chr = Parameters.CHAR_BOTTOM;
 					else if (y000Scaled >= yIdx + 0.5d)//top half
-						chr = Rasterizer.CHAR_TOP;
-					else chr = Rasterizer.CHAR_BOTH;
+						chr = Parameters.CHAR_TOP;
+					else chr = Parameters.CHAR_BOTH;
 				} else if ((int)y000Scaled == yIdx) {//bottom pixel
 					if (y000Scaled % 1d >= 0.5d)//top half
-							chr = Rasterizer.CHAR_TOP;
+							chr = Parameters.CHAR_TOP;
 					else if (y100Scaled < yIdx + 0.5d)//bottom half
-						chr = Rasterizer.CHAR_BOTTOM;
-					else chr = Rasterizer.CHAR_BOTH;
-				} else chr = Rasterizer.CHAR_BOTH;
+						chr = Parameters.CHAR_BOTTOM;
+					else chr = Parameters.CHAR_BOTH;
+				} else chr = Parameters.CHAR_BOTH;
 
 				switch (yIdx.CompareTo((int)y050Scaled)) {
 					case -1://bottom stat

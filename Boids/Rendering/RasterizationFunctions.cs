@@ -1,9 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Generic.Models;
 
-namespace Simulation {
+namespace ParticleSimulator.Rendering {
 	public static class RasterizationFunctions {
+		public static ConsoleColor ChooseDensityColor(double count) {
+			Predicate<double> comparer = Program.Simulator.IsDiscrete
+				? a => (int)(2d * a) <= (int)(2d * count)
+				: a => a <= count;
+			int rank = Program.Simulator.DensityScale.TakeWhile(a => comparer(a.Current)).Count();
+			return Parameters.DENSITY_COLORS[rank];
+		}
+
 		#region Grouping
 		public static double[][] GroupToArray(IEnumerable<double> data, int range, double domainBegin, double domainEnd) {
 			double[][] results = new double[range][];
@@ -18,7 +27,7 @@ namespace Simulation {
 			return results;
 		}
 		public static T[][] GroupToArray<T>(IEnumerable<T> data, int range, double domainBegin, double domainEnd, int dimension = 0)
-		where T : Vector {
+		where T : SimpleVector {
 			T[][] results = new T[range][];
 			foreach (IGrouping<int, T> g in Group(data, range, domainBegin, domainEnd, dimension))
 				results[g.Key] = g.ToArray();
@@ -38,7 +47,7 @@ namespace Simulation {
 			return results;
 		}
 		public static T[][] GroupToArray<T>(IEnumerable<T> data, int range, double domainEnd, int dimension = 0)
-		where T : Vector {
+		where T : SimpleVector {
 			T[][] results = new T[range][];
 			foreach (IGrouping<int, T> g in Group(data, range, domainEnd, dimension))
 				results[g.Key] = g.ToArray();
@@ -53,7 +62,7 @@ namespace Simulation {
 			return data.GroupBy(d => (int)(range * (d[dimension] - domainBegin) / (domainEnd - domainBegin)));
 		}
 		public static IEnumerable<IGrouping<int, T>> Group<T>(IEnumerable<T> data, int range, double domainBegin, double domainEnd, int dimension = 0)
-		where T : Vector {
+		where T : SimpleVector {
 			return data.GroupBy(t => (int)(range * (t.Coordinates[dimension] - domainBegin) / (domainEnd - domainBegin)));
 		}
 
@@ -64,7 +73,7 @@ namespace Simulation {
 			return data.GroupBy(d => (int)(range * d[dimension] / domainEnd));
 		}
 		public static IEnumerable<IGrouping<int, T>> Group<T>(IEnumerable<T> data, int range, double domainEnd, int dimension = 0)
-		where T : Vector {
+		where T : SimpleVector {
 			return data.GroupBy(t => (int)(range * t.Coordinates[dimension] / domainEnd));
 		}
 		#endregion Grouping
