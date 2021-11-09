@@ -78,15 +78,15 @@ namespace ParticleSimulator.Rendering {
 
 		public static void DrawLegend(ConsoleExtensions.CharInfo[] buffer, SampleSMA[] densityScale) {
 			int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - Parameters.DENSITY_COLORS.Length);
-			Func<double, double> rounding = Program.Simulator.IsDiscrete ? x => (int)x : x => x;
+			Func<double, string> rounding = Program.Simulator.IsDiscrete ? x => ((int)x).ToString() : x => x.ToStringBetter(2);
 			string strData;
 			for (int cIdx = 0; cIdx < Parameters.DENSITY_COLORS.Length; cIdx++) {
 				buffer[pixelIdx] = new ConsoleExtensions.CharInfo(
 					Parameters.CHAR_BOTH,
 					Parameters.DENSITY_COLORS[cIdx]);
 
-				if (cIdx == 0) strData = "≤" + rounding(densityScale[cIdx].Current).ToStringBetter(2);
-				else if (cIdx < densityScale.Length) strData = "=" + rounding(densityScale[cIdx].Current).ToStringBetter(2);
+				if (cIdx == 0) strData = "≤" + rounding(densityScale[cIdx].Current);
+				else if (cIdx < densityScale.Length) strData = "=" + rounding(densityScale[cIdx].Current);
 				else strData = ">";
 
 				for (int sIdx = 0; sIdx < strData.Length; sIdx++)
