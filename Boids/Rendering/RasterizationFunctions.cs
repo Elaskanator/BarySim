@@ -2,7 +2,7 @@
 using System.Linq;
 using Generic.Models;
 
-namespace Simulation {
+namespace ParticleSimulator.Rendering {
 	public static class RasterizationFunctions {
 		#region Grouping
 		public static double[][] GroupToArray(IEnumerable<double> data, int range, double domainBegin, double domainEnd) {
@@ -18,7 +18,7 @@ namespace Simulation {
 			return results;
 		}
 		public static T[][] GroupToArray<T>(IEnumerable<T> data, int range, double domainBegin, double domainEnd, int dimension = 0)
-		where T : Vector {
+		where T : SimpleVector {
 			T[][] results = new T[range][];
 			foreach (IGrouping<int, T> g in Group(data, range, domainBegin, domainEnd, dimension))
 				results[g.Key] = g.ToArray();
@@ -38,7 +38,7 @@ namespace Simulation {
 			return results;
 		}
 		public static T[][] GroupToArray<T>(IEnumerable<T> data, int range, double domainEnd, int dimension = 0)
-		where T : Vector {
+		where T : SimpleVector {
 			T[][] results = new T[range][];
 			foreach (IGrouping<int, T> g in Group(data, range, domainEnd, dimension))
 				results[g.Key] = g.ToArray();
@@ -53,7 +53,7 @@ namespace Simulation {
 			return data.GroupBy(d => (int)(range * (d[dimension] - domainBegin) / (domainEnd - domainBegin)));
 		}
 		public static IEnumerable<IGrouping<int, T>> Group<T>(IEnumerable<T> data, int range, double domainBegin, double domainEnd, int dimension = 0)
-		where T : Vector {
+		where T : SimpleVector {
 			return data.GroupBy(t => (int)(range * (t.Coordinates[dimension] - domainBegin) / (domainEnd - domainBegin)));
 		}
 
@@ -64,7 +64,7 @@ namespace Simulation {
 			return data.GroupBy(d => (int)(range * d[dimension] / domainEnd));
 		}
 		public static IEnumerable<IGrouping<int, T>> Group<T>(IEnumerable<T> data, int range, double domainEnd, int dimension = 0)
-		where T : Vector {
+		where T : SimpleVector {
 			return data.GroupBy(t => (int)(range * t.Coordinates[dimension] / domainEnd));
 		}
 		#endregion Grouping

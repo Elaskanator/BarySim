@@ -7,7 +7,7 @@ using System.Threading;
 using Generic.Extensions;
 using Generic.Models;
 
-namespace Simulation.Threading {
+namespace ParticleSimulator.Threading {
 	public class SynchronizedDataBuffer : IDisposable, IEquatable<SynchronizedDataBuffer>, IEqualityComparer<SynchronizedDataBuffer> {
 		private static int _id = 0;
 		public int ID { get; private set; }

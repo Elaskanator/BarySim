@@ -1,37 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using Generic.Extensions;
 using Generic.Models;
 
-namespace Simulation.Boids {
+namespace ParticleSimulator.Simulation.Boids {
 	public class Boid : AParticle {
 		public readonly Flock Flock;
 
-		private double[] _coordinates;
-		public override double[] Coordinates {
-			get { return this._coordinates; }
-			set { this._coordinates = this.BoundPosition(value).ToArray(); } }
-		private double[] _velocity;
-		public double[] Velocity {
+		private SimpleVector _velocity;
+		public override SimpleVector Velocity {
 			get { return this._velocity; }
 			set { this._velocity = VectorFunctions.Clamp(value, Parameters.DEFAULT_MAX_SPEED); } }
-		private double[] _acceleration;
-		public double[] Acceleration {
+		private SimpleVector _acceleration;
+		public SimpleVector Acceleration {
 			get { return this._acceleration; }
 			set { this._acceleration = VectorFunctions.Clamp(value, Parameters.DEFAULT_MAX_ACCELERATION); } }
+		public override double Radius => 0;
 
-		public Boid(Flock flock, double[] position, double[] velocity, double mass = 1)
-		: base(position, mass) {
+		public Boid(Flock flock, SimpleVector position, SimpleVector velocity, double mass = 1)
+		: base(position, velocity, mass) {
 			this.Flock = flock;
 			this.Velocity = velocity;
-			this.Acceleration = new double[this.Coordinates.Length];
+			this.Acceleration = new double[this.Dimensionality];
 		}
 
 		public void UpdateDeltas(IEnumerable<Boid> neighbors) {
 			this.Acceleration = this.ComputeNeighborhoodBias(neighbors);
+		}
 
+		internal override void ApplyUpdate() {
 			this.Velocity = VectorFunctions.Add(
 				VectorFunctions.Multiply(this.Velocity, this.Flock.SpeedDecay),
 				this.Acceleration);
@@ -41,28 +39,21 @@ namespace Simulation.Boids {
 				this.Velocity);
 		}
 
-		private IEnumerable<double> BoundPosition(double[] position) {
-			for (int i = 0; i < Parameters.DOMAIN.Length; i++)
-				if (position[i] < 0 || position[i] >= Parameters.DOMAIN[i])
-					yield return position[i].ModuloAbsolute(Parameters.DOMAIN[i]);//wrap around
-				else yield return position[i];
-		}
-
 		//TODO rewrite this method entirely
 		//seealso https://swharden.com/CsharpDataVis/boids/boids.md.html
-		private double[] ComputeNeighborhoodBias(IEnumerable<Boid> neighbors) {
+		private SimpleVector ComputeNeighborhoodBias(IEnumerable<Boid> neighbors) {
 			double cohesionBiasWeight = 0d, alignmentBiasWeight = 0d, separationBiasWeight = 0d;
-			double[] cohesionBias, separationBias, alignmentBias;
+			SimpleVector cohesionBias, separationBias, alignmentBias;
 			cohesionBias = separationBias = alignmentBias = Enumerable.Repeat(0d, Parameters.DOMAIN.Length).ToArray();
 
 			double dist;
 			double weight;
-			double[] vect;
+			SimpleVector vect;
 			//double[] positionPrime;
 
 			int count = 0;
-			foreach (Boid other in neighbors) {
-				if (count++ > Parameters.DESIRED_NEIGHBORS)
+			foreach (Boid other in neighbors.Except(x => x.ID == this.ID)) {
+				if (++count > Parameters.DESIRED_NEIGHBORS)
 					break;
 				
 				//positionPrime = b.GetNearestWrappedPosition(this);
@@ -95,14 +86,12 @@ namespace Simulation.Boids {
 
 				return
 					VectorFunctions.Clamp(
-						VectorFunctions.Add(
-							VectorFunctions.Multiply(cohesionBias, Parameters.DEFAULT_COHESION_WEIGHT), VectorFunctions.Add(
-							VectorFunctions.Multiply(alignmentBias, Parameters.DEFAULT_ALIGNMENT_WEIGHT),
-							VectorFunctions.Multiply(separationBias, Parameters.DEFAULT_SEPARATION_WEIGHT))),
-						Parameters.MAX_FORCE);
-			} else {
-				return Enumerable.Repeat(0d, Parameters.DOMAIN.Length).ToArray();
-			}
+						(VectorFunctions.Multiply(cohesionBias, Parameters.DEFAULT_COHESION_WEIGHT)
+						+ VectorFunctions.Multiply(alignmentBias, Parameters.DEFAULT_ALIGNMENT_WEIGHT)
+						+ VectorFunctions.Multiply(separationBias, Parameters.DEFAULT_SEPARATION_WEIGHT)
+						) / this.Mass,
+						Parameters.MAX_ACCELERATION);
+			} else return new double[Parameters.DOMAIN.Length];
 		}
 
 		//TODO better curve

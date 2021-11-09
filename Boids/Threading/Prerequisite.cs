@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Simulation.Threading {
+namespace ParticleSimulator.Threading {
 	public struct Prerequisite {
 		public readonly SynchronizedDataBuffer Resource;
 		public readonly DataConsumptionType ConsumptionType;

@@ -18,6 +18,7 @@ namespace Generic.Models {
 		public IEnumerable<ITree> Leaves { get; }
 
 		public void Add(object element);
+		public void AddRange(IEnumerable<object> elements);
 
 		public bool DoesContain(object element);
 		public ITree GetContainingChild(object element);
@@ -83,15 +84,13 @@ namespace Generic.Models {
 				this.GetContainingChild(element).Add(element);
 		}
 		public void Add(object element) { this.Add((T)element); }
-		public void Add(T element, params T[] more) {
-			this.Add(element);
-			for (int i = 0; i < more.Length; i++)
-				this.Add(more[i]);
-		}
+
 		public void AddRange(IEnumerable<T> elements) {
 			foreach (T e in elements)
 				this.Add(e);
 		}
+		public void AddRange(IEnumerable<object> elements) { this.AddRange(elements.Cast<T>()); }
+
 		protected virtual void Incorporate(T element) { }
 		protected abstract void AddElementToNode(T element);
 
@@ -129,7 +128,7 @@ namespace Generic.Models {
 			if (this.IsRoot)
 				yield break;
 			else
-				foreach (ATree<T> n in this.SiblingNodes.SelectMany(q => q.GetRefinedNeighborNodes(depthLimit - 1)))
+				foreach (ATree<T> n in this.SiblingNodes.SelectMany(q => q.GetChildren(depthLimit - 1)))
 					yield return n;
 		}
 		private IEnumerable<ATree<T>> GetChildren(int depthLimit) {

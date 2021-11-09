@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using Generic.Extensions;
 using Generic.Models;
 
-namespace Simulation.Threading {
+namespace ParticleSimulator.Threading {
 	public abstract class AEvaluationStep :IEquatable<AEvaluationStep>, IEqualityComparer<AEvaluationStep>, IDisposable {
 		private static int _id = 0;
 		public int ID { get; private set; }
