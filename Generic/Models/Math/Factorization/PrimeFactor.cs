@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Generic {
+namespace Generic.Models {
 	/// <summary>
 	/// Represents a proper factor of a whole number, without consideration of sign (positive or negative)
 	/// </summary>

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Generic;
+
+using Generic.Extensions;
 
 namespace Simulation.Threading {
 	public class RunManager :IDisposable {

@@ -3,12 +3,11 @@ using System;
 using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Collections.Generic;
+//using System.Collections.Generic;
 //using System.Drawing;
 //using System.Windows.Forms;//see https://stackoverflow.com/a/57908260/2799848
 
-namespace Generic {
-	#pragma warning disable CA1416//just shut the FUCK up
+namespace Generic.Extensions {
 	public static class ConsoleExtensions {
         public static void WaitForEnter(string message) {
             Console.Write(message);

@@ -5,7 +5,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Generic;
+
+using Generic.Extensions;
+using Generic.Models;
 
 namespace Simulation.Threading {
 	public abstract class AEvaluationStep :IEquatable<AEvaluationStep>, IEqualityComparer<AEvaluationStep>, IDisposable {
@@ -24,6 +26,7 @@ namespace Simulation.Threading {
 			get { return this._trackLatency; }
 			set { this._trackLatency = value; this._timer.Reset(); this._timerCalc.Reset(); } }
 		
+		private TimeSynchronizer _timeSynchronizer;
 		private Action _callback;
 		private bool _trackLatency = Parameters.DEBUG_ENABLE;
 		private List<Thread> _threads;
@@ -34,12 +37,13 @@ namespace Simulation.Threading {
 		private Stopwatch _timer = new();
 		protected Stopwatch _timerCalc = new();
 
-		protected AEvaluationStep(Action callback, params Prerequisite[] prerequisites) {
+		protected AEvaluationStep(TimeSynchronizer sync, Action callback, params Prerequisite[] prerequisites) {
 			this.ID = _id++;
 			this.IterationCount = 0;
 			this.IsActive = false;
 			this.Prerequisites = prerequisites ?? Array.Empty<Prerequisite>();
 			
+			this._timeSynchronizer = sync;
 			this._callback = callback;
 			this._threads = new List<Thread>();
 			this._threads.Add(new Thread(this.Calculate));
@@ -62,7 +66,9 @@ namespace Simulation.Threading {
 				}
 			} else this._event_processData = new EventWaitHandle(true, EventResetMode.ManualReset);
 		}
-		protected AEvaluationStep(params Prerequisite[] prerequisites) : this(null, prerequisites) { }
+		protected AEvaluationStep(TimeSynchronizer sync, params Prerequisite[] prerequisites) : this(sync, null, prerequisites) { }
+		protected AEvaluationStep(Action callback, params Prerequisite[] prerequisites) : this(null, callback, prerequisites) { }
+		protected AEvaluationStep(params Prerequisite[] prerequisites) : this(null, null, prerequisites) { }
 
 		public void Start() {
 			this.IsActive = true;
@@ -78,19 +84,21 @@ namespace Simulation.Threading {
 
 		public void AssimilateInput() {
 			object[] buffer = new object[this.Prerequisites.Length];
+			bool allowResume;
 			while (this.IsActive) {
+				if (!(this._timeSynchronizer is null)) this._timeSynchronizer.Synchronize();
 				this._event_gatherData.WaitOne();
 				if (!this.IsActive) return;
 
-				for (int pIdx = 0; pIdx < this.Prerequisites.Length; pIdx++)
-					if (this.IterationCount % this.Prerequisites[pIdx].ConsumptionReuse == 0)
+				for (int pIdx = 0; pIdx < this.Prerequisites.Length; pIdx++) {
+					if (this.IterationCount % this.Prerequisites[pIdx].ConsumptionReuse == 0) {
 						switch (this.Prerequisites[pIdx].ConsumptionType) {
 							case DataConsumptionType.Consume:
-								buffer[pIdx] = this.Prerequisites[pIdx].Resource.Dequeue(this.Prerequisites[pIdx].ReadTimeout);
+								buffer[pIdx] = this.Prerequisites[pIdx].Resource.Dequeue(false, this.Prerequisites[pIdx].ReadTimeout);
 								break;
 							case DataConsumptionType.OnUpdate:
 								this._refreshListeners[pIdx].WaitOne();
-								buffer[pIdx] = this.Prerequisites[pIdx].Resource.Current;
+								buffer[pIdx] = this.Prerequisites[pIdx].Resource.Peek();
 								break;
 							case DataConsumptionType.Read:
 								buffer[pIdx] = this.Prerequisites[pIdx].Resource.Peek();
@@ -104,6 +112,13 @@ namespace Simulation.Threading {
 									(int)this.Prerequisites[pIdx].ConsumptionType,
 									typeof(DataConsumptionType));
 						}
+					}
+					allowResume = this.Prerequisites[pIdx].ConsumptionType == DataConsumptionType.Consume
+						&& (this.Prerequisites[pIdx].ConsumptionReuse == 1
+							|| this.IterationCount % this.Prerequisites[pIdx].ConsumptionReuse == this.Prerequisites[pIdx].ConsumptionReuse - 1);
+					if (allowResume)
+						this.Prerequisites[pIdx].Resource.AllowResume();
+				}
 				_buffer = buffer;
 				this._event_processData.Set();
 			}
@@ -119,6 +134,7 @@ namespace Simulation.Threading {
 				}
 				if (!this.IsActive) return;
 
+				if (this.Prerequisites.Length == 0 && !(this._timeSynchronizer is null)) this._timeSynchronizer.Synchronize();
 				if (this.DoTrackLatency) this._timer.Start();
 				this.Refresh(this._buffer);
 
@@ -153,12 +169,16 @@ namespace Simulation.Threading {
 	public class NonOutputtingEvaluationStep : AEvaluationStep {
 		private readonly Action<object[]> _evaluator;
 
-		public NonOutputtingEvaluationStep(Action<object[]> evaluator, Action callback, params Prerequisite[] prerequisites)
-		: base(callback, prerequisites) {
+		public NonOutputtingEvaluationStep(Action<object[]> evaluator, TimeSynchronizer sync, Action callback, params Prerequisite[] prerequisites)
+		: base(sync, callback, prerequisites) {
 			this._evaluator = evaluator;
 		}
+		public NonOutputtingEvaluationStep(Action<object[]> evaluator, TimeSynchronizer sync, params Prerequisite[] prerequisites)
+		: this(evaluator, sync, null, prerequisites) { }
+		public NonOutputtingEvaluationStep(Action<object[]> evaluator, Action callback, params Prerequisite[] prerequisites)
+		: this(evaluator, null, callback, prerequisites) { }
 		public NonOutputtingEvaluationStep(Action<object[]> evaluator, params Prerequisite[] prerequisites)
-		: this(evaluator, null, prerequisites) { }
+		: this(evaluator, null, null, prerequisites) { }
 		
 		protected override void Refresh(object[] data) {
 			if (this.DoTrackLatency) this._timerCalc.Start();
@@ -186,21 +206,6 @@ namespace Simulation.Threading {
 		}
 		public EvaluationStep(SynchronizedDataBuffer outputResource, bool isOverwrite, int subsamplingOut, Func<object[], object> calculator,
 		params Prerequisite[] prerequisites) : this(outputResource, isOverwrite, subsamplingOut, calculator, null, prerequisites) { }
-
-		public EvaluationStep(SynchronizedDataBuffer outputResource, bool isOverwrite, Func<object[], object> calculator,
-		Action callback, params Prerequisite[] prerequisites) : this(outputResource, isOverwrite, 1, calculator, callback, prerequisites) { }
-		public EvaluationStep(SynchronizedDataBuffer outputResource, bool isOverwrite, Func<object[], object> calculator,
-		params Prerequisite[] prerequisites) : this(outputResource, isOverwrite, 1, calculator, null, prerequisites) { }
-
-		public EvaluationStep(SynchronizedDataBuffer outputResource, int subsamplingOut, Func<object[], object> calculator,
-		Action callback, params Prerequisite[] prerequisites) : this(outputResource, false, subsamplingOut, calculator, callback, prerequisites) { }
-		public EvaluationStep(SynchronizedDataBuffer outputResource, int subsamplingOut, Func<object[], object> calculator,
-		params Prerequisite[] prerequisites) : this(outputResource, false, subsamplingOut, calculator, null, prerequisites) { }
-
-		public EvaluationStep(SynchronizedDataBuffer outputResource, Func<object[], object> calculator,
-		Action callback, params Prerequisite[] prerequisites) : this(outputResource, false, 1, calculator, callback, prerequisites) { }
-		public EvaluationStep(SynchronizedDataBuffer outputResource, Func<object[], object> calculator,
-		params Prerequisite[] prerequisites) : this(outputResource, false, 1, calculator, null, prerequisites) { }
 
 		protected override void Refresh(object[] data) {
 			if (this.DoTrackLatency) this._timerCalc.Start();

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Generic {
+namespace Generic.Extensions {
 	public static class NumberExtensions {
 		public static double ModuloAbsolute(this int value, int mod) {
 			value = value % mod;
@@ -46,7 +46,7 @@ namespace Generic {
 				case 2:
 					r = Math.Sqrt(radius * r);
 
-					double angle = rand.NextDouble() * 2d * Math.PI;
+					double angle = 2d*Math.PI * rand.NextDouble();
 					return new double[] {
 						r * Math.Cos(angle),
 						r * Math.Sin(angle)
@@ -56,7 +56,7 @@ namespace Generic {
 
 					double u = rand.NextDouble();
 					double v = rand.NextDouble();
-					double theta = u * 2d * Math.PI;
+					double theta = 2d*Math.PI * u;
 					double phi = Math.Acos(2d*v - 1d);
 
 					return new double[] {
@@ -72,13 +72,13 @@ namespace Generic {
 		public static double HypersphereVolume(double radius, int dimensionality) {
 			switch (dimensionality) {
 				case 0:
-					return 0;
+					return 0d;
 				case 1:
 					return radius;
 				case 2:
-					return Math.PI * (radius * radius);
+					return Math.PI * (radius*radius);
 				case 3:
-					return (4d/3d) * Math.PI * (radius * radius * radius);
+					return (4d/3d) * Math.PI * (radius*radius*radius);
 				default:
 					throw new NotImplementedException();
 			}
@@ -87,13 +87,13 @@ namespace Generic {
 		public static double HypersphereRadius(double volume, int dimensionality) {
 			switch (dimensionality) {
 				case 0:
-					return 0;
+					return 0d;
 				case 1:
 					return volume;
 				case 2:
-					return Math.Sqrt(volume / Math.PI);;
+					return Math.Sqrt(volume / Math.PI);
 				case 3:
-					return Math.Cbrt(volume * 3d / 4d / Math.PI);
+					return Math.Cbrt(volume * 3d/4d / Math.PI);
 				default:
 					throw new NotImplementedException();
 			}

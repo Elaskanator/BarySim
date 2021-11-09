@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Generic {
+namespace Generic.Extensions {
 	public static class DictionaryExtensions {
 		public static void AddMany<TKey, TValue>(this Dictionary<TKey, TValue> source, IEnumerable<TValue> additions, Func<TValue, TKey> projection) {
 			foreach (TValue value in additions) source.Add(projection(value), value);

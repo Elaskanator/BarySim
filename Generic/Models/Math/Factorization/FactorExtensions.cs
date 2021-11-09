@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Generic {
+using Generic.Extensions;
+
+namespace Generic.Models {
 	public static class FactorExtensions {
 		/// <summary>
 		/// Returns the numeric representation of the provided prime factors representation the factorization of a fraction

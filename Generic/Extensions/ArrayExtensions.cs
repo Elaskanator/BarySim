@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Generic {
+namespace Generic.Extensions {
 	public static class ArrayExtensions {
 		public static T[] ShiftRight<T>(this T[] arr, bool wrapEnd = false) {
 			T[] tmp = new T[arr.Length];

@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using Generic;
 using Generic.Models;
 
 namespace Simulation {
@@ -20,7 +18,7 @@ namespace Simulation {
 			return results;
 		}
 		public static T[][] GroupToArray<T>(IEnumerable<T> data, int range, double domainBegin, double domainEnd, int dimension = 0)
-		where T : IVector {
+		where T : Vector {
 			T[][] results = new T[range][];
 			foreach (IGrouping<int, T> g in Group(data, range, domainBegin, domainEnd, dimension))
 				results[g.Key] = g.ToArray();
@@ -40,7 +38,7 @@ namespace Simulation {
 			return results;
 		}
 		public static T[][] GroupToArray<T>(IEnumerable<T> data, int range, double domainEnd, int dimension = 0)
-		where T : IVector {
+		where T : Vector {
 			T[][] results = new T[range][];
 			foreach (IGrouping<int, T> g in Group(data, range, domainEnd, dimension))
 				results[g.Key] = g.ToArray();
@@ -55,7 +53,7 @@ namespace Simulation {
 			return data.GroupBy(d => (int)(range * (d[dimension] - domainBegin) / (domainEnd - domainBegin)));
 		}
 		public static IEnumerable<IGrouping<int, T>> Group<T>(IEnumerable<T> data, int range, double domainBegin, double domainEnd, int dimension = 0)
-		where T : IVector {
+		where T : Vector {
 			return data.GroupBy(t => (int)(range * (t.Coordinates[dimension] - domainBegin) / (domainEnd - domainBegin)));
 		}
 
@@ -66,7 +64,7 @@ namespace Simulation {
 			return data.GroupBy(d => (int)(range * d[dimension] / domainEnd));
 		}
 		public static IEnumerable<IGrouping<int, T>> Group<T>(IEnumerable<T> data, int range, double domainEnd, int dimension = 0)
-		where T : IVector {
+		where T : Vector {
 			return data.GroupBy(t => (int)(range * t.Coordinates[dimension] / domainEnd));
 		}
 		#endregion Grouping

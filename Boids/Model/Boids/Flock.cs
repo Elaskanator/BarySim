@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
-using Generic;
+using Generic.Extensions;
+using Generic.Models;
 
 namespace Simulation.Boids {
 	public class Flock : IEquatable<Flock> {
@@ -23,21 +24,23 @@ namespace Simulation.Boids {
 				.Select(d => random.NextDouble() * Parameters.DOMAIN[d])
 				.ToArray();
 
-			double boidVolume = NumberExtensions.HypersphereVolume(this.Separation * 2, Parameters.DOMAIN.Length);
-			double randomRadius = NumberExtensions.HypersphereRadius(boidVolume * size, Parameters.DOMAIN.Length);
+			double boidVolume = NumberExtensions.HypersphereVolume(this.Separation, Parameters.DOMAIN.Length);
+			double radius = NumberExtensions.HypersphereRadius(boidVolume * size, Parameters.DOMAIN.Length);
 
 			this.Boids = Enumerable
 				.Range(0, size)
 				.Select(d => new Boid(
 					flock: this,
-					startingPosition.Zip(
-						NumberExtensions.Random_Spherical(randomRadius, Parameters.DOMAIN.Length, random),
+					position: startingPosition.Zip(
+						NumberExtensions.Random_Spherical(radius, Parameters.DOMAIN.Length, random),
 						(a, b) => a + b).ToArray(),
-					velocity: Enumerable
+					velocity: VectorFunctions.Multiply(
+						VectorFunctions.Normalize(Enumerable
 						.Range(0, Parameters.DOMAIN.Length)
 						.Select(d => (random.NextDouble() * 2d) - 1d).ToArray()//random between -1 and +1
-						.Normalize()//unit vector in radom direction (is this uniformly distributed?)
-						.Multiply(random.NextDouble() * Parameters.DEFAULT_MAX_STARTING_SPEED)))//scale by a random speed
+						.ToArray()),
+						random.NextDouble() * Parameters.DEFAULT_MAX_STARTING_SPEED)
+					))
 				.ToArray();
 		}
 

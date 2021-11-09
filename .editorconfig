@@ -1,6 +1,7 @@
 root = true
 [*]
-end_of_line = lf
+# what sort of dumb FAGGOT decided to have it fuck my shit up with LF only on an OBVIOUSLY WINDOWS SYSTEM?!
+end_of_line = crlf
 indent_style = tab
 indent_size = 4
 insert_final_newline = false

@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-using Generic;
+using Generic.Extensions;
+using Generic.Models;
 using Simulation.Boids;
 using Simulation.Threading;
 
@@ -14,17 +12,19 @@ namespace Simulation {
 	public class Program {
 		public const bool ENABLE_DEBUG_LOGGING = false;
 
+		public static IParticleSimulator Simulator { get; private set; }
 		public static RunManager Manager { get; private set; }
-		public static Flock[] Flocks { get; private set; }
 		public static bool IsActive { get; private set; }
 
-		public static SynchronizedDataBuffer Q_Tree, Q_Locations, Q_Autoscaling, Q_Rasterization, Q_Frame;
+		public static SynchronizedDataBuffer Q_Tree, Q_Locations, Q_Rasterization, Q_Frame;
 		public static AEvaluationStep Step_TreeManager, Step_Simulator, Step_Rasterizer, Step_Autoscaler, Step_Renderer, Step_Drawer;
-		public static IEnumerable<Boid> AllBoids { get { return Flocks.SelectMany(f => f.Boids); } }
-		public static int TotalBoids { get { return Flocks.Sum(f => f.Boids.Length); } }
 
 		public static void Main(string[] args) {
 			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);
+
+			Simulator = new BoidSimulator();
+			Manager = BuildRunManager();
+			
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
 			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
 			ConsoleExtensions.HideScrollbars();
@@ -33,54 +33,42 @@ namespace Simulation {
 			//ConsoleExtensions.SetWindowPosition(0, 0);
 			Console.CursorVisible = false;
 
-			Random rand = new Random();
-			Flocks = Enumerable.Range(0, Parameters.NUM_FLOCKS).Select(i => new Flock(Parameters.NUM_BOIDS_PER_FLOCK, rand)).ToArray();
-
-			Manager = BuildRunManager();
-
 			IsActive = true;
 			Manager.Start();
 		}
 
 		private static RunManager BuildRunManager() {
-			Q_Tree = new SynchronizedDataBuffer("Quadtree Constructor", 1);
+			Q_Tree = new SynchronizedDataBuffer("Tree", 0);
 			Q_Locations = new SynchronizedDataBuffer("Location Mapper", Parameters.PRECALCULATION_LIMIT);
-			Q_Autoscaling = new SynchronizedDataBuffer("Autoscaler", 1);
 			Q_Rasterization = new SynchronizedDataBuffer("Rasterizer", Parameters.PRECALCULATION_LIMIT);
 			Q_Frame = new SynchronizedDataBuffer("Frame Renderer", Parameters.PRECALCULATION_LIMIT);
 
-			Q_Autoscaling.Overwrite(
-				Enumerable.Range(1, Parameters.DENSITY_COLORS.Length - 1)
-				.Select(x => new SampleSMA(Parameters.AUTOSCALING_SMA_ALPHA, x)).ToArray());
-
-			Step_TreeManager = new EvaluationStep(Q_Tree,
-				Simulator.BuildTree)
-				{ Name = "Quadtree Builder" };
+			Step_TreeManager = new EvaluationStep(Q_Tree, false, 1,
+				p => Simulator.BuildTree(Simulator.AllParticles))
+				{ Name = "Tree Builder" };
 			Step_Simulator = new EvaluationStep(Q_Locations, !Parameters.SYNC_SIMULATION, Parameters.SUBFRAME_MULTIPLE,
-				Simulator.Simulate,
-				new Prerequisite(Q_Tree, DataConsumptionType.Consume, Parameters.QUADTREE_REFRESH_FRAMES))
+				p => Simulator.Simulate((ITree)p[0]),
+				new Prerequisite(Q_Tree, DataConsumptionType.Consume, Parameters.TREE_REFRESH_FRAMES))
 				{ Name = "Simulator" };
-			Step_Autoscaler = new EvaluationStep(Q_Autoscaling, true,//TODO limit the execution frequency
-				Rasterizer.Autoscale,
-				new Prerequisite(Q_Autoscaling, DataConsumptionType.ReadDirty),
+			Step_Rasterizer = new EvaluationStep(Q_Rasterization, !Parameters.SYNC_SIMULATION, 1,
+				Rasterizer.Rasterize,
+				new Prerequisite(Q_Locations, DataConsumptionType.Consume))
+				{ Name = "Rasterizer" };
+			Step_Autoscaler = new NonOutputtingEvaluationStep(
+				p => Simulator.AutoscaleUpdate((Tuple<char, double>[])p[0]),
+				new TimeSynchronizer(null, TimeSpan.FromMilliseconds(500)),
 				new Prerequisite(Q_Rasterization, DataConsumptionType.OnUpdate))
 				{ Name = "Autoscaler" };
-			Step_Rasterizer = new EvaluationStep(Q_Rasterization, !Parameters.SYNC_SIMULATION,
-				Rasterizer.Rasterize,
-				new Prerequisite(Q_Locations, DataConsumptionType.Consume),
-				new Prerequisite(Q_Autoscaling, DataConsumptionType.Read))
-				{ Name = "Rasterizer" };
-			Step_Renderer = new	EvaluationStep(Q_Frame, !Parameters.SYNC_SIMULATION,
+			Step_Renderer = new	EvaluationStep(Q_Frame, !Parameters.SYNC_SIMULATION, 1,
 				Renderer.Render,
-				new Prerequisite(Q_Rasterization, Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.OnUpdate),
-				new Prerequisite(Q_Autoscaling, DataConsumptionType.Read))
+				new Prerequisite(Q_Rasterization, Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.OnUpdate))
 				{ Name = "Renderer" };
 			Step_Drawer = new NonOutputtingEvaluationStep(
 				Renderer.Draw,
+				TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS),
 				new Prerequisite(Q_Frame,
 					Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.ReadDirty,
-					TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS)),
-				new Prerequisite(Q_Autoscaling, DataConsumptionType.ReadDirty))
+					TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS)))
 				{ Name = "Drawer" };
 
 			return new RunManager(Step_TreeManager, Step_Simulator, Parameters.DENSITY_AUTOSCALE_ENABLE ? Step_Autoscaler : null, Step_Rasterizer, Step_Renderer, Step_Drawer);

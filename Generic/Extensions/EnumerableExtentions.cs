@@ -4,7 +4,7 @@ using System.Linq;
 
 using Generic.Models;
 
-namespace Generic {
+namespace Generic.Extensions {
 	public static class EnumerableExtentions {
 		#region Projections
 		/// <summary>

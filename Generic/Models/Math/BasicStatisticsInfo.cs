@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Generic.Extensions;
 
-namespace Generic {
+namespace Generic.Models {
 	public class BasicStatisticsInfo {
 		public readonly bool EnableInterpolation = true;
 
@@ -21,7 +22,6 @@ namespace Generic {
 		
 		public readonly double Mean;
 		public readonly double StdDev;
-
 
 		public double GetPercentileValue(double pct) {
 			double idx = (this.Data_asc.Length - 1) * pct / 100d;

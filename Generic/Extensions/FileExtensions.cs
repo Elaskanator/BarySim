@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace Generic {
+namespace Generic.Extensions {
 	public static class FileExtensions {
 		public static string IncrementFilename(string path) {
 			string baseName = Path.GetFileNameWithoutExtension(path);

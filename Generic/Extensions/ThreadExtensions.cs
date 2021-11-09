@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 
-namespace Generic {
+namespace Generic.Extensions {
 	public static class ThreadExtensions {
 		public const int MIN_SLEEP_DURATION_MS = 50;
 

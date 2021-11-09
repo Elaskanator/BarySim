@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading;
 
+using Generic.Extensions;
+
 namespace Generic.Models {
 	public class TimeSynchronizer {
 		public static readonly TimeSpan THREAD_SLEEP_OVERHEAD = TimeSpan.FromMilliseconds(15);
@@ -39,8 +41,10 @@ namespace Generic.Models {
 				else this._targetTimeUtc = nowUtc + this.Min;
 			}
 
-			if (waitDuration >= THREAD_SLEEP_OVERHEAD) Thread.Sleep(waitDuration - THREAD_SLEEP_OVERHEAD);
-			Generic.DebugExtensions.DebugWriteline("Sync - End");
+			if (waitDuration >= THREAD_SLEEP_OVERHEAD) {
+				Thread.Sleep(waitDuration - THREAD_SLEEP_OVERHEAD);
+				"Sync - End".DebugWriteline();
+			}
 		}
 	}
 }

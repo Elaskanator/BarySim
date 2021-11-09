@@ -1,5 +1,6 @@
 ﻿using System;
-using Generic;
+
+using Generic.Models;
 
 namespace Simulation {
 	public static class Parameters {
@@ -17,14 +18,10 @@ namespace Simulation {
 		public const int PRECALCULATION_LIMIT = 1;//no benefit to larger values than one
 
 		#region Boids
-		//TODO for the same number of total boids, more flocks makes it slower?
-		public const int NUM_BOIDS_PER_FLOCK = 10000;//significantly affects performance
-		public const int NUM_FLOCKS = 1;//total number of boids is flocks * boidsPerFlock
-		public const int RATED_BOIDS = 3000;//for a solid 30fps on my system - can do 100k boids at about 1fps
 		public const int SUBFRAME_MULTIPLE = 1;
 
 		public const int DESIRED_NEIGHBORS = 8;
-		public const bool ENABLE_COHESION = false;
+		public const bool ENABLE_COHESION = true;
 		public const bool ENABLE_ALIGNMENT = true;
 		public const bool ENABLE_SEPARATION = true;
 		
@@ -35,7 +32,7 @@ namespace Simulation {
 		public const double DEFAULT_ALIGNMENT_WEIGHT = 0.5;
 		public const double DEFAULT_COHESION_WEIGHT = 0.5;
 
-		public const double DEFAULT_MAX_FORCE = 0.1;
+		public const double MAX_FORCE = 0.1;
 		public const double DEFAULT_MAX_ACCELERATION = 0.05;
 		public const double DEFAULT_MAX_SPEED = 0.4;
 		public const double DEFAULT_MAX_STARTING_SPEED = 1;
@@ -71,7 +68,7 @@ namespace Simulation {
 			//ConsoleColor.DarkMagenta,
 		};
 		
-		public static readonly double[] DOMAIN = new double[] { WORLD_ASPECT_RATIO, 1d }.Multiply(WORLD_SCALE);
+		public static readonly double[] DOMAIN = VectorFunctions.Multiply(new double[] { WORLD_ASPECT_RATIO, 1d }, WORLD_SCALE);
 		#endregion World
 
 		#region Aux
@@ -85,7 +82,7 @@ namespace Simulation {
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 10;
 		public const double PERF_SMA_ALPHA = 0.05d;
 
-		public const int QUADTREE_REFRESH_FRAMES = 10;
+		public const int TREE_REFRESH_FRAMES = 10;
 		public const double AUTOSCALING_REFRESH_FRAMES = 30;
 		public const double AUTOSCALING_SMA_ALPHA = 0.4d;
 		#endregion Aux

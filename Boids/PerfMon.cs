@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 
-using Generic;
+using Generic.Extensions;
+using Generic.Models;
 using Simulation.Threading;
 
 namespace Simulation {
@@ -63,8 +64,8 @@ namespace Simulation {
 			Tuple<string, double, ConsoleColor>[] values = new Tuple<string, double, ConsoleColor>[steps.Sum(s => includeQTimingsTester(s) ? 3 : 1) + 1];
 			double fps;
 			if (Parameters.SYNC_SIMULATION)
-				fps = Program.Step_Drawer.IterationTimings_Ticks.Current ?? 0d;
-			else fps = _frameTiming.Current ?? 0d;
+				fps = Program.Step_Drawer.IterationTimings_Ticks.Current;
+			else fps = _frameTiming.Current;
 			fps = 10000000 / fps;//conversion from ticks
 			values[0] = new("FPS", fps, ChooseFpsColor(fps));
 
@@ -72,14 +73,14 @@ namespace Simulation {
 			double timeVal;
 			for (int i = 0, k = 1; i < steps.Length; k += includeQTimingsTester(steps[i]) ? 3 : 1, i++) {
 				label = steps[i].Name[0].ToString();
-				timeVal = (steps[i].CalculationTimings_Ticks.Current ?? 0) / 10000d;
+				timeVal = steps[i].CalculationTimings_Ticks.Current / 10000d;
 				values[k] = new(label, timeVal, ChooseFrameIntervalColor(timeVal));
 
 				if (includeQTimingsTester(steps[i])) {
-					timeVal = ((steps[i] as EvaluationStep).OutputResource.EnqueueTimings_Ticks.Current ?? 0d) / 10000d;
+					timeVal = (steps[i] as EvaluationStep).OutputResource.EnqueueTimings_Ticks.Current / 10000d;
 					values[k + 1] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
 
-					timeVal = ((steps[i] as EvaluationStep).OutputResource.DequeueTimings_Ticks.Current ?? 0d) / 10000d;
+					timeVal = (steps[i] as EvaluationStep).OutputResource.DequeueTimings_Ticks.Current / 10000d;
 					values[k + 2] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
 				}
 			}
@@ -116,7 +117,7 @@ namespace Simulation {
 
 				//autoscaling - ignore small anomalies
 				bool recompute = _currentMin.NumUpdates == 0
-					|| 0.1 < (Math.Abs(dataMin - _currentMin.Current.Value) + Math.Abs(dataMax - _currentMax.Current.Value)) / (dataMax - dataMin);
+					|| 0.1 < (Math.Abs(dataMin - _currentMin.Current) + Math.Abs(dataMax - _currentMax.Current)) / (dataMax - dataMin);
 				if (recompute) {
 					_currentMin.Update(dataMin);
 					_currentMax.Update(dataMax);
@@ -131,25 +132,25 @@ namespace Simulation {
 			}
 
 			string
-				label_current = (_frameTiming.LastUpdate.Value / 10000d).ToStringBetter(2) + "ms",
-				label_min = _currentMin.Current.Value.ToStringBetter(2),
+				label_current = (_frameTiming.LastUpdate / 10000d).ToStringBetter(2) + "ms",
+				label_min = _currentMin.Current.ToStringBetter(2),
 				label_avg = dataAvg.ToStringBetter(2),
-				label_max = _currentMax.Current.Value.ToStringBetter(2);
+				label_max = _currentMax.Current.ToStringBetter(2);
 
 			for (int i = 0; i < label_max.Length; i++)
 				result[i] = new ConsoleExtensions.CharInfo(label_max[i], ConsoleColor.Gray);
 			for (int i = 0; i < label_min.Length; i++)
 				result[i + Parameters.GRAPH_WIDTH * (Parameters.GRAPH_HEIGHT - 1)] = new ConsoleExtensions.CharInfo(label_min[i], ConsoleColor.Gray);
 
-			int offset_avg = (int)(Parameters.GRAPH_HEIGHT * (dataAvg - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value));
+			int offset_avg = (int)(Parameters.GRAPH_HEIGHT * (dataAvg - _currentMin.Current) / (_currentMax.Current - _currentMin.Current));
 			if (offset_avg >= 0 && offset_avg < Parameters.GRAPH_HEIGHT)
 				for (int i = 0; i < label_avg.Length; i++)
 					result[i + Parameters.GRAPH_WIDTH * (Parameters.GRAPH_HEIGHT - 1 - offset_avg)] = new ConsoleExtensions.CharInfo(label_avg[i], ConsoleColor.Gray);
 
-			int offset_current = (int)(Parameters.GRAPH_HEIGHT * ((_frameTiming.Current.Value / 10000d) - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value));
+			int offset_current = (int)(Parameters.GRAPH_HEIGHT * ((_frameTiming.Current / 10000d) - _currentMin.Current) / (_currentMax.Current - _currentMin.Current));
 			if (offset_current < 0) offset_current = 0;
 			else if (offset_current >= Parameters.GRAPH_HEIGHT) offset_current = Parameters.GRAPH_HEIGHT - 1;
-			ConsoleColor color_current = ChooseFrameIntervalColor(_frameTiming.LastUpdate.Value / 10000d);
+			ConsoleColor color_current = ChooseFrameIntervalColor(_frameTiming.LastUpdate / 10000d);
 			for (int i = 0; i < label_current.Length; i++)
 				result[i + Parameters.GRAPH_WIDTH * (Parameters.GRAPH_HEIGHT - 1 - offset_current)] = new ConsoleExtensions.CharInfo(label_current[i], color_current);
 
@@ -173,13 +174,13 @@ namespace Simulation {
 				Y090 = columnStats.Percentile90,
 				y100 = columnStats.Percentile100;
 			double
-				y000Scaled = Parameters.GRAPH_HEIGHT * (y000 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-				y010Scaled = Parameters.GRAPH_HEIGHT * (y010 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-				y0205caled = Parameters.GRAPH_HEIGHT * (y025 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-				y050Scaled = Parameters.GRAPH_HEIGHT * (y050 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-				Y075Scaled = Parameters.GRAPH_HEIGHT * (Y075 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-				Y090Scaled = Parameters.GRAPH_HEIGHT * (Y090 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value),
-				y100Scaled = Parameters.GRAPH_HEIGHT * (y100 - _currentMin.Current.Value) / (_currentMax.Current.Value - _currentMin.Current.Value);
+				y000Scaled = Parameters.GRAPH_HEIGHT * (y000 - _currentMin.Current) / (_currentMax.Current - _currentMin.Current),
+				y010Scaled = Parameters.GRAPH_HEIGHT * (y010 - _currentMin.Current) / (_currentMax.Current - _currentMin.Current),
+				y0205caled = Parameters.GRAPH_HEIGHT * (y025 - _currentMin.Current) / (_currentMax.Current - _currentMin.Current),
+				y050Scaled = Parameters.GRAPH_HEIGHT * (y050 - _currentMin.Current) / (_currentMax.Current - _currentMin.Current),
+				Y075Scaled = Parameters.GRAPH_HEIGHT * (Y075 - _currentMin.Current) / (_currentMax.Current - _currentMin.Current),
+				Y090Scaled = Parameters.GRAPH_HEIGHT * (Y090 - _currentMin.Current) / (_currentMax.Current - _currentMin.Current),
+				y100Scaled = Parameters.GRAPH_HEIGHT * (y100 - _currentMin.Current) / (_currentMax.Current - _currentMin.Current);
 				
 			int
 				minY = y000Scaled < 0 ? 0 : (int)Math.Floor(y000Scaled),
@@ -236,15 +237,14 @@ namespace Simulation {
 			Console.WriteLine("---END--- Duration {0:G3}s", Program.Manager.EndTimeUtc.Subtract(Program.Manager.StartTimeUtc).TotalSeconds);
 			
 			Console.Write("Evaluated ");
-			
-			Console.ForegroundColor = ChooseColor(Math.Pow((double)Parameters.RATED_BOIDS / Program.TotalBoids, 2));
-			Console.Write(Program.TotalBoids);
+
+			int particleCount = Program.Simulator.AllParticles.Count();
+			Console.Write(particleCount);
 
 			Console.ForegroundColor = ConsoleColor.White;
-			Console.Write(" {0} across {1} for {2} averaging ",
-				"boid".Pluralize(Program.TotalBoids),
-				Parameters.NUM_FLOCKS.Pluralize("flock"),
-				(Program.Step_Rasterizer.IterationCount - Program.Q_Rasterization.Depth).Pluralize("rasters")
+			Console.Write(" {0} for {1} averaging ",
+				"particle".Pluralize(particleCount),
+				(Program.Step_Rasterizer.IterationCount - Program.Q_Rasterization.QueueLength).Pluralize("rasters")
 					+ (Parameters.SUBFRAME_MULTIPLE < 2
 						? ""
 						: " and " + Program.Step_Simulator.IterationCount.Pluralize("simulation steps")));

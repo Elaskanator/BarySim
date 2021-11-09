@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Generic {
+namespace Generic.Models {
 	public static class PrimeFunctions {
 		/// <summary>
 		/// Returns a list of prime factors of the provided value, which must be nonzero.

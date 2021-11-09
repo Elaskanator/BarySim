@@ -4,13 +4,14 @@ using System.Linq;
 
 namespace Generic.Models {
 	public class QuadTree<T> : ATree<T>
-	where T : IVector {
+	where T : Vector {
 		public const int CAPACITY = 5;
-		public const int MAX_DEPTH = 50;//dividing by 2 enough times WILL reach the sig figs limit of System.Double and cause zero-sized subtrees
+		//dividing by 2 enough times WILL reach the sig figs limit of System.Double and cause zero-sized subtrees (before reaching the stack frame depth limit due to recursion)
+		public const int MAX_DEPTH = 50;
 		
-		public readonly SimpleVector LeftCorner;
-		public readonly SimpleVector Center;
-		public readonly SimpleVector RightCorner;
+		public readonly Vector LeftCorner;
+		public readonly Vector Center;
+		public readonly Vector RightCorner;
 		
 		public int NumMembers { get; private set; }
 		public int Dimensionality { get { return this.LeftCorner.Dimensionality; } }
@@ -27,17 +28,24 @@ namespace Generic.Models {
 		private readonly T[] _members = new T[CAPACITY];//entries in non-leaves are leftovers that must be ignored
 		private List<T> _leftovers;
 
-		public QuadTree(IVector corner1, IVector corner2, QuadTree<T> parent = null) 
+		public QuadTree(Vector corner1, Vector corner2, QuadTree<T> parent = null) 
 		: base(parent) {//make sure all values in x1 are smaller than x2 (the corners of a cubic volume)
 			if (Enumerable.Range(0, corner1.Coordinates.Length).All(d => corner1.Coordinates[d] == corner2.Coordinates[d])) throw new ArgumentException("Domain has no volume");
 
 			var orderedCornerPoints = corner1.Coordinates.Zip(corner2.Coordinates, (a, b) => new { Min = a < b ? a : b, Max = a < b ? b : a }).ToArray();
-			this.LeftCorner = (SimpleVector)orderedCornerPoints.Select(t => t.Min).ToArray();
-			this.RightCorner = (SimpleVector)orderedCornerPoints.Select(t => t.Max).ToArray();
-			this.Center = (SimpleVector)corner1.Coordinates.Zip(corner2.Coordinates, (a, b) => (a + b) / 2d).ToArray();//average of each dimension
+			this.LeftCorner = (Vector)orderedCornerPoints.Select(t => t.Min).ToArray();
+			this.RightCorner = (Vector)orderedCornerPoints.Select(t => t.Max).ToArray();
+			this.Center = (Vector)corner1.Coordinates.Zip(corner2.Coordinates, (a, b) => (a + b) / 2d).ToArray();//average of each dimension
 		}
 
-		public override void Add(T element) {
+		public override bool DoesContain(T element) {
+			for (int d = 0; d < this.Dimensionality; d++)//all dimensions must overlap
+				if (this.LeftCorner.Coordinates[d] > element.Coordinates[d] || element.Coordinates[d] > this.RightCorner.Coordinates[d])
+					return false;
+			return true;//all dimensions overlap (or there are none)
+		}
+
+		protected override void AddElementToNode(T element) {
 			if (this.NumMembers < CAPACITY) this._members[this.NumMembers] = element;
 			else {
 				if (this.Depth < MAX_DEPTH) {
@@ -54,13 +62,7 @@ namespace Generic.Models {
 			}
 			this.NumMembers++;
 		}
-		
-		public override bool DoesContain(T element) {
-			for (int d = 0; d < this.Dimensionality; d++)//all dimensions must overlap
-				if (this.LeftCorner.Coordinates[d] > element.Coordinates[d] || element.Coordinates[d] > this.RightCorner.Coordinates[d])
-					return false;//does not contain
-			return true;//no non-overlapping dimensions (I don't care about the stupid case of zero dimensions)
-		}
+
 		public override QuadTree<T> GetContainingChild(T element) {
 			int quadrantIdx = Enumerable.Range(0, this.Dimensionality).Sum(d => element.Coordinates[d] >= this.Center.Coordinates[d] ? 1 << d : 0);
 			return this._quadrants[quadrantIdx];
@@ -81,8 +83,8 @@ namespace Generic.Models {
 										: 1)))
 							.ToArray();
 					return new QuadTree<T>(
-						(SimpleVector)cornerA,
-						(SimpleVector)cornerA.Zip(sizeHalved, (a, b) => a + b).ToArray(),
+						(Vector)cornerA,
+						(Vector)cornerA.Zip(sizeHalved, (a, b) => a + b).ToArray(),
 						this);
 				})
 				.ToArray();

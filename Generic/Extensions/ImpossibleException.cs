@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Generic {
+namespace Generic.Extensions {
 	/// <summary>
 	/// Sometimes you just need to shut up the compiler about "Not all execution paths return a value" when your code is (hopefully) logically guaranteed
 	/// </summary>

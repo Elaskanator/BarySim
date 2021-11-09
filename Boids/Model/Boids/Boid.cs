@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 
-using Generic;
+using Generic.Extensions;
+using Generic.Models;
 
 namespace Simulation.Boids {
 	public class Boid : AParticle {
@@ -13,35 +14,31 @@ namespace Simulation.Boids {
 			get { return this._coordinates; }
 			set { this._coordinates = this.BoundPosition(value).ToArray(); } }
 		private double[] _velocity;
-		public override double[] Velocity {
+		public double[] Velocity {
 			get { return this._velocity; }
-			set { this._velocity = value.Clamp(Parameters.DEFAULT_MAX_SPEED); } }
+			set { this._velocity = VectorFunctions.Clamp(value, Parameters.DEFAULT_MAX_SPEED); } }
 		private double[] _acceleration;
-		public override double[] Acceleration {
+		public double[] Acceleration {
 			get { return this._acceleration; }
-			set { this._acceleration = value.Clamp(Parameters.DEFAULT_MAX_ACCELERATION); } }
-
-		private double _mass;
-		public override double Mass {
-			get { return this._mass; }
-			set { if (value <= 0) throw new ArgumentOutOfRangeException("Mass"); else this._mass = value; } }
+			set { this._acceleration = VectorFunctions.Clamp(value, Parameters.DEFAULT_MAX_ACCELERATION); } }
 
 		public Boid(Flock flock, double[] position, double[] velocity, double mass = 1)
-		: base(position, velocity, null, mass) {
+		: base(position, mass) {
 			this.Flock = flock;
+			this.Velocity = velocity;
+			this.Acceleration = new double[this.Coordinates.Length];
 		}
 
 		public void UpdateDeltas(IEnumerable<Boid> neighbors) {
-			double[] bias = this.ComputeNeighborhoodBias(neighbors);
+			this.Acceleration = this.ComputeNeighborhoodBias(neighbors);
 
-			this.Acceleration = bias
-				.Divide(this.Mass);
+			this.Velocity = VectorFunctions.Add(
+				VectorFunctions.Multiply(this.Velocity, this.Flock.SpeedDecay),
+				this.Acceleration);
 
-			this.Velocity = this.Velocity
-				.Multiply(this.Flock.SpeedDecay)
-				.Add(this.Acceleration);
-
-			this.Coordinates = this.Coordinates.Add(this.Velocity);
+			this.Coordinates = VectorFunctions.Add(
+				this.Coordinates,
+				this.Velocity);
 		}
 
 		private IEnumerable<double> BoundPosition(double[] position) {
@@ -54,7 +51,6 @@ namespace Simulation.Boids {
 		//TODO rewrite this method entirely
 		//seealso https://swharden.com/CsharpDataVis/boids/boids.md.html
 		private double[] ComputeNeighborhoodBias(IEnumerable<Boid> neighbors) {
-			bool anyNeighbors = false;
 			double cohesionBiasWeight = 0d, alignmentBiasWeight = 0d, separationBiasWeight = 0d;
 			double[] cohesionBias, separationBias, alignmentBias;
 			cohesionBias = separationBias = alignmentBias = Enumerable.Repeat(0d, Parameters.DOMAIN.Length).ToArray();
@@ -70,42 +66,40 @@ namespace Simulation.Boids {
 					break;
 				
 				//positionPrime = b.GetNearestWrappedPosition(this);
-				dist = this.Coordinates.Distance(other.Coordinates);
+				dist = VectorFunctions.Distance(this.Coordinates, other.Coordinates);
 
 				if (Parameters.ENABLE_COHESION && Parameters.DEFAULT_COHESION_WEIGHT > 0d) {
 					weight = this.GetCohesionWeight(other, dist);
 					cohesionBiasWeight += weight;
-					cohesionBias = cohesionBias.Add(other.Coordinates.Multiply(weight));
+					cohesionBias = VectorFunctions.Add(cohesionBias, VectorFunctions.Multiply(other.Coordinates, weight));
 				}
 
 				if (Parameters.ENABLE_ALIGNMENT && Parameters.DEFAULT_ALIGNMENT_WEIGHT > 0d) {
 					weight = this.GetAlignmentWeight(other, dist);
 					alignmentBiasWeight += weight;
-					alignmentBias = alignmentBias.Add(other.Velocity.Multiply(weight));
+					alignmentBias = VectorFunctions.Add(alignmentBias, VectorFunctions.Multiply(other.Velocity, weight));
 				}
 
 				if (Parameters.ENABLE_SEPARATION && Parameters.DEFAULT_SEPARATION_WEIGHT > 0d && dist < this.Flock.Separation) {
 					weight = this.GetSeparationWeight(other, dist);
 					separationBiasWeight += weight;
-					vect = this.Coordinates.Subtract(other.Coordinates);
-					separationBias = separationBias.Add(vect.Multiply(weight));
+					vect = VectorFunctions.Subtract(this.Coordinates, other.Coordinates);
+					separationBias = VectorFunctions.Add(separationBias, VectorFunctions.Multiply(vect, weight));
 				}
 			}
 
 			if (count > 0) {
-				if (cohesionBiasWeight > 0) cohesionBias = cohesionBias.Divide(cohesionBiasWeight);
-				if (alignmentBiasWeight > 0) alignmentBias = alignmentBias.Divide(alignmentBiasWeight);
-				if (separationBiasWeight > 0) separationBias = separationBias.Divide(separationBiasWeight);
-				
-				//separationBias = separationBias.Subtract(this.Velocity);
+				if (cohesionBiasWeight > 0) cohesionBias = VectorFunctions.Multiply(cohesionBias, cohesionBiasWeight);
+				if (alignmentBiasWeight > 0) alignmentBias = VectorFunctions.Multiply(alignmentBias, alignmentBiasWeight);
+				if (separationBiasWeight > 0) separationBias = VectorFunctions.Multiply(separationBias, separationBiasWeight);
 
 				return
-					Enumerable.Repeat(0d, Parameters.DOMAIN.Length).ToArray()//for testing
-					//.Add(Enumerable.Repeat(0.005d, Parameters.Domain.Length).ToArray())//for testing
-					.Add(cohesionBias.Normalize().Multiply(Parameters.DEFAULT_COHESION_WEIGHT))
-					.Add(alignmentBias)
-					.Add(separationBias)
-					.Clamp(Parameters.DEFAULT_MAX_FORCE);
+					VectorFunctions.Clamp(
+						VectorFunctions.Add(
+							VectorFunctions.Multiply(cohesionBias, Parameters.DEFAULT_COHESION_WEIGHT), VectorFunctions.Add(
+							VectorFunctions.Multiply(alignmentBias, Parameters.DEFAULT_ALIGNMENT_WEIGHT),
+							VectorFunctions.Multiply(separationBias, Parameters.DEFAULT_SEPARATION_WEIGHT))),
+						Parameters.MAX_FORCE);
 			} else {
 				return Enumerable.Repeat(0d, Parameters.DOMAIN.Length).ToArray();
 			}

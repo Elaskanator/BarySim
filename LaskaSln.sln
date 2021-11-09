@@ -12,6 +12,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Generic", "Generic\Generic.csproj", "{3CF3A48B-9C45-44DC-9077-E08B86C2C56B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{EDA64E7F-6B66-45EA-926D-C83EB6825070}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Applications", "Applications", "{580C276A-7726-4BD2-9343-78E316CA4612}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,6 +33,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A67D6C4D-8687-43D9-BEA4-4BB9B9E86617} = {580C276A-7726-4BD2-9343-78E316CA4612}
+		{3CF3A48B-9C45-44DC-9077-E08B86C2C56B} = {EDA64E7F-6B66-45EA-926D-C83EB6825070}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8C6FE800-AF41-4EA9-B043-6563917B0D36}
