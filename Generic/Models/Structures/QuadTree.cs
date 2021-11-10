@@ -68,9 +68,9 @@ namespace Generic.Models {
 			int quadrantIdx = Enumerable.Range(0, this.Dimensionality).Sum(d => element.Coordinates[d] >= this.Center.Coordinates[d] ? 1 << d : 0);
 			return this._quadrants[quadrantIdx];
 		}
+		protected virtual T[] OrganizeNodes(T[] nodes) { return nodes; }
 
 		protected abstract T NewNode(double[] cornerA, double[] cornerB, T parent);
-		protected virtual T[] OrganizeNodes(T[] nodes) { return nodes; }
 
 		private IEnumerable<T> FormNodes() {
 			foreach (var newNodeData in Enumerable
