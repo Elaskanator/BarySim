@@ -28,10 +28,10 @@ namespace ParticleSimulator.Simulation {
 			this.Particles = Enumerable
 				.Range(0, Parameters.NUM_PARTICLES_PER_GROUP)
 				.Select(d => this.NewParticle(
-					startingPosition.Zip(
+					position:startingPosition.Zip(
 						NumberExtensions.Random_Spherical(radius, Parameters.DOMAIN.Length, random),
 						(a, b) => a + b).ToArray(),
-					VectorFunctions.Multiply(
+					velocity:VectorFunctions.Multiply(
 						VectorFunctions.Normalize(Enumerable
 						.Range(0, Parameters.DOMAIN.Length)
 						.Select(d => (random.NextDouble() * 2d) - 1d).ToArray()//random between -1 and +1

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Generic.Extensions;
-using ParticleSimulator.Rendering;
 
 namespace ParticleSimulator.Simulation.Boids {
 	public class BoidSimulator : AParticleSimulator<Boid, BoidQuadTree> {
@@ -16,10 +15,10 @@ namespace ParticleSimulator.Simulation.Boids {
 		public override IEnumerable<Boid> AllParticles => this.Flocks.SelectMany(f => f.Particles);
 		public override BoidQuadTree NewTree => new BoidQuadTree(new double[Parameters.DOMAIN.Length], Parameters.DOMAIN);
 
-		protected override void ComputeUpdate(BoidQuadTree tree) {
+		protected override void InteractTree(BoidQuadTree tree) {
 			Parallel.ForEach(tree.Leaves, leaf => {
 				foreach (Boid b in leaf.AllElements)
-					b.UpdateDeltas(leaf.GetNeighbors()); });
+					b.Interact(leaf.GetNeighbors().Cast<Boid>()); });
 		}
 	}
 }

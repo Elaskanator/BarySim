@@ -8,24 +8,21 @@ using ParticleSimulator.Simulation;
 using ParticleSimulator.Threading;
 
 namespace ParticleSimulator {
-	//TODO add handshake optimization (boids sharing interactions, to compute only half as many)
-	//TODO world wrap interaction: boids look forward only into adjoining quadrant
-	//FOR LATER refactor to support different underlying simulations, and support far-field interactions (e.g. astrophysical simulation)
+	//TODO add handshake optimization (particles with symmetric interactions, to compute only half as many)
+	//TODO world wrap interaction: particles look forward only into adjoining quadrant
 	//SEEALSO https://www.youtube.com/watch?v=TrrbshL_0-s
 	public class Program {
-		public const bool ENABLE_DEBUG_LOGGING = false;
-		public const SimulationType SimType = SimulationType.Boid;
+		public static readonly SimulationType SimType = SimulationType.Boid;
 
 		public static readonly Random Random = new();
 		public static IParticleSimulator Simulator { get; private set; }
 		public static RunManager Manager { get; private set; }
-		public static bool IsActive { get; private set; }
 
-		public static SynchronizedDataBuffer Q_Tree, Q_Locations, Q_Rasterization, Q_Frame;
-		public static AEvaluationStep Step_TreeManager, Step_Simulator, Step_Rasterizer, Step_Autoscaler, Step_Renderer, Step_Drawer;
+		public static SynchronizedDataBuffer Resource_Tree, Resource_Locations, Resource_Resamplings, Resource_Rasterization;
+		public static StepEvaluator StepEval_TreeMaintain, StepEval_Simulate, StepEval_Resample, StepEval_Autoscale, StepEval_Rasterize, StepEval_Draw;
 
 		public static void Main(string[] args) {
-			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);
+			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);//ctrl+c and alt+f4 etc
 
 			switch (SimType) {
 				case SimulationType.Boid:
@@ -37,64 +34,190 @@ namespace ParticleSimulator {
 				default:
 					throw new InvalidEnumArgumentException(nameof(SimType), (int)SimType, typeof(SimulationType));
 			}
-			Manager = BuildRunManager();
 			
+			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
 			Console.Title = string.Format("{0} Simulator ({1})", SimType, Simulator.AllParticles.Count().Pluralize("particle"));
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
 			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
-			ConsoleExtensions.HideScrollbars();
-			//flushing the console buffer gets *really* messed up if the window gets resized by anything
-			ConsoleExtensions.DisableAllResizing();
-			//ConsoleExtensions.SetWindowPosition(0, 0);
 			Console.CursorVisible = false;
+			//these require p-invokes
+			ConsoleExtensions.HideScrollbars();
+			//rendering gets *really* messed up if the window gets resized by anything
+			ConsoleExtensions.DisableAllResizing();//note this doesn't work to disable OS window snapping
+			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
-			IsActive = true;
+			Manager = BuildRunManager();
 			Manager.Start();
 		}
 
 		private static RunManager BuildRunManager() {
-			Q_Tree = new SynchronizedDataBuffer("Tree", 0);
-			Q_Locations = new SynchronizedDataBuffer("Location Mapper", Parameters.PRECALCULATION_LIMIT);
-			Q_Rasterization = new SynchronizedDataBuffer("Rasterizer", Parameters.PRECALCULATION_LIMIT);
-			Q_Frame = new SynchronizedDataBuffer("Frame Renderer", Parameters.PRECALCULATION_LIMIT);
+			Resource_Tree = new SynchronizedDataBuffer("Tree", 0);
+			Resource_Locations = new SynchronizedDataBuffer("Locations", Parameters.ENABLE_ASYNCHRONOUS ? Parameters.PRECALCULATION_LIMIT : 0);
+			Resource_Resamplings = new SynchronizedDataBuffer("Resampling", Parameters.ENABLE_ASYNCHRONOUS ? Parameters.PRECALCULATION_LIMIT : 0);
+			Resource_Rasterization = new SynchronizedDataBuffer("Rasterization", Parameters.ENABLE_ASYNCHRONOUS ? Parameters.PRECALCULATION_LIMIT : 0);
+			
+			StepEval_Draw = new(new() {
+				Name = "Drawing",
+				Initializer = null,
+				Calculator = null,
+				Evaluator = Renderer.FlushScreenBuffer,
+				Synchronizer = TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS),
+				Callback = null,
+				DataAssimilationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				SynchronizationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				DataLoadingTimeout = null,
+				OutputResource = null,
+				IsOutputOverwrite = false,
+				OutputSkips = 0,
+				InputResourceUses = new Prerequisite[] {
+					new() {
+						Resource = Resource_Rasterization,
+						DoConsume = true,
+						OnChange = false,
+						DoHold = false,
+						AllowDirtyRead = false,
+						ReuseAmount = 0,
+						ReuseTolerance = 0,
+						ReadTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS)
+			}}});
+			StepEval_Simulate = new(new() {
+				Name = "Simulating",
+				Initializer = null,
+				Calculator = Simulator.RefreshSimulation,
+				Evaluator = null,
+				Synchronizer = null,
+				Callback = null,
+				DataAssimilationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				SynchronizationTicksAverager = null,
+				IterationTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				DataLoadingTimeout = null,
+				OutputResource = Resource_Locations,
+				IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
+				OutputSkips = Parameters.SIMULATION_SKIPS,
+				InputResourceUses = new Prerequisite[] {
+					new() {
+						Resource = Resource_Tree,
+						DoConsume = true,
+						OnChange = false,
+						DoHold = true,
+						AllowDirtyRead = false,
+						ReuseAmount = Parameters.TREE_REFRESH_FRAMES,
+						ReuseTolerance = Parameters.SYNC_TREE_REFRESH ? Parameters.TREE_REFRESH_FRAMES : 0,
+						ReadTimeout = null
+			}}});
+			StepEval_TreeMaintain = new(new() {
+				Name = "Tree Managing",
+				Initializer = Simulator.RebuildTree,
+				Calculator = null,
+				Evaluator = null,
+				Synchronizer = null,
+				Callback = null,
+				DataAssimilationTicksAverager = null,
+				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				DataLoadingTimeout = null,
+				OutputResource = Resource_Tree,
+				IsOutputOverwrite = false,
+				OutputSkips = 0,
+				InputResourceUses = null
+			});
+			StepEval_Resample = new(new() {
+				Name = "Density Sampling",
+				Initializer = null,
+				Calculator = Simulator.ResampleDensities,
+				Evaluator = null,
+				Synchronizer = null,
+				Callback = null,
+				DataAssimilationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				SynchronizationTicksAverager = null,
+				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				DataLoadingTimeout = null,
+				OutputResource = Resource_Resamplings,
+				IsOutputOverwrite = false,
+				OutputSkips = 0,
+				InputResourceUses = new Prerequisite[] {
+					new() {
+						Resource = Resource_Locations,
+						DoConsume = true,
+						OnChange = false,
+						DoHold = false,
+						AllowDirtyRead = false,
+						ReuseAmount = 0,
+						ReuseTolerance = 0,
+						ReadTimeout = null
+			}}});
+			StepEval_Rasterize = new(new() {
+				Name = "Rasterizer",
+				Initializer = null,
+				Calculator = Renderer.Rasterize,
+				Evaluator = null,
+				Synchronizer = null,
+				Callback = PerfMon.AfterRasterize,
+				DataAssimilationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				SynchronizationTicksAverager = null,
+				IterationTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				DataLoadingTimeout = null,
+				OutputResource = Resource_Rasterization,
+				IsOutputOverwrite = false,
+				OutputSkips = 0,
+				InputResourceUses = new Prerequisite[] {
+					new() {
+						Resource = Resource_Resamplings,
+						DoConsume = true,
+						OnChange = false,
+						DoHold = false,
+						AllowDirtyRead = false,
+						ReuseAmount = 0,
+						ReuseTolerance = 0,
+						ReadTimeout = null
+			}}});
 
-			Step_TreeManager = new EvaluationStep(Q_Tree, false, 1,
-				p => Simulator.RebuildTree())
-				{ Name = "Tree Builder" };
-			Step_Simulator = new EvaluationStep(Q_Locations, !Parameters.SYNC_SIMULATION, Parameters.SIMULATION_SUBFRAME_MULTIPLE,
-				p => Simulator.Simulate((ITree)p[0]),
-				new Prerequisite(Q_Tree, DataConsumptionType.Consume, Parameters.TREE_REFRESH_FRAMES, Parameters.SYNC_TREE_REFRESH ? 0 : Parameters.TREE_REFRESH_FRAMES))
-				{ Name = "Simulator" };
-			Step_Rasterizer = new EvaluationStep(Q_Rasterization, !Parameters.SYNC_SIMULATION, 1,
-				p => Simulator.RasterizeDensities((Tuple<double[], double>[])p[0]),
-				new Prerequisite(Q_Locations, DataConsumptionType.Consume))
-				{ Name = "Rasterizer" };
-			Step_Autoscaler = new NonOutputtingEvaluationStep(
-				p => Simulator.AutoscaleUpdate((Tuple<char, double>[])p[0]),
-				new TimeSynchronizer(null, TimeSpan.FromMilliseconds(250)),
-				new Prerequisite(Q_Rasterization, DataConsumptionType.OnUpdate))
-				{ Name = "Autoscaler", DoTrackLatency = false };
-			Step_Renderer = new	EvaluationStep(Q_Frame, !Parameters.SYNC_SIMULATION, 1,
-				Renderer.Render,
-				new Prerequisite(Q_Rasterization, Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.OnUpdate))
-				{ Name = "Renderer" };
-			Step_Drawer = new NonOutputtingEvaluationStep(
-				p => Renderer.FlushScreenBuffer((ConsoleExtensions.CharInfo[])p[0]),
-				TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS),
-				new Prerequisite(Q_Frame,
-					Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.Read,
-					TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
-					true))
-				{ Name = "Drawer" };
+			if (Parameters.DENSITY_AUTOSCALE_ENABLE)
+				StepEval_Autoscale = new(new() {
+					Name = "Autoscaler",
+					Initializer = null,
+					Calculator = null,
+					Evaluator = Simulator.AutoscaleUpdate,
+					Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS)),
+					Callback = null,
+					DataAssimilationTicksAverager = null,
+					SynchronizationTicksAverager = null,
+					IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+					DataLoadingTimeout = null,
+					OutputResource = null,
+					IsOutputOverwrite = false,
+					OutputSkips = 0,
+					InputResourceUses = new Prerequisite[] {
+						new() {
+							Resource = Resource_Resamplings,
+							DoConsume = false,
+							OnChange = true,
+							DoHold = false,
+							AllowDirtyRead = false,
+							ReuseAmount = 0,
+							ReuseTolerance = 0,
+							ReadTimeout = null
+				}}});
 
-			return new RunManager(Step_TreeManager, Step_Simulator, Parameters.DENSITY_AUTOSCALE_ENABLE ? Step_Autoscaler : null, Step_Rasterizer, Step_Renderer, Step_Drawer);
+			return new RunManager(
+				new[] {
+					StepEval_Draw,
+					StepEval_Simulate,
+					StepEval_TreeMaintain,
+					StepEval_Resample,
+					StepEval_Rasterize,
+				}.Concat(Parameters.DENSITY_AUTOSCALE_ENABLE ? new[] { StepEval_Autoscale } : Array.Empty<StepEvaluator>())
+				.ToArray());
 		}
 
-		private static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+C
-			args.Cancel = true;//keep master thread alive for results output (if enabled)
-			IsActive = false;
+		private static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+c and alt+f4 etc
+			//keep master thread alive for results output (if enabled)
+			//also necessary to cleanup the application, otherwise any threading calls would immediately kill this thread
+			args.Cancel = true;
+
 			Manager.Dispose();
 			PerfMon.WriteEnd();
+
 			ConsoleExtensions.WaitForEnter("Press enter to end");
 			Environment.Exit(0);
 		}

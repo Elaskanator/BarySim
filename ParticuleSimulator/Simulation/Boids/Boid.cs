@@ -11,7 +11,6 @@ namespace ParticleSimulator.Simulation.Boids {
 		public Boid(Flock flock, double[] position, double[] velocity, double mass = 1)
 		: base(position, velocity, mass) {
 			this.Flock = flock;
-			this.Velocity = new double[position.Length];
 		}
 		
 		private double[] _velocity;
@@ -24,12 +23,13 @@ namespace ParticleSimulator.Simulation.Boids {
 			set { this._acceleration = VectorFunctions.Clamp(value, Parameters.MAX_ACCELERATION); } }
 		public override double Radius => 0f;
 
-		public void UpdateDeltas(IEnumerable<Boid> neighbors) {
+		public void Interact(IEnumerable<Boid> neighbors) {
 			this.Acceleration = this.ComputeNeighborhoodBias(neighbors);
 		}
+		public override void Interact(AParticle neighbor) { throw new NotImplementedException(); }
 
 		internal override void ApplyUpdate() {
-			this.Velocity = this.Velocity.Multiply(Parameters.SPEED_DECAY).Addition(this.Acceleration);
+			this.Velocity = this.Velocity.Multiply(Math.Exp(-Parameters.SPEED_DECAY)).Addition(this.Acceleration);
 			this.Coordinates = this.Velocity.Addition(this.Coordinates);
 		}
 

@@ -14,9 +14,9 @@ namespace ParticleSimulator.Simulation {
 		public SampleSMA[] DensityScale { get; }
 
 		public ITree RebuildTree();
-		public Tuple<double[], double>[] Simulate(ITree tree);
-		public Tuple<char, double>[] RasterizeDensities(Tuple<double[], double>[] particles);
-		public void AutoscaleUpdate(Tuple<char, double>[] sampling);
+		public Tuple<double[], double>[] RefreshSimulation(object[] parameters);
+		public Tuple<char, double>[] ResampleDensities(object[] parameters);
+		public void AutoscaleUpdate(object[] parameters);
 	}
 
 	public abstract class AParticleSimulator<P, T> : IParticleSimulator
@@ -39,45 +39,41 @@ namespace ParticleSimulator.Simulation {
 		public abstract T NewTree { get; }
 
 		public T RebuildTree() {
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("BuildTree - Start");
-
 			T tree = this.NewTree;
 			tree.AddRange(this.AllParticles);
 
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("BuildTree - End");
 			return tree;
 		}
 		ITree IParticleSimulator.RebuildTree() { return this.RebuildTree(); }
 
-		public Tuple<double[], double>[] Simulate(T tree) {
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Simulate - Start");
-
+		public Tuple<double[], double>[] RefreshSimulation(T tree) {
 			DateTime startUtc = DateTime.UtcNow;
 
-			this.ComputeUpdate(tree);
+			this.InteractTree(tree);
 			Parallel.ForEach(this.AllParticles, p => p.ApplyUpdate());
 
 			Tuple<double[], double>[] result = this.AllParticles.Select(p => new Tuple<double[], double>(p.Coordinates, p.Mass)).ToArray();
 
-			if (Parameters.PERF_ENABLE) PerfMon.AfterSimulate(startUtc);
-
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Simulate - End");
 			return result;
 		}
-		public Tuple<double[], double>[] Simulate(ITree tree) { return this.Simulate((T)tree); }
+		public Tuple<double[], double>[] RefreshSimulation(object[] parameters) { return this.RefreshSimulation((T)parameters[0]); }
 
-		protected abstract void ComputeUpdate(T tree);
+		protected virtual void InteractTree(T tree) {
+			P[] particles = tree.AllElements.ToArray();
+			foreach (P particle in particles) {
+				foreach (P other in particles.Except(p => p.ID == particle.ID))
+					particle.Interact(other);
+			}
+		}
 
-		public Tuple<char, double>[] RasterizeDensities(Tuple<double[], double>[] particles) {
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Rasterize - Start");
+		public Tuple<char, double>[] ResampleDensities(Tuple<double[], double>[] particleData) {
 			DateTime startUtc = DateTime.UtcNow;
 
-			Tuple<char, double>[] result = this.Resample(particles);
+			Tuple<char, double>[] result = this.Resample(particleData);
 			
-			if (Parameters.PERF_ENABLE) PerfMon.AfterRasterize(startUtc);
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Rasterize - End");
 			return result;
 		}
+		public Tuple<char, double>[] ResampleDensities(object[] parameters) { return this.ResampleDensities((Tuple<double[], double>[])parameters[0]); }
 
 		protected virtual Tuple<char, double>[] Resample(Tuple<double[], double>[] particles) {
 			Tuple<char, double>[] results = new Tuple<char, double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
@@ -117,8 +113,6 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public void AutoscaleUpdate(Tuple<char, double>[] sampling) {
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Autoscale - Start");
-
 			double[] orderedCounts = sampling.Except(c => c is null).Select(c => c.Item2).Order().ToArray();//TODO use selection sort?
 			if (orderedCounts.Length > 0) {
 				int totalBands = Parameters.DENSITY_COLORS.Length - 1;
@@ -141,7 +135,7 @@ namespace ParticleSimulator.Simulation {
 					}
 
 					if (newValRounded > curVal) {
-						this.DensityScale[band - 1].Update(newValRounded, Program.Step_Rasterizer.IterationCount <= 1 ? 1d : null);
+						this.DensityScale[band - 1].Update(newValRounded, Program.StepEval_Resample.NumCompleted <= 1 ? 1d : null);
 					} else if (band > 1 && newValRounded <= this.DensityScale[band - 2].Current) {
 						this.DensityScale[band - 1].Update(this.DensityScale[band - 2].Current + 1, 1d);
 					} else {
@@ -149,11 +143,21 @@ namespace ParticleSimulator.Simulation {
 					}
 				}
 			}
-
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Autoscale - End");
 		}
+		public void AutoscaleUpdate(object[] parameters) { this.AutoscaleUpdate((Tuple<char, double>[])parameters[0]); }
 
 		public IEnumerator<AParticle> GetEnumerator() { return this.AllParticles.GetEnumerator(); }
 		IEnumerator IEnumerable.GetEnumerator() {return this.AllParticles.GetEnumerator(); }
+	}
+
+	public abstract class ASymmetricalInteractionParticleSimulator<P, T> : AParticleSimulator<P, T>
+	where P : ASymmetricParticle
+	where T : ATree<P> {
+		public ASymmetricalInteractionParticleSimulator(Random rand = null)
+		: base(rand) { }
+
+		protected override void InteractTree(T tree) {
+			throw new NotImplementedException();
+		}
 	}
 }

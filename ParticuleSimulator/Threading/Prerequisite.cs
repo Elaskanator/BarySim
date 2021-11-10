@@ -2,35 +2,26 @@
 
 namespace ParticleSimulator.Threading {
 	public struct Prerequisite {
-		public readonly SynchronizedDataBuffer Resource;
-		public readonly DataConsumptionType ConsumptionType;
-		public readonly int ConsumptionReuse;
-		public readonly int ReuseSlipTolerance;
-		public readonly bool AllowDirtyRead;
-		public readonly TimeSpan? ReadTimeout;
+		public SynchronizedDataBuffer Resource;
 
-		public Prerequisite(SynchronizedDataBuffer buffer, DataConsumptionType consumptionType, TimeSpan? timeout, bool allowDirty, int consumptionReuse = 1, int reuseSlipTolerance = 0) {
-			if (consumptionReuse < 1) throw new ArgumentOutOfRangeException(nameof(consumptionReuse), "Must be strictly positive");
-			if (timeout.HasValue && timeout.Value.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(timeout), "Must be nonzero");
-			this.Resource = buffer;
-			this.ConsumptionType = consumptionType;
-			this.AllowDirtyRead = allowDirty;
-			this.ReadTimeout = timeout;
-			this.ConsumptionReuse = consumptionReuse;
-			this.ReuseSlipTolerance = reuseSlipTolerance;
-		}
-		public Prerequisite(SynchronizedDataBuffer buffer, DataConsumptionType consumptionType, TimeSpan? timeout, int consumptionReuse = 1, int reuseSlipTolerance = 0)
-		: this(buffer, consumptionType, timeout, false, consumptionReuse, reuseSlipTolerance) { }
-		public Prerequisite(SynchronizedDataBuffer buffer, DataConsumptionType consumptionType, bool allowDirty, int consumptionReuse = 1, int reuseSlipTolerance = 0)
-		: this(buffer, consumptionType, null, allowDirty, consumptionReuse, reuseSlipTolerance) { }
-		public Prerequisite(SynchronizedDataBuffer buffer, DataConsumptionType consumptionType, int consumptionReuse = 1, int reuseSlipTolerance = 0)
-		: this(buffer, consumptionType, null, false, consumptionReuse, reuseSlipTolerance) { }
+		public bool DoConsume;
+		public bool OnChange;
+		public bool DoHold;
+		public bool AllowDirtyRead;
+		public TimeSpan? ReadTimeout;
+		//negative means unlimited
+		public int ReuseAmount;
+		public int ReuseTolerance;
 
 		public override string ToString() {
-			return string.Format("{0}<{1}{2}>{3}", nameof(Prerequisite),
-				this.ConsumptionType,
-				this.ConsumptionReuse > 1 ? string.Format(" Reuse: {0}", this.ConsumptionReuse) : "",
-				this.Resource);
+			return string.Format("{0}<{1}>[{2} {3} {4} {5} {6} {7} {8}]", nameof(Prerequisite), this.Resource.Name,
+				this.DoConsume,
+				this.OnChange,
+				this.DoHold,
+				this.AllowDirtyRead,
+				this.ReadTimeout,
+				this.ReuseAmount,
+				this.ReuseTolerance);
 		}
 	}
 }

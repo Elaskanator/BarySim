@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 
 namespace ParticleSimulator.Simulation.Gravity {
-	public class CelestialBody : AParticle {
+	public class CelestialBody : ASymmetricParticle {
 		public const double GRAVITATIONAL_CONSTANT = 0.66743d;
 
 		private readonly double _radius;
@@ -18,7 +19,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 
 		internal readonly Dictionary<int, double[]> _contributingAccelerations = new();
 		private double[] _contributingBaryonsAcceleration;
-		public void Interact(BaryonQuadTree baryonNode) {
+		public void InteractNode(BaryonQuadTree baryonNode) {
 			double[] toOther = this.Coordinates.Subtract(baryonNode.Barycenter.Current);
 			double distance = VectorFunctions.Magnitude(toOther);
 
@@ -46,6 +47,9 @@ namespace ParticleSimulator.Simulation.Gravity {
 				other._contributingAccelerations[this.ID] = VectorFunctions.Divide(force, -other.Mass);
 			}
 		}
+		public override void Interact(AParticle other) { this.Interact((CelestialBody)other); }
+		
+		public override void Interact(ATree<AParticle> tree) { throw new NotImplementedException(); }
 
 		internal override void ApplyUpdate() {
 			this.Coordinates = VectorFunctions.Addition(

@@ -36,8 +36,7 @@ namespace ParticleSimulator.Rendering {
 			}
 		}
 
-		public static ConsoleExtensions.CharInfo[] Render(object[] p) {
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Render - Start");
+		public static ConsoleExtensions.CharInfo[] Rasterize(object[] p) {
 			Tuple<char, double>[] rasterization = (Tuple<char, double>[])p[0];
 
 			ConsoleExtensions.CharInfo[] frame = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
@@ -53,17 +52,18 @@ namespace ParticleSimulator.Rendering {
 			}
 			if (Parameters.PERF_ENABLE) PerfMon.DrawStatsOverlay(frame);
 
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Render - End");
 			return frame;
 		}
 
-		public static void FlushScreenBuffer(ConsoleExtensions.CharInfo[] buffer) {
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Draw - Start");
+		private static DateTime? _lastUpdateUtc = null;
+		public static void FlushScreenBuffer(object[] parameters) {
+			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])parameters[0];
 
 			int xOffset = Parameters.PERF_ENABLE ? 4 : 0,
 				yOffset = Parameters.PERF_ENABLE ? 1 : 0;
 
-			TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(Program.Step_Rasterizer.LastIerationEndUtc ?? Program.Manager.StartTimeUtc);
+			if (Program.StepEval_Draw.IsPunctual ?? false) _lastUpdateUtc = DateTime.UtcNow;
+			TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(_lastUpdateUtc ?? Program.Manager.StartTimeUtc);
 			if (timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS) {
 				buffer ??= new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 				string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s").PadRight(6);
@@ -72,12 +72,12 @@ namespace ParticleSimulator.Rendering {
 			}
 
 			if (!(buffer is null)) ConsoleExtensions.WriteConsoleOutput(buffer);
-			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Draw - End");
 		}
 
 		public static void DrawLegend(ConsoleExtensions.CharInfo[] buffer, SampleSMA[] densityScale) {
 			int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - Parameters.DENSITY_COLORS.Length);
 			Func<double, string> rounding = Program.Simulator.IsDiscrete ? x => ((int)x).ToString() : x => x.ToStringBetter(2);
+
 			string strData;
 			for (int cIdx = 0; cIdx < Parameters.DENSITY_COLORS.Length; cIdx++) {
 				buffer[pixelIdx] = new ConsoleExtensions.CharInfo(

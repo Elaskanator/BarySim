@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Generic.Models;
 
 namespace ParticleSimulator {
@@ -20,9 +21,23 @@ namespace ParticleSimulator {
 			this.Velocity = velocity;
 			this.Mass = mass;
 		}
+		
+		public abstract void Interact(AParticle particle);
+
+		public virtual void Interact(AParticle[] particles) {
+			foreach (AParticle other in particles)
+				this.Interact(other);
+		}
+		public virtual void InteractMany(IEnumerable<AParticle> particles) {
+			foreach (AParticle other in particles)
+				this.Interact(other);
+		}
+		public virtual void Interact(ATree<AParticle> tree) {
+			this.Interact(tree.AllElements.ToArray());
+		}
 
 		internal abstract void ApplyUpdate();
-		protected double[] BoundPosition(double[] position) {
+		private double[] BoundPosition(double[] position) {
 			return position
 				.Select((x, i) =>
 					x < 0d
@@ -42,5 +57,10 @@ namespace ParticleSimulator {
 			return string.Format("{0}[ID {1}]<{2}>", nameof(AParticle), this.ID,
 				string.Join(",", this.Coordinates.Select(i => i.ToString())));
 		}
+	}
+
+	public abstract class ASymmetricParticle : AParticle {
+		public ASymmetricParticle(double[] position, double[] velocity, double mass)
+		: base(position, velocity, mass) { }
 	}
 }

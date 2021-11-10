@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Generic.Extensions;
 
 namespace ParticleSimulator.Simulation.Gravity {
-	public class GravitySimulator : AParticleSimulator<CelestialBody, BaryonQuadTree> {
+	public class GravitySimulator : ASymmetricalInteractionParticleSimulator<CelestialBody, BaryonQuadTree> {
 		public GravitySimulator(Random rand = null) : base(rand) {
 			this.Clusterings = Enumerable.Range(0, Parameters.NUM_PARTICLE_GROUPS).Select(i => new Clustering(this._rand)).ToArray();
 		}
@@ -14,10 +15,10 @@ namespace ParticleSimulator.Simulation.Gravity {
 		public override IEnumerable<CelestialBody> AllParticles => this.Clusterings.SelectMany(c => c.Particles);
 		public override BaryonQuadTree NewTree => new BaryonQuadTree(new double[Parameters.DOMAIN.Length], Parameters.DOMAIN);
 
-		protected override void ComputeUpdate(BaryonQuadTree tree) {
+		protected override void InteractTree(BaryonQuadTree tree) {
 			BaryonQuadTree[] nodes;
-			foreach (BaryonQuadTree leaf in tree.Leaves) {
-				nodes = leaf.GetRefinedNeighborNodes(3).Cast<BaryonQuadTree>().ToArray();
+			Parallel.ForEach(tree.Leaves, leaf => {
+				nodes = leaf.GetRefinedNeighborNodes(Parameters.QUADTREE_NEIGHBORHOOD_FILTER).Cast<BaryonQuadTree>().ToArray();
 				foreach (CelestialBody b in leaf.NodeElements)
 					foreach (BaryonQuadTree otherNode in nodes) {
 						if (otherNode.IsLeaf)
@@ -25,9 +26,8 @@ namespace ParticleSimulator.Simulation.Gravity {
 								if (b.ID != b2.ID)
 									b.Interact(b2);
 						else
-							b.Interact(otherNode);
-					}
-			}
+							b.InteractNode(otherNode);
+					}});
 		}
 
 		protected override Tuple<char, double>[] Resample(Tuple<double[], double>[] particles) {

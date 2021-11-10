@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
@@ -8,7 +7,6 @@ using ParticleSimulator.Threading;
 namespace ParticleSimulator {
 	internal static class PerfMon {
 		private static SampleSMA _frameTiming = new SampleSMA(Parameters.PERF_SMA_ALPHA);
-		private static SortedDictionary<int, double> _simulationTimes = new();
 		public static readonly int GraphWidth;
 
 		private static double[] _currentColumnData;
@@ -17,23 +15,25 @@ namespace ParticleSimulator {
 		private static BasicStatisticsInfo[] _columnStats;
 		private static ConsoleExtensions.CharInfo[][] _columns;
 		private static readonly object _columnStatsLock = new();
-		private static readonly object _cleanupLock = new();
 
-		private static readonly Func<AEvaluationStep, bool> _includeQTimingsTester = s => (s is EvaluationStep) && !(s as EvaluationStep).IsOutputOverwrite;
+		private static readonly Func<EvaluationStep, bool> _includeQTimingsTester = s => false;
 		private static readonly Tuple<string, double, ConsoleColor>[] _statsHeaderValues;
 
 		static PerfMon() {
 			_statsHeaderValues = new Tuple<string, double, ConsoleColor>[
 				Parameters.PERF_STATS_ENABLE
-					? Program.Manager.Steps.Sum(s => _includeQTimingsTester(s) ? 3 : 1) + 1
+					? Program.Manager.Evaluators.Sum(s => _includeQTimingsTester(s.Step) ? 3 : 1) + 1
 					: 1];
 
 			int width =
 				Parameters.PERF_STATS_ENABLE
 					? Parameters.GRAPH_WIDTH > 0
 						? Parameters.GRAPH_WIDTH
-						: 3 + Parameters.NUMBER_SPACING + Program.Manager.Steps.Sum(s => Parameters.NUMBER_SPACING + (_includeQTimingsTester(s) ? 3 + 2*Parameters.NUMBER_SPACING : 1))
-					: 30;
+						: 3 + Parameters.NUMBER_SPACING
+							+ Program.Manager.Evaluators.Sum(s =>
+								Parameters.NUMBER_SPACING
+								+ (_includeQTimingsTester(s.Step) ? 3 + 2*Parameters.NUMBER_SPACING : 1))
+					: Parameters.PERF_GRAPH_DEFAULT_WIDTH;
 			GraphWidth = Console.WindowWidth > width ? width : Console.WindowWidth;
 
 			_columnStats = new BasicStatisticsInfo[GraphWidth];
@@ -53,9 +53,9 @@ namespace ParticleSimulator {
 			new Tuple<double, ConsoleColor>(double.NegativeInfinity, ConsoleColor.White)
 		};
 
-		internal static void AfterRasterize(DateTime startUtc) {
+		public static void AfterRasterize(StepEvaluator result) {
 			//IterationCount is not yet updated
-			int frameIdx = Program.Step_Rasterizer.IterationCount % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
+			int frameIdx = (result.NumCompleted - 1) % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 			if (frameIdx == 0)
 				lock (_columnStatsLock) {
 					_currentColumnData = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
@@ -64,25 +64,15 @@ namespace ParticleSimulator {
 					_columnStats = _columnStats.ShiftRight(false);
 				}
 
-			long currentFrameTimeTicks = (long)(_simulationTimes[Program.Step_Rasterizer.IterationCount] + DateTime.UtcNow.Subtract(startUtc).Ticks);//TODO small memory leak
+			long currentFrameTimeTicks = result.IterationEndUtc.Value
+				.Subtract(result.IterationStartUtc.Value).Ticks;
 			_frameTiming.Update(currentFrameTimeTicks);
 			_currentColumnData[frameIdx] = currentFrameTimeTicks / 10000d;
 			_columnStats[0] = new BasicStatisticsInfo(_currentColumnData.Take(frameIdx + 1));
-
-			if ((Program.Step_Rasterizer.IterationCount + 1) % (Parameters.PRECALCULATION_LIMIT + 1) == 0)
-				lock (_cleanupLock)
-					for (int i = _simulationTimes.Keys.First(); i <= Program.Step_Rasterizer.IterationCount; i++)
-						_simulationTimes.Remove(i);
 		}
 
-		internal static void AfterSimulate(DateTime startUtc) {
-			if (Program.Step_Simulator.IterationCount % Parameters.SIMULATION_SUBFRAME_MULTIPLE == 0)
-				lock (_cleanupLock)
-					_simulationTimes[Program.Step_Simulator.IterationCount / Parameters.SIMULATION_SUBFRAME_MULTIPLE] = DateTime.UtcNow.Subtract(startUtc).Ticks;
-		}
-
-		internal static void DrawStatsOverlay(ConsoleExtensions.CharInfo[] frameBuffer) {
-			RefreshStats();
+		public static void DrawStatsOverlay(ConsoleExtensions.CharInfo[] frameBuffer) {
+			RefreshStatsHedaer();
 
 			int position = 0;
 			string numberStr;
@@ -97,27 +87,25 @@ namespace ParticleSimulator {
 			}
 		}
 
-		private static void RefreshStats() {
-			double fps;
-			if (Parameters.SYNC_SIMULATION)
-				fps = Program.Step_Drawer.IterationTimings_Ticks.Current;
-			else fps = _frameTiming.Current;
-			fps = 10000000 / fps;//conversion from ticks
-			_statsHeaderValues[0] = new("FPS", fps, ChooseFpsColor(fps));
+		private static void RefreshStatsHedaer() {
+			double
+				fps = 10000000 / Program.StepEval_Draw.Step.IterationTicksAverager.LastUpdate,
+				smoothedFps = 10000000 / Program.StepEval_Draw.Step.IterationTicksAverager.Current;
+			_statsHeaderValues[0] = new("FPS", smoothedFps, ChooseFpsColor(fps));
 
 			if (Parameters.PERF_STATS_ENABLE) {
 				string label;
 				double timeVal;
-				for (int i = 0, k = 1; i < Program.Manager.Steps.Length; k += _includeQTimingsTester(Program.Manager.Steps[i]) ? 3 : 1, i++) {
-					label = Program.Manager.Steps[i].Name[0].ToString();
-					timeVal = Program.Manager.Steps[i].CalculationTimings_Ticks.Current / 10000d;
+				for (int i = 0, k = 1; i < Program.Manager.Evaluators.Length; k += _includeQTimingsTester(Program.Manager.Evaluators[i].Step) ? 3 : 1, i++) {
+					label = Program.Manager.Evaluators[i].Step.Name[0].ToString();
+					timeVal = Program.Manager.Evaluators[i].Step.IterationTicksAverager.Current / 10000d;
 					_statsHeaderValues[k] = new(label, timeVal, ChooseFrameIntervalColor(timeVal));
 
-					if (_includeQTimingsTester(Program.Manager.Steps[i])) {
-						timeVal = (Program.Manager.Steps[i] as EvaluationStep).OutputResource.EnqueueTimings_Ticks.Current / 10000d;
+					if (_includeQTimingsTester(Program.Manager.Evaluators[i].Step)) {
+						timeVal = Program.Manager.Evaluators[i].Step.OutputResource.EnqueueTimings_Ticks.Current / 10000d;
 						_statsHeaderValues[k + 1] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
 
-						timeVal = (Program.Manager.Steps[i] as EvaluationStep).OutputResource.DequeueTimings_Ticks.Current / 10000d;
+						timeVal = Program.Manager.Evaluators[i].Step.OutputResource.DequeueTimings_Ticks.Current / 10000d;
 						_statsHeaderValues[k + 2] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
 					}
 				}
@@ -131,11 +119,10 @@ namespace ParticleSimulator {
 				if (_columnStats[0] is null) return null;
 
 				result = new ConsoleExtensions.CharInfo[GraphWidth * Parameters.GRAPH_HEIGHT];
-				double numColumns = Program.Step_Rasterizer.IterationCount / Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 
-				dataMin = _columnStats.Where(s => !(s is null)).Min(s => s.Percentile25);
+				dataMin = _columnStats.Where(s => !(s is null)).Min(s => s.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF));
 				dataAvg = _columnStats.Where(s => !(s is null)).Average(s => s.Mean);//faster than true average calculation
-				dataMax = _columnStats.Where(s => !(s is null)).Max(s => s.Percentile75);
+				dataMax = _columnStats.Where(s => !(s is null)).Max(s => s.GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF));
 				if (dataMin < 1)
 					dataMin = 0;
 				if (dataMin >= dataMax)
@@ -270,12 +257,12 @@ namespace ParticleSimulator {
 			Console.ForegroundColor = ConsoleColor.White;
 			Console.Write(" {0} for {1} averaging ",
 				"particle".Pluralize(particleCount),
-				(Program.Step_Rasterizer.IterationCount - Program.Q_Rasterization.QueueLength).Pluralize("rasters")
-					+ (Parameters.SIMULATION_SUBFRAME_MULTIPLE < 2
+				(Program.StepEval_Resample.NumCompleted - Program.Resource_Resamplings.QueueLength).Pluralize("rasters")
+					+ (Parameters.SIMULATION_SKIPS < 2
 						? ""
-						: " and " + Program.Step_Simulator.IterationCount.Pluralize("simulation steps")));
+						: " and " + Program.StepEval_Simulate.NumCompleted.Pluralize("simulation steps")));
 
-			double fps = (double)Program.Step_Rasterizer.IterationCount / totalDuration.TotalSeconds;
+			double fps = (double)Program.StepEval_Resample.NumCompleted / totalDuration.TotalSeconds;
 			Console.ForegroundColor = ChooseFpsColor(fps);
 			Console.Write(fps.ToStringBetter(4));
 			Console.ForegroundColor = ConsoleColor.White;
@@ -283,7 +270,7 @@ namespace ParticleSimulator {
 
 			if (Parameters.TARGET_FPS > 0) {
 				double expectedFramesRendered = Parameters.TARGET_FPS * (double)totalDuration.TotalSeconds;
-				double fpsRatio = (double)Program.Step_Renderer.IterationCount / ((int)(1 + expectedFramesRendered));
+				double fpsRatio = (double)Program.StepEval_Rasterize.NumCompleted / ((int)(1 + expectedFramesRendered));
 
 				Console.Write(" ({0:G3}% of {1} fps)",
 					100 * fpsRatio,

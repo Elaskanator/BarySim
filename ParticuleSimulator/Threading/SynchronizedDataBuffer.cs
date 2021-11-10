@@ -12,100 +12,130 @@ namespace ParticleSimulator.Threading {
 		public int ID { get; private set; }
 		public string Name { get; private set; }
 
-		public int BufferSize { get; private set; }
+		public SynchronizedDataBuffer(string name, int size = 1) {
+			if (size < 0) throw new ArgumentOutOfRangeException(nameof(size), "Must be nonzero");
+			this.ID = ++_id;
+			this.Name = name;
+			this.BUFFER_SIZE = size;
+			this.EnqueueTimings_Ticks = new(Parameters.PERF_SMA_ALPHA);
+			this.DequeueTimings_Ticks = new(Parameters.PERF_SMA_ALPHA);
+
+			this._latch_canReturnFromAdd = new(false);
+			this.ReleaseListeners = Array.Empty<AutoResetEvent>();
+			this.RefreshListeners = new();
+			this._queue = new object[this.BUFFER_SIZE];
+		}
+		public override string ToString() {
+			return string.Format("{0}[{1}, {2}]",
+				nameof(SynchronizedDataBuffer),
+				this.Name,
+				this.QueueLength.Pluralize("entry"));
+		}
+
+		public readonly int BUFFER_SIZE;
 		public object Current { get; private set; }
-		public int TotalVolume { get; private set; }
+		public int TotalEnqueues { get; private set; }
+		public int TotalDequeues { get; private set; }
 		public int QueueLength { get; private set; }
 
+		public List<AutoResetEvent> RefreshListeners { get; private set; }
+		public AutoResetEvent AddRefreshListener() {
+			AutoResetEvent signal = new(false);
+			this.RefreshListeners.Add(signal);
+			return signal;
+		}
+		public AutoResetEvent[] ReleaseListeners { get; private set; }
+		public AutoResetEvent AddReleaseListener() {
+			AutoResetEvent signal = new(false);
+			this.ReleaseListeners = ReleaseListeners.Append(signal).ToArray();
+			return signal;
+		}
+
+		private AutoResetEvent _latch_canReturnFromAdd;
+		private AutoResetEvent _latch_canAdd = new(true);
+		private AutoResetEvent _latch_canPop = new(false);
+		private ManualResetEvent _latch_hasAny = new(false);
+		private object _lock = new();
+		private object[] _queue;
+		
+		private bool _trackLatency = false;
 		public bool DoTrackLatency {
 			get { return this._trackLatency; }
 			set { this._trackLatency = value; this._timerEnqueue.Reset(); this._timerDequeue.Reset(); } }
 		public SampleSMA EnqueueTimings_Ticks { get; private set; }
 		public SampleSMA DequeueTimings_Ticks { get; private set; }
-		internal List<AutoResetEvent> RefreshListeners { get; private set; }
-
-		public SynchronizedDataBuffer(string name, int size = 1) {
-			if (size < 0) throw new ArgumentOutOfRangeException(nameof(size), "Must be nonzero");
-			this.ID = ++_id;
-			this.Name = name;
-			this.BufferSize = size;
-			this.EnqueueTimings_Ticks = new(Parameters.PERF_SMA_ALPHA);
-			this.DequeueTimings_Ticks = new(Parameters.PERF_SMA_ALPHA);
-
-			this.RefreshListeners = new List<AutoResetEvent>();
-			this._queue = Enumerable.Repeat<object>(null, this.BufferSize).ToArray();
-			this._latch_canContinue = new EventWaitHandle(size > 0, size > 0 ? EventResetMode.ManualReset : EventResetMode.AutoReset);
-		}
-		
-		private bool _trackLatency = Parameters.PERF_ENABLE;
-		private bool _isOpen = true;
-		private bool _isNew = true;
 		private Stopwatch _timerEnqueue = new(), _timerDequeue = new();
-		private AutoResetEvent _latch_canAdd = new(true);
-		private EventWaitHandle _latch_canContinue;
-		private AutoResetEvent _latch_canPop = new(false);
-		private ManualResetEvent _latch_hasAny = new(false);
-		private object _lock = new();
-		private object[] _queue;
 
-		public object Peek() {
-			if (!this._isOpen) return null;
-			this._latch_hasAny.WaitOne();
-			return this.Current;
-		}
+		// MUST lock and enforce size constraints before invoking either Pop or Add
+		private object CommitPop() {
+			this._latch_canAdd.Set();
+			if (this.QueueLength > this.BUFFER_SIZE)
+				this._latch_canPop.Set();
 
-		public bool TryPeek(out object result) {
-			if (this._isNew) {
-				result = null;
-				return false;
-			} else {
-				result = this.Current;
-				return true;
+			if (this.BUFFER_SIZE == 0){
+				_latch_canReturnFromAdd.Set();
+				return this.Current;
 			}
+			else return this._queue[(this.TotalDequeues++ + --this.QueueLength) % this.BUFFER_SIZE];
+		}
+		private void CommitAdd(object value) {
+			if (this.BUFFER_SIZE > 0)
+				this._queue[(this.TotalDequeues + this.QueueLength++) % this.BUFFER_SIZE] = value;
+			this.Current = value;
+			if (this.TotalEnqueues == 0)
+				this._latch_hasAny.Set();
+			this.TotalEnqueues++;
+
+			this._latch_canPop.Set();
+			if (this.QueueLength < this.BUFFER_SIZE)
+				this._latch_canAdd.Set();
+			
+			foreach (AutoResetEvent e in this.RefreshListeners)
+				e.Set();
 		}
 
 		public void Overwrite(object value) {
 			lock (this._lock) {
-				if (this.QueueLength == 0 || this.BufferSize == 0) this.Add(value);//create initial
+				if (this.QueueLength == 0 || this.BUFFER_SIZE == 0)
+					this.CommitAdd(value);//create initial
 				else {
-					this._queue[(this.TotalVolume + (this.QueueLength-1)) % this.BufferSize] = value;
+					this._queue[(this.TotalDequeues + (this.QueueLength-1)) % this.BUFFER_SIZE] = value;
 					this.Current = value;
-					this._latch_hasAny.Set();
-					this.SignalRefreshListeners();
+					if (this.TotalEnqueues == 0) {
+						this.TotalEnqueues++;
+						this._latch_hasAny.Set();
+					}
+					foreach (AutoResetEvent e in this.RefreshListeners) e.Set();
 				}
 			}
 		}
 
-		public void Enqueue(object value) {
-			if (!this._isOpen) return;
-
-			if (this.DoTrackLatency) this._timerEnqueue.Start();
-			this._latch_canAdd.WaitOne();
-			if (this.DoTrackLatency) {
-				this._timerEnqueue.Stop();
-				this.EnqueueTimings_Ticks.Update(this._timerEnqueue.ElapsedTicks);
-				this._timerEnqueue.Reset();
-			}
-
-			if (!this._isOpen) return;
-			lock (this._lock) this.Add(value);
-
-			this._latch_canContinue.WaitOne();
+		public object Peek() {
+			if (this.TotalEnqueues == 0)
+				this._latch_hasAny.WaitOne();
+			return this.Current;
 		}
 
-		public bool TryEnqueue(object value) {
-			if (!this._isOpen || this.BufferSize == 0) return false;
-			else lock (this._lock) {
-				bool test  = false;
-				if (this.QueueLength >= this.BufferSize) test = this._latch_canAdd.WaitOne(0);//I sure hope this doesn't cause a race condition
-				else test = true;
-				if (test) this.Add(value);
-				return test;
+		public bool TryPeek(ref object output) {
+			bool result = false;
+			if (this.TotalEnqueues > 0) {
+				output = this.Current;
+				result = true;
 			}
+			return result;
+		}
+		public bool TryPeek(ref object output, TimeSpan timeout) {
+			bool result = false;
+			if (this.TotalEnqueues > 0
+			|| WaitHandle.WaitAny(new[] { this._latch_hasAny }, timeout) != WaitHandle.WaitTimeout) {
+				output = this.Current;
+				result = true;
+			}
+			return result;
 		}
 		
-		public object Dequeue(bool allowResume) {
-			if (!this._isOpen) return null;
+		public object Dequeue() {
+			if (Parameters.ENABLE_DEBUG_QUEUE_LOGGING) DebugExtensions.DebugWriteline(string.Format("Queue Out - {0} - Start", this.Name));
 
 			if (this.DoTrackLatency) this._timerDequeue.Start();
 			this._latch_canPop.WaitOne();
@@ -115,72 +145,51 @@ namespace ParticleSimulator.Threading {
 				this._timerDequeue.Reset();
 			}
 
-			lock (this._lock) return this.Pop(allowResume);
+			object result;
+			lock (this._lock)
+				result = this.CommitPop();
+
+			if (Parameters.ENABLE_DEBUG_QUEUE_LOGGING) DebugExtensions.DebugWriteline(string.Format("Queue Out - {0} - End", this.Name));
+			return result;
 		}
-		
-		public bool TryDequeue(bool allowResume, out object result) {
-			result = null;
-			if (!this._isOpen) return false;
-			lock (this._lock) {
-				if (this.QueueLength > 0) {
-					bool test = this._latch_canPop.WaitOne(0);//I sure hope this doesn't cause a race condition
-					if (test) result = this.Pop(allowResume);
-					return test;
-				} else return false;
+		public bool TryDequeue(ref object output, TimeSpan timeout) {
+			bool result = false;
+			if (WaitHandle.WaitAny(new[] { this._latch_canPop }, timeout) != WaitHandle.WaitTimeout) {
+				result = true;
+				lock (this._lock)
+					output = this.CommitPop();
 			}
+			return result;
 		}
-		public bool TryDequeue(bool allowResume, out object result, TimeSpan timeout) {
-			result = null;
-			int waitResult = WaitHandle.WaitAny(new[] { this._latch_canPop }, timeout);
 
-			if (waitResult == WaitHandle.WaitTimeout) return false;
-			else {
-				lock (this._lock) result = this.Pop(allowResume);
-				return true;
+		public void Enqueue(object value) {
+			if (Parameters.ENABLE_DEBUG_QUEUE_LOGGING) DebugExtensions.DebugWriteline(string.Format("Queue In - {0} - Start", this.Name));
+
+			if (this.DoTrackLatency) this._timerEnqueue.Start();
+			this._latch_canAdd.WaitOne();
+			if (this.DoTrackLatency) {
+				this._timerEnqueue.Stop();
+				this.EnqueueTimings_Ticks.Update(this._timerEnqueue.ElapsedTicks);
+				this._timerEnqueue.Reset();
 			}
-		}
-		
-		internal void AllowResume() {
-			this._latch_canContinue.Set();
-		}
-		// MUST lock and enforce size constraints before invoking either of these
-		private object Pop(bool allowResume) {
-			this._latch_canAdd.Set();
-			if (allowResume) this._latch_canContinue.Set();
-			if (this.QueueLength > this.BufferSize) this._latch_canPop.Set();
 
-			if (this.BufferSize == 0) return this.Current;
-			else return this._queue[(this.TotalVolume++ + --this.QueueLength) % this.BufferSize];
-		}
-		private void Add(object value) {
-			if (this.BufferSize > 0) this._queue[(this.TotalVolume + this.QueueLength++) % this.BufferSize] = value;
-			this.Current = value;
-			this._isNew = false;
+			lock (this._lock)
+				this.CommitAdd(value);
+			
+			if (this.BUFFER_SIZE == 0) {
+				if (Parameters.ENABLE_DEBUG_QUEUE_LOGGING) DebugExtensions.DebugWriteline(string.Format("Queue In - {0} - Wait", this.Name));
+				this._latch_canReturnFromAdd.WaitOne();
+			}
 
-			this._latch_hasAny.Set();
-			this._latch_canPop.Set();
-			if (this.QueueLength < this.BufferSize) this._latch_canAdd.Set();
-
-			this.SignalRefreshListeners();
-		}
-		private void SignalRefreshListeners() {
-			foreach (AutoResetEvent e in this.RefreshListeners) e.Set();
+			if (Parameters.ENABLE_DEBUG_QUEUE_LOGGING) DebugExtensions.DebugWriteline(string.Format("Queue In - {0} - End", this.Name));
 		}
 
 		public void Dispose() {
-			this._isOpen = false;
-			this._latch_canAdd.Set();
-			this._latch_canPop.Set();
-			this._latch_hasAny.Set();
-			this._latch_canContinue.Set();
-			GC.SuppressFinalize(this);
-		}
-		public override string ToString() {
-			return string.Format("{0}[{1}, {2}{3}]",
-				nameof(SynchronizedDataBuffer),
-				this.Name,
-				this.QueueLength.Pluralize("entry"),
-				this.RefreshListeners.Count == 0 ? "" : this.RefreshListeners.Count.Pluralize(", listener"));
+			this._latch_canAdd.Dispose();
+			this._latch_canPop.Dispose();
+			this._latch_hasAny.Dispose();
+			foreach (AutoResetEvent e in this.RefreshListeners)
+				e.Dispose();
 		}
 
 		public override bool Equals(object obj) { return !(obj is null) && (obj is SynchronizedDataBuffer) && this.Equals(obj as SynchronizedDataBuffer); }
