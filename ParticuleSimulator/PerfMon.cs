@@ -1,22 +1,44 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using Generic.Extensions;
 using Generic.Models;
-using ParticleSimulator.Rendering;
 using ParticleSimulator.Threading;
 
 namespace ParticleSimulator {
 	internal static class PerfMon {
 		private static SampleSMA _frameTiming = new SampleSMA(Parameters.PERF_SMA_ALPHA);
-		private static Dictionary<int, double> _simulationTimes = new();//TODO this is a bigass memory leak
+		private static SortedDictionary<int, double> _simulationTimes = new();
+		public static readonly int GraphWidth;
+
 		private static double[] _currentColumnData;
-		private static SampleSMA _currentMin = new SampleSMA(Parameters.PERF_SMA_ALPHA);
-		private static SampleSMA _currentMax = new SampleSMA(Parameters.PERF_SMA_ALPHA);
-		private static ConsoleExtensions.CharInfo[][] _columns = new ConsoleExtensions.CharInfo[Parameters.GRAPH_WIDTH][];
-		private static BasicStatisticsInfo[] _columnStats = new BasicStatisticsInfo[Parameters.GRAPH_WIDTH];
-		private static readonly object _lock = new();
+		private static SampleSMA _currentMin = new SampleSMA(Parameters.PERF_GRA_SMA_ALPHA);
+		private static SampleSMA _currentMax = new SampleSMA(Parameters.PERF_GRA_SMA_ALPHA);
+		private static BasicStatisticsInfo[] _columnStats;
+		private static ConsoleExtensions.CharInfo[][] _columns;
+		private static readonly object _columnStatsLock = new();
+		private static readonly object _cleanupLock = new();
+
+		private static readonly Func<AEvaluationStep, bool> _includeQTimingsTester = s => (s is EvaluationStep) && !(s as EvaluationStep).IsOutputOverwrite;
+		private static readonly Tuple<string, double, ConsoleColor>[] _statsHeaderValues;
+
+		static PerfMon() {
+			_statsHeaderValues = new Tuple<string, double, ConsoleColor>[
+				Parameters.PERF_STATS_ENABLE
+					? Program.Manager.Steps.Sum(s => _includeQTimingsTester(s) ? 3 : 1) + 1
+					: 1];
+
+			int width =
+				Parameters.PERF_STATS_ENABLE
+					? Parameters.GRAPH_WIDTH > 0
+						? Parameters.GRAPH_WIDTH
+						: 3 + Parameters.NUMBER_SPACING + Program.Manager.Steps.Sum(s => Parameters.NUMBER_SPACING + (_includeQTimingsTester(s) ? 3 + 2*Parameters.NUMBER_SPACING : 1))
+					: 30;
+			GraphWidth = Console.WindowWidth > width ? width : Console.WindowWidth;
+
+			_columnStats = new BasicStatisticsInfo[GraphWidth];
+			_columns = new ConsoleExtensions.CharInfo[GraphWidth][];
+		}
 
 		public static readonly Tuple<double, ConsoleColor>[] RatioColors = new Tuple<double, ConsoleColor>[] {
 			new Tuple<double, ConsoleColor>(1.05d, ConsoleColor.Cyan),
@@ -34,78 +56,81 @@ namespace ParticleSimulator {
 		internal static void AfterRasterize(DateTime startUtc) {
 			//IterationCount is not yet updated
 			int frameIdx = Program.Step_Rasterizer.IterationCount % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
-			if (frameIdx == 0) lock (_lock) {
-				_currentColumnData = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
-				_columns = _columns.ShiftRight(false);
-				_columns[0] = _columns[1];
-				_columnStats = _columnStats.ShiftRight(false);
-			}
+			if (frameIdx == 0)
+				lock (_columnStatsLock) {
+					_currentColumnData = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
+					_columns = _columns.ShiftRight(false);
+					_columns[0] = _columns[1];
+					_columnStats = _columnStats.ShiftRight(false);
+				}
+
 			long currentFrameTimeTicks = (long)(_simulationTimes[Program.Step_Rasterizer.IterationCount] + DateTime.UtcNow.Subtract(startUtc).Ticks);//TODO small memory leak
 			_frameTiming.Update(currentFrameTimeTicks);
 			_currentColumnData[frameIdx] = currentFrameTimeTicks / 10000d;
 			_columnStats[0] = new BasicStatisticsInfo(_currentColumnData.Take(frameIdx + 1));
+
+			if ((Program.Step_Rasterizer.IterationCount + 1) % (Parameters.PRECALCULATION_LIMIT + 1) == 0)
+				lock (_cleanupLock)
+					for (int i = _simulationTimes.Keys.First(); i <= Program.Step_Rasterizer.IterationCount; i++)
+						_simulationTimes.Remove(i);
 		}
 
 		internal static void AfterSimulate(DateTime startUtc) {
-			if (Program.Step_Simulator.IterationCount % Parameters.SUBFRAME_MULTIPLE == 0)
-				_simulationTimes[Program.Step_Simulator.IterationCount / Parameters.SUBFRAME_MULTIPLE] = DateTime.UtcNow.Subtract(startUtc).Ticks;
+			if (Program.Step_Simulator.IterationCount % Parameters.SIMULATION_SUBFRAME_MULTIPLE == 0)
+				lock (_cleanupLock)
+					_simulationTimes[Program.Step_Simulator.IterationCount / Parameters.SIMULATION_SUBFRAME_MULTIPLE] = DateTime.UtcNow.Subtract(startUtc).Ticks;
 		}
 
-		public static void DrawStatsHeader(ConsoleExtensions.CharInfo[] buffer) {
-			AEvaluationStep[] steps = new AEvaluationStep[] {
-				Program.Step_TreeManager,
-				Program.Step_Simulator,
-				Program.Step_Rasterizer,
-				Program.Step_Drawer,
-				Program.Step_Renderer,
-				Program.Step_Autoscaler,
-			};
+		internal static void DrawStatsOverlay(ConsoleExtensions.CharInfo[] frameBuffer) {
+			RefreshStats();
 
-			Func<AEvaluationStep, bool> includeQTimingsTester = s => (s is EvaluationStep) && !(s as EvaluationStep).IsOutputOverwrite;
-			Tuple<string, double, ConsoleColor>[] values = new Tuple<string, double, ConsoleColor>[steps.Sum(s => includeQTimingsTester(s) ? 3 : 1) + 1];
+			int position = 0;
+			string numberStr;
+			for (int i = 0; i < _statsHeaderValues.Length; i++) {
+				for (int j = 0; j < _statsHeaderValues[i].Item1.Length; j++)
+					frameBuffer[position + j] = new ConsoleExtensions.CharInfo(_statsHeaderValues[i].Item1[j], ConsoleColor.White);
+				position += _statsHeaderValues[i].Item1.Length;
+				numberStr = _statsHeaderValues[i].Item2.ToStringBetter(Parameters.NUMBER_ACCURACY, Parameters.NUMBER_SPACING).PadCenter(Parameters.NUMBER_SPACING);
+				for (int j = 0; j < numberStr.Length; j++)
+					frameBuffer[position + j] = new ConsoleExtensions.CharInfo(numberStr[j], _statsHeaderValues[i].Item3);
+				position += numberStr.Length;
+			}
+		}
+
+		private static void RefreshStats() {
 			double fps;
 			if (Parameters.SYNC_SIMULATION)
 				fps = Program.Step_Drawer.IterationTimings_Ticks.Current;
 			else fps = _frameTiming.Current;
 			fps = 10000000 / fps;//conversion from ticks
-			values[0] = new("FPS", fps, ChooseFpsColor(fps));
+			_statsHeaderValues[0] = new("FPS", fps, ChooseFpsColor(fps));
 
-			string label;
-			double timeVal;
-			for (int i = 0, k = 1; i < steps.Length; k += includeQTimingsTester(steps[i]) ? 3 : 1, i++) {
-				label = steps[i].Name[0].ToString();
-				timeVal = steps[i].CalculationTimings_Ticks.Current / 10000d;
-				values[k] = new(label, timeVal, ChooseFrameIntervalColor(timeVal));
+			if (Parameters.PERF_STATS_ENABLE) {
+				string label;
+				double timeVal;
+				for (int i = 0, k = 1; i < Program.Manager.Steps.Length; k += _includeQTimingsTester(Program.Manager.Steps[i]) ? 3 : 1, i++) {
+					label = Program.Manager.Steps[i].Name[0].ToString();
+					timeVal = Program.Manager.Steps[i].CalculationTimings_Ticks.Current / 10000d;
+					_statsHeaderValues[k] = new(label, timeVal, ChooseFrameIntervalColor(timeVal));
 
-				if (includeQTimingsTester(steps[i])) {
-					timeVal = (steps[i] as EvaluationStep).OutputResource.EnqueueTimings_Ticks.Current / 10000d;
-					values[k + 1] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
+					if (_includeQTimingsTester(Program.Manager.Steps[i])) {
+						timeVal = (Program.Manager.Steps[i] as EvaluationStep).OutputResource.EnqueueTimings_Ticks.Current / 10000d;
+						_statsHeaderValues[k + 1] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
 
-					timeVal = (steps[i] as EvaluationStep).OutputResource.DequeueTimings_Ticks.Current / 10000d;
-					values[k + 2] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
+						timeVal = (Program.Manager.Steps[i] as EvaluationStep).OutputResource.DequeueTimings_Ticks.Current / 10000d;
+						_statsHeaderValues[k + 2] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
+					}
 				}
-			}
-
-			int position = 0;
-			string numberStr;
-			for (int i = 0; i < values.Length; i++) {
-				for (int j = 0; j < values[i].Item1.Length; j++)
-					buffer[position + j] = new ConsoleExtensions.CharInfo(values[i].Item1[j], ConsoleColor.White);
-				position += values[i].Item1.Length;
-				numberStr = values[i].Item2.ToStringBetter(Parameters.NUMBER_ACCURACY, Parameters.NUMBER_SPACING).PadCenter(Parameters.NUMBER_SPACING);
-				for (int j = 0; j < numberStr.Length; j++)
-					buffer[position + j] = new ConsoleExtensions.CharInfo(numberStr[j], values[i].Item3);
-				position += numberStr.Length;
 			}
 		}
 
 		public static ConsoleExtensions.CharInfo[] GetFpsGraph() {
 			ConsoleExtensions.CharInfo[] result;
 			double dataMin, dataAvg, dataMax;
-			lock (_lock) {
+			lock (_columnStatsLock) {
 				if (_columnStats[0] is null) return null;
 
-				result = new ConsoleExtensions.CharInfo[Parameters.GRAPH_WIDTH * Parameters.GRAPH_HEIGHT];
+				result = new ConsoleExtensions.CharInfo[GraphWidth * Parameters.GRAPH_HEIGHT];
 				double numColumns = Program.Step_Rasterizer.IterationCount / Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 
 				dataMin = _columnStats.Where(s => !(s is null)).Min(s => s.Percentile25);
@@ -141,19 +166,19 @@ namespace ParticleSimulator {
 			for (int i = 0; i < label_max.Length; i++)
 				result[i] = new ConsoleExtensions.CharInfo(label_max[i], ConsoleColor.Gray);
 			for (int i = 0; i < label_min.Length; i++)
-				result[i + Parameters.GRAPH_WIDTH * (Parameters.GRAPH_HEIGHT - 1)] = new ConsoleExtensions.CharInfo(label_min[i], ConsoleColor.Gray);
+				result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1)] = new ConsoleExtensions.CharInfo(label_min[i], ConsoleColor.Gray);
 
 			int offset_avg = (int)(Parameters.GRAPH_HEIGHT * (dataAvg - _currentMin.Current) / (_currentMax.Current - _currentMin.Current));
 			if (offset_avg >= 0 && offset_avg < Parameters.GRAPH_HEIGHT)
 				for (int i = 0; i < label_avg.Length; i++)
-					result[i + Parameters.GRAPH_WIDTH * (Parameters.GRAPH_HEIGHT - 1 - offset_avg)] = new ConsoleExtensions.CharInfo(label_avg[i], ConsoleColor.Gray);
+					result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - offset_avg)] = new ConsoleExtensions.CharInfo(label_avg[i], ConsoleColor.Gray);
 
 			int offset_current = (int)(Parameters.GRAPH_HEIGHT * ((_frameTiming.Current / 10000d) - _currentMin.Current) / (_currentMax.Current - _currentMin.Current));
 			if (offset_current < 0) offset_current = 0;
 			else if (offset_current >= Parameters.GRAPH_HEIGHT) offset_current = Parameters.GRAPH_HEIGHT - 1;
 			ConsoleColor color_current = ChooseFrameIntervalColor(_frameTiming.LastUpdate / 10000d);
 			for (int i = 0; i < label_current.Length; i++)
-				result[i + Parameters.GRAPH_WIDTH * (Parameters.GRAPH_HEIGHT - 1 - offset_current)] = new ConsoleExtensions.CharInfo(label_current[i], color_current);
+				result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - offset_current)] = new ConsoleExtensions.CharInfo(label_current[i], color_current);
 
 			return result;
 		}
@@ -161,7 +186,7 @@ namespace ParticleSimulator {
 		private static void DrawGraphColumn(ConsoleExtensions.CharInfo[] buffer, ConsoleExtensions.CharInfo[] newColumn, int xIdx) {
 			for (int yIdx = 0; yIdx < Parameters.GRAPH_HEIGHT; yIdx++)
 				if (!Equals(newColumn[yIdx], default(ConsoleExtensions.CharInfo)))
-					buffer[xIdx + (Parameters.GRAPH_HEIGHT - yIdx - 1)*Parameters.GRAPH_WIDTH] = newColumn[yIdx];
+					buffer[xIdx + (Parameters.GRAPH_HEIGHT - yIdx - 1)*GraphWidth] = newColumn[yIdx];
 		}
 		private static ConsoleExtensions.CharInfo[] ComputeGraphColumn(int xIdx, BasicStatisticsInfo columnStats) {
 			ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[Parameters.GRAPH_HEIGHT];
@@ -246,7 +271,7 @@ namespace ParticleSimulator {
 			Console.Write(" {0} for {1} averaging ",
 				"particle".Pluralize(particleCount),
 				(Program.Step_Rasterizer.IterationCount - Program.Q_Rasterization.QueueLength).Pluralize("rasters")
-					+ (Parameters.SUBFRAME_MULTIPLE < 2
+					+ (Parameters.SIMULATION_SUBFRAME_MULTIPLE < 2
 						? ""
 						: " and " + Program.Step_Simulator.IterationCount.Pluralize("simulation steps")));
 

@@ -4,15 +4,15 @@ using System.Linq;
 
 namespace Generic.Models {
 	public abstract class AQuadTree<E, T> : ATree<E>
-	where E : SimpleVector
+	where E : IVector<double>
 	where T : AQuadTree<E, T> {
 		public const int CAPACITY = 5;
 		//dividing by 2 enough times WILL reach the sig figs limit of System.Double and cause zero-sized subtrees (before reaching the stack frame depth limit due to recursion)
 		public const int MAX_DEPTH = 50;
 		
-		public readonly SimpleVector LeftCorner;
-		public readonly SimpleVector Center;
-		public readonly SimpleVector RightCorner;
+		public readonly VectorDouble LeftCorner;
+		public readonly VectorDouble Center;
+		public readonly VectorDouble RightCorner;
 		
 		public int NumMembers { get; private set; }
 		public int Dimensionality { get { return this.LeftCorner.Dimensionality; } }
@@ -29,7 +29,7 @@ namespace Generic.Models {
 		private readonly E[] _members = new E[CAPACITY];//entries in non-leaves are leftovers that must be ignored
 		private List<E> _leftovers;
 
-		public AQuadTree(SimpleVector corner1, SimpleVector corner2, T parent = null) 
+		public AQuadTree(VectorDouble corner1, VectorDouble corner2, T parent = null) 
 		: base(parent) {//make sure all values in x1 are smaller than x2 (the corners of a cubic volume)
 			if (Enumerable.Range(0, corner1.Coordinates.Length).All(d => corner1.Coordinates[d] == corner2.Coordinates[d])) throw new ArgumentException("Domain has no volume");
 
@@ -51,7 +51,7 @@ namespace Generic.Models {
 			else {
 				if (this.Depth < MAX_DEPTH) {
 					if (this.NumMembers == CAPACITY) {//one-time quadrant formation
-						this._quadrants = this.FormNodes().ToArray();
+						this._quadrants = this.OrganizeNodes(this.FormNodes().ToArray());
 						foreach (E member in this._members)
 							this.GetContainingChild(member).Add(member);
 					}
@@ -70,6 +70,7 @@ namespace Generic.Models {
 		}
 
 		protected abstract T NewNode(double[] cornerA, double[] cornerB, T parent);
+		protected virtual T[] OrganizeNodes(T[] nodes) { return nodes; }
 
 		private IEnumerable<T> FormNodes() {
 			foreach (var newNodeData in Enumerable
@@ -103,8 +104,8 @@ namespace Generic.Models {
 	}
 
 	public class QuadTree<E> : AQuadTree<E, QuadTree<E>>
-	where E : SimpleVector {
-		public QuadTree(SimpleVector corner1, SimpleVector corner2, QuadTree<E> parent = null)
+	where E : IVector<double> {
+		public QuadTree(VectorDouble corner1, VectorDouble corner2, QuadTree<E> parent = null)
 		: base(corner1, corner2, parent) { }
 
 		protected override QuadTree<E> NewNode(double[] cornerA, double[] cornerB, QuadTree<E> parent) {

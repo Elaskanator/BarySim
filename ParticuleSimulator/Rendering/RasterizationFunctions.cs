@@ -18,7 +18,7 @@ namespace ParticleSimulator.Rendering {
 			return results;
 		}
 		public static T[][] GroupToArray<T>(IEnumerable<T> data, int range, double domainBegin, double domainEnd, int dimension = 0)
-		where T : SimpleVector {
+		where T : VectorDouble {
 			T[][] results = new T[range][];
 			foreach (IGrouping<int, T> g in Group(data, range, domainBegin, domainEnd, dimension))
 				results[g.Key] = g.ToArray();
@@ -38,7 +38,7 @@ namespace ParticleSimulator.Rendering {
 			return results;
 		}
 		public static T[][] GroupToArray<T>(IEnumerable<T> data, int range, double domainEnd, int dimension = 0)
-		where T : SimpleVector {
+		where T : VectorDouble {
 			T[][] results = new T[range][];
 			foreach (IGrouping<int, T> g in Group(data, range, domainEnd, dimension))
 				results[g.Key] = g.ToArray();
@@ -53,7 +53,7 @@ namespace ParticleSimulator.Rendering {
 			return data.GroupBy(d => (int)(range * (d[dimension] - domainBegin) / (domainEnd - domainBegin)));
 		}
 		public static IEnumerable<IGrouping<int, T>> Group<T>(IEnumerable<T> data, int range, double domainBegin, double domainEnd, int dimension = 0)
-		where T : SimpleVector {
+		where T : VectorDouble {
 			return data.GroupBy(t => (int)(range * (t.Coordinates[dimension] - domainBegin) / (domainEnd - domainBegin)));
 		}
 
@@ -64,7 +64,7 @@ namespace ParticleSimulator.Rendering {
 			return data.GroupBy(d => (int)(range * d[dimension] / domainEnd));
 		}
 		public static IEnumerable<IGrouping<int, T>> Group<T>(IEnumerable<T> data, int range, double domainEnd, int dimension = 0)
-		where T : SimpleVector {
+		where T : VectorDouble {
 			return data.GroupBy(t => (int)(range * t.Coordinates[dimension] / domainEnd));
 		}
 		#endregion Grouping

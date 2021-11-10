@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 using ParticleSimulator.Rendering;
@@ -12,7 +14,9 @@ namespace ParticleSimulator {
 	//SEEALSO https://www.youtube.com/watch?v=TrrbshL_0-s
 	public class Program {
 		public const bool ENABLE_DEBUG_LOGGING = false;
+		public const SimulationType SimType = SimulationType.Boid;
 
+		public static readonly Random Random = new();
 		public static IParticleSimulator Simulator { get; private set; }
 		public static RunManager Manager { get; private set; }
 		public static bool IsActive { get; private set; }
@@ -23,10 +27,19 @@ namespace ParticleSimulator {
 		public static void Main(string[] args) {
 			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);
 
-			Simulator = new Simulation.Boids.BoidSimulator();
-			//Simulator = new Simulation.Gravity.GravitySimulator();
+			switch (SimType) {
+				case SimulationType.Boid:
+					Simulator = new Simulation.Boids.BoidSimulator(Random);
+					break;
+				case SimulationType.Gravity:
+					Simulator = new Simulation.Gravity.GravitySimulator(Random);
+					break;
+				default:
+					throw new InvalidEnumArgumentException(nameof(SimType), (int)SimType, typeof(SimulationType));
+			}
 			Manager = BuildRunManager();
 			
+			Console.Title = string.Format("{0} Simulator ({1})", SimType, Simulator.AllParticles.Count().Pluralize("particle"));
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
 			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
 			ConsoleExtensions.HideScrollbars();
@@ -48,9 +61,9 @@ namespace ParticleSimulator {
 			Step_TreeManager = new EvaluationStep(Q_Tree, false, 1,
 				p => Simulator.RebuildTree())
 				{ Name = "Tree Builder" };
-			Step_Simulator = new EvaluationStep(Q_Locations, !Parameters.SYNC_SIMULATION, Parameters.SUBFRAME_MULTIPLE,
+			Step_Simulator = new EvaluationStep(Q_Locations, !Parameters.SYNC_SIMULATION, Parameters.SIMULATION_SUBFRAME_MULTIPLE,
 				p => Simulator.Simulate((ITree)p[0]),
-				new Prerequisite(Q_Tree, DataConsumptionType.Consume, Parameters.TREE_REFRESH_FRAMES))
+				new Prerequisite(Q_Tree, DataConsumptionType.Consume, Parameters.TREE_REFRESH_FRAMES, Parameters.SYNC_TREE_REFRESH ? 0 : Parameters.TREE_REFRESH_FRAMES))
 				{ Name = "Simulator" };
 			Step_Rasterizer = new EvaluationStep(Q_Rasterization, !Parameters.SYNC_SIMULATION, 1,
 				p => Simulator.RasterizeDensities((Tuple<double[], double>[])p[0]),
@@ -58,9 +71,9 @@ namespace ParticleSimulator {
 				{ Name = "Rasterizer" };
 			Step_Autoscaler = new NonOutputtingEvaluationStep(
 				p => Simulator.AutoscaleUpdate((Tuple<char, double>[])p[0]),
-				new TimeSynchronizer(null, TimeSpan.FromMilliseconds(500)),
+				new TimeSynchronizer(null, TimeSpan.FromMilliseconds(250)),
 				new Prerequisite(Q_Rasterization, DataConsumptionType.OnUpdate))
-				{ Name = "Autoscaler" };
+				{ Name = "Autoscaler", DoTrackLatency = false };
 			Step_Renderer = new	EvaluationStep(Q_Frame, !Parameters.SYNC_SIMULATION, 1,
 				Renderer.Render,
 				new Prerequisite(Q_Rasterization, Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.OnUpdate))
@@ -69,8 +82,9 @@ namespace ParticleSimulator {
 				p => Renderer.FlushScreenBuffer((ConsoleExtensions.CharInfo[])p[0]),
 				TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS),
 				new Prerequisite(Q_Frame,
-					Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.ReadDirty,
-					TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS)))
+					Parameters.SYNC_SIMULATION ? DataConsumptionType.Consume : DataConsumptionType.Read,
+					TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
+					true))
 				{ Name = "Drawer" };
 
 			return new RunManager(Step_TreeManager, Step_Simulator, Parameters.DENSITY_AUTOSCALE_ENABLE ? Step_Autoscaler : null, Step_Rasterizer, Step_Renderer, Step_Drawer);

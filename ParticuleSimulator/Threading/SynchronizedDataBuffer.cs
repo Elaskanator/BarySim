@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-
 using Generic.Extensions;
 using Generic.Models;
 
@@ -38,7 +37,7 @@ namespace ParticleSimulator.Threading {
 			this._latch_canContinue = new EventWaitHandle(size > 0, size > 0 ? EventResetMode.ManualReset : EventResetMode.AutoReset);
 		}
 		
-		private bool _trackLatency = Parameters.DEBUG_ENABLE;
+		private bool _trackLatency = Parameters.PERF_ENABLE;
 		private bool _isOpen = true;
 		private bool _isNew = true;
 		private Stopwatch _timerEnqueue = new(), _timerDequeue = new();
@@ -105,24 +104,18 @@ namespace ParticleSimulator.Threading {
 			}
 		}
 		
-		public object Dequeue(bool allowResume, TimeSpan? timeout = null) {
+		public object Dequeue(bool allowResume) {
 			if (!this._isOpen) return null;
 
-			int waitResult = 0;
 			if (this.DoTrackLatency) this._timerDequeue.Start();
-			if (timeout.HasValue) waitResult = WaitHandle.WaitAny(new[] { this._latch_canPop }, timeout.Value);
-			else this._latch_canPop.WaitOne();
+			this._latch_canPop.WaitOne();
 			if (this.DoTrackLatency) {
 				this._timerDequeue.Stop();
 				this.DequeueTimings_Ticks.Update(this._timerDequeue.ElapsedTicks);
 				this._timerDequeue.Reset();
 			}
 
-			if (waitResult == WaitHandle.WaitTimeout) return this.Current;
-			else lock (this._lock) return this.Pop(allowResume);
-		}
-		public object Dequeue(TimeSpan? timeout = null) {
-			return this.Dequeue(true, timeout);
+			lock (this._lock) return this.Pop(allowResume);
 		}
 		
 		public bool TryDequeue(bool allowResume, out object result) {
@@ -133,14 +126,18 @@ namespace ParticleSimulator.Threading {
 					bool test = this._latch_canPop.WaitOne(0);//I sure hope this doesn't cause a race condition
 					if (test) result = this.Pop(allowResume);
 					return test;
-				} else {
-					result = null;
-					return false;
-				}
+				} else return false;
 			}
 		}
-		public bool TryDequeue(out object result) {
-			return this.TryDequeue(true, out result);
+		public bool TryDequeue(bool allowResume, out object result, TimeSpan timeout) {
+			result = null;
+			int waitResult = WaitHandle.WaitAny(new[] { this._latch_canPop }, timeout);
+
+			if (waitResult == WaitHandle.WaitTimeout) return false;
+			else {
+				lock (this._lock) result = this.Pop(allowResume);
+				return true;
+			}
 		}
 		
 		internal void AllowResume() {
