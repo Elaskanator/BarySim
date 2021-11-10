@@ -4,13 +4,13 @@ using Generic.Extensions;
 using Generic.Models;
 
 namespace ParticleSimulator.Simulation.Gravity {
-	public class CelestialBody : AParticle {
+	public class CelestialBody : AParticleDouble {
 		public const double GRAVITATIONAL_CONSTANT = 0.66743d;
 
 		private readonly double _radius;
 		public override double Radius => this._radius;
 
-		public CelestialBody(SimpleVector position, SimpleVector velocity, double mass) : base(position, velocity, mass) {
+		public CelestialBody(VectorDouble position, VectorDouble velocity, double mass) : base(position, velocity, mass) {
 			this._contributingBaryonsAcceleration = new double[this.Dimensionality];
 
 			this._radius = NumberExtensions.HypersphereRadius(mass, this.Dimensionality);
@@ -18,7 +18,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 
 		internal readonly Dictionary<int, double[]> _contributingAccelerations = new();
 		private double[] _contributingBaryonsAcceleration;
-		public void Interact(BaryonQuadTree<CelestialBody> baryonNode) {
+		public void Interact(BaryonQuadTree baryonNode) {
 			double[] toOther = VectorFunctions.Subtract(this, baryonNode.Barycenter.Current);
 			double distance = VectorFunctions.Magnitude(toOther);
 
@@ -26,7 +26,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 			if (distance > this.Radius) toOtherNormalized = VectorFunctions.Divide(toOther, distance);
 			else return;
 
-			this._contributingBaryonsAcceleration = VectorFunctions.Add(
+			this._contributingBaryonsAcceleration = VectorFunctions.Addition(
 				this._contributingBaryonsAcceleration,
 				VectorFunctions.Multiply(toOtherNormalized, GRAVITATIONAL_CONSTANT * baryonNode.TotalMass / distance / distance));
 		}
@@ -48,12 +48,12 @@ namespace ParticleSimulator.Simulation.Gravity {
 		}
 
 		internal override void ApplyUpdate() {
-			this.Coordinates = VectorFunctions.Add(
+			this.Coordinates = VectorFunctions.Addition(
 				this.Coordinates,
-				VectorFunctions.Add(
+				VectorFunctions.Addition(
 					_contributingBaryonsAcceleration, 
 					this._contributingAccelerations.Values.Aggregate(new double[this.Dimensionality],
-						(agg, x) => VectorFunctions.Add(agg, x))));
+						(agg, x) => VectorFunctions.Addition(agg, x))));
 			this._contributingAccelerations.Clear();
 			this._contributingBaryonsAcceleration = new double[this.Dimensionality];
 		}

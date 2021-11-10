@@ -40,22 +40,18 @@ namespace Generic.Models {
 		public IncrementalAverage() : base() { }
 		public IncrementalAverage(double init) : base(init) { }
 
-		protected override double Multiply(double a, double b) {
-			return a * b;
-		}
-		protected override double Add(double a, double b) {
-			return a + b;
-		}
+		protected override double Multiply(double a, double b) { return a * b; }
+		protected override double Add(double a, double b) { return a + b; }
 	}
-	public class IncrementalVectorAverage : AIncrementalAverage<SimpleVector> {
+	public class IncrementalVectorAverage : AIncrementalAverage<VectorDouble> {
 		public IncrementalVectorAverage() : base() { }
-		public IncrementalVectorAverage(SimpleVector init) : base(init) { }
+		public IncrementalVectorAverage(VectorDouble init) : base(init) { }
 
-		protected override SimpleVector Multiply(SimpleVector a, double b) {
-			return VectorFunctions.Multiply(a, b);
+		protected override VectorDouble Multiply(VectorDouble a, double b) {
+			return VectorFunctions.Multiply(a.Coordinates, b);
 		}
-		protected override SimpleVector Add(SimpleVector a, SimpleVector b) {
-			return VectorFunctions.Add(a, b);
+		protected override VectorDouble Add(VectorDouble a, VectorDouble b) {
+			return VectorFunctions.Addition(a, (IVector<double>)b);
 		}
 	}
 
@@ -77,18 +73,18 @@ namespace Generic.Models {
 	}
 
 	public class WeightedIncrementalVectorAverage : IncrementalVectorAverage {
-		private SimpleVector _sum;
-		public override SimpleVector Current { get { return this.NumUpdates > 0 ? VectorFunctions.Divide(this._sum, this.NumUpdates) : null; } }
+		private VectorDouble _sum;
+		public override VectorDouble Current { get { return this.NumUpdates > 0 ? VectorFunctions.Divide(this._sum.Coordinates, this.NumUpdates) : null; } }
 		public double Weight { get; protected set; }
 
-		public WeightedIncrementalVectorAverage(SimpleVector init) : base(init) { }
+		public WeightedIncrementalVectorAverage(VectorDouble init) : base(init) { }
 
 		protected override double UpdateStrength { get { throw new Exception("Update strength is specified in the Update parameter, not by the class"); } }
 
-		protected override void ApplyUpdate(SimpleVector value, double? weight) {
+		protected override void ApplyUpdate(VectorDouble value, double? weight) {
 			double w = weight ?? 1d;
 			this._sum ??= new double[value.Dimensionality];
-			this._sum = VectorFunctions.Add(this._sum, VectorFunctions.Multiply(value, w));
+			this._sum = VectorFunctions.Addition(this._sum, VectorFunctions.Multiply(value.Coordinates, w));
 			this.Weight += w;
 		}
 	}

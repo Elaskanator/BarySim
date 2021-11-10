@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Generic.Extensions;
 using Generic.Models;
 
@@ -28,7 +27,7 @@ namespace ParticleSimulator.Threading {
 		
 		private TimeSynchronizer _timeSynchronizer;
 		private Action _callback;
-		private bool _trackLatency = Parameters.DEBUG_ENABLE;
+		private bool _trackLatency = Parameters.PERF_ENABLE;
 		private List<Thread> _threads;
 		private AutoResetEvent[] _refreshListeners;
 		private object[] _buffer;
@@ -84,40 +83,66 @@ namespace ParticleSimulator.Threading {
 
 		public void AssimilateInput() {
 			object[] buffer = new object[this.Prerequisites.Length];
-			bool allowResume;
+			bool success;
+			Prerequisite req;
+			int[] skips = new int[this.Prerequisites.Length];
 			while (this.IsActive) {
 				if (!(this._timeSynchronizer is null)) this._timeSynchronizer.Synchronize();
 				this._event_gatherData.WaitOne();
 				if (!this.IsActive) return;
 
 				for (int pIdx = 0; pIdx < this.Prerequisites.Length; pIdx++) {
-					if (this.IterationCount % this.Prerequisites[pIdx].ConsumptionReuse == 0) {
-						switch (this.Prerequisites[pIdx].ConsumptionType) {
+					req = this.Prerequisites[pIdx];
+
+					if (req.ConsumptionReuse <= 0 || this.IterationCount % req.ConsumptionReuse == 0) {
+						switch (req.ConsumptionType) {
 							case DataConsumptionType.Consume:
-								buffer[pIdx] = this.Prerequisites[pIdx].Resource.Dequeue(false, this.Prerequisites[pIdx].ReadTimeout);
+								if (req.ReadTimeout.HasValue || req.ReuseSlipTolerance != 0) {
+									if (req.ReadTimeout.HasValue) {
+										success = req.Resource.TryDequeue(false, out buffer[pIdx], req.ReadTimeout.Value);
+										if (!this.IsActive) return;
+									} else success = req.Resource.TryDequeue(false, out buffer[pIdx]);
+
+									if (success) {
+										skips[pIdx] = 0;
+									} else {
+										skips[pIdx]++;
+										if (req.AllowDirtyRead)
+											buffer[pIdx] = req.Resource.Current;
+										else if (req.ReuseSlipTolerance > 0 && skips[pIdx] > req.ReuseSlipTolerance) {
+											buffer[pIdx] = req.Resource.Dequeue(false);
+											skips[pIdx] = 0;
+										} else buffer[pIdx] = req.Resource.Peek();
+									}
+								} else buffer[pIdx] = req.Resource.Dequeue(false);
 								break;
 							case DataConsumptionType.OnUpdate:
-								this._refreshListeners[pIdx].WaitOne();
-								buffer[pIdx] = this.Prerequisites[pIdx].Resource.Peek();
+								if (req.ReadTimeout.HasValue)
+									WaitHandle.WaitAny(new[] { this._refreshListeners[pIdx] }, req.ReadTimeout.Value);
+								else this._refreshListeners[pIdx].WaitOne();
+
+								if (!this.IsActive) return;
+
+								if (req.AllowDirtyRead)
+									buffer[pIdx] = req.Resource.Current;
+								else buffer[pIdx] = req.Resource.Peek();
+
 								break;
 							case DataConsumptionType.Read:
-								buffer[pIdx] = this.Prerequisites[pIdx].Resource.Peek();
-								break;
-							case DataConsumptionType.ReadDirty:
-								buffer[pIdx] = this.Prerequisites[pIdx].Resource.Current;
+								if (req.AllowDirtyRead)
+									buffer[pIdx] = req.Resource.Current;
+								else buffer[pIdx] = req.Resource.Peek();
+
 								break;
 							default:
 								throw new InvalidEnumArgumentException(
 									nameof(Prerequisite.ConsumptionType),
-									(int)this.Prerequisites[pIdx].ConsumptionType,
+									(int)req.ConsumptionType,
 									typeof(DataConsumptionType));
 						}
 					}
-					allowResume = this.Prerequisites[pIdx].ConsumptionType == DataConsumptionType.Consume
-						&& (this.Prerequisites[pIdx].ConsumptionReuse == 1
-							|| this.IterationCount % this.Prerequisites[pIdx].ConsumptionReuse == this.Prerequisites[pIdx].ConsumptionReuse - 1);
-					if (allowResume)
-						this.Prerequisites[pIdx].Resource.AllowResume();
+					if (req.ConsumptionType == DataConsumptionType.Consume && req.ConsumptionReuse > 0 && (this.IterationCount + 1) % req.ConsumptionReuse == 0)
+						req.Resource.AllowResume();
 				}
 				_buffer = buffer;
 				this._event_processData.Set();
@@ -134,7 +159,8 @@ namespace ParticleSimulator.Threading {
 				}
 				if (!this.IsActive) return;
 
-				if (this.Prerequisites.Length == 0 && !(this._timeSynchronizer is null)) this._timeSynchronizer.Synchronize();
+				if (this.Prerequisites.Length == 0 && !(this._timeSynchronizer is null))
+					this._timeSynchronizer.Synchronize();
 				if (this.DoTrackLatency) this._timer.Start();
 				this.Refresh(this._buffer);
 
@@ -154,10 +180,10 @@ namespace ParticleSimulator.Threading {
 		protected abstract void Refresh(object[] data);
 
 		public override string ToString() {
-			return string.Format("{0}{1}<{2}>{2}", nameof(AEvaluationStep),
+			return string.Format("{0}{1}<{2}>{3}", nameof(AEvaluationStep),
 				this.Name is null ? "" : string.Format("<{0}>", this.Name),
 				this.Prerequisites.Length.Pluralize("prerequisite"),
-				this.Prerequisites.Length == 0 ? "" : "[" + string.Join(", ", this.Prerequisites.AsEnumerable()) + "]");//string.Join ambiguous without AsEnumerable() (C# you STOOOPID)
+				this.Prerequisites.Length == 0 ? "" : "[" + string.Join(", ", this.Prerequisites.AsEnumerable()) + "]");//string.Join ambiguous without AsEnumerable()
 		}
 
 		public override bool Equals(object obj) { return (obj is AEvaluationStep) && this.ID == (obj as AEvaluationStep).ID; }

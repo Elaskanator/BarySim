@@ -8,9 +8,9 @@ using Generic.Models;
 using ParticleSimulator.Rendering;
 
 namespace ParticleSimulator.Simulation {
-	public interface IParticleSimulator : IEnumerable<AParticle> {
+	public interface IParticleSimulator : IEnumerable<IParticle> {
 		public bool IsDiscrete { get; }
-		public IEnumerable<AParticle> AllParticles { get; }
+		public IEnumerable<IParticle> AllParticles { get; }
 		public SampleSMA[] DensityScale { get; }
 
 		public ITree RebuildTree();
@@ -20,9 +20,10 @@ namespace ParticleSimulator.Simulation {
 	}
 
 	public abstract class AParticleSimulator<P, T> : IParticleSimulator
-	where P : AParticle
+	where P : AParticle<double>
 	where T : ATree<P> {
-		public AParticleSimulator() {
+		public AParticleSimulator(Random rand = null) {
+			this._rand = rand ?? new Random();
 			this.DensityScale = Enumerable
 				.Range(1, Parameters.DENSITY_COLORS.Length - 1)
 				.Select(x => new SampleSMA(Parameters.AUTOSCALING_SMA_ALPHA, x))
@@ -31,9 +32,9 @@ namespace ParticleSimulator.Simulation {
 		
 		public abstract bool IsDiscrete { get; }
 		public abstract IEnumerable<P> AllParticles { get; }
-		IEnumerable<AParticle> IParticleSimulator.AllParticles { get { return this.AllParticles; } }
+		IEnumerable<IParticle> IParticleSimulator.AllParticles => this.AllParticles;
 		public SampleSMA[] DensityScale { get; private set; }
-		protected readonly Random _rand = new();
+		protected readonly Random _rand;
 
 		public abstract T NewTree { get; }
 
@@ -58,25 +59,62 @@ namespace ParticleSimulator.Simulation {
 
 			Tuple<double[], double>[] result = this.AllParticles.Select(p => new Tuple<double[], double>(p.Coordinates, p.Mass)).ToArray();
 
-			if (Parameters.DEBUG_ENABLE) PerfMon.AfterSimulate(startUtc);
+			if (Parameters.PERF_ENABLE) PerfMon.AfterSimulate(startUtc);
 
 			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Simulate - End");
 			return result;
 		}
 		public Tuple<double[], double>[] Simulate(ITree tree) { return this.Simulate((T)tree); }
+
 		protected abstract void ComputeUpdate(T tree);
 
 		public Tuple<char, double>[] RasterizeDensities(Tuple<double[], double>[] particles) {
 			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Rasterize - Start");
 			DateTime startUtc = DateTime.UtcNow;
 
-			Tuple<char, double>[] result = this.Resample(particles, Renderer.RenderWidth, Renderer.RenderHeight);
+			Tuple<char, double>[] result = this.Resample(particles);
 			
-			if (Parameters.DEBUG_ENABLE) PerfMon.AfterRasterize(startUtc);
+			if (Parameters.PERF_ENABLE) PerfMon.AfterRasterize(startUtc);
 			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Rasterize - End");
 			return result;
 		}
-		protected abstract Tuple<char, double>[] Resample(Tuple<double[], double>[] particles, double width, double height);
+
+		protected virtual Tuple<char, double>[] Resample(Tuple<double[], double>[] particles) {
+			Tuple<char, double>[] results = new Tuple<char, double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+
+			int topCount, bottomCount;
+			double colorCount;
+			char pixelChar;
+			foreach (IGrouping<int, double[]> xGroup
+			in particles.Select(p => p.Item1).GroupBy(c => (int)(Renderer.RenderWidth * c[0] / Parameters.DOMAIN_DOUBLE[0]))) {
+				foreach (IGrouping<int, double> yGroup
+				in xGroup//subdivide each pixel into two vertical components
+					.Select(c => Parameters.DOMAIN_DOUBLE.Length < 2 ? 0 : Renderer.RenderHeight * c[1] / Parameters.DOMAIN_DOUBLE[1] / 2d)
+					.GroupBy(y => (int)y))//preserve floating point value of normalized Y for subdivision
+				{
+					topCount = yGroup.Count(y => y % 1d < 0.5d);
+					bottomCount = yGroup.Count() - topCount;
+
+					if (topCount > 0 && bottomCount > 0) {
+						pixelChar = Parameters.CHAR_BOTH;
+						colorCount = ((double)topCount + bottomCount) / 2d;
+					} else if (topCount > 0) {
+						pixelChar = Parameters.CHAR_TOP;
+						colorCount = topCount;
+					} else {
+						pixelChar = Parameters.CHAR_BOTTOM;
+						colorCount = bottomCount;
+					}
+
+					results[xGroup.Key + Renderer.RenderWidthOffset + Parameters.WINDOW_WIDTH*(yGroup.Key + Renderer.RenderHeightOffset)] =
+						new Tuple<char, double>(
+							pixelChar,
+							colorCount);
+				}
+			}
+
+			return results;
+		}
 
 		public void AutoscaleUpdate(Tuple<char, double>[] sampling) {
 			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Autoscale - Start");
@@ -85,29 +123,37 @@ namespace ParticleSimulator.Simulation {
 			if (orderedCounts.Length > 0) {
 				int totalBands = Parameters.DENSITY_COLORS.Length - 1;
 
-				int lastBand = 0;
-				int idx;
-				int bandValue;
+				double curVal = 0d, curValRounded = 0d;
+				double newVal = 0d, newValRounded = 0d;
+				int percentilIdx;
 				for (int band = 1; band <= totalBands; band++) {
-					idx = (int)(((double)orderedCounts.Length * band / (totalBands + 1d)) - 1d);
+					percentilIdx = (int)(((double)orderedCounts.Length * band / (totalBands + 1d)) - 1d);
 
-					if (orderedCounts.Length > idx) {
-						bandValue = (int)orderedCounts[idx];
-						if (bandValue > lastBand) {
-							this.DensityScale[band - 1].Update(bandValue, Program.Step_Rasterizer.IterationCount <= 1 || bandValue == 1 ? 1d : null);
-							lastBand = (int)this.DensityScale[band - 1].Current;
-						} else {
-							this.DensityScale[band - 1].Update(++lastBand);
+					if (orderedCounts.Length > percentilIdx) {
+						curVal = curValRounded = this.DensityScale[band - 1].Current;
+						newVal = newValRounded = orderedCounts[percentilIdx];
+						if (Program.Simulator.IsDiscrete) {
+							curValRounded = Math.Floor(curVal);
+							newValRounded = Math.Ceiling(newVal);
 						}
 					} else {
-						this.DensityScale[band - 1].Update(++lastBand);
+						newVal = newValRounded = curVal = ++curValRounded;
+					}
+
+					if (newValRounded > curVal) {
+						this.DensityScale[band - 1].Update(newValRounded, Program.Step_Rasterizer.IterationCount <= 1 ? 1d : null);
+					} else if (band > 1 && newValRounded <= this.DensityScale[band - 2].Current) {
+						this.DensityScale[band - 1].Update(this.DensityScale[band - 2].Current + 1, 1d);
+					} else {
+						this.DensityScale[band - 1].Update(newValRounded, 1d);
 					}
 				}
 			}
+
 			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Autoscale - End");
 		}
 
-		public IEnumerator<AParticle> GetEnumerator() { return this.AllParticles.GetEnumerator(); }
+		public IEnumerator<IParticle> GetEnumerator() { return this.AllParticles.GetEnumerator(); }
 		IEnumerator IEnumerable.GetEnumerator() {return this.AllParticles.GetEnumerator(); }
 	}
 }

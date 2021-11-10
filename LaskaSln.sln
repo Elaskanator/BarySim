@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31729.503
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParticleSimulator", "Boids\ParticleSimulator.csproj", "{A67D6C4D-8687-43D9-BEA4-4BB9B9E86617}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E806FC2D-60C9-40DE-B627-ACFDAD04B176}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
@@ -16,27 +14,29 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Applications", "Applications", "{580C276A-7726-4BD2-9343-78E316CA4612}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParticleSimulator", "ParticuleSimulator\ParticleSimulator.csproj", "{CF39B897-A8BF-4041-8D5E-227C9543AC3D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A67D6C4D-8687-43D9-BEA4-4BB9B9E86617}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A67D6C4D-8687-43D9-BEA4-4BB9B9E86617}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A67D6C4D-8687-43D9-BEA4-4BB9B9E86617}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A67D6C4D-8687-43D9-BEA4-4BB9B9E86617}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3CF3A48B-9C45-44DC-9077-E08B86C2C56B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3CF3A48B-9C45-44DC-9077-E08B86C2C56B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3CF3A48B-9C45-44DC-9077-E08B86C2C56B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3CF3A48B-9C45-44DC-9077-E08B86C2C56B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF39B897-A8BF-4041-8D5E-227C9543AC3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF39B897-A8BF-4041-8D5E-227C9543AC3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF39B897-A8BF-4041-8D5E-227C9543AC3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF39B897-A8BF-4041-8D5E-227C9543AC3D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{A67D6C4D-8687-43D9-BEA4-4BB9B9E86617} = {580C276A-7726-4BD2-9343-78E316CA4612}
 		{3CF3A48B-9C45-44DC-9077-E08B86C2C56B} = {EDA64E7F-6B66-45EA-926D-C83EB6825070}
+		{CF39B897-A8BF-4041-8D5E-227C9543AC3D} = {580C276A-7726-4BD2-9343-78E316CA4612}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8C6FE800-AF41-4EA9-B043-6563917B0D36}

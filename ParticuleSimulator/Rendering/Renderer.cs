@@ -16,16 +16,16 @@ namespace ParticleSimulator.Rendering {
 			MaxX = Parameters.WINDOW_WIDTH;
 			MaxY = Parameters.WINDOW_HEIGHT * 2;
 
-			if (Parameters.DOMAIN.Length > 1) {
-				double aspectRatio = Parameters.DOMAIN[0] / Parameters.DOMAIN[1];
+			if (Parameters.DOMAIN_DOUBLE.Length > 1) {
+				double aspectRatio = Parameters.DOMAIN_DOUBLE[0] / Parameters.DOMAIN_DOUBLE[1];
 				double consoleAspectRatio = (double)MaxX / (double)MaxY;
 				if (aspectRatio > consoleAspectRatio) {//wide
 					RenderWidth = MaxX;
-					RenderHeight = (int)(MaxX * Parameters.DOMAIN[1] / Parameters.DOMAIN[0]);
+					RenderHeight = (int)(MaxX * Parameters.DOMAIN_DOUBLE[1] / Parameters.DOMAIN_DOUBLE[0]);
 					if (RenderHeight < 1) RenderHeight = 1;
 					RenderHeightOffset = (MaxY - RenderHeight) / 4;
 				} else {//tall
-					RenderWidth = (int)(MaxY * Parameters.DOMAIN[0] / Parameters.DOMAIN[1]);
+					RenderWidth = (int)(MaxY * Parameters.DOMAIN_DOUBLE[0] / Parameters.DOMAIN_DOUBLE[1]);
 					RenderHeight = MaxY;
 					RenderWidthOffset = (MaxX - RenderWidth) / 2;
 				}
@@ -41,18 +41,17 @@ namespace ParticleSimulator.Rendering {
 			Tuple<char, double>[] rasterization = (Tuple<char, double>[])p[0];
 
 			ConsoleExtensions.CharInfo[] frame = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
-			if (!(rasterization is null))
+			if (!(rasterization is null)) {
 				for (int i = 0; i < rasterization.Length; i++)
 					frame[i] = rasterization[i] is null ? default :
 						new ConsoleExtensions.CharInfo(
 							rasterization[i].Item1,
 							ChooseDensityColor(rasterization[i].Item2));
 
-			if (Parameters.LEGEND_ENABLE) DrawLegend(frame, Program.Simulator.DensityScale);
-			if (Parameters.DEBUG_ENABLE) {
-				if (Parameters.PERF_STATS_ENABLE) PerfMon.DrawStatsHeader(frame);
-				if (Parameters.PERF_GRAPH_ENABLE && !(rasterization is null)) frame.RegionMerge(Parameters.WINDOW_WIDTH, PerfMon.GetFpsGraph(), Parameters.GRAPH_WIDTH, 0, Parameters.PERF_STATS_ENABLE ? 1 : 0, true);
+				if (Parameters.LEGEND_ENABLE) DrawLegend(frame, Program.Simulator.DensityScale);
+				if (Parameters.PERF_GRAPH_ENABLE) frame.RegionMerge(Parameters.WINDOW_WIDTH, PerfMon.GetFpsGraph(), PerfMon.GraphWidth, 0, 1, true);
 			}
+			if (Parameters.PERF_ENABLE) PerfMon.DrawStatsOverlay(frame);
 
 			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Render - End");
 			return frame;
@@ -61,8 +60,8 @@ namespace ParticleSimulator.Rendering {
 		public static void FlushScreenBuffer(ConsoleExtensions.CharInfo[] buffer) {
 			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Draw - Start");
 
-			int xOffset = Parameters.DEBUG_ENABLE ? 4 : 0,
-				yOffset = Parameters.DEBUG_ENABLE && Parameters.PERF_STATS_ENABLE ? 1 : 0;
+			int xOffset = Parameters.PERF_ENABLE ? 4 : 0,
+				yOffset = Parameters.PERF_ENABLE ? 1 : 0;
 
 			TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(Program.Step_Rasterizer.LastIerationEndUtc ?? Program.Manager.StartTimeUtc);
 			if (timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS) {
@@ -85,7 +84,7 @@ namespace ParticleSimulator.Rendering {
 					Parameters.CHAR_BOTH,
 					Parameters.DENSITY_COLORS[cIdx]);
 
-				if (cIdx == 0) strData = "≤" + rounding(densityScale[cIdx].Current);
+				if (cIdx == 0) strData = (!Program.Simulator.IsDiscrete || densityScale[cIdx].Current >= 2 ? "≤" : "=") + rounding(densityScale[cIdx].Current);
 				else if (cIdx < densityScale.Length) strData = "=" + rounding(densityScale[cIdx].Current);
 				else strData = ">";
 
@@ -98,8 +97,8 @@ namespace ParticleSimulator.Rendering {
 
 		public static ConsoleColor ChooseDensityColor(double count) {
 			Predicate<double> comparer = Program.Simulator.IsDiscrete
-				? a => (int)(2d * a) <= (int)(2d * count)
-				: a => a <= count;
+				? a => (int)(2d * a) < (int)(2d * count)
+				: a => a < count;
 			int rank = Program.Simulator.DensityScale.TakeWhile(a => comparer(a.Current)).Count();
 			return Parameters.DENSITY_COLORS[rank];
 		}
