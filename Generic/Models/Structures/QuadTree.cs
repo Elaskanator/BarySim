@@ -7,23 +7,28 @@ namespace Generic.Models {
 	where E : IVector<double>
 	where T : AQuadTree<E, T> {
 		public const int CAPACITY = 5;
-		//dividing by 2 enough times WILL reach the sig figs limit of System.Double and cause zero-sized subtrees (before reaching the stack frame depth limit due to recursion)
-		public const int MAX_DEPTH = 50;
+		//dividing by 2 enough times WILL reach the sig figs limit of the underlying type and cause zero-sized subtrees (before reaching the stack frame depth limit due to recursion)
+		public abstract int MaxDepth { get; }
 		
 		public readonly VectorDouble LeftCorner;
 		public readonly VectorDouble Center;
 		public readonly VectorDouble RightCorner;
 		
 		public int NumMembers { get; private set; }
-		public int Dimensionality { get { return this.LeftCorner.Dimensionality; } }
+		public int Dimensionality { get { return this.LeftCorner.Length; } }
 		public override IEnumerable<T> Children { get { return this._quadrants; } }
 		public override bool IsLeaf { get { return this._quadrants.Length == 0; } }
 		public override IEnumerable<E> NodeElements { get {
-			if (this.Depth < MAX_DEPTH || this.NumMembers < CAPACITY)
+			if (this.Depth < MaxDepth || this.NumMembers < CAPACITY)
 				return this._members.Take(this.NumMembers);
 			else
 				return this._members.Concat(this._leftovers);
 		} }
+
+		protected abstract N Zero { get; }
+		protected abstract N Add(N value1, N value2);
+		protected abstract N Subtract(N value1, N value2);
+		protected abstract N Halve(N value);
 
 		private T[] _quadrants = Array.Empty<T>();
 		private readonly E[] _members = new E[CAPACITY];//entries in non-leaves are leftovers that must be ignored
@@ -41,7 +46,7 @@ namespace Generic.Models {
 
 		public override bool DoesContain(E element) {
 			for (int d = 0; d < this.Dimensionality; d++)//all dimensions must overlap
-				if (this.LeftCorner.Coordinates[d] > element.Coordinates[d] || element.Coordinates[d] > this.RightCorner.Coordinates[d])
+				if (this.LeftCorner[d].CompareTo(element.Coordinates[d]) >0 || element.Coordinates[d].CompareTo(this.RightCorner[d]) > 0)
 					return false;
 			return true;//all dimensions overlap (or there are none)
 		}
@@ -49,7 +54,7 @@ namespace Generic.Models {
 		protected override void AddElementToNode(E element) {
 			if (this.NumMembers < CAPACITY) this._members[this.NumMembers] = element;
 			else {
-				if (this.Depth < MAX_DEPTH) {
+				if (this.Depth < MaxDepth) {
 					if (this.NumMembers == CAPACITY) {//one-time quadrant formation
 						this._quadrants = this.OrganizeNodes(this.FormNodes().ToArray());
 						foreach (E member in this._members)
@@ -65,7 +70,7 @@ namespace Generic.Models {
 		}
 
 		public override T GetContainingChild(E element) {
-			int quadrantIdx = Enumerable.Range(0, this.Dimensionality).Sum(d => element.Coordinates[d] >= this.Center.Coordinates[d] ? 1 << d : 0);
+			int quadrantIdx = Enumerable.Range(0, this.Dimensionality).Sum(d => element.Coordinates[d].CompareTo(this.Center[d]) >= 0 ? 1 << d : 0);
 			return this._quadrants[quadrantIdx];
 		}
 
@@ -76,20 +81,19 @@ namespace Generic.Models {
 			foreach (var newNodeData in Enumerable
 				.Range(0, 1 << this.Dimensionality)//the 2^dimension "quadrants" of the Euclidean hyperplane
 				.Select(q => {
-					double[]
-						sizeHalved = this.LeftCorner.Coordinates.Zip(this.RightCorner.Coordinates, (a, b) => (b - a) / 2d).ToArray(),
+					N[]
+						sizeHalved = this.LeftCorner.Zip(this.RightCorner, (a, b) => this.Halve(this.Subtract(b, a))).ToArray(),
 						cornerA = Enumerable
 							.Range(0, this.Dimensionality)
-							.Select(d =>
-								this.LeftCorner.Coordinates[d]
-								+ (sizeHalved[d]
-									* ((q & (1 << d)) == 0
-										? 0//smaller half
-										: 1)))
+							.Select(d => this.Add(
+								this.LeftCorner[d],
+								(q & (1 << d)) == 0
+									? this.Zero
+									: sizeHalved[d]))
 							.ToArray();
 					return new {
 						LeftCorner = cornerA,
-						RightCorner = cornerA.Zip(sizeHalved, (a, b) => a + b).ToArray(),
+						RightCorner = cornerA.Zip(sizeHalved, (a, b) => this.Add(a, b)).ToArray(),
 						Parent = (T)this };
 				}))
 				yield return this.NewNode(newNodeData.LeftCorner, newNodeData.RightCorner, newNodeData.Parent);
@@ -108,8 +112,23 @@ namespace Generic.Models {
 		public QuadTree(VectorDouble corner1, VectorDouble corner2, QuadTree<E> parent = null)
 		: base(corner1, corner2, parent) { }
 
-		protected override QuadTree<E> NewNode(double[] cornerA, double[] cornerB, QuadTree<E> parent) {
-			return new QuadTree<E>(cornerA, cornerB, parent);
-		}
+		protected override double Zero => 0d;
+		protected override double Add(double value1, double value2) { return value1 + value2; }
+		protected override double Halve(double value) { return value / 2d; }
+		protected override double Subtract(double value1, double value2) { return value1 - value2; }
+	}
+
+	public abstract class AQuadTreeFloat<V, T> : AQuadTree<float, V, T>
+	where V : IVector<float>
+	where T : AQuadTreeFloat<V, T>{
+		public override int MaxDepth => 20;
+
+		public AQuadTreeFloat(float[] corner1, float[] corner2, T parent = null)
+		: base(corner1, corner2, parent) { }
+
+		protected override float Zero => 0f;
+		protected override float Add(float value1, float value2) { return value1 + value2; }
+		protected override float Halve(float value) { return value / 2f; }
+		protected override float Subtract(float value1, float value2) { return value1 - value2; }
 	}
 }
