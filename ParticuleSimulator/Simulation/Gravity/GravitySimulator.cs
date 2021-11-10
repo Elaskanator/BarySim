@@ -12,7 +12,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 		public override bool IsDiscrete => false;
 		public Clustering[] Clusterings { get; private set; }
 		public override IEnumerable<CelestialBody> AllParticles => this.Clusterings.SelectMany(c => c.Particles);
-		public override BaryonQuadTree NewTree => new BaryonQuadTree(new double[Parameters.DOMAIN_DOUBLE.Length], Parameters.DOMAIN_DOUBLE);
+		public override BaryonQuadTree NewTree => new BaryonQuadTree(new double[Parameters.DOMAIN.Length], Parameters.DOMAIN);
 
 		protected override void ComputeUpdate(BaryonQuadTree tree) {
 			BaryonQuadTree[] nodes;

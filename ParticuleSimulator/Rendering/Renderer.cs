@@ -16,16 +16,16 @@ namespace ParticleSimulator.Rendering {
 			MaxX = Parameters.WINDOW_WIDTH;
 			MaxY = Parameters.WINDOW_HEIGHT * 2;
 
-			if (Parameters.DOMAIN_DOUBLE.Length > 1) {
-				double aspectRatio = Parameters.DOMAIN_DOUBLE[0] / Parameters.DOMAIN_DOUBLE[1];
+			if (Parameters.DOMAIN.Length > 1) {
+				double aspectRatio = Parameters.DOMAIN[0] / Parameters.DOMAIN[1];
 				double consoleAspectRatio = (double)MaxX / (double)MaxY;
 				if (aspectRatio > consoleAspectRatio) {//wide
 					RenderWidth = MaxX;
-					RenderHeight = (int)(MaxX * Parameters.DOMAIN_DOUBLE[1] / Parameters.DOMAIN_DOUBLE[0]);
+					RenderHeight = (int)(MaxX * Parameters.DOMAIN[1] / Parameters.DOMAIN[0]);
 					if (RenderHeight < 1) RenderHeight = 1;
 					RenderHeightOffset = (MaxY - RenderHeight) / 4;
 				} else {//tall
-					RenderWidth = (int)(MaxY * Parameters.DOMAIN_DOUBLE[0] / Parameters.DOMAIN_DOUBLE[1]);
+					RenderWidth = (int)(MaxY * Parameters.DOMAIN[0] / Parameters.DOMAIN[1]);
 					RenderHeight = MaxY;
 					RenderWidthOffset = (MaxX - RenderWidth) / 2;
 				}

@@ -5,23 +5,23 @@ using Generic.Extensions;
 using Generic.Models;
 
 namespace ParticleSimulator.Simulation.Boids {
-	public class Boid: AParticleDouble {
+	public class Boid: AParticle {
 		public readonly Flock Flock;
 
-		public Boid(Flock flock, VectorDouble position, VectorDouble velocity, double mass = 1)
+		public Boid(Flock flock, double[] position, double[] velocity, double mass = 1)
 		: base(position, velocity, mass) {
 			this.Flock = flock;
-			this.Velocity = new VectorDouble(new double[position.Dimensionality]);
+			this.Velocity = new double[position.Length];
 		}
 		
-		private IVector<double> _velocity;
-		public override IVector<double> Velocity {
+		private double[] _velocity;
+		public override double[] Velocity {
 			get { return this._velocity; }
-			set { this._velocity = new VectorDouble(VectorFunctions.Clamp(value.Coordinates, Parameters.MAX_SPEED)); } }
-		private IVector<double> _acceleration;
-		public IVector<double> Acceleration {
+			set { this._velocity = VectorFunctions.Clamp(value, Parameters.MAX_SPEED); } }
+		private double[] _acceleration;
+		public double[] Acceleration {
 			get { return this._acceleration; }
-			set { this._acceleration = new VectorDouble(VectorFunctions.Clamp(value.Coordinates, Parameters.MAX_ACCELERATION)); } }
+			set { this._acceleration = VectorFunctions.Clamp(value, Parameters.MAX_ACCELERATION); } }
 		public override double Radius => 0f;
 
 		public void UpdateDeltas(IEnumerable<Boid> neighbors) {
@@ -29,23 +29,22 @@ namespace ParticleSimulator.Simulation.Boids {
 		}
 
 		internal override void ApplyUpdate() {
-			this.Velocity = new VectorDouble(VectorFunctions.Addition(VectorFunctions.Multiply(this.Velocity, Parameters.SPEED_DECAY), this.Acceleration.Coordinates));
-
-			this.Coordinates = VectorFunctions.Addition(
-				this,
-				this.Velocity);
+			this.Velocity = this.Velocity.Multiply(Parameters.SPEED_DECAY).Addition(this.Acceleration);
+			this.Coordinates = this.Velocity.Addition(this.Coordinates);
 		}
 
 		//TODO rewrite this method entirely
 		//seealso https://swharden.com/CsharpDataVis/boids/boids.md.html
-		private VectorDouble ComputeNeighborhoodBias(IEnumerable<Boid> neighbors) {
+		private double[] ComputeNeighborhoodBias(IEnumerable<Boid> neighbors) {
 			double cohesionBiasWeight = 0d, alignmentBiasWeight = 0d, separationBiasWeight = 0d;
-			VectorDouble cohesionBias, separationBias, alignmentBias;
-			cohesionBias = separationBias = alignmentBias = Enumerable.Repeat(0d, Parameters.DOMAIN_DOUBLE.Length).ToArray();
+			double[]
+				cohesionBias = new double[this.Dimensionality],
+				separationBias = new double[this.Dimensionality],
+				alignmentBias = new double[this.Dimensionality];
 
 			double dist;
 			double weight;
-			VectorDouble awayVector;
+			double[] awayVector;
 
 			int count = 0;
 			foreach (Boid other in neighbors.Except(x => x.ID == this.ID)) {
@@ -57,44 +56,44 @@ namespace ParticleSimulator.Simulation.Boids {
 				if (Parameters.ENABLE_COHESION && Parameters.COHESION_WEIGHT > 0d) {
 					weight = this.GetCohesionWeight(other, dist);
 					cohesionBiasWeight += weight;
-					cohesionBias += other.Coordinates.Multiply(weight);
+					cohesionBias = cohesionBias.Addition(other.Coordinates.Multiply(weight));
 				}
 
 				if (Parameters.ENABLE_ALIGNMENT && Parameters.ALIGNMENT_WEIGHT > 0d) {
 					weight = this.GetAlignmentWeight(other, dist);
 					alignmentBiasWeight += weight;
-					alignmentBias += other.Velocity.Multiply(weight);
+					alignmentBias = alignmentBias.Addition(other.Velocity.Multiply(weight));
 				}
 
-				if (Parameters.ENABLE_SEPARATION && Parameters.SEPARATION_WEIGHT > 0d && dist < Parameters.DEFAULT_SEPARATION) {
+				if (Parameters.ENABLE_SEPARATION && Parameters.SEPARATION_WEIGHT > 0d && dist < Parameters.SEPARATION) {
 					weight = this.GetSeparationWeight(other, dist);
 					separationBiasWeight += weight;
 					awayVector = this.Coordinates.Subtract(other.Coordinates);
-					separationBias += awayVector * weight;
+					separationBias = separationBias.Addition(awayVector.Multiply(weight));
 				}
 			}
 
 			if (count > 0) {
-				if (cohesionBiasWeight > 0d) cohesionBias /= cohesionBiasWeight;
-				if (alignmentBiasWeight > 0d) alignmentBias /= alignmentBiasWeight;
-				if (separationBiasWeight > 0d) separationBias /= separationBiasWeight;
+				if (cohesionBiasWeight > 0d) cohesionBias = cohesionBias.Divide(cohesionBiasWeight);
+				if (alignmentBiasWeight > 0d) alignmentBias = alignmentBias.Divide(alignmentBiasWeight);
+				if (separationBiasWeight > 0d) separationBias = separationBias.Divide(separationBiasWeight);
 
 				return
-					(cohesionBias * Parameters.COHESION_WEIGHT).Coordinates.Clamp(Parameters.MAX_IMPULSE_COHESION)
-					.Addition(alignmentBias * Parameters.ALIGNMENT_WEIGHT).Clamp(Parameters.MAX_IMPULSE_ALIGNMENT)
-					.Addition(separationBias* Parameters.SEPARATION_WEIGHT).Clamp(Parameters.MAX_IMPULSE_SEPARATION)
+					((cohesionBias.Multiply(Parameters.COHESION_WEIGHT).Clamp(Parameters.MAX_IMPULSE_COHESION))
+						.Addition(alignmentBias.Multiply(Parameters.ALIGNMENT_WEIGHT).Clamp(Parameters.MAX_IMPULSE_ALIGNMENT))
+						.Addition(separationBias.Multiply(Parameters.SEPARATION_WEIGHT).Clamp(Parameters.MAX_IMPULSE_SEPARATION)))
 					.Divide(this.Mass)
 					.Clamp(Parameters.MAX_ACCELERATION);
 			} else
-				return new double[Parameters.DOMAIN_DOUBLE.Length];
+				return cohesionBias;
 		}
 
 		public double GetCohesionWeight(Boid other, double dist) {
-			return this.Flock.ID == other.Flock.ID ? dist > Parameters.DEFAULT_SEPARATION ? 1d / (dist - Parameters.DEFAULT_SEPARATION/2d) : Parameters.COHESION_WEIGHT : 0d;
+			return this.Flock.ID == other.Flock.ID ? dist > Parameters.SEPARATION ? 1d / (dist - Parameters.SEPARATION/2d) : Parameters.COHESION_WEIGHT : 0d;
 		}
 
 		public double GetAlignmentWeight(Boid other, double dist) {
-			return this.Flock.ID == other.Flock.ID ? dist > Parameters.DEFAULT_SEPARATION ? 1d / Math.Sqrt(dist) : Parameters.MAX_IMPULSE_ALIGNMENT : 0d;
+			return this.Flock.ID == other.Flock.ID ? dist > Parameters.SEPARATION ? 1d / Math.Sqrt(dist) : Parameters.MAX_IMPULSE_ALIGNMENT : 0d;
 		}
 
 		public double GetSeparationWeight(Boid other, double dist) {

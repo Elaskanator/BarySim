@@ -23,8 +23,7 @@ namespace ParticleSimulator {
 		public const int NUM_PARTICLES_PER_GROUP = 3000;
 		public const int NUM_PARTICLE_GROUPS = 1;
 
-		public const double DEFAULT_SEPARATION = 4;
-		public static readonly float DEFAULT_SEPARATION_FLOAT = (float)DEFAULT_SEPARATION;
+		public const double SEPARATION = 4;
 		#endregion Particles
 
 		#region Sizes
@@ -45,33 +44,23 @@ namespace ParticleSimulator {
 		public const bool ENABLE_SEPARATION = true;
 		
 		public const double SPEED_DECAY = 0.1;//used as E^val
-		public static readonly float SPEED_DECAY_FLOAT = (float)SPEED_DECAY;
 
 		public const double SEPARATION_WEIGHT = 10d;
-		public static readonly float SEPARATION_WEIGHT_FLOAT = (float)SEPARATION_WEIGHT;
 		public const double ALIGNMENT_WEIGHT = 1d;
-		public static readonly float ALIGNMENT_WEIGHT_FLOAT = (float)ALIGNMENT_WEIGHT;
 		public const double COHESION_WEIGHT = 1d;
-		public static readonly float COHESION_WEIGHT_FLOAT = (float)COHESION_WEIGHT;
 
-		public const double MAX_ACCELERATION = 0.1;
-		public static readonly float MAX_ACCELERATION_FLOAT = (float)MAX_ACCELERATION;
-		public const double MAX_SPEED = 1;
-		public static readonly float MAX_SPEED_FLOAT = (float)MAX_SPEED;
-		public const double MAX_STARTING_SPEED = 1;
-		public static readonly float MAX_STARTING_SPEED_FLOAT = (float)MAX_STARTING_SPEED;
+		public const double MAX_ACCELERATION = 0.1d;
+		public const double MAX_SPEED = 1d;
+		public const double MAX_STARTING_SPEED = 1d;
 
-		public const double MAX_IMPULSE_COHESION = 1;
-		public static readonly float MAX_IMPULSE_COHESION_FLOAT = (float)MAX_IMPULSE_COHESION;
-		public const double MAX_IMPULSE_ALIGNMENT = 1;
-		public static readonly float MAX_IMPULSE_ALIGNMENT_FLOAT = (float)MAX_IMPULSE_ALIGNMENT;
-		public const double MAX_IMPULSE_SEPARATION = 10;
-		public static readonly float MAX_IMPULSE_SEPARATION_FLOAT = (float)MAX_IMPULSE_SEPARATION;
+		public const double MAX_IMPULSE_COHESION = 1d;
+		public const double MAX_IMPULSE_ALIGNMENT = 1d;
+		public const double MAX_IMPULSE_SEPARATION = 10d;
 		#endregion Boids
 
 		#region Gravity
-		public const double DEFAULT_MIN_MASS = 1;
-		public const double DEFAULT_MAX_MASS = 1;
+		public const double MIN_MASS = 1;
+		public const double MAX_MASS = 1;
 		#endregion Gravity
 
 		#region Aux
@@ -89,7 +78,7 @@ namespace ParticleSimulator {
 		public const double PERF_GRA_SMA_ALPHA = 0.2d;
 
 		public const int TREE_REFRESH_FRAMES = 10;
-		public const double AUTOSCALING_REFRESH_FRAMES = 30;
+		public const int AUTOSCALING_REFRESH_FRAMES = 30;
 		public const double AUTOSCALING_SMA_ALPHA = 0.4d;
 		#endregion Aux
 
@@ -113,7 +102,6 @@ namespace ParticleSimulator {
 			//ConsoleColor.DarkMagenta,
 		};
 		
-		public static readonly double[] DOMAIN_DOUBLE = VectorFunctions.Multiply(new double[] { WORLD_ASPECT_RATIO, 1d }, WORLD_SCALE);
-		public static readonly float[] DOMAIN_FLOAT = VectorFunctions.Multiply(new float[] { (float)WORLD_ASPECT_RATIO, 1f }, (float)WORLD_SCALE);
+		public static readonly double[] DOMAIN = VectorFunctions.Multiply(new double[] { WORLD_ASPECT_RATIO, 1d }, WORLD_SCALE);
 	}
 }

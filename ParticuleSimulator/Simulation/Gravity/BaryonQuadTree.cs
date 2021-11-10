@@ -6,7 +6,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 		public WeightedIncrementalVectorAverage Barycenter { get; private set; }
 		public double TotalMass { get; private set; }
 
-		public BaryonQuadTree(VectorDouble corner1, VectorDouble corner2, BaryonQuadTree parent = null)
+		public BaryonQuadTree(double[] corner1, double[] corner2, BaryonQuadTree parent = null)
 		: base(corner1, corner2, parent) {
 			this.Barycenter = new WeightedIncrementalVectorAverage(this.Center);
 		}

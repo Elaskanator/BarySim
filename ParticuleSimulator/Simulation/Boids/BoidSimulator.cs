@@ -14,7 +14,7 @@ namespace ParticleSimulator.Simulation.Boids {
 		public override bool IsDiscrete => true;
 		public Flock[] Flocks { get; private set; }
 		public override IEnumerable<Boid> AllParticles => this.Flocks.SelectMany(f => f.Particles);
-		public override BoidQuadTree NewTree => new BoidQuadTree(new double[Parameters.DOMAIN_DOUBLE.Length], Parameters.DOMAIN_DOUBLE);
+		public override BoidQuadTree NewTree => new BoidQuadTree(new double[Parameters.DOMAIN.Length], Parameters.DOMAIN);
 
 		protected override void ComputeUpdate(BoidQuadTree tree) {
 			Parallel.ForEach(tree.Leaves, leaf => {

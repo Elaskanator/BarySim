@@ -8,9 +8,9 @@ using Generic.Models;
 using ParticleSimulator.Rendering;
 
 namespace ParticleSimulator.Simulation {
-	public interface IParticleSimulator : IEnumerable<IParticle> {
+	public interface IParticleSimulator : IEnumerable<AParticle> {
 		public bool IsDiscrete { get; }
-		public IEnumerable<IParticle> AllParticles { get; }
+		public IEnumerable<AParticle> AllParticles { get; }
 		public SampleSMA[] DensityScale { get; }
 
 		public ITree RebuildTree();
@@ -20,7 +20,7 @@ namespace ParticleSimulator.Simulation {
 	}
 
 	public abstract class AParticleSimulator<P, T> : IParticleSimulator
-	where P : AParticle<double>
+	where P : AParticle
 	where T : ATree<P> {
 		public AParticleSimulator(Random rand = null) {
 			this._rand = rand ?? new Random();
@@ -32,7 +32,7 @@ namespace ParticleSimulator.Simulation {
 		
 		public abstract bool IsDiscrete { get; }
 		public abstract IEnumerable<P> AllParticles { get; }
-		IEnumerable<IParticle> IParticleSimulator.AllParticles => this.AllParticles;
+		IEnumerable<AParticle> IParticleSimulator.AllParticles => this.AllParticles;
 		public SampleSMA[] DensityScale { get; private set; }
 		protected readonly Random _rand;
 
@@ -86,10 +86,10 @@ namespace ParticleSimulator.Simulation {
 			double colorCount;
 			char pixelChar;
 			foreach (IGrouping<int, double[]> xGroup
-			in particles.Select(p => p.Item1).GroupBy(c => (int)(Renderer.RenderWidth * c[0] / Parameters.DOMAIN_DOUBLE[0]))) {
+			in particles.Select(p => p.Item1).GroupBy(c => (int)(Renderer.RenderWidth * c[0] / Parameters.DOMAIN[0]))) {
 				foreach (IGrouping<int, double> yGroup
 				in xGroup//subdivide each pixel into two vertical components
-					.Select(c => Parameters.DOMAIN_DOUBLE.Length < 2 ? 0 : Renderer.RenderHeight * c[1] / Parameters.DOMAIN_DOUBLE[1] / 2d)
+					.Select(c => Parameters.DOMAIN.Length < 2 ? 0 : Renderer.RenderHeight * c[1] / Parameters.DOMAIN[1] / 2d)
 					.GroupBy(y => (int)y))//preserve floating point value of normalized Y for subdivision
 				{
 					topCount = yGroup.Count(y => y % 1d < 0.5d);
@@ -153,7 +153,7 @@ namespace ParticleSimulator.Simulation {
 			if (Program.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline("Autoscale - End");
 		}
 
-		public IEnumerator<IParticle> GetEnumerator() { return this.AllParticles.GetEnumerator(); }
+		public IEnumerator<AParticle> GetEnumerator() { return this.AllParticles.GetEnumerator(); }
 		IEnumerator IEnumerable.GetEnumerator() {return this.AllParticles.GetEnumerator(); }
 	}
 }

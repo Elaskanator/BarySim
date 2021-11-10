@@ -43,15 +43,15 @@ namespace Generic.Models {
 		protected override double Multiply(double a, double b) { return a * b; }
 		protected override double Add(double a, double b) { return a + b; }
 	}
-	public class IncrementalVectorAverage : AIncrementalAverage<VectorDouble> {
+	public class IncrementalVectorAverage : AIncrementalAverage<double[]> {
 		public IncrementalVectorAverage() : base() { }
-		public IncrementalVectorAverage(VectorDouble init) : base(init) { }
+		public IncrementalVectorAverage(double[] init) : base(init) { }
 
-		protected override VectorDouble Multiply(VectorDouble a, double b) {
-			return VectorFunctions.Multiply(a.Coordinates, b);
+		protected override double[] Multiply(double[] a, double b) {
+			return VectorFunctions.Multiply(a, b);
 		}
-		protected override VectorDouble Add(VectorDouble a, VectorDouble b) {
-			return VectorFunctions.Addition(a, (IVector<double>)b);
+		protected override double[] Add(double[] a, double[] b) {
+			return VectorFunctions.Addition(a, b);
 		}
 	}
 
@@ -73,18 +73,18 @@ namespace Generic.Models {
 	}
 
 	public class WeightedIncrementalVectorAverage : IncrementalVectorAverage {
-		private VectorDouble _sum;
-		public override VectorDouble Current { get { return this.NumUpdates > 0 ? VectorFunctions.Divide(this._sum.Coordinates, this.NumUpdates) : null; } }
+		private double[] _sum;
+		public override double[] Current { get { return this.NumUpdates > 0 ? VectorFunctions.Divide(this._sum, this.NumUpdates) : null; } }
 		public double Weight { get; protected set; }
 
-		public WeightedIncrementalVectorAverage(VectorDouble init) : base(init) { }
+		public WeightedIncrementalVectorAverage(double[] init) : base(init) { }
 
 		protected override double UpdateStrength { get { throw new Exception("Update strength is specified in the Update parameter, not by the class"); } }
 
-		protected override void ApplyUpdate(VectorDouble value, double? weight) {
+		protected override void ApplyUpdate(double[] value, double? weight) {
 			double w = weight ?? 1d;
-			this._sum ??= new double[value.Dimensionality];
-			this._sum = VectorFunctions.Addition(this._sum, VectorFunctions.Multiply(value.Coordinates, w));
+			this._sum ??= new double[value.Length];
+			this._sum = VectorFunctions.Addition(this._sum, VectorFunctions.Multiply(value, w));
 			this.Weight += w;
 		}
 	}

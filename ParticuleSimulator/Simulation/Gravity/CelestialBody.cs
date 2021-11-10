@@ -4,13 +4,13 @@ using Generic.Extensions;
 using Generic.Models;
 
 namespace ParticleSimulator.Simulation.Gravity {
-	public class CelestialBody : AParticleDouble {
+	public class CelestialBody : AParticle {
 		public const double GRAVITATIONAL_CONSTANT = 0.66743d;
 
 		private readonly double _radius;
 		public override double Radius => this._radius;
 
-		public CelestialBody(VectorDouble position, VectorDouble velocity, double mass) : base(position, velocity, mass) {
+		public CelestialBody(double[] position, double[] velocity, double mass) : base(position, velocity, mass) {
 			this._contributingBaryonsAcceleration = new double[this.Dimensionality];
 
 			this._radius = NumberExtensions.HypersphereRadius(mass, this.Dimensionality);
@@ -19,7 +19,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 		internal readonly Dictionary<int, double[]> _contributingAccelerations = new();
 		private double[] _contributingBaryonsAcceleration;
 		public void Interact(BaryonQuadTree baryonNode) {
-			double[] toOther = VectorFunctions.Subtract(this, baryonNode.Barycenter.Current);
+			double[] toOther = this.Coordinates.Subtract(baryonNode.Barycenter.Current);
 			double distance = VectorFunctions.Magnitude(toOther);
 
 			double[] toOtherNormalized;
@@ -33,7 +33,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 		public void Interact(CelestialBody other) {
 			if (this._contributingAccelerations.ContainsKey(other.ID)) return;//handshake optimization
 			else {
-				double[] toOther = VectorFunctions.Subtract(this, other);
+				double[] toOther = this.Coordinates.Subtract(other.Coordinates);
 				double distance = VectorFunctions.Magnitude(toOther);
 				
 				double[] toOtherNormalized;
