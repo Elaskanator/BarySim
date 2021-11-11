@@ -6,13 +6,17 @@ using System.Linq;
 namespace Generic.Models {
 	public class SimpleVector : ICollection<double>, IEnumerable<double>, IList<double>, ICollection, IEnumerable, IList, IStructuralComparable, IStructuralEquatable, ICloneable {
 		public int Dimensionality { get { return this.Coordinates.Length; } }
-		public virtual double[] Coordinates { get; set; }
+		public double[] Coordinates { get; set; }
 
 		double IList<double>.this[int index] { get => this.Coordinates[index]; set => this.Coordinates[index] = value; }
 		object IList.this[int index] { get => this.Coordinates[index]; set => this.Coordinates[index] = (double)value; }
 
 		public SimpleVector(int dimensionality) { this.Coordinates = new double[dimensionality]; }
 		public SimpleVector(double[] v) { this.Coordinates = v; }
+
+		public static readonly SimpleVector Zero1D = new(1);
+		public static readonly SimpleVector Zero2D = new(2);
+		public static readonly SimpleVector Zero3D = new(3);
 
 		public double this[int dimension] => this.Coordinates[dimension];
 
@@ -60,16 +64,17 @@ namespace Generic.Models {
 		public override string ToString() { return string.Format("Vector<{0}>", string.Join(",", this.Coordinates.Select(c => c.ToString("G5")))); }
 	}
 
+
 	public static class VectorFunctions {
 		public static double[] Negate(this double[] v) {
 			return v.Select(n => -n).ToArray();
 		}
 		public static SimpleVector Negate(this SimpleVector v) { return (SimpleVector)Negate(v.Coordinates); }
 
-		public static double[] Addition(this double[] v1, double[] v2) {
+		public static double[] Add(this double[] v1, double[] v2) {
 			return v1.Select((n, i) => n + v2[i]).ToArray();
 		}
-		public static SimpleVector Addition(this SimpleVector v1, SimpleVector v2) { return (SimpleVector)Addition(v1.Coordinates, v2.Coordinates); }
+		public static SimpleVector Addition(this SimpleVector v1, SimpleVector v2) { return (SimpleVector)Add(v1.Coordinates, v2.Coordinates); }
 
 		public static double[] Subtract(this double[] v1, double[]v2) {
 			return v1.Select((n, i) => n - v2[i]).ToArray();

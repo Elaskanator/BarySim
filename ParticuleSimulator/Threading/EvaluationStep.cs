@@ -20,6 +20,7 @@ namespace ParticleSimulator.Threading {
 
 		public AIncrementalAverage<double> DataAssimilationTicksAverager;
 		public AIncrementalAverage<double> SynchronizationTicksAverager;
+		public AIncrementalAverage<double> ExclusiveTimeAverage;
 		public AIncrementalAverage<double> IterationTicksAverager;
 	}
 }

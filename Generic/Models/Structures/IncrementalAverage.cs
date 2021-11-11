@@ -51,7 +51,7 @@ namespace Generic.Models {
 			return VectorFunctions.Multiply(a, b);
 		}
 		protected override double[] Add(double[] a, double[] b) {
-			return VectorFunctions.Addition(a, b);
+			return VectorFunctions.Add(a, b);
 		}
 	}
 
@@ -84,7 +84,7 @@ namespace Generic.Models {
 		protected override void ApplyUpdate(double[] value, double? weight) {
 			double w = weight ?? 1d;
 			this._sum ??= new double[value.Length];
-			this._sum = VectorFunctions.Addition(this._sum, VectorFunctions.Multiply(value, w));
+			this._sum = VectorFunctions.Add(this._sum, VectorFunctions.Multiply(value, w));
 			this.Weight += w;
 		}
 	}

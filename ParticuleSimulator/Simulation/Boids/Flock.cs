@@ -5,7 +5,7 @@ namespace ParticleSimulator.Simulation.Boids {
 		public Flock(Random rand) : base(rand) { }
 
 		public override Boid NewParticle(double[] position, double[] velocity, Random random) {
-			return new Boid(this, position, velocity);
+			return new Boid(this.ID, position, velocity);
 		}
 	}
 }

@@ -18,7 +18,7 @@ namespace ParticleSimulator.Rendering {
 			return results;
 		}
 		public static T[][] GroupToArray<T>(IEnumerable<T> data, int range, double domainBegin, double domainEnd, int dimension = 0)
-		where T : SimpleVector {
+		where T : AParticle {
 			T[][] results = new T[range][];
 			foreach (IGrouping<int, T> g in Group(data, range, domainBegin, domainEnd, dimension))
 				results[g.Key] = g.ToArray();
@@ -38,7 +38,7 @@ namespace ParticleSimulator.Rendering {
 			return results;
 		}
 		public static T[][] GroupToArray<T>(IEnumerable<T> data, int range, double domainEnd, int dimension = 0)
-		where T : SimpleVector {
+		where T : AParticle {
 			T[][] results = new T[range][];
 			foreach (IGrouping<int, T> g in Group(data, range, domainEnd, dimension))
 				results[g.Key] = g.ToArray();
@@ -53,8 +53,8 @@ namespace ParticleSimulator.Rendering {
 			return data.GroupBy(d => (int)(range * (d[dimension] - domainBegin) / (domainEnd - domainBegin)));
 		}
 		public static IEnumerable<IGrouping<int, T>> Group<T>(IEnumerable<T> data, int range, double domainBegin, double domainEnd, int dimension = 0)
-		where T : SimpleVector {
-			return data.GroupBy(t => (int)(range * (t.Coordinates[dimension] - domainBegin) / (domainEnd - domainBegin)));
+		where T : AParticle {
+			return data.GroupBy(t => (int)(range * (t.TrueCoordinates[dimension] - domainBegin) / (domainEnd - domainBegin)));
 		}
 
 		public static IEnumerable<IGrouping<int, double>> Group(IEnumerable<double> data, int range, double domainEnd)  {
@@ -64,8 +64,8 @@ namespace ParticleSimulator.Rendering {
 			return data.GroupBy(d => (int)(range * d[dimension] / domainEnd));
 		}
 		public static IEnumerable<IGrouping<int, T>> Group<T>(IEnumerable<T> data, int range, double domainEnd, int dimension = 0)
-		where T : SimpleVector {
-			return data.GroupBy(t => (int)(range * t.Coordinates[dimension] / domainEnd));
+		where T : AParticle {
+			return data.GroupBy(t => (int)(range * t.TrueCoordinates[dimension] / domainEnd));
 		}
 		#endregion Grouping
 

@@ -11,10 +11,10 @@ namespace ParticleSimulator {
 		public const bool PERF_GRAPH_ENABLE = true;
 
 		#region Particles
-		public const int NUM_PARTICLES_PER_GROUP = 10000;
-		public const int NUM_PARTICLE_GROUPS = 1;
+		public const int NUM_PARTICLES_PER_GROUP = 1000;
+		public const int NUM_PARTICLE_GROUPS = 5;
 
-		public const double SEPARATION = 1;
+		public const double SEPARATION = 3;
 		#endregion Particles
 
 		#region Sizes
@@ -29,14 +29,15 @@ namespace ParticleSimulator {
 
 		#region Timings
 		//NOTE sentinel value is -1 for unlimited
-		public const double TARGET_FPS = 30;
+		public const double TARGET_FPS = -1;
 		public const double MAX_FPS = -1;
 
 		public const int SIMULATION_SKIPS = 0;
-		public const int TREE_REFRESH_FRAMES = -1;
+		public const int TREE_REFRESH_SKIPS = 7;
+		public const int QUADTREE_NODE_CAPACITY = 5;
 		public const int AUTOSCALING_REFRESH_FRAMES = 30;
 
-		public const bool SYNC_SIMULATION = true;
+		public const bool SYNC_SIMULATION = false;
 		public const bool SYNC_TREE_REFRESH = false;
 
 		//how far ahead steps can work (when applicable)
@@ -45,7 +46,7 @@ namespace ParticleSimulator {
 		#endregion Timings
 
 		#region Boids
-		public const int DESIRED_NEIGHBORS = 8;
+		public const int DESIRED_NEIGHBORS = 10;
 		public const bool ENABLE_COHESION = true;
 		public const bool ENABLE_ALIGNMENT = true;
 		public const bool ENABLE_SEPARATION = true;
@@ -56,13 +57,13 @@ namespace ParticleSimulator {
 		public const double ALIGNMENT_WEIGHT = 1d;
 		public const double COHESION_WEIGHT = 1d;
 
-		public const double MAX_ACCELERATION = 0.5d;
-		public const double MAX_SPEED = 1d;
+		public const double MAX_ACCELERATION = 0.1d;
+		public const double MAX_SPEED = 0.1d;
 		public const double MAX_STARTING_SPEED = 1d;
 
 		public const double MAX_IMPULSE_COHESION = 1d;
-		public const double MAX_IMPULSE_ALIGNMENT = 1d;
-		public const double MAX_IMPULSE_SEPARATION = 2d;
+		public const double MAX_IMPULSE_ALIGNMENT = 0.5d;
+		public const double MAX_IMPULSE_SEPARATION = 0.5d;
 		#endregion Boids
 
 		#region Gravity
@@ -84,13 +85,15 @@ namespace ParticleSimulator {
 
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 30;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 30;
-		public const double PERF_GRAPH_PERCENTILE_CUTOFF = 10d;
+		public const double PERF_GRAPH_PERCENTILE_LOW_CUTOFF = 0d;
+		public const double PERF_GRAPH_PERCENTILE_HIGH_CUTOFF = 2d;
 		public const double PERF_SMA_ALPHA = 0.1d;
 		public const double PERF_GRA_SMA_ALPHA = 0.2d;
 
 		public const double AUTOSCALING_SMA_ALPHA = 0.4d;
 		public const int AUTOSCALE_INTERVAL_MS = 250;
 
+		public const bool ENABLE_DEBUG_LOGGING = false;
 		public const bool ENABLE_DEBUG_PROCESS_LOGGING = false;
 		public const bool ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING = false;
 		public const bool ENABLE_DEBUG_QUEUE_LOGGING = false;

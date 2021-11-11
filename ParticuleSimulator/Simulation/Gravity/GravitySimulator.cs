@@ -1,24 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Generic.Extensions;
 
 namespace ParticleSimulator.Simulation.Gravity {
-	public class GravitySimulator : ASymmetricalInteractionParticleSimulator<CelestialBody, BaryonQuadTree> {
-		public GravitySimulator(Random rand = null) : base(rand) {
-			this.Clusterings = Enumerable.Range(0, Parameters.NUM_PARTICLE_GROUPS).Select(i => new Clustering(this._rand)).ToArray();
-		}
+	public class GravitySimulator : ASymmetricalInteractionParticleSimulator<CelestialBody, Clustering, BaryonQuadTree> {
+		public GravitySimulator(Random rand = null) : base(rand) { }
 
 		public override bool IsDiscrete => false;
-		public Clustering[] Clusterings { get; private set; }
-		public override IEnumerable<CelestialBody> AllParticles => this.Clusterings.SelectMany(c => c.Particles);
+		public override int? NeighborhoodFilteringDepth => Parameters.QUADTREE_NEIGHBORHOOD_FILTER;
 		public override BaryonQuadTree NewTree => new BaryonQuadTree(new double[Parameters.DOMAIN.Length], Parameters.DOMAIN);
+		public override Clustering NewParticleGroup(Random rand) { return new Clustering(rand); }
 
 		protected override void InteractTree(BaryonQuadTree tree) {
-			BaryonQuadTree[] nodes;
 			Parallel.ForEach(tree.Leaves, leaf => {
-				nodes = leaf.GetRefinedNeighborNodes(Parameters.QUADTREE_NEIGHBORHOOD_FILTER).Cast<BaryonQuadTree>().ToArray();
+				BaryonQuadTree[] nodes = leaf.GetRefinedNeighborNodes(this.NeighborhoodFilteringDepth).Cast<BaryonQuadTree>().ToArray();
 				foreach (CelestialBody b in leaf.NodeElements)
 					foreach (BaryonQuadTree otherNode in nodes) {
 						if (otherNode.IsLeaf)
@@ -26,11 +21,11 @@ namespace ParticleSimulator.Simulation.Gravity {
 								if (b.ID != b2.ID)
 									b.Interact(b2);
 						else
-							b.InteractNode(otherNode);
+							b.InteractSubtree(otherNode);
 					}});
 		}
 
-		protected override Tuple<char, double>[] Resample(Tuple<double[], double>[] particles) {
+		protected override Tuple<char, double>[] ResampleDensities(Tuple<double[], object>[] particles) {
 			throw new NotImplementedException();
 		}
 	}

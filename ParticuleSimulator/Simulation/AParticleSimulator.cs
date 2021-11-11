@@ -10,79 +10,86 @@ using ParticleSimulator.Rendering;
 namespace ParticleSimulator.Simulation {
 	public interface IParticleSimulator : IEnumerable<AParticle> {
 		public bool IsDiscrete { get; }
-		public IEnumerable<AParticle> AllParticles { get; }
+		public AParticle[] AllParticles { get; }
 		public SampleSMA[] DensityScale { get; }
+		public int? InteractionLimit { get; }
+		public int? NeighborhoodFilteringDepth { get; }
 
 		public ITree RebuildTree();
-		public Tuple<double[], double>[] RefreshSimulation(object[] parameters);
+		public Tuple<double[], object>[] RefreshSimulation(object[] parameters);
 		public Tuple<char, double>[] ResampleDensities(object[] parameters);
 		public void AutoscaleUpdate(object[] parameters);
 	}
 
-	public abstract class AParticleSimulator<P, T> : IParticleSimulator
+	public abstract class AParticleSimulator<P, G, T> : IParticleSimulator
 	where P : AParticle
-	where T : ATree<P> {
+	where G : AParticleGroup<P>
+	where T : AQuadTree<P, T> {
 		public AParticleSimulator(Random rand = null) {
 			this._rand = rand ?? new Random();
+			this.ParticleGroups = Enumerable.Range(0, Parameters.NUM_PARTICLE_GROUPS).Select(i => this.NewParticleGroup(rand)).ToArray();
+			this.AllParticles = this.ParticleGroups.SelectMany(g => g.Particles).ToArray();
 			this.DensityScale = Enumerable
 				.Range(1, Parameters.DENSITY_COLORS.Length - 1)
 				.Select(x => new SampleSMA(Parameters.AUTOSCALING_SMA_ALPHA, x))
 				.ToArray();
 		}
+		public virtual int? InteractionLimit => Parameters.DESIRED_NEIGHBORS;
+		public virtual int? NeighborhoodFilteringDepth => null;
 		
 		public abstract bool IsDiscrete { get; }
-		public abstract IEnumerable<P> AllParticles { get; }
-		IEnumerable<AParticle> IParticleSimulator.AllParticles => this.AllParticles;
+		public G[] ParticleGroups { get; private set; }
+		public P[] AllParticles { get; private set; }
+		AParticle[] IParticleSimulator.AllParticles => this.AllParticles;
 		public SampleSMA[] DensityScale { get; private set; }
 		protected readonly Random _rand;
 
 		public abstract T NewTree { get; }
+		public abstract G NewParticleGroup(Random rand);
 
 		public T RebuildTree() {
+			Parallel.ForEach(this.AllParticles, p => p.Coordinates = p.TrueCoordinates);//make sure to update with true coordinates before recalcuating tree (to avoid race condition)
+
 			T tree = this.NewTree;
-			tree.AddRange(this.AllParticles);
+			tree.AddRange(this.AllParticles, this._rand);
 
 			return tree;
 		}
 		ITree IParticleSimulator.RebuildTree() { return this.RebuildTree(); }
 
-		public Tuple<double[], double>[] RefreshSimulation(T tree) {
+		public Tuple<double[], object>[] RefreshSimulation(T tree) {
 			DateTime startUtc = DateTime.UtcNow;
 
 			this.InteractTree(tree);
 			Parallel.ForEach(this.AllParticles, p => p.ApplyUpdate());
 
-			Tuple<double[], double>[] result = this.AllParticles.Select(p => new Tuple<double[], double>(p.Coordinates, p.Mass)).ToArray();
+			Tuple<double[], object>[] result = this.AllParticles.Select(p => new Tuple<double[], object>(p.TrueCoordinates, null)).ToArray();
 
 			return result;
 		}
-		public Tuple<double[], double>[] RefreshSimulation(object[] parameters) { return this.RefreshSimulation((T)parameters[0]); }
+		public Tuple<double[], object>[] RefreshSimulation(object[] parameters) { return this.RefreshSimulation((T)parameters[0]); }
 
 		protected virtual void InteractTree(T tree) {
-			P[] particles = tree.AllElements.ToArray();
-			foreach (P particle in particles) {
-				foreach (P other in particles.Except(p => p.ID == particle.ID))
-					particle.Interact(other);
-			}
+			Parallel.ForEach(tree.Leaves, leaf => {
+				P[] neighbors;
+				if (this.InteractionLimit.HasValue)
+					neighbors = leaf.GetNeighbors().Take(this.InteractionLimit.Value + 1).ToArray();
+				else neighbors = leaf.GetNeighbors().ToArray();
+				foreach (P b in leaf.NodeElements)
+					b.InteractMany(neighbors);
+			});
 		}
 
-		public Tuple<char, double>[] ResampleDensities(Tuple<double[], double>[] particleData) {
-			DateTime startUtc = DateTime.UtcNow;
+		public Tuple<char, double>[] ResampleDensities(object[] parameters) { return this.ResampleDensities((Tuple<double[], object>[])parameters[0]); }
 
-			Tuple<char, double>[] result = this.Resample(particleData);
-			
-			return result;
-		}
-		public Tuple<char, double>[] ResampleDensities(object[] parameters) { return this.ResampleDensities((Tuple<double[], double>[])parameters[0]); }
-
-		protected virtual Tuple<char, double>[] Resample(Tuple<double[], double>[] particles) {
+		protected virtual Tuple<char, double>[] ResampleDensities(Tuple<double[], object>[] particleData) {
 			Tuple<char, double>[] results = new Tuple<char, double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 
 			int topCount, bottomCount;
 			double colorCount;
 			char pixelChar;
 			foreach (IGrouping<int, double[]> xGroup
-			in particles.Select(p => p.Item1).GroupBy(c => (int)(Renderer.RenderWidth * c[0] / Parameters.DOMAIN[0]))) {
+			in particleData.Select(p => p.Item1).GroupBy(c => (int)(Renderer.RenderWidth * c[0] / Parameters.DOMAIN[0]))) {
 				foreach (IGrouping<int, double> yGroup
 				in xGroup//subdivide each pixel into two vertical components
 					.Select(c => Parameters.DOMAIN.Length < 2 ? 0 : Renderer.RenderHeight * c[1] / Parameters.DOMAIN[1] / 2d)
@@ -146,13 +153,14 @@ namespace ParticleSimulator.Simulation {
 		}
 		public void AutoscaleUpdate(object[] parameters) { this.AutoscaleUpdate((Tuple<char, double>[])parameters[0]); }
 
-		public IEnumerator<AParticle> GetEnumerator() { return this.AllParticles.GetEnumerator(); }
+		public IEnumerator<AParticle> GetEnumerator() { return this.AllParticles.AsEnumerable().GetEnumerator(); }
 		IEnumerator IEnumerable.GetEnumerator() {return this.AllParticles.GetEnumerator(); }
 	}
 
-	public abstract class ASymmetricalInteractionParticleSimulator<P, T> : AParticleSimulator<P, T>
+	public abstract class ASymmetricalInteractionParticleSimulator<P, G, T> : AParticleSimulator<P, G, T>
 	where P : ASymmetricParticle
-	where T : ATree<P> {
+	where G : AParticleGroup<P>
+	where T : AQuadTree<P, T> {
 		public ASymmetricalInteractionParticleSimulator(Random rand = null)
 		: base(rand) { }
 

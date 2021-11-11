@@ -8,6 +8,7 @@ using ParticleSimulator.Simulation;
 using ParticleSimulator.Threading;
 
 namespace ParticleSimulator {
+	//TODO quadtree neighborhood search is too effectively localized, so particles cluster way too much never seeing farfield
 	//TODO add handshake optimization (particles with symmetric interactions, to compute only half as many)
 	//TODO world wrap interaction: particles look forward only into adjoining quadrant
 	//SEEALSO https://www.youtube.com/watch?v=TrrbshL_0-s
@@ -61,12 +62,13 @@ namespace ParticleSimulator {
 				Initializer = null,
 				Calculator = null,
 				Evaluator = Renderer.FlushScreenBuffer,
-				Synchronizer = TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS),
+				Synchronizer = Parameters.TARGET_FPS > 0 || Parameters.MAX_FPS > 0 ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
 				Callback = null,
-				DataAssimilationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				SynchronizationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				DataAssimilationTicksAverager = null,
+				SynchronizationTicksAverager = null,
+				ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				DataLoadingTimeout = null,
+				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
 				OutputResource = null,
 				IsOutputOverwrite = false,
 				OutputSkips = 0,
@@ -79,7 +81,7 @@ namespace ParticleSimulator {
 						AllowDirtyRead = false,
 						ReuseAmount = 0,
 						ReuseTolerance = 0,
-						ReadTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS)
+						ReadTimeout = null
 			}}});
 			StepEval_Simulate = new(new() {
 				Name = "Simulating",
@@ -88,9 +90,10 @@ namespace ParticleSimulator {
 				Evaluator = null,
 				Synchronizer = null,
 				Callback = null,
-				DataAssimilationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				DataAssimilationTicksAverager = null,
 				SynchronizationTicksAverager = null,
-				IterationTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				IterationTicksAverager = null,
 				DataLoadingTimeout = null,
 				OutputResource = Resource_Locations,
 				IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
@@ -102,8 +105,8 @@ namespace ParticleSimulator {
 						OnChange = false,
 						DoHold = true,
 						AllowDirtyRead = false,
-						ReuseAmount = Parameters.TREE_REFRESH_FRAMES,
-						ReuseTolerance = Parameters.SYNC_TREE_REFRESH ? Parameters.TREE_REFRESH_FRAMES : 0,
+						ReuseAmount = Parameters.SYNC_TREE_REFRESH ? Parameters.TREE_REFRESH_SKIPS : 0,
+						ReuseTolerance = Parameters.SYNC_TREE_REFRESH ? 0 : Parameters.TREE_REFRESH_SKIPS,
 						ReadTimeout = null
 			}}});
 			StepEval_TreeMaintain = new(new() {
@@ -114,6 +117,8 @@ namespace ParticleSimulator {
 				Synchronizer = null,
 				Callback = null,
 				DataAssimilationTicksAverager = null,
+				SynchronizationTicksAverager = null,
+				ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				DataLoadingTimeout = null,
 				OutputResource = Resource_Tree,
@@ -128,9 +133,10 @@ namespace ParticleSimulator {
 				Evaluator = null,
 				Synchronizer = null,
 				Callback = null,
-				DataAssimilationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				DataAssimilationTicksAverager = null,
 				SynchronizationTicksAverager = null,
-				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				IterationTicksAverager = null,
 				DataLoadingTimeout = null,
 				OutputResource = Resource_Resamplings,
 				IsOutputOverwrite = false,
@@ -152,10 +158,11 @@ namespace ParticleSimulator {
 				Calculator = Renderer.Rasterize,
 				Evaluator = null,
 				Synchronizer = null,
-				Callback = PerfMon.AfterRasterize,
-				DataAssimilationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				Callback = Parameters.PERF_ENABLE ? PerfMon.AfterRasterize : null,
+				DataAssimilationTicksAverager = null,
 				SynchronizationTicksAverager = null,
-				IterationTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				IterationTicksAverager = null,
 				DataLoadingTimeout = null,
 				OutputResource = Resource_Rasterization,
 				IsOutputOverwrite = false,
@@ -182,7 +189,8 @@ namespace ParticleSimulator {
 					Callback = null,
 					DataAssimilationTicksAverager = null,
 					SynchronizationTicksAverager = null,
-					IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+					ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+					IterationTicksAverager = null,
 					DataLoadingTimeout = null,
 					OutputResource = null,
 					IsOutputOverwrite = false,

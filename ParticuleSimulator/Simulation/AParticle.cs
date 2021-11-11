@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Generic.Models;
 
 namespace ParticleSimulator {
@@ -8,40 +9,73 @@ namespace ParticleSimulator {
 
 		private readonly int _myId = ++_globalID;
 		public int ID { get { return this._myId; } }
-		public virtual double Mass { get; set; }
-		public virtual double[] Velocity { get; set; }
-		private double[] _coordinates;
-		public override double[] Coordinates {
-			get { return this._coordinates; }
-			set { this._coordinates = this.BoundPosition(value); } }
+		public int GroupID { get; private set; }
 		public abstract double Radius { get; }
+		public virtual int? InteractionLimit => null;
 
-		public AParticle(double[] position, double[] velocity, double mass)
+		private double[] _trueCoordinates;
+		public double[] TrueCoordinates {
+			get { return this._trueCoordinates; }
+			set { this._trueCoordinates = this.BoundPosition(value); } }
+		private double[] _velocity;
+		public double[] Velocity {
+			get { return this._velocity; }
+			set { this._velocity = Parameters.MAX_SPEED > 0 ? VectorFunctions.Clamp(value, Parameters.MAX_SPEED) : value; } }
+		private double[] _acceleration;
+		public double[] Acceleration {
+			get { return this._acceleration; }
+			set { this._acceleration = Parameters.MAX_ACCELERATION > 0 ? VectorFunctions.Clamp(value, Parameters.MAX_ACCELERATION) : value; } }
+
+
+		public AParticle(int groupID, double[] position, double[] velocity)
 		: base(position) {
+			this.GroupID = groupID;
+
+			this.TrueCoordinates = position;//causes coordinates to be bounded
+			this.Coordinates = this.TrueCoordinates;//now set values used for quadtree build (after clamping)
+
 			this.Velocity = velocity;
-			this.Mass = mass;
+			this._acceleration = new double[this.Dimensionality];
 		}
 		
-		public abstract void Interact(AParticle particle);
+		public abstract void Interact(AParticle other);
+		public virtual void InteractSubtree(ITree node) { return; }
 
-		public virtual void Interact(AParticle[] particles) {
-			foreach (AParticle other in particles)
-				this.Interact(other);
+		public virtual void InteractMany(AParticle[] particles) {
+			this._acceleration = new double[this.Dimensionality];
+
+			for (int i = 0; i < particles.Length; i++)
+				if (this.GroupID != particles[i].GroupID)
+					this.Interact(particles[i]);
 		}
-		public virtual void InteractMany(IEnumerable<AParticle> particles) {
-			foreach (AParticle other in particles)
-				this.Interact(other);
-		}
-		public virtual void Interact(ATree<AParticle> tree) {
-			this.Interact(tree.AllElements.ToArray());
+		public virtual void InteractMany(ATree<AParticle> tree) {
+			this._acceleration = new double[this.Dimensionality];
+
+			Parallel.ForEach(tree.Leaves, leaf => {
+				ATree<AParticle>[] nodes = leaf.GetRefinedNeighborNodes(Parameters.QUADTREE_NEIGHBORHOOD_FILTER).ToArray();
+				foreach (AParticle b in leaf.NodeElements)
+					foreach (ATree<AParticle> otherNode in nodes) {
+						if (otherNode.IsLeaf)
+							foreach (AParticle b2 in otherNode.NodeElements)
+								if (b.ID != b2.ID)
+									b.Interact(b2);
+						else
+							b.InteractSubtree(otherNode);
+					}});
 		}
 
-		internal abstract void ApplyUpdate();
+		internal virtual void ApplyUpdate() {
+			if (Parameters.SPEED_DECAY > 0)
+				this.Velocity = this.Velocity.Multiply(Math.Exp(-Parameters.SPEED_DECAY)).Add(this.Acceleration);
+			else this.Velocity = this.Velocity.Add(this.Acceleration);
+
+			this.TrueCoordinates = this.Velocity.Add(this.TrueCoordinates);
+		}
 		private double[] BoundPosition(double[] position) {
 			return position
 				.Select((x, i) =>
 					x < 0d
-						? x % Parameters.DOMAIN[i] + Parameters.DOMAIN[i]
+						? x % Parameters.DOMAIN[i] + Parameters.DOMAIN[i]//don't want symmetric modulus
 						: x >= Parameters.DOMAIN[i]
 							? x % Parameters.DOMAIN[i]
 							: x)
@@ -54,13 +88,14 @@ namespace ParticleSimulator {
 		public int GetHashCode(AParticle obj) { return obj.ID.GetHashCode(); }
 		public override int GetHashCode() { return this.ID.GetHashCode(); }
 		public override string ToString() {
-			return string.Format("{0}[ID {1}]<{2}>", nameof(AParticle), this.ID,
-				string.Join(",", this.Coordinates.Select(i => i.ToString())));
+			return string.Format("{0}[ID {1}]<{2}><{3}>", nameof(AParticle), this.ID,
+				string.Join(",", this.TrueCoordinates.Select(i => i.ToString("G5"))),
+				string.Join(",", this.Coordinates.Select(i => i.ToString("G5"))));
 		}
 	}
 
 	public abstract class ASymmetricParticle : AParticle {
-		public ASymmetricParticle(double[] position, double[] velocity, double mass)
-		: base(position, velocity, mass) { }
+		public ASymmetricParticle(int groupID, double[] position, double[] velocity)
+		: base(groupID, position, velocity) { }
 	}
 }

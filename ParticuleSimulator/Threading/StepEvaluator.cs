@@ -4,6 +4,7 @@ using System.Threading;
 using Generic.Extensions;
 
 namespace ParticleSimulator.Threading {
+	#pragma warning disable CS0162 // Unreachable code detected
 	public class StepEvaluator : IDisposable {
 		public readonly EvaluationStep Step;
 
@@ -12,7 +13,8 @@ namespace ParticleSimulator.Threading {
 		public int NumCompleted { get; private set; }
 		public DateTime? IterationStartUtc { get; private set; }
 		public DateTime? IterationReceiveUtc { get; private set; }
-		public DateTime? IterationResumeUtc { get; private set; }
+		public DateTime? IterationSyncResumeUtc { get; private set; }
+		public DateTime? IterationCalcEndUtc { get; private set; }
 		public DateTime? IterationEndUtc { get; private set; }
 		public bool? IsPunctual { get; private set; }
 		
@@ -113,34 +115,43 @@ namespace ParticleSimulator.Threading {
 				refreshSignal = castedInfo.Item5;
 
 			int skips = 0, reuses = 0;
-			bool doAccess;
+			bool allowAccess, allowReuse;
 			while (this.IsActive) {
-				if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2}", this.Step.Name, req.Resource.Name, this.NumCompleted));
 				signal.WaitOne();
-				if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - start", this.Step.Name, req.Resource.Name, this.NumCompleted));
-				if (!(refreshSignal is null)) {
-					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - refresh wait", this.Step.Name, req.Resource.Name, this.NumCompleted));
-					refreshSignal.WaitOne();
-					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - refresh signaled", this.Step.Name, req.Resource.Name, this.NumCompleted));
-				}
+				if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} start", this.Step.Name, req.Resource.Name, this.NumCompleted));
 
-
-				doAccess = true;
+				allowAccess = true; allowReuse = false;
 				if (this.NumCompleted > 0) {
+					allowReuse = true;
 					if (req.ReuseAmount < 0) {
-						doAccess = false;
+						allowAccess = false;
 					} else if (reuses < req.ReuseAmount) {
-						doAccess = false;
+						allowAccess = false;
 						reuses++;
-					} else if (req.ReuseTolerance < 0) {
-						doAccess = false;
-					} else if (skips < req.ReuseTolerance) {
-						doAccess = false;
-						skips++;
+					} else if (req.ReuseTolerance >= 0 && skips >= req.ReuseTolerance) {
+						allowReuse = false;
 					}
+
+					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} Reuse {3} skips {4} reusing allowance {5} + {6} {7} {8}", this.Step.Name, req.Resource.Name, this.NumCompleted, reuses, skips, req.ReuseAmount, req.ReuseTolerance, allowReuse, allowAccess));
 				}
 
-				if (doAccess) {
+				if (allowReuse) {
+					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} Reusing", this.Step.Name, req.Resource.Name, this.NumCompleted));
+					returnSignal.Set();
+					skips++;
+					if (allowAccess)
+						if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} attempt access", this.Step.Name, req.Resource.Name, this.NumCompleted));
+						if (req.Resource.TryDequeue(ref _ingestBuffer[outIdx], TimeSpan.Zero))
+							skips = 0;
+				} else if (allowAccess) {
+					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - start access", this.Step.Name, req.Resource.Name, this.NumCompleted));
+
+					if (!(refreshSignal is null)) {
+						if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - refresh wait", this.Step.Name, req.Resource.Name, this.NumCompleted));
+						refreshSignal.WaitOne();
+						if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - refresh signaled", this.Step.Name, req.Resource.Name, this.NumCompleted));
+					}
+
 					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - access start", this.Step.Name, req.Resource.Name, this.NumCompleted));
 					if (req.DoConsume) {
 						if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - access consume", this.Step.Name, req.Resource.Name, this.NumCompleted));
@@ -180,11 +191,13 @@ namespace ParticleSimulator.Threading {
 								reuses = 0;
 							}
 						}
+
+						if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - access end", this.Step.Name, req.Resource.Name, this.NumCompleted));
 					}
-					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - access end", this.Step.Name, req.Resource.Name, this.NumCompleted));
+
+					returnSignal.Set();
 				}
 
-				returnSignal.Set();
 				if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Receiving - {0} {1} {2} - end", this.Step.Name, req.Resource.Name, this.NumCompleted));
 			}
 		}
@@ -202,18 +215,19 @@ namespace ParticleSimulator.Threading {
 			bool waitHolds;
 			object result;
 			while (this.IsActive) {
-				if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - start", this.Step.Name, this.NumCompleted));
+				if (Parameters.ENABLE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - start", this.Step.Name, this.NumCompleted));
 
+				this.IsPunctual = false;
 				this.IterationStartUtc = DateTime.UtcNow;
 				waitHolds = false;
 
 				if (signals.Any()) {
 					if (Parameters.ENABLE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - wait", this.Step.Name, this.NumCompleted));
-					if (this.Step.DataLoadingTimeout.HasValue) {
-						this.IsPunctual = WaitHandle.WaitAll(signals, this.Step.DataLoadingTimeout.Value);
-					} else this.IsPunctual = WaitHandle.WaitAll(signals);
+					this.IsPunctual = this.Step.DataLoadingTimeout.HasValue
+						? WaitHandle.WaitAll(signals, this.Step.DataLoadingTimeout.Value)
+						: WaitHandle.WaitAll(signals);
 					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - signaled {2}", this.Step.Name, this.NumCompleted, this.IsPunctual));
-				} else this.IsPunctual = true;
+				}
 
 				this.IterationReceiveUtc = DateTime.UtcNow;
 				if (!(this.Step.DataAssimilationTicksAverager is null))
@@ -225,17 +239,26 @@ namespace ParticleSimulator.Threading {
 					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - synchronize end", this.Step.Name, this.NumCompleted));
 				}
 
-				this.IterationResumeUtc = DateTime.UtcNow;
+				this.IterationSyncResumeUtc = DateTime.UtcNow;
 				if (!(this.Step.SynchronizationTicksAverager is null))
-					this.Step.SynchronizationTicksAverager.Update(this.IterationResumeUtc.Value.Subtract(this.IterationReceiveUtc.Value).Ticks);
+					this.Step.SynchronizationTicksAverager.Update(this.IterationSyncResumeUtc.Value.Subtract(this.IterationReceiveUtc.Value).Ticks);
 
 				if (this.Step.OutputResource is null) {
+					if (Parameters.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - evaluating", this.Step.Name, this.NumCompleted));
 					this.Step.Evaluator(this._ingestBuffer);
+
+					this.IterationCalcEndUtc = DateTime.UtcNow;
+					if (!(this.Step.ExclusiveTimeAverage is null))
+						this.Step.ExclusiveTimeAverage.Update(this.IterationCalcEndUtc.Value.Subtract(this.IterationSyncResumeUtc.Value).Ticks);
+					if (Parameters.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - eval complete", this.Step.Name, this.NumCompleted));
 				} else {
-					if (this.Step.Initializer is null)
-						result = this.Step.Calculator(this._ingestBuffer);
-					else result = this.Step.Initializer();
-					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - calculated", this.Step.Name, this.NumCompleted));
+					if (Parameters.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - calulating", this.Step.Name, this.NumCompleted));
+					result = this.Step.Initializer is null ? this.Step.Calculator(this._ingestBuffer) : this.Step.Initializer();
+
+					this.IterationCalcEndUtc = DateTime.UtcNow;
+					if (!(this.Step.ExclusiveTimeAverage is null))
+						this.Step.ExclusiveTimeAverage.Update(this.IterationCalcEndUtc.Value.Subtract(this.IterationSyncResumeUtc.Value).Ticks);
+					if (Parameters.ENABLE_DEBUG_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - eval complete", this.Step.Name, this.NumCompleted));
 
 					if (this.Step.OutputSkips < 1 || this.NumCompleted % (this.Step.OutputSkips + 1) == 0) {
 						if (this.Step.IsOutputOverwrite)
@@ -256,17 +279,19 @@ namespace ParticleSimulator.Threading {
 					this.Step.Callback(this);
 				
 				if (waitHolds) {
-					if (Parameters.ENABLE_VERBOSE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - wait", this.Step.Name, this.NumCompleted));
-					if (this.Step.OutputResource.ReleaseListeners.Any())
+					if (this.Step.OutputResource.ReleaseListeners.Any()) {
+						if (Parameters.ENABLE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - wait after", this.Step.Name, this.NumCompleted));
 						WaitHandle.WaitAll(this.Step.OutputResource.ReleaseListeners);
+					}
 				}
 
 				if (returnSignals.Any())
 					foreach (EventWaitHandle sig in returnSignals)
 						sig.Set();
 
-				if (Parameters.ENABLE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - end", this.Step.Name, this.NumCompleted));
+				if (Parameters.ENABLE_DEBUG_PROCESS_LOGGING) DebugExtensions.DebugWriteline(string.Format("Process - {0} {1} - end", this.Step.Name, this.NumCompleted - 1));
 			}
 		}
 	}
+	#pragma warning restore CS0162 // Unreachable code detected
 }

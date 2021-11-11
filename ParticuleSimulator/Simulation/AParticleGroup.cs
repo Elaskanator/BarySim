@@ -7,14 +7,16 @@ using System.Linq;
 namespace ParticleSimulator.Simulation {
 	public abstract class AParticleGroup<P> : IEquatable<AParticleGroup<P>>, IEqualityComparer<AParticleGroup<P>>
 	where P : AParticle {
-		private static int _id = 0;
-		public readonly int ID = ++_id;
+		private static int _globalID = 0;
+		public int ID { get; }
 
 		public P[] Particles { get; private set; }
 
 		public abstract P NewParticle(double[] position, double[] velocity, Random rand);
 
 		public AParticleGroup(Random random) {
+			this.ID = ++_globalID;
+
 			random ??= new Random();
 
 			double[] startingPosition = Enumerable

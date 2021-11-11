@@ -16,14 +16,13 @@ namespace ParticleSimulator {
 		private static ConsoleExtensions.CharInfo[][] _columns;
 		private static readonly object _columnStatsLock = new();
 
-		private static readonly Func<EvaluationStep, bool> _includeQTimingsTester = s => false;
 		private static readonly Tuple<string, double, ConsoleColor>[] _statsHeaderValues;
 
 		static PerfMon() {
 			_statsHeaderValues = new Tuple<string, double, ConsoleColor>[
-				Parameters.PERF_STATS_ENABLE
-					? Program.Manager.Evaluators.Sum(s => _includeQTimingsTester(s.Step) ? 3 : 1) + 1
-					: 1];
+				1 + (Parameters.PERF_STATS_ENABLE
+					? Program.Manager.Evaluators.Count()
+					: 0)];
 
 			int width =
 				Parameters.PERF_STATS_ENABLE
@@ -32,7 +31,7 @@ namespace ParticleSimulator {
 						: 3 + Parameters.NUMBER_SPACING
 							+ Program.Manager.Evaluators.Sum(s =>
 								Parameters.NUMBER_SPACING
-								+ (_includeQTimingsTester(s.Step) ? 3 + 2*Parameters.NUMBER_SPACING : 1))
+								+ 1)
 					: Parameters.PERF_GRAPH_DEFAULT_WIDTH;
 			GraphWidth = Console.WindowWidth > width ? width : Console.WindowWidth;
 
@@ -96,33 +95,28 @@ namespace ParticleSimulator {
 			if (Parameters.PERF_STATS_ENABLE) {
 				string label;
 				double timeVal;
-				for (int i = 0, k = 1; i < Program.Manager.Evaluators.Length; k += _includeQTimingsTester(Program.Manager.Evaluators[i].Step) ? 3 : 1, i++) {
+				for (int i = 0; i < Program.Manager.Evaluators.Length; i++) {
 					label = Program.Manager.Evaluators[i].Step.Name[0].ToString();
-					timeVal = Program.Manager.Evaluators[i].Step.IterationTicksAverager.Current / 10000d;
-					_statsHeaderValues[k] = new(label, timeVal, ChooseFrameIntervalColor(timeVal));
-
-					if (_includeQTimingsTester(Program.Manager.Evaluators[i].Step)) {
-						timeVal = Program.Manager.Evaluators[i].Step.OutputResource.EnqueueTimings_Ticks.Current / 10000d;
-						_statsHeaderValues[k + 1] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
-
-						timeVal = Program.Manager.Evaluators[i].Step.OutputResource.DequeueTimings_Ticks.Current / 10000d;
-						_statsHeaderValues[k + 2] = new("|", timeVal, ChooseFrameIntervalColor(timeVal));
-					}
+					timeVal = Program.Manager.Evaluators[i].Step.ExclusiveTimeAverage.Current / 10000d;
+					_statsHeaderValues[i + 1] = new(label, timeVal, ChooseFrameIntervalColor(timeVal));
 				}
 			}
 		}
 
 		public static ConsoleExtensions.CharInfo[] GetFpsGraph() {
 			ConsoleExtensions.CharInfo[] result;
+			BasicStatisticsInfo rangeStatsLow, rangeStatsHigh;
 			double dataMin, dataAvg, dataMax;
 			lock (_columnStatsLock) {
 				if (_columnStats[0] is null) return null;
 
 				result = new ConsoleExtensions.CharInfo[GraphWidth * Parameters.GRAPH_HEIGHT];
 
-				dataMin = _columnStats.Where(s => !(s is null)).Min(s => s.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF));
+				rangeStatsLow = new BasicStatisticsInfo(_columnStats.Where(s => !(s is null)).Select(s => s.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_LOW_CUTOFF)));
+				rangeStatsHigh = new BasicStatisticsInfo(_columnStats.Where(s => !(s is null)).Select(s => s.GetPercentileValue(100 - Parameters.PERF_GRAPH_PERCENTILE_HIGH_CUTOFF)));
+				dataMin = rangeStatsLow.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_LOW_CUTOFF);
 				dataAvg = _columnStats.Where(s => !(s is null)).Average(s => s.Mean);//faster than true average calculation
-				dataMax = _columnStats.Where(s => !(s is null)).Max(s => s.GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF));
+				dataMax = rangeStatsHigh.GetPercentileValue(100 - Parameters.PERF_GRAPH_PERCENTILE_HIGH_CUTOFF);
 				if (dataMin < 1)
 					dataMin = 0;
 				if (dataMin >= dataMax)
@@ -146,9 +140,9 @@ namespace ParticleSimulator {
 
 			string
 				label_current = (_frameTiming.LastUpdate / 10000d).ToStringBetter(2) + "ms",
-				label_min = _currentMin.Current.ToStringBetter(2),
+				label_min = _currentMin.Current.ToStringBetter(2) + "ms",
 				label_avg = dataAvg.ToStringBetter(2),
-				label_max = _currentMax.Current.ToStringBetter(2);
+				label_max = _currentMax.Current.ToStringBetter(2) + "ms";
 
 			for (int i = 0; i < label_max.Length; i++)
 				result[i] = new ConsoleExtensions.CharInfo(label_max[i], ConsoleColor.Gray);
