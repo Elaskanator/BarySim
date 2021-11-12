@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Generic.Models {
 	public abstract class AIncrementalAverage<T> {
@@ -17,8 +16,8 @@ namespace Generic.Models {
 
 		public void Update(T value, double? weighting = null) {
 			this.LastUpdate = value;
-			this.ApplyUpdate(value, weighting);
 			this.NumUpdates++;
+			this.ApplyUpdate(value, weighting);
 		}
 
 		protected virtual void ApplyUpdate(T value, double? weighting) {
@@ -34,6 +33,11 @@ namespace Generic.Models {
 		protected abstract T Multiply(T a, double b);
 		protected abstract T Add(T a, T b);
 
+		public virtual void Reset() {
+			this._current = this.LastUpdate = default;
+			this.NumUpdates = 0;
+		}
+
 		public override string ToString() { return string.Format("{0}[{1}]", nameof(AIncrementalAverage<T>), this.Current); }
 	}
 	public class IncrementalAverage : AIncrementalAverage<double> {
@@ -42,51 +46,6 @@ namespace Generic.Models {
 
 		protected override double Multiply(double a, double b) { return a * b; }
 		protected override double Add(double a, double b) { return a + b; }
-	}
-	public class IncrementalVectorAverage : AIncrementalAverage<double[]> {
-		public IncrementalVectorAverage() : base() { }
-		public IncrementalVectorAverage(double[] init) : base(init) { }
-
-		protected override double[] Multiply(double[] a, double b) {
-			return VectorFunctions.Multiply(a, b);
-		}
-		protected override double[] Add(double[] a, double[] b) {
-			return VectorFunctions.Add(a, b);
-		}
-	}
-
-	public class WeightedIncrementalAverage : IncrementalAverage {
-		private double _sum = 0d;
-		public override double Current { get { return this.NumUpdates > 0 ? this._sum / this.NumUpdates : 0d; } }
-		public double Weight { get; protected set; }
-
-		public WeightedIncrementalAverage() : base() { }
-		public WeightedIncrementalAverage(double init) : base(init) { }
-
-		protected override double UpdateStrength { get { throw new Exception("Update strength is specified in the Update parameter, not by the class"); } }
-
-		protected override void ApplyUpdate(double value, double? weight) {
-			double w = weight ?? 1d;
-			this._sum += value * w;
-			this.Weight += w;
-		}
-	}
-
-	public class WeightedIncrementalVectorAverage : IncrementalVectorAverage {
-		private double[] _sum;
-		public override double[] Current { get { return this.NumUpdates > 0 ? VectorFunctions.Divide(this._sum, this.NumUpdates) : null; } }
-		public double Weight { get; protected set; }
-
-		public WeightedIncrementalVectorAverage(double[] init) : base(init) { }
-
-		protected override double UpdateStrength { get { throw new Exception("Update strength is specified in the Update parameter, not by the class"); } }
-
-		protected override void ApplyUpdate(double[] value, double? weight) {
-			double w = weight ?? 1d;
-			this._sum ??= new double[value.Length];
-			this._sum = VectorFunctions.Add(this._sum, VectorFunctions.Multiply(value, w));
-			this.Weight += w;
-		}
 	}
 
 	public class TrackingIncrementalAverage : IncrementalAverage {

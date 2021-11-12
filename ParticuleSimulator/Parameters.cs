@@ -16,11 +16,11 @@ namespace ParticleSimulator {
 		public const bool COLOR_GROUPS = true;
 
 		public const int NUM_PARTICLES_PER_GROUP = 500;
-		public const int NUM_PARTICLE_GROUPS = 5;//only 14 colors are available
+		public const int NUM_PARTICLE_GROUPS = 4;//only 14 colors are available
 		public const double INITIAL_SEPARATION = 50;
 		
 		public const double MAX_STARTING_SPEED = -1;
-		public const int DESIRED_INTERACTION_NEIGHBORS = 10;
+		public const int DESIRED_INTERACTION_NEIGHBORS = 15;
 		#endregion Particles
 
 		#region Sizes
@@ -31,7 +31,7 @@ namespace ParticleSimulator {
 		public const double WORLD_ASPECT_RATIO = 1d;
 		public const double WORLD_EPSILON = 0.0001d;
 		public const bool WORLD_WRAPPING = false;//TODO
-		public const double WORLD_BOUNCE_PCT = 4d;//note only considers one of the domain components
+		public const double WORLD_BOUNCE_PCT = 5d;//note only considers one of the domain components
 
 		public const int GRAPH_WIDTH = -1;
 		public const int GRAPH_HEIGHT = 7;//at least 2
@@ -54,33 +54,44 @@ namespace ParticleSimulator {
 		#endregion Timings
 
 		#region Boids
-		public const bool BOIDS_ENABLE_COHESION   = true;
-		public const bool BOIDS_ENABLE_ALIGNMENT  = true;
-		public const bool BOIDS_ENABLE_SEPARATION = true;
+		public const bool BOIDS_ENABLE_COHESION				= true;
+		public const bool BOIDS_ENABLE_ALIGNMENT			= true;
+		public const bool BOIDS_ENABLE_SEPARATION			= true;
+		public const double BOIDS_PREDATOR_CHANCE			= 0.005d;
 
-		public const double BOIDS_MIN_SPEED = 2d;
-		public const double BOIDS_MAX_SPEED = 5d;
-		public const double BOIDS_BOID_FOV_RADIANS = -1;
+		public const double BOIDS_BOID_MIN_SPEED			= 2d;
+		public const double BOIDS_BOID_MAX_SPEED			= 5d;
+		public const double BOIDS_BOID_SPEED_DECAY			= 0.25d;//used as E^-val
+		public const double BOIDS_PREDATOR_MIN_SPEED		= 1d;
+		public const double BOIDS_PREDATOR_MAX_SPEED		= 6d;
+		public const double BOIDS_PREDATOR_SPEED_DECAY		= 0.02d;//used as E^-val
 
-		public const double BOIDS_BOID_VISION = 100d;
-		public const double BOIDS_GROUP_AVOIDANCE_DIST = 100d;
-		public const double BOIDS_MIN_SEPARATION_DIST = 20d;
-		public const double BOIDS_MAX_COHESION_DIST = 50d;
-		public const double BOIDS_SPEED_DECAY = 0.05d;//used as E^-val
+		public const double BOIDS_BOID_VISION				= 250d;
+		public const double BOIDS_BOID_FOV_RADIANS			= -1;
+		public const double BOIDS_PREDATOR_VISION			= 750d;
+		public const double BOIDS_PREDATOR_FOV_RADIANS		= -1;
 
-		public const double BOIDS_PREDATOR_CHANCE = 0.002d;
-		public const double BOIDS_PREDATOR_VISION = 200d;
-		public const double BOIDS_PREDATOR_MAX_SPEED = 4d;
-		public const double BOIDS_PREDATOR_SPEED_DECAY = 0d;//used as E^-val
-		public const ConsoleColor BOIDS_PREDATOR_COLOR = ConsoleColor.DarkRed;
+		public const double BOIDS_BOID_MIN_DIST				= 40d;
+		public const double BOIDS_BOID_COHESION_DIST		= 80d;
+		public const double BOIDS_BOID_GROUP_AVOID_DIST		= 200d;
+		public const double BOIDS_PREDATOR_MIN_DIST			= 20d;
+		public const double BOIDS_PREDATOR_COHESION_DIST	= 100d;
+		public const double BOIDS_PREDATOR_GROUP_AVOID_DIST	= 400d;
 
-		public const double BOIDS_PREDATOR_COHESION_WEIGHT	= 0.0200d;
-		public const double BOIDS_PREDATOR_SEPARATION_WEIGHT= 0.0500d;
+		public const double BOIDS_BOID_DISPERSE_W			= 0.0005d;
+		public const double BOIDS_BOID_COHESION_W			= 0.04d;
+		public const double BOIDS_BOID_ALIGNMENT_W			= 0.1d;
+		public const double BOIDS_BOID_GROUP_AVOID_WE		= 0.5d;
 
-		public const double BOIDS_COHESION_WEIGHT			= 0.0003d;
-		public const double BOIDS_ALIGNMENT_WEIGHT			= 0.0100d;
-		public const double BOIDS_SEPARATION_WEIGHT			= 0.0010d;
-		public const double BOIDS_GROUP_SEPARATION_WEIGHT	= 0.0005d;
+		public const double BOIDS_PREDATOR_DISPERSE_W		= 0.0002d;
+		public const double BOIDS_PREDATOR_COHESION_W		= 0.005d;
+		public const double BOIDS_PREDATOR_ALIGNMENT_W		= 0d;
+		public const double BOIDS_PREDATOR_GROUP_AVOID_WE	= 2.0d;
+
+		public const double BOIDS_FLEE_WE					= 2.0d;
+		public const double BOIDS_CHASE_WE					= 4.0d;
+		
+		public const ConsoleColor BOIDS_PREDATOR_COLOR		= ConsoleColor.DarkRed;
 		#endregion Boids
 
 		#region Gravity

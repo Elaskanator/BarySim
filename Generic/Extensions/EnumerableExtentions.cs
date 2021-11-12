@@ -62,6 +62,15 @@ namespace Generic.Extensions {
 		#endregion Projections
 
 		#region Aggregations
+		public static bool All(this IEnumerable<bool> source) {
+			return source.All(x => x);
+		}
+		public static bool Any(this IEnumerable<bool> source) {
+			return source.Any(x => x);
+		}
+		public static bool None(this IEnumerable<bool> source) { 
+			return !source.Any();
+		}
 		public static bool None<TSource>(this IEnumerable<TSource> source) { return !source.Any(); }
 		public static bool None<TSource>(this IEnumerable<TSource> source, Predicate<TSource> predicate) { return !source.Any(x => predicate(x)); }
 

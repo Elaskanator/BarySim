@@ -24,8 +24,8 @@ namespace ParticleSimulator.Simulation {
 				.Select(d => rand.NextDouble() * Parameters.DOMAIN[d])
 				.ToArray();
 
-			double boidVolume = NumberExtensions.HypersphereVolume(4d * Parameters.INITIAL_SEPARATION, Parameters.DOMAIN.Length);
-			double radius = NumberExtensions.HypersphereRadius(boidVolume * Parameters.NUM_PARTICLES_PER_GROUP, Parameters.DOMAIN.Length);
+			double particleVolume = NumberExtensions.HypersphereVolume(4d * Parameters.INITIAL_SEPARATION, Parameters.DOMAIN.Length);
+			double radius = NumberExtensions.HypersphereRadius(particleVolume * Parameters.NUM_PARTICLES_PER_GROUP, Parameters.DOMAIN.Length);
 
 			double startingSpeedRange = Parameters.MAX_STARTING_SPEED < 0
 				? 0d
