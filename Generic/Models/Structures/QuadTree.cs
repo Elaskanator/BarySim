@@ -8,7 +8,7 @@ namespace Generic.Models {
 	where T : AQuadTree<E, T> {
 		public virtual int Capacity => 5;
 		//dividing by 2 enough times WILL reach the sig figs limit of System.Double and cause zero-sized subtrees (and that's before reaching the stack frame depth limit due to recursion)
-		public const int MAX_DEPTH = 47;
+		public const int MAX_DEPTH = 40;
 		
 		public readonly double[] LeftCorner;
 		public readonly double[] Center;

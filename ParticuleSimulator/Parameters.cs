@@ -15,9 +15,9 @@ namespace ParticleSimulator {
 		#region Particles
 		public const bool COLOR_GROUPS = true;
 
-		public const int NUM_PARTICLES_PER_GROUP = 500;
-		public const int NUM_PARTICLE_GROUPS = 4;//only 14 colors are available
-		public const double INITIAL_SEPARATION = 50;
+		public const int NUM_PARTICLES_PER_GROUP = 1000;
+		public const int NUM_PARTICLE_GROUPS = 3;//only 14 colors are available
+		public const double INITIAL_SEPARATION = 100;
 		
 		public const double MAX_STARTING_SPEED = -1;
 		public const int DESIRED_INTERACTION_NEIGHBORS = 15;
@@ -56,7 +56,7 @@ namespace ParticleSimulator {
 		public const bool BOIDS_ENABLE_COHESION				= true;
 		public const bool BOIDS_ENABLE_ALIGNMENT			= true;
 		public const bool BOIDS_ENABLE_SEPARATION			= true;
-		public const double BOIDS_PREDATOR_CHANCE			= 0.005d;
+		public const double BOIDS_PREDATOR_CHANCE			= 0.01d;
 
 		public const double BOIDS_BOID_MIN_SPEED			= 2d;
 		public const double BOIDS_BOID_MAX_SPEED			= 5d;
@@ -65,7 +65,7 @@ namespace ParticleSimulator {
 		public const double BOIDS_PREDATOR_MAX_SPEED		= 6d;
 		public const double BOIDS_PREDATOR_SPEED_DECAY		= 0.02d;//used as E^-val
 
-		public const double BOIDS_BOID_VISION				= 250d;
+		public const double BOIDS_BOID_VISION				= 400d;
 		public const double BOIDS_BOID_FOV_RADIANS			= -1;
 		public const double BOIDS_PREDATOR_VISION			= 750d;
 		public const double BOIDS_PREDATOR_FOV_RADIANS		= -1;
