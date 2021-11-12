@@ -33,7 +33,7 @@ namespace ParticleSimulator.Simulation.Boids {
 			int count = 0;
 			foreach (Boid other in others.Cast<Boid>()) {
 				if (other.IsPredator || target is null || target.ID == other.ID) {
-					if (Parameters.BOIDS_BOID_FOV_DEGREES < 0 || Parameters.BOIDS_BOID_FOV_DEGREES > Math.Abs(this.Velocity.AngleTo(other.TrueCoordinates))) {
+					if (Parameters.BOIDS_BOID_FOV_RADIANS < 0 || Parameters.BOIDS_BOID_FOV_RADIANS > Math.Abs(this.Velocity.AngleTo(other.TrueCoordinates))) {
 						this.InteractInternal(other);
 						if (++count >= Parameters.DESIRED_INTERACTION_NEIGHBORS && Parameters.DESIRED_INTERACTION_NEIGHBORS > 0)
 							return;

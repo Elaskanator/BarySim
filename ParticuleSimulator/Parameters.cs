@@ -60,7 +60,7 @@ namespace ParticleSimulator {
 
 		public const double BOIDS_MIN_SPEED = 2d;
 		public const double BOIDS_MAX_SPEED = 5d;
-		public const double BOIDS_BOID_FOV_DEGREES = 90d;
+		public const double BOIDS_BOID_FOV_RADIANS = -1;
 
 		public const double BOIDS_BOID_VISION = 100d;
 		public const double BOIDS_GROUP_AVOIDANCE_DIST = 100d;
