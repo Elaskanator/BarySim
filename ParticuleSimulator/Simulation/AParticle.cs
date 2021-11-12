@@ -1,85 +1,94 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Generic.Models;
 
 namespace ParticleSimulator {
-	public abstract class AParticle : SimpleVector {
+	public abstract class AParticle : VectorDouble {
 		private static int _globalID = 0;
 
 		private readonly int _myId = ++_globalID;
-		public int ID { get { return this._myId; } }
-		public int GroupID { get; private set; }
-		public abstract double Radius { get; }
+		public int ID => this._myId;
 		public virtual int? InteractionLimit => null;
+		public virtual double SpeedDecay => 0d;
+		public int GroupID { get; private set; }
+		public double Mass { get; private set; }
 
-		private double[] _trueCoordinates;
-		public double[] TrueCoordinates {
-			get { return this._trueCoordinates; }
-			set { this._trueCoordinates = this.BoundPosition(value); } }
-		private double[] _velocity;
-		public double[] Velocity {
-			get { return this._velocity; }
-			set { this._velocity = Parameters.MAX_SPEED > 0 ? VectorFunctions.Clamp(value, Parameters.MAX_SPEED) : value; } }
-		private double[] _acceleration;
-		public double[] Acceleration {
-			get { return this._acceleration; }
-			set { this._acceleration = Parameters.MAX_ACCELERATION > 0 ? VectorFunctions.Clamp(value, Parameters.MAX_ACCELERATION) : value; } }
-
-
-		public AParticle(int groupID, double[] position, double[] velocity)
+		public AParticle(int groupID, double[] position, double[] velocity, double mass = 1d)
 		: base(position) {
 			this.GroupID = groupID;
-
-			this.TrueCoordinates = position;//causes coordinates to be bounded
-			this.Coordinates = this.TrueCoordinates;//now set values used for quadtree build (after clamping)
-
+			this.Mass = mass;
 			this.Velocity = velocity;
-			this._acceleration = new double[this.Dimensionality];
+			this.Acceleration = new double[this.DIMENSIONALITY];
+
+			this.TrueCoordinates = position;//causes clamping
+			this.Coordinates = (double[])this.TrueCoordinates.Clone();//now set values used for quadtree build (after clamping)
 		}
+
+		private static double _bounceMin;
+		private static double[] _bounceMax;
+		static AParticle() {
+
+			if (!Parameters.WORLD_WRAPPING) {
+				_bounceMin = Parameters.DOMAIN[0] * Parameters.WORLD_BOUNCE_PCT / 100d;
+				if (_bounceMin < Parameters.WORLD_EPSILON)
+					_bounceMax = Parameters.DOMAIN.Select(x => x - Parameters.WORLD_EPSILON).ToArray();//need min <= x < max (exclude domain max)
+				else _bounceMax = Parameters.DOMAIN.Select(x => x - _bounceMin).ToArray();
+			}
+		}
+
+		private double[] _actuallyTrueCoordinates;//base Vector.Coordinates value is a (stale) snapshot for tree/spatial mapping structures
+		public double[] TrueCoordinates {
+			get { return this._actuallyTrueCoordinates; }
+			private set {
+				this._actuallyTrueCoordinates = Parameters.WORLD_WRAPPING
+					? this.WrapPosition(value)
+					: this.BounceEdge(value);//and clamp position
+		} }
+		private double[] _vel = new double[2];
+		public double[] Velocity { get { return this._vel; } set { if (double.IsNaN(value[0])) { } this._vel = value; } }
+		public double[] Acceleration { get; set; }
 		
-		public abstract void Interact(AParticle other);
-		public virtual void InteractSubtree(ITree node) { return; }
+		public abstract void Interact(IEnumerable<AParticle> others);//returns whether to stop evaluating more
+		public virtual void AfterInteract() { }
+		public virtual void InteractSubtree(ITree node) { }
 
-		public virtual void InteractMany(AParticle[] particles) {
-			this._acceleration = new double[this.Dimensionality];
-
-			for (int i = 0; i < particles.Length; i++)
-				if (this.GroupID != particles[i].GroupID)
-					this.Interact(particles[i]);
+		public void ApplyTimeStep() {
+			this.Velocity = this.Velocity.Multiply(this.SpeedDecay).Add(this.Acceleration);
+			
+			this.AfterInteract();
+			
+			this.TrueCoordinates = this.TrueCoordinates.Add(this.Velocity);
 		}
-		public virtual void InteractMany(ATree<AParticle> tree) {
-			this._acceleration = new double[this.Dimensionality];
-
-			Parallel.ForEach(tree.Leaves, leaf => {
-				ATree<AParticle>[] nodes = leaf.GetRefinedNeighborNodes(Parameters.QUADTREE_NEIGHBORHOOD_FILTER).ToArray();
-				foreach (AParticle b in leaf.NodeElements)
-					foreach (ATree<AParticle> otherNode in nodes) {
-						if (otherNode.IsLeaf)
-							foreach (AParticle b2 in otherNode.NodeElements)
-								if (b.ID != b2.ID)
-									b.Interact(b2);
-						else
-							b.InteractSubtree(otherNode);
-					}});
+		private double[] WrapPosition(double[] p) {
+			for (int i = 0; i < this.DIMENSIONALITY; i++)
+				if (p[i] < 0d)
+					p[i] = (p[i] % Parameters.DOMAIN[i]) + Parameters.DOMAIN[i];//don't want symmetric modulus
+				else if (p[i] >= Parameters.DOMAIN[i])
+					p[i] %= Parameters.DOMAIN[i];
+			return p;
 		}
-
-		internal virtual void ApplyUpdate() {
-			if (Parameters.SPEED_DECAY > 0)
-				this.Velocity = this.Velocity.Multiply(Math.Exp(-Parameters.SPEED_DECAY)).Add(this.Acceleration);
-			else this.Velocity = this.Velocity.Add(this.Acceleration);
-
-			this.TrueCoordinates = this.Velocity.Add(this.TrueCoordinates);
-		}
-		private double[] BoundPosition(double[] position) {
-			return position
-				.Select((x, i) =>
-					x < 0d
-						? x % Parameters.DOMAIN[i] + Parameters.DOMAIN[i]//don't want symmetric modulus
-						: x >= Parameters.DOMAIN[i]
-							? x % Parameters.DOMAIN[i]
-							: x)
-				.ToArray();
+		private double[] BounceEdge(double[] p) {
+			double diffFraction;
+			for (int i = 0; i < this.DIMENSIONALITY; i++) {
+				diffFraction = 0;
+				if (p[i] < 0d) {
+					p[i] = 0d;
+					this.Velocity[i] = this.Velocity[i] < 0d ? 0d : this.Velocity[i];
+					diffFraction = 1d;
+				} else if (p[i] < _bounceMin){
+					diffFraction = (_bounceMin - p[i]) / _bounceMin;
+				} else if (p[i] >= Parameters.DOMAIN[i]) {//position MUST be strictly less than domain max
+					p[i] = Parameters.DOMAIN[i] - Parameters.WORLD_EPSILON;
+					this.Velocity[i] = this.Velocity[i] > 0d ? 0d : this.Velocity[i];
+					diffFraction = -1d;
+				} else if (p[i] > _bounceMax[i]) {
+					diffFraction = (_bounceMax[i] - p[i]) / _bounceMin;
+				}
+				if (diffFraction != 0)
+					this.Velocity[i] += Math.Sign(diffFraction) * Math.Abs(this.Velocity[i]) * Math.Pow(Math.Abs(diffFraction), 2);
+			}
+			return p;
 		}
 
 		public bool Equals(AParticle other) { return !(other is null) && this.ID == other.ID; }
@@ -92,10 +101,5 @@ namespace ParticleSimulator {
 				string.Join(",", this.TrueCoordinates.Select(i => i.ToString("G5"))),
 				string.Join(",", this.Coordinates.Select(i => i.ToString("G5"))));
 		}
-	}
-
-	public abstract class ASymmetricParticle : AParticle {
-		public ASymmetricParticle(int groupID, double[] position, double[] velocity)
-		: base(groupID, position, velocity) { }
 	}
 }

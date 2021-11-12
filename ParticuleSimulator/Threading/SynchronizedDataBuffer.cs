@@ -72,7 +72,7 @@ namespace ParticleSimulator.Threading {
 			if (this.QueueLength > this.BUFFER_SIZE)
 				this._latch_canPop.Set();
 
-			if (this.BUFFER_SIZE == 0){
+			if (this.BUFFER_SIZE == 0) {
 				_latch_canReturnFromAdd.Set();
 				return this.Current;
 			}
@@ -96,9 +96,9 @@ namespace ParticleSimulator.Threading {
 
 		public void Overwrite(object value) {
 			lock (this._lock) {
-				if (this.QueueLength == 0 || this.BUFFER_SIZE == 0)
+				if (this.QueueLength == 0 || this.BUFFER_SIZE == 0) {
 					this.CommitAdd(value);//create initial
-				else {
+				} else {
 					this._queue[(this.TotalDequeues + (this.QueueLength-1)) % this.BUFFER_SIZE] = value;
 					this.Current = value;
 					if (this.TotalEnqueues == 0) {
@@ -135,8 +135,6 @@ namespace ParticleSimulator.Threading {
 		}
 		
 		public object Dequeue() {
-			if (Parameters.ENABLE_DEBUG_QUEUE_LOGGING) DebugExtensions.DebugWriteline(string.Format("Queue Out - {0} - Start", this.Name));
-
 			if (this.DoTrackLatency) this._timerDequeue.Start();
 			this._latch_canPop.WaitOne();
 			if (this.DoTrackLatency) {
@@ -149,7 +147,6 @@ namespace ParticleSimulator.Threading {
 			lock (this._lock)
 				result = this.CommitPop();
 
-			if (Parameters.ENABLE_DEBUG_QUEUE_LOGGING) DebugExtensions.DebugWriteline(string.Format("Queue Out - {0} - End", this.Name));
 			return result;
 		}
 		public bool TryDequeue(ref object output, TimeSpan timeout) {
@@ -163,8 +160,6 @@ namespace ParticleSimulator.Threading {
 		}
 
 		public void Enqueue(object value) {
-			if (Parameters.ENABLE_DEBUG_QUEUE_LOGGING) DebugExtensions.DebugWriteline(string.Format("Queue In - {0} - Start", this.Name));
-
 			if (this.DoTrackLatency) this._timerEnqueue.Start();
 			this._latch_canAdd.WaitOne();
 			if (this.DoTrackLatency) {
@@ -176,12 +171,8 @@ namespace ParticleSimulator.Threading {
 			lock (this._lock)
 				this.CommitAdd(value);
 			
-			if (this.BUFFER_SIZE == 0) {
-				if (Parameters.ENABLE_DEBUG_QUEUE_LOGGING) DebugExtensions.DebugWriteline(string.Format("Queue In - {0} - Wait", this.Name));
+			if (this.BUFFER_SIZE == 0)
 				this._latch_canReturnFromAdd.WaitOne();
-			}
-
-			if (Parameters.ENABLE_DEBUG_QUEUE_LOGGING) DebugExtensions.DebugWriteline(string.Format("Queue In - {0} - End", this.Name));
 		}
 
 		public void Dispose() {

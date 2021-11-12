@@ -30,7 +30,8 @@ namespace ParticleSimulator {
 					Simulator = new Simulation.Boids.BoidSimulator(Random);
 					break;
 				case SimulationType.Gravity:
-					Simulator = new Simulation.Gravity.GravitySimulator(Random);
+					throw new NotImplementedException();
+					//Simulator = new Simulation.Gravity.GravitySimulator(Random);
 					break;
 				default:
 					throw new InvalidEnumArgumentException(nameof(SimType), (int)SimType, typeof(SimulationType));
@@ -59,42 +60,43 @@ namespace ParticleSimulator {
 			
 			StepEval_Draw = new(new() {
 				Name = "Drawing",
-				Initializer = null,
-				Calculator = null,
+				//Initializer = null,
+				//Calculator = null,
 				Evaluator = Renderer.FlushScreenBuffer,
 				Synchronizer = Parameters.TARGET_FPS > 0 || Parameters.MAX_FPS > 0 ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
-				Callback = null,
-				DataAssimilationTicksAverager = null,
-				SynchronizationTicksAverager = null,
-				ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				//Callback = null,
+				//DataAssimilationTicksAverager = null,
+				//SynchronizationTicksAverager = null,
+				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
-				OutputResource = null,
-				IsOutputOverwrite = false,
-				OutputSkips = 0,
+				//OutputResource = null,
+				//IsOutputOverwrite = false,
+				//OutputSkips = 0,
 				InputResourceUses = new Prerequisite[] {
 					new() {
 						Resource = Resource_Rasterization,
 						DoConsume = true,
-						OnChange = false,
-						DoHold = false,
-						AllowDirtyRead = false,
-						ReuseAmount = 0,
-						ReuseTolerance = 0,
-						ReadTimeout = null
+						//OnChange = false,
+						//DoHold = false,
+						//AllowDirtyRead = false,
+						//ReuseAmount = 0,
+						//ReuseTolerance = 0,
+						//ReadTimeout = null
 			}}});
+
 			StepEval_Simulate = new(new() {
 				Name = "Simulating",
-				Initializer = null,
+				//Initializer = null,
 				Calculator = Simulator.RefreshSimulation,
-				Evaluator = null,
-				Synchronizer = null,
-				Callback = null,
-				DataAssimilationTicksAverager = null,
-				SynchronizationTicksAverager = null,
-				ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = null,
-				DataLoadingTimeout = null,
+				//Evaluator = null,
+				//Synchronizer = null,
+				//Callback = null,
+				//DataAssimilationTicksAverager = null,
+				//SynchronizationTicksAverager = null,
+				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				//IterationTicksAverager = null,
+				//DataLoadingTimeout = null,
 				OutputResource = Resource_Locations,
 				IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
 				OutputSkips = Parameters.SIMULATION_SKIPS,
@@ -102,109 +104,109 @@ namespace ParticleSimulator {
 					new() {
 						Resource = Resource_Tree,
 						DoConsume = true,
-						OnChange = false,
+						//OnChange = false,
 						DoHold = true,
-						AllowDirtyRead = false,
+						//AllowDirtyRead = false,
 						ReuseAmount = Parameters.SYNC_TREE_REFRESH ? Parameters.TREE_REFRESH_SKIPS : 0,
 						ReuseTolerance = Parameters.SYNC_TREE_REFRESH ? 0 : Parameters.TREE_REFRESH_SKIPS,
-						ReadTimeout = null
+						//ReadTimeout = null
 			}}});
 			StepEval_TreeMaintain = new(new() {
 				Name = "Tree Managing",
 				Initializer = Simulator.RebuildTree,
-				Calculator = null,
-				Evaluator = null,
-				Synchronizer = null,
-				Callback = null,
-				DataAssimilationTicksAverager = null,
-				SynchronizationTicksAverager = null,
-				ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				//Calculator = null,
+				//Evaluator = null,
+				//Synchronizer = null,
+				//Callback = null,
+				//DataAssimilationTicksAverager = null,
+				//SynchronizationTicksAverager = null,
+				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				DataLoadingTimeout = null,
+				//DataLoadingTimeout = null,
 				OutputResource = Resource_Tree,
-				IsOutputOverwrite = false,
-				OutputSkips = 0,
-				InputResourceUses = null
+				//IsOutputOverwrite = false,
+				//OutputSkips = 0,
+				//InputResourceUses = null
 			});
 			StepEval_Resample = new(new() {
 				Name = "Density Sampling",
-				Initializer = null,
-				Calculator = Simulator.ResampleDensities,
-				Evaluator = null,
-				Synchronizer = null,
-				Callback = null,
-				DataAssimilationTicksAverager = null,
-				SynchronizationTicksAverager = null,
-				ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = null,
-				DataLoadingTimeout = null,
+				//Initializer = null,
+				Calculator = Simulator.Resample,
+				//Evaluator = null,
+				//Synchronizer = null,
+				//Callback = null,
+				//DataAssimilationTicksAverager = null,
+				//SynchronizationTicksAverager = null,
+				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				//IterationTicksAverager = null,
+				//DataLoadingTimeout = null,
 				OutputResource = Resource_Resamplings,
-				IsOutputOverwrite = false,
-				OutputSkips = 0,
+				//IsOutputOverwrite = false,
+				//OutputSkips = 0,
 				InputResourceUses = new Prerequisite[] {
 					new() {
 						Resource = Resource_Locations,
 						DoConsume = true,
-						OnChange = false,
-						DoHold = false,
-						AllowDirtyRead = false,
-						ReuseAmount = 0,
-						ReuseTolerance = 0,
-						ReadTimeout = null
+						//OnChange = false,
+						//DoHold = false,
+						//AllowDirtyRead = false,
+						//ReuseAmount = 0,
+						//ReuseTolerance = 0,
+						//ReadTimeout = null
 			}}});
 			StepEval_Rasterize = new(new() {
 				Name = "Rasterizer",
-				Initializer = null,
+				//Initializer = null,
 				Calculator = Renderer.Rasterize,
-				Evaluator = null,
-				Synchronizer = null,
+				//Evaluator = null,
+				//Synchronizer = null,
 				Callback = Parameters.PERF_ENABLE ? PerfMon.AfterRasterize : null,
-				DataAssimilationTicksAverager = null,
-				SynchronizationTicksAverager = null,
-				ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = null,
-				DataLoadingTimeout = null,
+				//DataAssimilationTicksAverager = null,
+				//SynchronizationTicksAverager = null,
+				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				//DataLoadingTimeout = null,
 				OutputResource = Resource_Rasterization,
-				IsOutputOverwrite = false,
-				OutputSkips = 0,
+				//IsOutputOverwrite = false,
+				//OutputSkips = 0,
 				InputResourceUses = new Prerequisite[] {
 					new() {
 						Resource = Resource_Resamplings,
 						DoConsume = true,
-						OnChange = false,
-						DoHold = false,
-						AllowDirtyRead = false,
-						ReuseAmount = 0,
-						ReuseTolerance = 0,
-						ReadTimeout = null
+						//OnChange = false,
+						//DoHold = false,
+						//AllowDirtyRead = false,
+						//ReuseAmount = 0,
+						//ReuseTolerance = 0,
+						//ReadTimeout = null
 			}}});
 
-			if (Parameters.DENSITY_AUTOSCALE_ENABLE)
+			if (Parameters.DENSITY_AUTOSCALE_ENABLE && !Parameters.COLOR_GROUPS)
 				StepEval_Autoscale = new(new() {
 					Name = "Autoscaler",
-					Initializer = null,
-					Calculator = null,
+					//Initializer = null,
+					//Calculator = null,
 					Evaluator = Simulator.AutoscaleUpdate,
 					Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS)),
-					Callback = null,
-					DataAssimilationTicksAverager = null,
-					SynchronizationTicksAverager = null,
-					ExclusiveTimeAverage = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-					IterationTicksAverager = null,
-					DataLoadingTimeout = null,
-					OutputResource = null,
-					IsOutputOverwrite = false,
-					OutputSkips = 0,
+					//Callback = null,
+					//DataAssimilationTicksAverager = null,
+					//SynchronizationTicksAverager = null,
+					ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+					//IterationTicksAverager = null,
+					//DataLoadingTimeout = null,
+					//OutputResource = null,
+					//IsOutputOverwrite = false,
+					//OutputSkips = 0,
 					InputResourceUses = new Prerequisite[] {
 						new() {
 							Resource = Resource_Resamplings,
-							DoConsume = false,
+							//DoConsume = false,
 							OnChange = true,
-							DoHold = false,
-							AllowDirtyRead = false,
-							ReuseAmount = 0,
-							ReuseTolerance = 0,
-							ReadTimeout = null
+							//DoHold = false,
+							//AllowDirtyRead = false,
+							//ReuseAmount = 0,
+							//ReuseTolerance = 0,
+							//ReadTimeout = null
 				}}});
 
 			return new RunManager(
