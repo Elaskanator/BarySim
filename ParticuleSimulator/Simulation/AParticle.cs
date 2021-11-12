@@ -19,7 +19,7 @@ namespace ParticleSimulator {
 			this.GroupID = groupID;
 			this.Mass = mass;
 			this.Velocity = velocity;
-			this.Acceleration = new double[this.DIMENSIONALITY];
+			this.AccumulatedImpulse = new double[this.DIMENSIONALITY];
 
 			this.TrueCoordinates = position;//causes clamping
 			this.Coordinates = (double[])this.TrueCoordinates.Clone();//now set values used for quadtree build (after clamping)
@@ -28,7 +28,6 @@ namespace ParticleSimulator {
 		private static double _bounceMin;
 		private static double[] _bounceMax;
 		static AParticle() {
-
 			if (!Parameters.WORLD_WRAPPING) {
 				_bounceMin = Parameters.DOMAIN[0] * Parameters.WORLD_BOUNCE_PCT / 100d;
 				if (_bounceMin < Parameters.WORLD_EPSILON)
@@ -45,16 +44,15 @@ namespace ParticleSimulator {
 					? this.WrapPosition(value)
 					: this.BounceEdge(value);//and clamp position
 		} }
-		private double[] _vel = new double[2];
-		public double[] Velocity { get { return this._vel; } set { if (double.IsNaN(value[0])) { } this._vel = value; } }
-		public double[] Acceleration { get; set; }
+		public double[] Velocity { get; set; }
+		public virtual double[] AccumulatedImpulse { get; set; }
 		
 		public abstract void Interact(IEnumerable<AParticle> others);//returns whether to stop evaluating more
 		public virtual void AfterInteract() { }
 		public virtual void InteractSubtree(ITree node) { }
 
 		public void ApplyTimeStep() {
-			this.Velocity = this.Velocity.Multiply(this.SpeedDecay).Add(this.Acceleration);
+			this.Velocity = this.Velocity.Multiply(this.SpeedDecay).Add(this.AccumulatedImpulse.Divide(this.Mass));
 			
 			this.AfterInteract();
 			

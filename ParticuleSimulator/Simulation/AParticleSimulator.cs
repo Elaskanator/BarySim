@@ -54,7 +54,9 @@ namespace ParticleSimulator.Simulation {
 		ITree IParticleSimulator.RebuildTree() { return this.RebuildTree(); }
 
 		public Tuple<double[], AParticle>[] RefreshSimulation(ParticleTree<P> tree) {
-			this.InteractTree(tree);
+			if (Parameters.DESIRED_INTERACTION_NEIGHBORS != 0)
+				this.InteractTree(tree);
+
 			foreach (P p in this.AllParticles)
 				p.ApplyTimeStep();
 
@@ -67,7 +69,7 @@ namespace ParticleSimulator.Simulation {
 		protected virtual void InteractTree(ParticleTree<P> tree) {
 			Parallel.ForEach(tree.Leaves, leaf => {
 				foreach (P p in leaf.NodeElements) {
-					p.Acceleration = new double[p.DIMENSIONALITY];
+					p.AccumulatedImpulse = new double[p.DIMENSIONALITY];
 					p.Interact(leaf.GetNeighbors().Except(p2 => p2.ID == p.ID));
 				}
 			});

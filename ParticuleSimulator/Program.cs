@@ -221,6 +221,7 @@ namespace ParticleSimulator {
 		}
 
 		private static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+c and alt+f4 etc
+			Environment.Exit(0);
 			//keep master thread alive for results output (if enabled)
 			//also necessary to cleanup the application, otherwise any threading calls would immediately kill this thread
 			args.Cancel = true;

@@ -1,8 +1,8 @@
 ﻿using System;
-using Generic.Extensions;
-using System.Linq;
-using Generic.Models;
 using System.Collections.Generic;
+using System.Linq;
+using Generic.Extensions;
+using Generic.Models;
 
 namespace ParticleSimulator.Simulation.Boids {
 	public class Boid: AParticle {
@@ -11,33 +11,70 @@ namespace ParticleSimulator.Simulation.Boids {
 		public Boid(int groupID, double[] position, double[] velocity)
 		: base(groupID, position, velocity) {
 			this.IsPredator = Program.Random.NextDouble() < Parameters.BOIDS_PREDATOR_CHANCE;
+			this._accumDisperse = new double[this.DIMENSIONALITY];
+			this._accumCohere = new double[this.DIMENSIONALITY];
+			this._cohesionInteractions = 0;
+			this._accumAlign = new double[this.DIMENSIONALITY];
+			this._alignInteractions = 0;
 		}
 		static Boid() {
-			_speedDecay = Math.Exp(-Parameters.BOIDS_SPEED_DECAY);
+			_speedDecay = Math.Exp(-Parameters.BOIDS_BOID_SPEED_DECAY);
 			_predatorSpeedDecay = Math.Exp(-Parameters.BOIDS_PREDATOR_SPEED_DECAY);
 		}
 		
 		public bool IsPredator { get; private set; }
-		public double Vision => this.IsPredator ? Parameters.BOIDS_PREDATOR_VISION : Parameters.BOIDS_BOID_VISION;
-		public double MaxSpeed => this.IsPredator ? Parameters.BOIDS_PREDATOR_MAX_SPEED : Parameters.BOIDS_MAX_SPEED;
+
 		public override double SpeedDecay => this.IsPredator ? _predatorSpeedDecay : _speedDecay;
+		public double MinSpeed => this.IsPredator ? Parameters.BOIDS_PREDATOR_MIN_SPEED : Parameters.BOIDS_BOID_MIN_SPEED;
+		public double MaxSpeed => this.IsPredator ? Parameters.BOIDS_PREDATOR_MAX_SPEED : Parameters.BOIDS_BOID_MAX_SPEED;
+
+		public double MinDist => this.IsPredator ? Parameters.BOIDS_PREDATOR_MIN_DIST : Parameters.BOIDS_BOID_MIN_DIST;
+		public double CohesionDist => this.IsPredator ? Parameters.BOIDS_PREDATOR_COHESION_DIST : Parameters.BOIDS_BOID_COHESION_DIST;
+		public double Vision => this.IsPredator ? Parameters.BOIDS_PREDATOR_VISION : Parameters.BOIDS_BOID_VISION;
+		public double FoV => this.IsPredator ? Parameters.BOIDS_PREDATOR_FOV_RADIANS : Parameters.BOIDS_BOID_FOV_RADIANS;
+
+		public double DisperseWeight => this.IsPredator ? Parameters.BOIDS_PREDATOR_DISPERSE_W : Parameters.BOIDS_BOID_DISPERSE_W;
+		public double CohesionWeight => this.IsPredator ? Parameters.BOIDS_PREDATOR_COHESION_W : Parameters.BOIDS_BOID_COHESION_W;
+		public double AlignmentWeight => this.IsPredator ? Parameters.BOIDS_PREDATOR_ALIGNMENT_W : Parameters.BOIDS_BOID_ALIGNMENT_W;
+
+		public double FlockDispersalRadius => this.IsPredator ? Parameters.BOIDS_PREDATOR_GROUP_AVOID_DIST : Parameters.BOIDS_BOID_GROUP_AVOID_DIST;
+		public double ForeignFlockDislike => this.IsPredator ? Parameters.BOIDS_PREDATOR_GROUP_AVOID_WE : Parameters.BOIDS_BOID_GROUP_AVOID_WE;
+
+		private double[] _accumDisperse;
+		private double[] _accumCohere;
+		private int _cohesionInteractions;
+		private double[] _accumAlign;
+		private int _alignInteractions;
+		public override double[] AccumulatedImpulse {
+			get { return
+				this._accumDisperse.Multiply(this.DisperseWeight)
+				.Add(this._accumCohere.Multiply(this.CohesionWeight / (this._cohesionInteractions > 0 ? this._cohesionInteractions : 1)))
+				.Add(this._accumAlign.Multiply(this.AlignmentWeight / (this._alignInteractions > 0 ? this._alignInteractions : 1))); }
+			set {
+				this._accumDisperse = new double[this.DIMENSIONALITY];
+				this._accumCohere = new double[this.DIMENSIONALITY];
+				this._cohesionInteractions = 0;
+				this._accumAlign = new double[this.DIMENSIONALITY];
+				this._alignInteractions = 0;
+		} }
 
 		public override void Interact(IEnumerable<AParticle> others) {
-			if (Parameters.DESIRED_INTERACTION_NEIGHBORS == 0) return;
-
+			if (this.FoV > 0)
+				others = others.Where(p => Math.Abs(this.Velocity.AngleTo(p.TrueCoordinates)) < this.FoV/2d);
+			
 			AParticle target = this.IsPredator
-				? others.Take(Parameters.DESIRED_INTERACTION_NEIGHBORS < 0 ? 1 : Parameters.DESIRED_INTERACTION_NEIGHBORS)
-					.MinBy(p => this.TrueCoordinates.Distance(p.TrueCoordinates))
+				? others
+					.Take(Parameters.DESIRED_INTERACTION_NEIGHBORS < 0 ? 1 : Parameters.DESIRED_INTERACTION_NEIGHBORS)
+					.OrderBy(p => this.Velocity.AngleTo(p.TrueCoordinates) * this.TrueCoordinates.Distance(p.TrueCoordinates))
+					.FirstOrDefault()
 				: null;
 
 			int count = 0;
 			foreach (Boid other in others.Cast<Boid>()) {
-				if (other.IsPredator || target is null || target.ID == other.ID) {
-					if (Parameters.BOIDS_BOID_FOV_RADIANS < 0 || Parameters.BOIDS_BOID_FOV_RADIANS > Math.Abs(this.Velocity.AngleTo(other.TrueCoordinates))) {
-						this.InteractInternal(other);
-						if (++count >= Parameters.DESIRED_INTERACTION_NEIGHBORS && Parameters.DESIRED_INTERACTION_NEIGHBORS > 0)
-							return;
-					}
+				if (target is null || target.ID == other.ID) {
+					this.InteractInternal(other);
+					if (++count >= Parameters.DESIRED_INTERACTION_NEIGHBORS && Parameters.DESIRED_INTERACTION_NEIGHBORS > 0)
+						return;
 				}
 
 				if (other.IsPredator && !this.IsPredator)
@@ -49,61 +86,65 @@ namespace ParticleSimulator.Simulation.Boids {
 			double dist = vectorAway.Magnitude();
 
 			if (dist < this.Vision) {
-				double[] result = new double[this.DIMENSIONALITY];
 				double
-					minDist = 0d,
-					attractionWeight = 0d,
-					separationWeight = 0d;
+					minDist = this.MinDist,
+					cohesionDist = this.CohesionDist,
+					dispersionWeight = 0,
+					cohesionWeight = 0,
+					alignmentWeight = 0;
 
-				if (this.IsPredator && (other).IsPredator) {
-					minDist = Parameters.BOIDS_MIN_SEPARATION_DIST;
-					separationWeight = Parameters.BOIDS_SEPARATION_WEIGHT;
-				} else if (this.IsPredator) {
-					attractionWeight = Parameters.BOIDS_PREDATOR_COHESION_WEIGHT;
-				} else if ((other).IsPredator) {
-					minDist = Parameters.BOIDS_BOID_VISION;
-					separationWeight = Parameters.BOIDS_PREDATOR_SEPARATION_WEIGHT;
-				} else {
+				if (this.IsPredator == other.IsPredator) {
 					if (this.GroupID == other.GroupID) {
-						minDist = Parameters.BOIDS_MIN_SEPARATION_DIST;
-						separationWeight = Parameters.BOIDS_SEPARATION_WEIGHT;
+						if (dist > minDist) {
+							cohesionWeight = 1d;
+							if (dist < cohesionDist)
+								alignmentWeight = 1d;
+						} else dispersionWeight = 1d;
 					} else {
-						minDist = Parameters.BOIDS_GROUP_AVOIDANCE_DIST;
-						separationWeight = Parameters.BOIDS_GROUP_SEPARATION_WEIGHT;
+						minDist = this.FlockDispersalRadius;
+						dispersionWeight = this.ForeignFlockDislike;
 					}
-
-					if (this.GroupID == other.GroupID && dist > minDist) {
-						separationWeight = 0d;
-						if (dist > Parameters.BOIDS_MAX_COHESION_DIST)
-							attractionWeight = Parameters.BOIDS_COHESION_WEIGHT;
-						else if (Parameters.BOIDS_ENABLE_ALIGNMENT && Parameters.BOIDS_ALIGNMENT_WEIGHT > 0d)
-							result = result.Add(
-								other.Velocity.Subtract(this.Velocity)
-								.Multiply(Parameters.BOIDS_ALIGNMENT_WEIGHT));
-					}
+				} else if (this.IsPredator) {
+					minDist = 1d;
+					cohesionDist = 1d;
+					cohesionWeight = Parameters.BOIDS_CHASE_WE;
+				} else if (other.IsPredator) {
+					minDist = this.Vision;
+					dispersionWeight = Parameters.BOIDS_FLEE_WE;
+					cohesionWeight = 1d;
+					alignmentWeight = -1d;
 				}
 
-				if (dist < minDist)
-					if (Parameters.BOIDS_ENABLE_SEPARATION && separationWeight > 0d && dist > Parameters.WORLD_EPSILON)
-						result = result.Add(
-							vectorAway.Normalize().Multiply(Parameters.BOIDS_MAX_SPEED * (minDist - dist))
-							.Multiply(separationWeight));
+				if (Parameters.BOIDS_ENABLE_ALIGNMENT && alignmentWeight != 0d) {
+					this._accumAlign = this._accumAlign.Add(other.Velocity.Subtract(this.Velocity).Multiply(alignmentWeight));
+					this._alignInteractions++;
+				}
+				
+				if (Parameters.BOIDS_ENABLE_SEPARATION && dispersionWeight != 0d && dist > Parameters.WORLD_EPSILON)
+					this._accumDisperse = this._accumDisperse.Add(
+						vectorAway.Normalize().Multiply(this.MaxSpeed * dispersionWeight * (minDist - dist)));
 
-				if (Parameters.BOIDS_ENABLE_COHESION && attractionWeight > 0d)
-					result = result.Subtract(
-						vectorAway.Multiply(attractionWeight));
+				if (Parameters.BOIDS_ENABLE_COHESION && cohesionWeight != 0d && dist > minDist) {
+					if (dist < cohesionDist)
+						this._accumCohere = this._accumCohere.Add(
+							vectorAway.Normalize()
+								.Multiply(-cohesionWeight * this.MaxSpeed * (dist - minDist) / (cohesionDist - minDist)));
+					else this._accumCohere = this._accumCohere.Add(
+							vectorAway.Normalize()
+								.Multiply(-cohesionWeight * this.MaxSpeed));
 
-				this.Acceleration = this.Acceleration.Add(result);
+					this._cohesionInteractions++;
+				}
 			}
 		}
 
 		public override void AfterInteract() {
 			double speed;
 			while ((speed = this.Velocity.Magnitude()) == 0)
-				this.Velocity = NumberExtensions.RandomUnitVector_Spherical(Parameters.DOMAIN.Length, Program.Random).Multiply(Parameters.BOIDS_MAX_SPEED * Program.Random.NextDouble());
+				this.Velocity = NumberExtensions.RandomUnitVector_Spherical(Parameters.DOMAIN.Length, Program.Random).Multiply(Parameters.BOIDS_BOID_MAX_SPEED * Program.Random.NextDouble());
 
-			this.Velocity = speed < Parameters.BOIDS_MIN_SPEED
-				? this.Velocity.Multiply(Parameters.BOIDS_MIN_SPEED / speed)
+			this.Velocity = speed < this.MinSpeed
+				? this.Velocity.Multiply(this.MinSpeed / speed)
 				: speed > this.MaxSpeed
 					? this.Velocity.Multiply(this.MaxSpeed / speed)
 					: this.Velocity;
