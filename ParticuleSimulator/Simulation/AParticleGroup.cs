@@ -14,32 +14,35 @@ namespace ParticleSimulator.Simulation {
 
 		public abstract P NewParticle(double[] position, double[] velocity, Random rand);
 
-		public AParticleGroup(Random random) {
+		public AParticleGroup(Random rand) {
 			this.ID = ++_globalID;
 
-			random ??= new Random();
+			rand ??= new Random();
 
 			double[] startingPosition = Enumerable
 				.Range(0, Parameters.DOMAIN.Length)
-				.Select(d => random.NextDouble() * Parameters.DOMAIN[d])
+				.Select(d => rand.NextDouble() * Parameters.DOMAIN[d])
 				.ToArray();
 
-			double boidVolume = NumberExtensions.HypersphereVolume(4d * Parameters.SEPARATION, Parameters.DOMAIN.Length);
+			double boidVolume = NumberExtensions.HypersphereVolume(4d * Parameters.INITIAL_SEPARATION, Parameters.DOMAIN.Length);
 			double radius = NumberExtensions.HypersphereRadius(boidVolume * Parameters.NUM_PARTICLES_PER_GROUP, Parameters.DOMAIN.Length);
 
+			double startingSpeedRange = Parameters.MAX_STARTING_SPEED < 0
+				? 0d
+				: Parameters.MAX_STARTING_SPEED;
 			this.Particles = Enumerable
 				.Range(0, Parameters.NUM_PARTICLES_PER_GROUP)
-				.Select(d => this.NewParticle(
-					position:startingPosition.Zip(
-						NumberExtensions.Random_Spherical(radius, Parameters.DOMAIN.Length, random),
-						(a, b) => a + b).ToArray(),
-					velocity:VectorFunctions.Multiply(
-						VectorFunctions.Normalize(Enumerable
-						.Range(0, Parameters.DOMAIN.Length)
-						.Select(d => (random.NextDouble() * 2d) - 1d).ToArray()//random between -1 and +1
-						.ToArray()),
-						random.NextDouble() * Parameters.MAX_STARTING_SPEED).ToArray(),
-					random))
+				.Select(d => {
+					double direction = startingSpeedRange < 0 ? 0 : 2d * Math.PI * rand.NextDouble();
+					return this.NewParticle(
+						position:startingPosition.Zip(
+							NumberExtensions.RandomCoordinate_Spherical(radius, Parameters.DOMAIN.Length, rand),
+							(a, b) => a + b).ToArray(),
+						velocity:startingSpeedRange <= 0
+							? new double[Parameters.DOMAIN.Length]
+							: NumberExtensions.RandomUnitVector_Spherical(Parameters.DOMAIN.Length, rand).Multiply(startingSpeedRange * rand.NextDouble()),
+						rand);
+					})
 				.ToArray();
 		}
 

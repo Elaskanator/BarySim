@@ -12,19 +12,19 @@ namespace ParticleSimulator.Simulation {
 		public bool IsDiscrete { get; }
 		public AParticle[] AllParticles { get; }
 		public SampleSMA[] DensityScale { get; }
-		public int? InteractionLimit { get; }
+		public int InteractionLimit { get; }
 		public int? NeighborhoodFilteringDepth { get; }
 
 		public ITree RebuildTree();
-		public Tuple<double[], object>[] RefreshSimulation(object[] parameters);
-		public Tuple<char, double>[] ResampleDensities(object[] parameters);
+		public ConsoleColor ChooseGroupColor(AParticle[] others);
+		public Tuple<double[], AParticle>[] RefreshSimulation(object[] parameters);
+		public Tuple<char, AParticle[]>[] Resample(object[] parameters);
 		public void AutoscaleUpdate(object[] parameters);
 	}
 
-	public abstract class AParticleSimulator<P, G, T> : IParticleSimulator
+	public abstract class AParticleSimulator<P, G> : IParticleSimulator
 	where P : AParticle
-	where G : AParticleGroup<P>
-	where T : AQuadTree<P, T> {
+	where G : AParticleGroup<P> {
 		public AParticleSimulator(Random rand = null) {
 			this._rand = rand ?? new Random();
 			this.ParticleGroups = Enumerable.Range(0, Parameters.NUM_PARTICLE_GROUPS).Select(i => this.NewParticleGroup(rand)).ToArray();
@@ -34,7 +34,7 @@ namespace ParticleSimulator.Simulation {
 				.Select(x => new SampleSMA(Parameters.AUTOSCALING_SMA_ALPHA, x))
 				.ToArray();
 		}
-		public virtual int? InteractionLimit => Parameters.DESIRED_NEIGHBORS;
+		public virtual int InteractionLimit => Parameters.DESIRED_INTERACTION_NEIGHBORS;
 		public virtual int? NeighborhoodFilteringDepth => null;
 		
 		public abstract bool IsDiscrete { get; }
@@ -44,83 +44,89 @@ namespace ParticleSimulator.Simulation {
 		public SampleSMA[] DensityScale { get; private set; }
 		protected readonly Random _rand;
 
-		public abstract T NewTree { get; }
 		public abstract G NewParticleGroup(Random rand);
 
-		public T RebuildTree() {
-			Parallel.ForEach(this.AllParticles, p => p.Coordinates = p.TrueCoordinates);//make sure to update with true coordinates before recalcuating tree (to avoid race condition)
-
-			T tree = this.NewTree;
-			tree.AddRange(this.AllParticles, this._rand);
-
-			return tree;
+		public ParticleTree<P> RebuildTree() {
+			foreach (P p in this.AllParticles)
+				p.Coordinates = (double[])p.TrueCoordinates.Clone();//tree reuse means we don't care about race conditions with dirty access
+			return new ParticleTree<P>(this.AllParticles);
 		}
 		ITree IParticleSimulator.RebuildTree() { return this.RebuildTree(); }
 
-		public Tuple<double[], object>[] RefreshSimulation(T tree) {
-			DateTime startUtc = DateTime.UtcNow;
-
+		public Tuple<double[], AParticle>[] RefreshSimulation(ParticleTree<P> tree) {
 			this.InteractTree(tree);
-			Parallel.ForEach(this.AllParticles, p => p.ApplyUpdate());
+			foreach (P p in this.AllParticles)
+				p.ApplyTimeStep();
 
-			Tuple<double[], object>[] result = this.AllParticles.Select(p => new Tuple<double[], object>(p.TrueCoordinates, null)).ToArray();
+			Tuple<double[], AParticle>[] result = this.AllParticles.Select(p => new Tuple<double[], AParticle>(p.TrueCoordinates, p)).ToArray();
 
 			return result;
 		}
-		public Tuple<double[], object>[] RefreshSimulation(object[] parameters) { return this.RefreshSimulation((T)parameters[0]); }
+		public Tuple<double[], AParticle>[] RefreshSimulation(object[] parameters) { return this.RefreshSimulation((ParticleTree<P>)parameters[0]); }
 
-		protected virtual void InteractTree(T tree) {
+		protected virtual void InteractTree(ParticleTree<P> tree) {
 			Parallel.ForEach(tree.Leaves, leaf => {
-				P[] neighbors;
-				if (this.InteractionLimit.HasValue)
-					neighbors = leaf.GetNeighbors().Take(this.InteractionLimit.Value + 1).ToArray();
-				else neighbors = leaf.GetNeighbors().ToArray();
-				foreach (P b in leaf.NodeElements)
-					b.InteractMany(neighbors);
+				foreach (P p in leaf.NodeElements) {
+					p.Acceleration = new double[p.DIMENSIONALITY];
+					p.Interact(leaf.GetNeighbors().Except(p2 => p2.ID == p.ID));
+				}
 			});
 		}
 
-		public Tuple<char, double>[] ResampleDensities(object[] parameters) { return this.ResampleDensities((Tuple<double[], object>[])parameters[0]); }
+		public virtual ConsoleColor ChooseGroupColor(AParticle[] others) {//treat like a static method
+			int dominantGroupID = others.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
+			return (ConsoleColor)(dominantGroupID < 1 ? 1 : dominantGroupID > 14 ? 14 :
+				dominantGroupID == (int)Parameters.BOIDS_PREDATOR_COLOR
+					? ((dominantGroupID + 1) % 16) + 1
+					: dominantGroupID);
+		}
 
-		protected virtual Tuple<char, double>[] ResampleDensities(Tuple<double[], object>[] particleData) {
-			Tuple<char, double>[] results = new Tuple<char, double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+		public virtual Tuple<char, AParticle[]>[] Resample(object[] parameters) {
+			Tuple<double[], AParticle>[] particleData = (Tuple<double[], AParticle>[])parameters[0];
+			Tuple<char, AParticle[]>[] results = new Tuple<char, AParticle[]>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 
-			int topCount, bottomCount;
-			double colorCount;
+			bool top, bottom;
 			char pixelChar;
-			foreach (IGrouping<int, double[]> xGroup
-			in particleData.Select(p => p.Item1).GroupBy(c => (int)(Renderer.RenderWidth * c[0] / Parameters.DOMAIN[0]))) {
-				foreach (IGrouping<int, double> yGroup
-				in xGroup//subdivide each pixel into two vertical components
-					.Select(c => Parameters.DOMAIN.Length < 2 ? 0 : Renderer.RenderHeight * c[1] / Parameters.DOMAIN[1] / 2d)
-					.GroupBy(y => (int)y))//preserve floating point value of normalized Y for subdivision
-				{
-					topCount = yGroup.Count(y => y % 1d < 0.5d);
-					bottomCount = yGroup.Count() - topCount;
+			foreach (IGrouping<int, dynamic> bin in this.DiscreteParticleBin(particleData)) {
+				top = bin.Any(t => t.Y % 1d < 0.5d);
+				bottom = bin.Any(t => t.Y % 1d >= 0.5d);
 
-					if (topCount > 0 && bottomCount > 0) {
-						pixelChar = Parameters.CHAR_BOTH;
-						colorCount = ((double)topCount + bottomCount) / 2d;
-					} else if (topCount > 0) {
-						pixelChar = Parameters.CHAR_TOP;
-						colorCount = topCount;
-					} else {
-						pixelChar = Parameters.CHAR_BOTTOM;
-						colorCount = bottomCount;
-					}
+				if (top && bottom)
+					pixelChar = Parameters.CHAR_BOTH;
+				else if (top)
+					pixelChar = Parameters.CHAR_TOP;
+				else pixelChar = Parameters.CHAR_LOW;
 
-					results[xGroup.Key + Renderer.RenderWidthOffset + Parameters.WINDOW_WIDTH*(yGroup.Key + Renderer.RenderHeightOffset)] =
-						new Tuple<char, double>(
-							pixelChar,
-							colorCount);
-				}
+				results[bin.Key] =
+					new Tuple<char, AParticle[]>(
+						pixelChar,
+						bin.Select(b => (AParticle)b.Particle).ToArray());
 			}
-
 			return results;
 		}
 
+		public IEnumerable<IGrouping<int, dynamic>> DiscreteParticleBin(Tuple<double[], AParticle>[] particleData) { 
+			return particleData
+				.Select(d => new {
+					X = d.Item1[0] * Renderer.RenderWidth / Parameters.DOMAIN[0],
+					Y = d.Item1[1] * Renderer.RenderHeight / Parameters.DOMAIN[1] / 2d,
+					Particle = d.Item2})
+				.GroupBy(d => (int)d.X + Renderer.RenderWidthOffset + Parameters.WINDOW_WIDTH*((int)d.Y + Renderer.RenderHeightOffset));
+/*
+			foreach (IGrouping<int, Tuple<double[], AParticle>> xGroup
+			in particleData.GroupBy(c => (int)(c.Item1[0] * Renderer.RenderWidth / Parameters.DOMAIN[0])))
+				foreach (IGrouping<int, Tuple<AParticle, int, double>> yGroup
+				in xGroup.Select(c => new Tuple<AParticle, int, double>(c.Item2, xGroup.Key,
+					Parameters.DOMAIN.Length < 2 ? 0 : (int)(c.Item1[1] * Renderer.RenderHeight / Parameters.DOMAIN[1] / 2d)))
+					.GroupBy(t => (int)t.Item3)) 
+						yield return yGroup;
+*/
+		}
+
+		
+
 		public void AutoscaleUpdate(Tuple<char, double>[] sampling) {
-			double[] orderedCounts = sampling.Except(c => c is null).Select(c => c.Item2).Order().ToArray();//TODO use selection sort?
+			double[] orderedCounts = ((Tuple<char, double>[])sampling.Clone()).Except(c => c is null).Select(c => c.Item2).Order().ToArray();//TODO use selection sort?
 			if (orderedCounts.Length > 0) {
 				int totalBands = Parameters.DENSITY_COLORS.Length - 1;
 
@@ -155,17 +161,5 @@ namespace ParticleSimulator.Simulation {
 
 		public IEnumerator<AParticle> GetEnumerator() { return this.AllParticles.AsEnumerable().GetEnumerator(); }
 		IEnumerator IEnumerable.GetEnumerator() {return this.AllParticles.GetEnumerator(); }
-	}
-
-	public abstract class ASymmetricalInteractionParticleSimulator<P, G, T> : AParticleSimulator<P, G, T>
-	where P : ASymmetricParticle
-	where G : AParticleGroup<P>
-	where T : AQuadTree<P, T> {
-		public ASymmetricalInteractionParticleSimulator(Random rand = null)
-		: base(rand) { }
-
-		protected override void InteractTree(T tree) {
-			throw new NotImplementedException();
-		}
 	}
 }

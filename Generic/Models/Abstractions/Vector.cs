@@ -4,30 +4,30 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Generic.Models {
-	public class SimpleVector : ICollection<double>, IEnumerable<double>, IList<double>, ICollection, IEnumerable, IList, IStructuralComparable, IStructuralEquatable, ICloneable {
-		public int Dimensionality { get { return this.Coordinates.Length; } }
+	public class VectorDouble : ICollection<double>, IEnumerable<double>, IList<double>, ICollection, IEnumerable, IList, IStructuralComparable, IStructuralEquatable, ICloneable {
+		public int DIMENSIONALITY { get { return this.Coordinates.Length; } }
 		public double[] Coordinates { get; set; }
 
 		double IList<double>.this[int index] { get => this.Coordinates[index]; set => this.Coordinates[index] = value; }
 		object IList.this[int index] { get => this.Coordinates[index]; set => this.Coordinates[index] = (double)value; }
 
-		public SimpleVector(int dimensionality) { this.Coordinates = new double[dimensionality]; }
-		public SimpleVector(double[] v) { this.Coordinates = v; }
+		public VectorDouble(int dimensionality) { this.Coordinates = new double[dimensionality]; }
+		public VectorDouble(double[] v) { this.Coordinates = v; }
 
-		public static readonly SimpleVector Zero1D = new(1);
-		public static readonly SimpleVector Zero2D = new(2);
-		public static readonly SimpleVector Zero3D = new(3);
+		public static readonly VectorDouble Zero1D = new(1);
+		public static readonly VectorDouble Zero2D = new(2);
+		public static readonly VectorDouble Zero3D = new(3);
 
 		public double this[int dimension] => this.Coordinates[dimension];
 
-		public static explicit operator SimpleVector(double[] v) => new SimpleVector(v);
+		public static explicit operator VectorDouble(double[] v) => new VectorDouble(v);
 
-		public static SimpleVector operator - (SimpleVector v) { return v.Negate(); }
-		public static SimpleVector operator + (SimpleVector v1, SimpleVector v2) { return v1.Addition(v2); }
-		public static SimpleVector operator - (SimpleVector v1, SimpleVector v2) { return v1.Subtract(v2); }
-		public static SimpleVector operator * (SimpleVector v, double scalar) { return v.Multiply(scalar); }
-		public static SimpleVector operator * (double scalar, SimpleVector v) { return v.Multiply(scalar); }
-		public static SimpleVector operator / (SimpleVector v, double scalar) { return v.Divide(scalar); }
+		public static VectorDouble operator - (VectorDouble v) { return v.Negate(); }
+		public static VectorDouble operator + (VectorDouble v1, VectorDouble v2) { return v1.Addition(v2); }
+		public static VectorDouble operator - (VectorDouble v1, VectorDouble v2) { return v1.Subtract(v2); }
+		public static VectorDouble operator * (VectorDouble v, double scalar) { return v.Multiply(scalar); }
+		public static VectorDouble operator * (double scalar, VectorDouble v) { return v.Multiply(scalar); }
+		public static VectorDouble operator / (VectorDouble v, double scalar) { return v.Divide(scalar); }
 
 		public bool IsFixedSize => true;
 		public bool IsReadOnly => false;
@@ -69,27 +69,27 @@ namespace Generic.Models {
 		public static double[] Negate(this double[] v) {
 			return v.Select(n => -n).ToArray();
 		}
-		public static SimpleVector Negate(this SimpleVector v) { return (SimpleVector)Negate(v.Coordinates); }
+		public static VectorDouble Negate(this VectorDouble v) { return (VectorDouble)Negate(v.Coordinates); }
 
 		public static double[] Add(this double[] v1, double[] v2) {
 			return v1.Select((n, i) => n + v2[i]).ToArray();
 		}
-		public static SimpleVector Addition(this SimpleVector v1, SimpleVector v2) { return (SimpleVector)Add(v1.Coordinates, v2.Coordinates); }
+		public static VectorDouble Addition(this VectorDouble v1, VectorDouble v2) { return (VectorDouble)Add(v1.Coordinates, v2.Coordinates); }
 
 		public static double[] Subtract(this double[] v1, double[]v2) {
 			return v1.Select((n, i) => n - v2[i]).ToArray();
 		}
-		public static SimpleVector Subtract(this SimpleVector v1, SimpleVector v2) { return (SimpleVector)Subtract(v1.Coordinates, v2.Coordinates); }
+		public static VectorDouble Subtract(this VectorDouble v1, VectorDouble v2) { return (VectorDouble)Subtract(v1.Coordinates, v2.Coordinates); }
 
 		public static double[] Multiply(this double[] v, double scalar) {
 			return v.Select(n => n * scalar).ToArray();
 		}
-		public static SimpleVector Multiply(this SimpleVector v, double scalar) { return (SimpleVector)Multiply(v.Coordinates, scalar); }
+		public static VectorDouble Multiply(this VectorDouble v, double scalar) { return (VectorDouble)Multiply(v.Coordinates, scalar); }
 
 		public static double[] Divide(this double[] v, double scalar) {
 			return v.Select(n => n / scalar).ToArray();
 		}
-		public static SimpleVector Divide(this SimpleVector v, double scalar) { return (SimpleVector)Divide(v.Coordinates, scalar); }
+		public static VectorDouble Divide(this VectorDouble v, double scalar) { return (VectorDouble)Divide(v.Coordinates, scalar); }
 
 		/// <summary>
 		/// Normalizes a vector to have a Euclidean length of 1
@@ -100,9 +100,9 @@ namespace Generic.Models {
 			if (magnitude > 0) {
 				double componentScale = 1d / magnitude;
 				return v.Select(n => n * componentScale).ToArray();
-			} else return v;
+			} else throw new ArgumentOutOfRangeException(nameof(v), "Cannot normalize zero-length vectors");
 		}
-		public static SimpleVector Normalize(this SimpleVector v) { return (SimpleVector)Normalize(v.Coordinates); }
+		public static VectorDouble Normalize(this VectorDouble v) { return (VectorDouble)Normalize(v.Coordinates); }
 
 		public static double[] Clamp(this double[] v, double maxMagnitude) {
 			double magnitude = Magnitude(v);
@@ -110,12 +110,12 @@ namespace Generic.Models {
 				return v.Select(n => n * maxMagnitude / magnitude).ToArray();
 			else return v;
 		}
-		public static SimpleVector Clamp(this SimpleVector v, double maxMagnitude) { return (SimpleVector)Clamp(v.Coordinates, maxMagnitude); }
+		public static VectorDouble Clamp(this VectorDouble v, double maxMagnitude) { return (VectorDouble)Clamp(v.Coordinates, maxMagnitude); }
 
 		public static double Magnitude(this double[] v) {
 			return Math.Sqrt(v.Sum(x => x * x));
 		}
-		public static double Magnitude(this SimpleVector v) { return Magnitude(v.Coordinates); }
+		public static double Magnitude(this VectorDouble v) { return Magnitude(v.Coordinates); }
 
 		public static double Distance(this double[] v1, double[] v2) {
 			return Math.Sqrt(
@@ -125,12 +125,12 @@ namespace Generic.Models {
 					.Select(x => x * x)
 					.Sum());
 		}
-		public static double Distance(this SimpleVector v1, SimpleVector v2) { return Distance(v1.Coordinates, v2.Coordinates); }
+		public static double Distance(this VectorDouble v1, VectorDouble v2) { return Distance(v1.Coordinates, v2.Coordinates); }
 
 		public static double Dot(this double[] v1, double[] v2) {
 			return Enumerable.Range(0, v1.Length).Aggregate(0d, (xs, d) => xs + (v1[d] * v2[d]));
 		}
-		public static double Dot(this SimpleVector v1, SimpleVector v2) { return Dot(v1.Coordinates, v2.Coordinates); }
+		public static double Dot(this VectorDouble v1, VectorDouble v2) { return Dot(v1.Coordinates, v2.Coordinates); }
 
 		public static double AngleTo(this double[] v1, double[] v2) {
 			double
@@ -140,6 +140,6 @@ namespace Generic.Models {
 			if (len1 == 0 || len2 == 0) return 0;
 			else return Math.Acos(dot / len1 / len2);
 		}
-		public static double AngleTo(this SimpleVector v1, SimpleVector v2) { return AngleTo(v1.Coordinates, v2.Coordinates); }
+		public static double AngleTo(this VectorDouble v1, VectorDouble v2) { return AngleTo(v1.Coordinates, v2.Coordinates); }
 	}
 }

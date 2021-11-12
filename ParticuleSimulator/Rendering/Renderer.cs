@@ -36,8 +36,8 @@ namespace ParticleSimulator.Rendering {
 			}
 		}
 
-		public static ConsoleExtensions.CharInfo[] Rasterize(object[] p) {
-			Tuple<char, double>[] rasterization = (Tuple<char, double>[])p[0];
+		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
+			Tuple<char, AParticle[]>[] rasterization = (Tuple<char, AParticle[]>[])parameters[0];
 
 			ConsoleExtensions.CharInfo[] frame = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 			if (!(rasterization is null)) {
@@ -45,7 +45,7 @@ namespace ParticleSimulator.Rendering {
 					frame[i] = rasterization[i] is null ? default :
 						new ConsoleExtensions.CharInfo(
 							rasterization[i].Item1,
-							ChooseDensityColor(rasterization[i].Item2));
+							Parameters.COLOR_GROUPS ? Program.Simulator.ChooseGroupColor(rasterization[i].Item2) : ChooseDensityColor(rasterization[i].Item2.Length));
 
 				if (Parameters.LEGEND_ENABLE) DrawLegend(frame, Program.Simulator.DensityScale);
 				if (Parameters.PERF_GRAPH_ENABLE) frame.RegionMerge(Parameters.WINDOW_WIDTH, PerfMon.GetFpsGraph(), PerfMon.GraphWidth, 0, 1, true);

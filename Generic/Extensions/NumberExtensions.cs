@@ -34,9 +34,8 @@ namespace Generic.Extensions {
 			return Math.Pow(numberBase, exp);
 		}
 
-		public static double[] Random_Spherical(double radius, int dimensionality, Random rand = null) {
+		public static double[] RandomCoordinate_Spherical(double radius, int dimensionality, Random rand = null) {
 			if (dimensionality < 1) throw new ArgumentOutOfRangeException("dimensionality");
-
 			rand ??= new Random();
 
 			double r = rand.NextDouble();
@@ -65,7 +64,35 @@ namespace Generic.Extensions {
 						r * Math.Cos(phi)
 					};
 				default:
-					throw new NotImplementedException("Random sampling within a hyperspherical coordinates");
+					throw new NotImplementedException("4D+");
+			}
+		}
+
+		public static double[] RandomUnitVector_Spherical(int dimensionality, Random rand = null) {
+			if (dimensionality < 1) throw new ArgumentOutOfRangeException("dimensionality");
+			rand ??= new Random();
+
+			switch (dimensionality) {
+				case 1:
+					if (rand.NextDouble() < 0.5)
+						return new double[] { 1 };
+					else return new double[] { -1 };
+				case 2:
+					double angle = 2d * Math.PI * rand.NextDouble();
+					return new double[] {
+						Math.Cos(angle),
+						Math.Sin(angle)
+					};
+				case 3:
+					double theta = 2d * Math.PI * rand.NextDouble();
+					double phi = Math.PI * rand.NextDouble();
+					return new double[] {
+						Math.Cos(theta) * Math.Sin(phi),
+						Math.Sin(theta) * Math.Sin(phi),
+						Math.Cos(phi)
+					};
+				default:
+					throw new NotImplementedException("4d+");
 			}
 		}
 
@@ -107,7 +134,7 @@ namespace Generic.Extensions {
 		}
 
 		private static string DecimalFmtString(int precision) {
-			if (precision < 1) throw new ArgumentOutOfRangeException("precision", precision, "Must be strictly positive");
+			if (precision < 1) throw new ArgumentOutOfRangeException(nameof(precision), precision, "Must be strictly positive");
 			return "{0:0." + new string('0', precision - 1) + "E+0}";
 		}
 		public static string ToStringScientificNotation(this decimal value, int precision = 3) {

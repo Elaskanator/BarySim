@@ -122,12 +122,13 @@ namespace Generic.Models {
 		protected override double UpdateStrength { get { return this.Alpha; } }
 
 		public SampleSMA() : base() { }
-		public SampleSMA(double init) : base(init) { }
-
-		public SampleSMA(double weighting, double? init = null) {
+		public SampleSMA(double weighting) {
 			this.Alpha = weighting;
+		}
 
-			if (init.HasValue) this.Update(init.Value);
+		public SampleSMA(double weighting, double init)
+		: base(init) {
+			this.Alpha = weighting;
 		}
 	}
 
