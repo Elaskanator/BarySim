@@ -48,7 +48,7 @@ namespace ParticleSimulator.Rendering {
 							Parameters.COLOR_GROUPS ? Program.Simulator.ChooseGroupColor(rasterization[i].Item2) : ChooseDensityColor(rasterization[i].Item2.Length));
 
 				if (Parameters.LEGEND_ENABLE) DrawLegend(frame, Program.Simulator.DensityScale);
-				if (Parameters.PERF_GRAPH_ENABLE) frame.RegionMerge(Parameters.WINDOW_WIDTH, PerfMon.GetFpsGraph(), PerfMon.GraphWidth, 0, 1, true);
+				if (Parameters.PERF_GRAPH_ENABLE) frame.RegionMerge(Parameters.WINDOW_WIDTH, PerfMon.RenderFpsGraph(), PerfMon.GraphWidth, 0, 1, true);
 			}
 			if (Parameters.PERF_ENABLE) PerfMon.DrawStatsOverlay(frame);
 

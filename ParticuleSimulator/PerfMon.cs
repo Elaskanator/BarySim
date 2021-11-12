@@ -110,7 +110,7 @@ namespace ParticleSimulator {
 			}
 		}
 
-		public static ConsoleExtensions.CharInfo[] GetFpsGraph() {
+		public static ConsoleExtensions.CharInfo[] RenderFpsGraph() {
 			BasicStatisticsInfo[] frameTimeStats, iterationTimeStats;
 			lock (_columnStatsLock) {
 				if (_columnFrameTimeStatsMs[0] is null)
@@ -144,7 +144,7 @@ namespace ParticleSimulator {
 			_currentMax = newMax;
 
 			for (int i = 0; i < frameTimeStats.Length; i++) {
-				_graph_columns[i] = ComputeGraphColumn(frameTimeStats[i], iterationTimeStats[i]);
+				_graph_columns[i] = RenderGraphColumn(frameTimeStats[i], iterationTimeStats[i]);
 				DrawGraphColumn(result, _graph_columns[i], i);
 			}
 
@@ -189,7 +189,7 @@ namespace ParticleSimulator {
 				if (!Equals(newColumn[yIdx], default(ConsoleExtensions.CharInfo)))
 					buffer[xIdx + (Parameters.GRAPH_HEIGHT - yIdx - 1)*GraphWidth] = newColumn[yIdx];
 		}
-		private static ConsoleExtensions.CharInfo[] ComputeGraphColumn(BasicStatisticsInfo frameTimeStats, BasicStatisticsInfo iterationTimeStats) {
+		private static ConsoleExtensions.CharInfo[] RenderGraphColumn(BasicStatisticsInfo frameTimeStats, BasicStatisticsInfo iterationTimeStats) {
 			ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[Parameters.GRAPH_HEIGHT];
 
 			double
@@ -212,7 +212,7 @@ namespace ParticleSimulator {
 				
 			int
 				minY = y000Scaled < 0 ? 0 : (int)Math.Floor(y000Scaled),
-				maxY = yMaxScaled > Parameters.GRAPH_HEIGHT ? Parameters.GRAPH_HEIGHT : (int)Math.Ceiling(yMaxScaled);
+				maxY = yMaxScaled >= Parameters.GRAPH_HEIGHT ? Parameters.GRAPH_HEIGHT - 1 : (int)Math.Ceiling(yMaxScaled);
 			ConsoleColor color; char chr;
 			for (int yIdx = minY; yIdx < maxY; yIdx++) {
 				if ((int)yMaxScaled == yIdx) {//top pixel
