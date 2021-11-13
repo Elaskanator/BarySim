@@ -51,7 +51,7 @@ namespace Generic.Extensions {
 						r * Math.Sin(angle)
 					};
 				case 3:
-					r = Math.Cbrt(radius * r);
+					r = Math.Cbrt(radius * radius * radius * r);
 
 					double u = rand.NextDouble();
 					double v = rand.NextDouble();

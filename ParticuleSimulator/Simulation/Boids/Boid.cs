@@ -8,9 +8,9 @@ namespace ParticleSimulator.Simulation.Boids {
 	public class Boid: AParticle {
 		private static double _speedDecay;
 		private static double _predatorSpeedDecay;
-		public Boid(int groupID, double[] position, double[] velocity)
+		public Boid(int groupID, double[] position, double[] velocity, double corruption)
 		: base(groupID, position, velocity) {
-			this.IsPredator = Program.Random.NextDouble() < Parameters.BOIDS_PREDATOR_CHANCE;
+			this.IsPredator = Program.Random.NextDouble() < corruption;
 			this._accumDisperse = new double[this.DIMENSIONALITY];
 			this._accumCohere = new double[this.DIMENSIONALITY];
 			this._cohesionInteractions = 0;

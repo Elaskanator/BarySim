@@ -11,13 +11,15 @@ namespace Generic.Models {
 		public const int MAX_DEPTH = 40;
 		
 		public readonly double[] LeftCorner;
-		public readonly double[] Center;
+		//public readonly double[] Center;
 		public readonly double[] RightCorner;
+		public readonly double[] Size;
 
 		public AQuadTree(double[] corner1, double[] corner2, T parent = null) 
 		: base(parent) {//make sure all values in x1 are smaller than x2 (the corners of a cubic volume)
 			this.LeftCorner = corner1;
 			this.RightCorner = corner2;
+			this.Size = corner1.Zip(corner2, (a, b) => b - a).ToArray();
 
 			this._members = new E[this.Capacity];
 
@@ -26,7 +28,7 @@ namespace Generic.Models {
 			//var orderedCornerPoints = corner1.Zip(corner2, (a, b) => new { Min = a < b ? a : b, Max = a < b ? b : a }).ToArray();
 			//this.LeftCorner = orderedCornerPoints.Select(t => t.Min).ToArray();
 			//this.RightCorner = orderedCornerPoints.Select(t => t.Max).ToArray();
-			this.Center = corner1.Zip(corner2, (a, b) => (a + b) / 2d).ToArray();//average of each dimension
+			//this.Center = corner1.Zip(corner2, (a, b) => (a + b) / 2d).ToArray();//average of each dimension
 		}
 		
 		public int NumMembers { get; private set; }
@@ -51,7 +53,7 @@ namespace Generic.Models {
 			} else {
 				if (this.Depth < MAX_DEPTH) {
 					if (this.NumMembers == Capacity) {//one-time quadrant formation
-						this._quadrants = this.OrganizeNodes(this.FormNodes());
+						this._quadrants = this.FormNodes();
 						foreach (E member in this._members)
 							this.GetContainingChild(member).AddElementToNode(member);
 					}
@@ -76,11 +78,10 @@ namespace Generic.Models {
 			//^^ doesn't work if randomizing nodes (this.OrganizeNodes() method)
 			return this._quadrants.Single(q => q.DoesContain(element));
 		}
-		protected virtual T[] OrganizeNodes(T[] nodes) { return nodes; }
 
 		protected abstract T NewNode(double[] cornerA, double[] cornerB, T parent);
 
-		private T[] FormNodes() {
+		protected virtual T[] FormNodes() {
 			double[] sizeHalved = this.LeftCorner.Zip(this.RightCorner, (a, b) => (b - a) / 2d).ToArray();
 			return Enumerable
 				.Range(0, 1 << this.Dimensionality)//the 2^dimension "quadrants" of the Euclidean hyperplane

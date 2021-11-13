@@ -27,18 +27,18 @@ namespace ParticleSimulator {
 
 			switch (SimType) {
 				case SimulationType.Boid:
-					Simulator = new Simulation.Boids.BoidSimulator(Random);
+					Simulator = new Simulation.Boids.BoidSimulator();
 					break;
 				case SimulationType.Gravity:
 					throw new NotImplementedException();
-					//Simulator = new Simulation.Gravity.GravitySimulator(Random);
+					//Simulator = new Simulation.Gravity.GravitySimulator();
 					break;
 				default:
 					throw new InvalidEnumArgumentException(nameof(SimType), (int)SimType, typeof(SimulationType));
 			}
 			
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
-			Console.Title = string.Format("{0} Simulator ({1})", SimType, Simulator.AllParticles.Count().Pluralize("particle"));
+			Console.Title = string.Format("{0} Simulator - {1} ({2}D)", SimType, Simulator.AllParticles.Count().Pluralize("particle"), Parameters.DIMENSIONALITY);
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
 			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
 			Console.CursorVisible = false;

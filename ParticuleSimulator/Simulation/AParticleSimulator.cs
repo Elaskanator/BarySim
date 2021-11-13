@@ -25,18 +25,17 @@ namespace ParticleSimulator.Simulation {
 	public abstract class AParticleSimulator<P, G> : IParticleSimulator
 	where P : AParticle
 	where G : AParticleGroup<P> {
-		public AParticleSimulator(Random rand = null) {
-			this._rand = rand ?? new Random();
-
+		public AParticleSimulator() {
 			double[] center;
 			this.ParticleGroups = new G[Parameters.NUM_PARTICLE_GROUPS];
 			for (int i = 0; i < Parameters.NUM_PARTICLE_GROUPS; i++) {
 				center = Parameters.DOMAIN
-					.Divide(2)
 					.Add(NumberExtensions.RandomCoordinate_Spherical(
-						Parameters.DOMAIN.Magnitude() / 3d, Parameters.DOMAIN.Length,
-						rand));
-				this.ParticleGroups[i] = this.NewParticleGroup(center, rand);
+						Parameters.DOMAIN.Magnitude() / 2d, Parameters.DOMAIN.Length,
+						Program.Random))
+					.Divide(2);
+				this.ParticleGroups[i] = this.NewParticleGroup();
+				this.ParticleGroups[i].Init(center);
 			}
 			this.AllParticles = this.ParticleGroups.SelectMany(g => g.Particles).ToArray();
 			this.DensityScale = Enumerable
@@ -54,7 +53,7 @@ namespace ParticleSimulator.Simulation {
 		public SampleSMA[] DensityScale { get; private set; }
 		protected readonly Random _rand;
 
-		public abstract G NewParticleGroup(double[] center, Random rand);
+		public abstract G NewParticleGroup();
 
 		public ParticleTree<P> RebuildTree() {
 			foreach (P p in this.AllParticles)
@@ -86,11 +85,17 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public virtual ConsoleColor ChooseGroupColor(AParticle[] others) {//treat like a static method
-			int dominantGroupID = others.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
-			return (ConsoleColor)(dominantGroupID < 1 ? 1 : dominantGroupID > 14 ? 14 :
-				dominantGroupID == (int)Parameters.BOIDS_PREDATOR_COLOR
-					? ((dominantGroupID + 1) % 16) + 1
-					: dominantGroupID);
+			int dominantGroupID;
+			if (Parameters.DIMENSIONALITY < 3)
+				dominantGroupID = others.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
+			else dominantGroupID = others.GroupBy(p => p.GroupID).MinBy(g=> g.Min(p => p.TrueCoordinates.Skip(2).ToArray().Magnitude())).Key;
+
+			return (ConsoleColor)(dominantGroupID%15 + 1);
+		}
+
+		private double GetDepthScalar(double[] v) {
+			double h = v.Skip(2).ToArray().Magnitude();
+			return 1d - (h / Parameters.DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT);
 		}
 
 		public virtual Tuple<char, AParticle[]>[] Resample(object[] parameters) {
@@ -118,7 +123,7 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public IEnumerable<IGrouping<int, dynamic>> DiscreteParticleBin(Tuple<double[], AParticle>[] particleData) { 
-			return particleData
+			return particleData//Parameters.RENDER_3D_PHI
 				.Select(d => new {
 					X = d.Item1[0] * Renderer.RenderWidth / Parameters.DOMAIN[0],
 					Y = d.Item1[1] * Renderer.RenderHeight / Parameters.DOMAIN[1] / 2d,

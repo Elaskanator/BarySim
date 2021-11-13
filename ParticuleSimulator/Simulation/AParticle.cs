@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Generic.Models;
 
@@ -21,26 +20,20 @@ namespace ParticleSimulator {
 			this.Velocity = velocity;
 			this.AccumulatedImpulse = new double[this.DIMENSIONALITY];
 
-			this._actuallyTrueCoordinates = this.WrapPosition(position);
+			this.TrueCoordinates = position;
 			this.Coordinates = (double[])this.TrueCoordinates.Clone();//now set values used for quadtree build (after clamping)
-		}
-
-		private static double[] _bounceMax;
-		static AParticle() {
-			if (!Parameters.WORLD_WRAPPING) {
-				if (Parameters.WORLD_BOUNCE_SIZE < Parameters.WORLD_EPSILON)
-					_bounceMax = Parameters.DOMAIN.Select(x => x - Parameters.WORLD_EPSILON).ToArray();//need min <= x < max (exclude domain max)
-				else _bounceMax = Parameters.DOMAIN.Select(x => x - Parameters.WORLD_BOUNCE_SIZE).ToArray();
-			}
 		}
 
 		private double[] _actuallyTrueCoordinates;//base Vector.Coordinates value is a (stale) snapshot for tree/spatial mapping structures
 		public double[] TrueCoordinates {
 			get { return this._actuallyTrueCoordinates; }
 			private set {
-				this._actuallyTrueCoordinates = Parameters.WORLD_WRAPPING
-					? this.WrapPosition(value)
-					: this.BounceEdge(value);//and clamp position
+				if (Parameters.WORLD_WRAPPING) {
+					this._actuallyTrueCoordinates = this.WrapPosition(value);
+				} else {
+					this._actuallyTrueCoordinates = this.BoundPosition(value);
+					this.BounceVelocity();
+				}
 		} }
 		public double[] Velocity { get; set; }
 		public virtual double[] AccumulatedImpulse { get; set; }
@@ -64,27 +57,20 @@ namespace ParticleSimulator {
 					p[i] %= Parameters.DOMAIN[i];
 			return p;
 		}
-		private double[] BounceEdge(double[] p) {
-			double diffFraction;
+		private double[] BoundPosition(double[] p) {
 			for (int i = 0; i < this.DIMENSIONALITY; i++) {
-				diffFraction = 0;
 				if (p[i] < 0d) {
 					p[i] = 0d;
-					this.Velocity[i] = this.Velocity[i] < 0d ? 0d : this.Velocity[i];
-					diffFraction = 1d;
-				} else if (p[i] < Parameters.WORLD_BOUNCE_SIZE){
-					diffFraction = (Parameters.WORLD_BOUNCE_SIZE - p[i]) / Parameters.WORLD_BOUNCE_SIZE;
-				} else if (p[i] >= Parameters.DOMAIN[i]) {//position MUST be strictly less than domain max
+				} else if (p[i] >= Parameters.DOMAIN[i]) {
 					p[i] = Parameters.DOMAIN[i] - Parameters.WORLD_EPSILON;
-					this.Velocity[i] = this.Velocity[i] > 0d ? 0d : this.Velocity[i];
-					diffFraction = -1d;
-				} else if (p[i] > _bounceMax[i]) {
-					diffFraction = (_bounceMax[i] - p[i]) / Parameters.WORLD_BOUNCE_SIZE;
 				}
-				if (diffFraction != 0)
-					this.Velocity[i] += Parameters.WORLD_BOUNCE_WEIGHT * Math.Sign(diffFraction) * Math.Pow(diffFraction, 2);
 			}
 			return p;
+		}
+		private void BounceVelocity() {
+			double[] toCenter = Parameters.DOMAIN_CENTER.Subtract(this.TrueCoordinates);
+			if (toCenter.Magnitude() > Parameters.DOMAIN_MAX_RADIUS)
+				this.Velocity = this.Velocity.Add(toCenter.Multiply(Parameters.WORLD_BOUNCE_WEIGHT));
 		}
 
 		public bool Equals(AParticle other) { return !(other is null) && this.ID == other.ID; }

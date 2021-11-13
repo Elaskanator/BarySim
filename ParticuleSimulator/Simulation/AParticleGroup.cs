@@ -14,11 +14,11 @@ namespace ParticleSimulator.Simulation {
 
 		public abstract P NewParticle(double[] position, double[] velocity, Random rand);
 
-		public AParticleGroup(double[] center, Random rand) {
+		public AParticleGroup() {
 			this.ID = ++_globalID;
+		}
 
-			rand ??= new Random();
-
+		public void Init(double[] center) {
 			double particleVolume = NumberExtensions.HypersphereVolume(Parameters.INITIAL_SEPARATION, Parameters.DOMAIN.Length);
 			double radius = NumberExtensions.HypersphereRadius(particleVolume * Parameters.NUM_PARTICLES_PER_GROUP, Parameters.DOMAIN.Length);
 
@@ -28,15 +28,15 @@ namespace ParticleSimulator.Simulation {
 			this.Particles = Enumerable
 				.Range(0, Parameters.NUM_PARTICLES_PER_GROUP)
 				.Select(d => {
-					double direction = startingSpeedRange < 0 ? 0 : 2d * Math.PI * rand.NextDouble();
+					double direction = startingSpeedRange < 0 ? 0 : 2d * Math.PI * Program.Random.NextDouble();
 					return this.NewParticle(
 						position:center.Zip(
-							NumberExtensions.RandomCoordinate_Spherical(radius, Parameters.DOMAIN.Length, rand),
+							NumberExtensions.RandomCoordinate_Spherical(radius, Parameters.DOMAIN.Length, Program.Random),
 							(a, b) => a + b).ToArray(),
 						velocity:startingSpeedRange <= 0
 							? new double[Parameters.DOMAIN.Length]
-							: NumberExtensions.RandomUnitVector_Spherical(Parameters.DOMAIN.Length, rand).Multiply(startingSpeedRange * rand.NextDouble()),
-						rand);
+							: NumberExtensions.RandomUnitVector_Spherical(Parameters.DOMAIN.Length, Program.Random).Multiply(startingSpeedRange * Program.Random.NextDouble()),
+						Program.Random);
 					})
 				.ToArray();
 		}
