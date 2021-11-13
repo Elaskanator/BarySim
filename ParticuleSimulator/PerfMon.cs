@@ -14,9 +14,10 @@ namespace ParticleSimulator {
 		private static double[] _currentColumnIterationTimeDataMs;
 		private static double _currentMin = 0;
 		private static double _currentMax = 0;
-		private static BasicStatisticsInfo[] _columnFrameTimeStatsMs;
-		private static BasicStatisticsInfo[] _columnIterationTimeStatsMs;
-		private static ConsoleExtensions.CharInfo[][] _graph_columns;
+		private static StatsInfo[] _columnFrameTimeStatsMs;
+		private static StatsInfo[] _columnIterationTimeStatsMs;
+		private static ConsoleExtensions.CharInfo[][] _graphColumns;
+		private static DateTime _lastGraphRenderFrameUtc = DateTime.UtcNow;
 		private static readonly object _columnStatsLock = new();
 
 		private static readonly Tuple<string, double, ConsoleColor>[] _statsHeaderValues;
@@ -38,9 +39,9 @@ namespace ParticleSimulator {
 					: Parameters.PERF_GRAPH_DEFAULT_WIDTH;
 			GraphWidth = Console.WindowWidth > width ? width : Console.WindowWidth;
 
-			_columnFrameTimeStatsMs = new BasicStatisticsInfo[GraphWidth];
-			_columnIterationTimeStatsMs = new BasicStatisticsInfo[GraphWidth];
-			_graph_columns = new ConsoleExtensions.CharInfo[GraphWidth][];
+			_columnFrameTimeStatsMs = new StatsInfo[GraphWidth];
+			_columnIterationTimeStatsMs = new StatsInfo[GraphWidth];
+			_graphColumns = new ConsoleExtensions.CharInfo[GraphWidth][];
 		}
 
 		public static void AfterRasterize(StepEvaluator result) {
@@ -53,8 +54,8 @@ namespace ParticleSimulator {
 					} else {
 						_currentColumnFrameTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
 						_currentColumnIterationTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
-						_graph_columns = _graph_columns.ShiftRight(false);
-						_graph_columns[0] = _graph_columns[1];
+						_graphColumns = _graphColumns.ShiftRight(false);
+						_graphColumns[0] = _graphColumns[1];
 						_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.ShiftRight(false);
 						_columnIterationTimeStatsMs = _columnIterationTimeStatsMs.ShiftRight(false);
 					}
@@ -64,15 +65,16 @@ namespace ParticleSimulator {
 					Program.StepEval_Rasterize.Step.ExclusiveTicksAverager.Current,
 					Program.StepEval_Resample.Step.ExclusiveTicksAverager.Current,
 				}.Max() / 10000d;
+				double currentIterationTimeMs = Program.StepEval_Draw.Step.IterationTicksAverager.Current / 10000d;
 
 				_frameTimingMs.Update(currentFrameTimeMs);
-				_fpsTimingMs.Update(Program.StepEval_Draw.Step.IterationTicksAverager.Current / 10000d);
+				_fpsTimingMs.Update(currentIterationTimeMs);
 
 				_currentColumnFrameTimeDataMs[frameIdx] = currentFrameTimeMs;
-				_columnFrameTimeStatsMs[0] = new BasicStatisticsInfo(_currentColumnFrameTimeDataMs.Take(frameIdx + 1));
+				_columnFrameTimeStatsMs[0] = new StatsInfo(_currentColumnFrameTimeDataMs.Take(frameIdx + 1));
 
-				_currentColumnIterationTimeDataMs[frameIdx] = Program.StepEval_Draw.Step.IterationTicksAverager.Current / 10000d;
-				_columnIterationTimeStatsMs[0] = new BasicStatisticsInfo(_currentColumnIterationTimeDataMs.Take(frameIdx + 1));
+				_currentColumnIterationTimeDataMs[frameIdx] = currentIterationTimeMs;
+				_columnIterationTimeStatsMs[0] = new StatsInfo(_currentColumnIterationTimeDataMs.Take(frameIdx + 1));
 			}
 		}
 
@@ -110,42 +112,23 @@ namespace ParticleSimulator {
 			}
 		}
 
-		public static ConsoleExtensions.CharInfo[] RenderFpsGraph() {
-			BasicStatisticsInfo[] frameTimeStats, iterationTimeStats;
+		public static void DrawFpsGraph(ConsoleExtensions.CharInfo[] frameBuffer) {
+			ConsoleExtensions.CharInfo[][] graphColumnsCopy;
+			StatsInfo frameTimeStats, iterationTimeStats;
 			lock (_columnStatsLock) {
 				if (_columnFrameTimeStatsMs[0] is null)
-					return null;
-				frameTimeStats = _columnFrameTimeStatsMs.TakeUntil(s => s is null).ToArray();
-				iterationTimeStats = _columnIterationTimeStatsMs.TakeUntil(s => s is null).ToArray();
+					return;
+				else if (_graphColumns[0] is null || DateTime.UtcNow.Subtract(_lastGraphRenderFrameUtc).TotalMilliseconds >= Parameters.PERF_GRAPH_REFRESH_MS)
+					RerenderGraph();
+				graphColumnsCopy = _graphColumns.TakeUntil(s => s is null).ToArray();
+				frameTimeStats = _columnFrameTimeStatsMs[0];
+				iterationTimeStats = _columnIterationTimeStatsMs[0];
 			}
-
-			ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[GraphWidth * Parameters.GRAPH_HEIGHT];
-			BasicStatisticsInfo rangeStats = new BasicStatisticsInfo(frameTimeStats.Concat(iterationTimeStats).Where(s => !(s is null)).SelectMany(s => s.Data_asc));
 			
-			double
-				minMean = frameTimeStats.Min(s => s.Mean),
-				maxMean = frameTimeStats.Max(s => s.Mean),
-				newMin = rangeStats.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_LOW_CUTOFF),
-				newMax = rangeStats.GetPercentileValue(100 - Parameters.PERF_GRAPH_PERCENTILE_HIGH_CUTOFF),
-				frameTime = frameTimeStats[0].Mean,
-				fps = iterationTimeStats[0].Mean;
+			ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[GraphWidth * Parameters.GRAPH_HEIGHT];
 
-			if (newMin > minMean)
-				newMin = minMean;
-			if (newMin < 1)
-				newMin = 0;
-
-			if (newMax < maxMean)
-				newMax = maxMean;
-			if (newMin >= newMax)
-				newMax = newMin + 1;
-
-			_currentMin = newMin;
-			_currentMax = newMax;
-
-			for (int i = 0; i < frameTimeStats.Length; i++) {
-				_graph_columns[i] = RenderGraphColumn(frameTimeStats[i], iterationTimeStats[i]);
-				DrawGraphColumn(result, _graph_columns[i], i);
+			for (int i = 0; i < graphColumnsCopy.Length; i++) {
+				DrawGraphColumn(result, graphColumnsCopy[i], i);
 			}
 
 			double decimals = (_currentMax - _currentMin).BaseExponent();
@@ -156,7 +139,9 @@ namespace ParticleSimulator {
 				if (decimals < 1)
 					fmtStr = "." + new string('0', (int)Math.Ceiling(Math.Abs(decimals)));
 			}
-
+			double
+				frameTime = frameTimeStats.Mean,
+				fps = iterationTimeStats.Mean;
 			string
 				label_min = _currentMin.ToString(fmtStr) + "ms",
 				label_max = _currentMax.ToString(fmtStr) + "ms",
@@ -180,8 +165,39 @@ namespace ParticleSimulator {
 			offset_fps = offset_fps < 0 ? 0 : offset_fps < Parameters.GRAPH_HEIGHT ? offset_fps : Parameters.GRAPH_HEIGHT - 1;
 			for (int i = 0; i < label_fps.Length; i++)
 				result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - offset_fps)] = new ConsoleExtensions.CharInfo(label_fps[i], color_frameTime);
+			
+			frameBuffer.RegionMerge(Parameters.WINDOW_WIDTH, result, GraphWidth, 0, 1, true);
+		}
 
-			return result;
+		private static void RerenderGraph() {
+			StatsInfo[]
+				frameTimeStats = _columnFrameTimeStatsMs.TakeUntil(s => s is null).ToArray(),
+				iterationTimeStats = _columnIterationTimeStatsMs.TakeUntil(s => s is null).ToArray();
+			StatsInfo rangeStats = new StatsInfo(frameTimeStats.Concat(iterationTimeStats).Where(s => !(s is null)).SelectMany(s => s.Data_asc));
+			
+			double
+				minMean = frameTimeStats.Min(s => s.Mean),
+				maxMean = frameTimeStats.Max(s => s.Mean),
+				newMin = rangeStats.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_LOW_CUTOFF),
+				newMax = rangeStats.GetPercentileValue(100 - Parameters.PERF_GRAPH_PERCENTILE_HIGH_CUTOFF);
+
+			if (newMin > minMean)
+				newMin = minMean;
+			if (newMin < 1)
+				newMin = 0;
+
+			if (newMax < maxMean)
+				newMax = maxMean;
+			if (newMin >= newMax)
+				newMax = newMin + 1;
+
+			_currentMin = newMin;
+			_currentMax = newMax;
+
+			for (int i = 0; i < frameTimeStats.Length; i++)
+				_graphColumns[i] = RenderGraphColumn(_columnFrameTimeStatsMs[i], _columnIterationTimeStatsMs[i]);
+
+			_lastGraphRenderFrameUtc = DateTime.UtcNow;
 		}
 
 		private static void DrawGraphColumn(ConsoleExtensions.CharInfo[] buffer, ConsoleExtensions.CharInfo[] newColumn, int xIdx) {
@@ -189,7 +205,7 @@ namespace ParticleSimulator {
 				if (!Equals(newColumn[yIdx], default(ConsoleExtensions.CharInfo)))
 					buffer[xIdx + (Parameters.GRAPH_HEIGHT - yIdx - 1)*GraphWidth] = newColumn[yIdx];
 		}
-		private static ConsoleExtensions.CharInfo[] RenderGraphColumn(BasicStatisticsInfo frameTimeStats, BasicStatisticsInfo iterationTimeStats) {
+		private static ConsoleExtensions.CharInfo[] RenderGraphColumn(StatsInfo frameTimeStats, StatsInfo iterationTimeStats) {
 			ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[Parameters.GRAPH_HEIGHT];
 
 			double

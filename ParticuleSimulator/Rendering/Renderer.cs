@@ -39,20 +39,20 @@ namespace ParticleSimulator.Rendering {
 		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
 			Tuple<char, AParticle[]>[] rasterization = (Tuple<char, AParticle[]>[])parameters[0];
 
-			ConsoleExtensions.CharInfo[] frame = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 			if (!(rasterization is null)) {
 				for (int i = 0; i < rasterization.Length; i++)
-					frame[i] = rasterization[i] is null ? default :
+					frameBuffer[i] = rasterization[i] is null ? default :
 						new ConsoleExtensions.CharInfo(
 							rasterization[i].Item1,
 							Parameters.COLOR_GROUPS ? Program.Simulator.ChooseGroupColor(rasterization[i].Item2) : ChooseDensityColor(rasterization[i].Item2.Length));
 
-				if (Parameters.LEGEND_ENABLE) DrawLegend(frame, Program.Simulator.DensityScale);
-				if (Parameters.PERF_GRAPH_ENABLE) frame.RegionMerge(Parameters.WINDOW_WIDTH, PerfMon.RenderFpsGraph(), PerfMon.GraphWidth, 0, 1, true);
+				if (Parameters.LEGEND_ENABLE) DrawLegend(frameBuffer, Program.Simulator.DensityScale);
+				if (Parameters.PERF_GRAPH_ENABLE) PerfMon.DrawFpsGraph(frameBuffer);
 			}
-			if (Parameters.PERF_ENABLE) PerfMon.DrawStatsOverlay(frame);
+			if (Parameters.PERF_ENABLE) PerfMon.DrawStatsOverlay(frameBuffer);
 
-			return frame;
+			return frameBuffer;
 		}
 
 		private static DateTime? _lastUpdateUtc = null;

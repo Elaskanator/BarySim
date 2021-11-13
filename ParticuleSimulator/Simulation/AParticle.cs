@@ -21,18 +21,16 @@ namespace ParticleSimulator {
 			this.Velocity = velocity;
 			this.AccumulatedImpulse = new double[this.DIMENSIONALITY];
 
-			this.TrueCoordinates = position;//causes clamping
+			this._actuallyTrueCoordinates = this.WrapPosition(position);
 			this.Coordinates = (double[])this.TrueCoordinates.Clone();//now set values used for quadtree build (after clamping)
 		}
 
-		private static double _bounceMin;
 		private static double[] _bounceMax;
 		static AParticle() {
 			if (!Parameters.WORLD_WRAPPING) {
-				_bounceMin = Parameters.DOMAIN[0] * Parameters.WORLD_BOUNCE_PCT / 100d;
-				if (_bounceMin < Parameters.WORLD_EPSILON)
+				if (Parameters.WORLD_BOUNCE_SIZE < Parameters.WORLD_EPSILON)
 					_bounceMax = Parameters.DOMAIN.Select(x => x - Parameters.WORLD_EPSILON).ToArray();//need min <= x < max (exclude domain max)
-				else _bounceMax = Parameters.DOMAIN.Select(x => x - _bounceMin).ToArray();
+				else _bounceMax = Parameters.DOMAIN.Select(x => x - Parameters.WORLD_BOUNCE_SIZE).ToArray();
 			}
 		}
 
@@ -74,17 +72,17 @@ namespace ParticleSimulator {
 					p[i] = 0d;
 					this.Velocity[i] = this.Velocity[i] < 0d ? 0d : this.Velocity[i];
 					diffFraction = 1d;
-				} else if (p[i] < _bounceMin){
-					diffFraction = (_bounceMin - p[i]) / _bounceMin;
+				} else if (p[i] < Parameters.WORLD_BOUNCE_SIZE){
+					diffFraction = (Parameters.WORLD_BOUNCE_SIZE - p[i]) / Parameters.WORLD_BOUNCE_SIZE;
 				} else if (p[i] >= Parameters.DOMAIN[i]) {//position MUST be strictly less than domain max
 					p[i] = Parameters.DOMAIN[i] - Parameters.WORLD_EPSILON;
 					this.Velocity[i] = this.Velocity[i] > 0d ? 0d : this.Velocity[i];
 					diffFraction = -1d;
 				} else if (p[i] > _bounceMax[i]) {
-					diffFraction = (_bounceMax[i] - p[i]) / _bounceMin;
+					diffFraction = (_bounceMax[i] - p[i]) / Parameters.WORLD_BOUNCE_SIZE;
 				}
 				if (diffFraction != 0)
-					this.Velocity[i] += Math.Sign(diffFraction) * Math.Abs(this.Velocity[i]) * Math.Pow(Math.Abs(diffFraction), 2);
+					this.Velocity[i] += Parameters.WORLD_BOUNCE_WEIGHT * Math.Sign(diffFraction) * Math.Pow(diffFraction, 2);
 			}
 			return p;
 		}

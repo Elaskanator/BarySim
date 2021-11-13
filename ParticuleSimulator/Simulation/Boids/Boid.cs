@@ -106,7 +106,7 @@ namespace ParticleSimulator.Simulation.Boids {
 					}
 				} else if (this.IsPredator) {
 					minDist = 1d;
-					cohesionDist = 1d;
+					cohesionDist = 2d;
 					cohesionWeight = Parameters.BOIDS_CHASE_WE;
 				} else if (other.IsPredator) {
 					minDist = this.Vision;

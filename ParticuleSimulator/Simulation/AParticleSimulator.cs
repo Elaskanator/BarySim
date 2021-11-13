@@ -27,7 +27,17 @@ namespace ParticleSimulator.Simulation {
 	where G : AParticleGroup<P> {
 		public AParticleSimulator(Random rand = null) {
 			this._rand = rand ?? new Random();
-			this.ParticleGroups = Enumerable.Range(0, Parameters.NUM_PARTICLE_GROUPS).Select(i => this.NewParticleGroup(rand)).ToArray();
+
+			double[] center;
+			this.ParticleGroups = new G[Parameters.NUM_PARTICLE_GROUPS];
+			for (int i = 0; i < Parameters.NUM_PARTICLE_GROUPS; i++) {
+				center = Parameters.DOMAIN
+					.Divide(2)
+					.Add(NumberExtensions.RandomCoordinate_Spherical(
+						Parameters.DOMAIN.Magnitude() / 3d, Parameters.DOMAIN.Length,
+						rand));
+				this.ParticleGroups[i] = this.NewParticleGroup(center, rand);
+			}
 			this.AllParticles = this.ParticleGroups.SelectMany(g => g.Particles).ToArray();
 			this.DensityScale = Enumerable
 				.Range(1, Parameters.DENSITY_COLORS.Length - 1)
@@ -44,7 +54,7 @@ namespace ParticleSimulator.Simulation {
 		public SampleSMA[] DensityScale { get; private set; }
 		protected readonly Random _rand;
 
-		public abstract G NewParticleGroup(Random rand);
+		public abstract G NewParticleGroup(double[] center, Random rand);
 
 		public ParticleTree<P> RebuildTree() {
 			foreach (P p in this.AllParticles)
@@ -114,18 +124,7 @@ namespace ParticleSimulator.Simulation {
 					Y = d.Item1[1] * Renderer.RenderHeight / Parameters.DOMAIN[1] / 2d,
 					Particle = d.Item2})
 				.GroupBy(d => (int)d.X + Renderer.RenderWidthOffset + Parameters.WINDOW_WIDTH*((int)d.Y + Renderer.RenderHeightOffset));
-/*
-			foreach (IGrouping<int, Tuple<double[], AParticle>> xGroup
-			in particleData.GroupBy(c => (int)(c.Item1[0] * Renderer.RenderWidth / Parameters.DOMAIN[0])))
-				foreach (IGrouping<int, Tuple<AParticle, int, double>> yGroup
-				in xGroup.Select(c => new Tuple<AParticle, int, double>(c.Item2, xGroup.Key,
-					Parameters.DOMAIN.Length < 2 ? 0 : (int)(c.Item1[1] * Renderer.RenderHeight / Parameters.DOMAIN[1] / 2d)))
-					.GroupBy(t => (int)t.Item3)) 
-						yield return yGroup;
-*/
 		}
-
-		
 
 		public void AutoscaleUpdate(Tuple<char, double>[] sampling) {
 			double[] orderedCounts = ((Tuple<char, double>[])sampling.Clone()).Except(c => c is null).Select(c => c.Item2).Order().ToArray();//TODO use selection sort?

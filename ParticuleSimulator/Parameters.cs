@@ -15,9 +15,9 @@ namespace ParticleSimulator {
 		#region Particles
 		public const bool COLOR_GROUPS = true;
 
-		public const int NUM_PARTICLES_PER_GROUP = 1000;
-		public const int NUM_PARTICLE_GROUPS = 4;//only 14 colors are available
-		public const double INITIAL_SEPARATION = 100;
+		public const int NUM_PARTICLES_PER_GROUP = 250;
+		public const int NUM_PARTICLE_GROUPS = 10;//only 14 colors are available
+		public const double INITIAL_SEPARATION = 2;
 		
 		public const double MAX_STARTING_SPEED = -1;
 		public const int DESIRED_INTERACTION_NEIGHBORS = 10;
@@ -27,10 +27,11 @@ namespace ParticleSimulator {
 		public const int WINDOW_WIDTH = 160;//160 x 80 max, practical min width of graph width if that is enabled
 		public const int WINDOW_HEIGHT = 80;//using top and bottom halves of each character to get double the verticle resolution
 
-		public const double WORLD_SCALE = 2400d;
+		public const double WORLD_SCALE = 800d;
 		public const double WORLD_EPSILON = 0.0001d;
 		public const bool WORLD_WRAPPING = false;//TODO
-		public const double WORLD_BOUNCE_PCT = 5d;//note only considers one of the domain components
+		public const double WORLD_BOUNCE_SIZE = 100d;
+		public const double WORLD_BOUNCE_WEIGHT = 1d;
 
 		public const int GRAPH_WIDTH = -1;
 		public const int GRAPH_HEIGHT = 7;//at least 2
@@ -41,7 +42,7 @@ namespace ParticleSimulator {
 		public const double MAX_FPS = -1;
 
 		public const int SIMULATION_SKIPS = 0;
-		public const int TREE_REFRESH_SKIPS = 4;
+		public const int TREE_REFRESH_SKIPS = 3;
 		public const int QUADTREE_NODE_CAPACITY = 8;
 		public const int AUTOSCALING_REFRESH_FRAMES = 30;
 
@@ -56,13 +57,13 @@ namespace ParticleSimulator {
 		public const bool BOIDS_ENABLE_COHESION				= true;
 		public const bool BOIDS_ENABLE_ALIGNMENT			= true;
 		public const bool BOIDS_ENABLE_SEPARATION			= true;
-		public const double BOIDS_PREDATOR_CHANCE			= 0.01d;
+		public const double BOIDS_PREDATOR_CHANCE			= 0.005d;
 
 		public const double BOIDS_BOID_MIN_SPEED			= 2d;
-		public const double BOIDS_BOID_MAX_SPEED			= 5d;
+		public const double BOIDS_BOID_MAX_SPEED			= 3d;
 		public const double BOIDS_BOID_SPEED_DECAY			= 0.25d;//used as E^-val
 		public const double BOIDS_PREDATOR_MIN_SPEED		= 1d;
-		public const double BOIDS_PREDATOR_MAX_SPEED		= 6d;
+		public const double BOIDS_PREDATOR_MAX_SPEED		= 5d;
 		public const double BOIDS_PREDATOR_SPEED_DECAY		= 0.02d;//used as E^-val
 
 		public const double BOIDS_BOID_VISION				= 400d;
@@ -88,7 +89,7 @@ namespace ParticleSimulator {
 		public const double BOIDS_PREDATOR_GROUP_AVOID_WE	= 2.0d;
 
 		public const double BOIDS_FLEE_WE					= 2.0d;
-		public const double BOIDS_CHASE_WE					= 4.0d;
+		public const double BOIDS_CHASE_WE					= 2.0d;
 		
 		public const ConsoleColor BOIDS_PREDATOR_COLOR		= ConsoleColor.DarkRed;
 		#endregion Boids
@@ -112,6 +113,7 @@ namespace ParticleSimulator {
 		public const int NUMBER_SPACING = 5;
 		public const double PERF_SMA_ALPHA = 0.1d;
 
+		public const int PERF_GRAPH_REFRESH_MS = 125;
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 30;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 10;
 		public const double PERF_GRAPH_PERCENTILE_LOW_CUTOFF = 0d;

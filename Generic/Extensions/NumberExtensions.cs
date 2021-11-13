@@ -43,7 +43,7 @@ namespace Generic.Extensions {
 				case 1:
 					return new double[] { radius * r };
 				case 2:
-					r = Math.Sqrt(radius * r);
+					r = Math.Sqrt(radius * radius * r);
 
 					double angle = 2d*Math.PI * rand.NextDouble();
 					return new double[] {

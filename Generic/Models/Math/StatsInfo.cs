@@ -4,7 +4,7 @@ using System.Linq;
 using Generic.Extensions;
 
 namespace Generic.Models {
-	public class BasicStatisticsInfo {
+	public class StatsInfo {
 		public readonly bool EnableInterpolation = true;
 
 		public readonly double[] Data_asc;
@@ -22,7 +22,7 @@ namespace Generic.Models {
 			} else return this.Data_asc[(int)idx];
 		}
 
-		public BasicStatisticsInfo(IEnumerable<double> data) {
+		public StatsInfo(IEnumerable<double> data) {
 			if (data is null) throw new ArgumentNullException();
 			this.Data_asc = data.Order().ToArray();
 			if (this.Data_asc.Length == 0) throw new ArgumentException();
