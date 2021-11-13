@@ -32,10 +32,10 @@ namespace ParticleSimulator.Simulation {
 			this.ParticleGroups = new G[Parameters.NUM_PARTICLE_GROUPS];
 			for (int i = 0; i < Parameters.NUM_PARTICLE_GROUPS; i++) {
 				center = Parameters.DOMAIN
-					.Divide(2)
 					.Add(NumberExtensions.RandomCoordinate_Spherical(
-						Parameters.DOMAIN.Magnitude() / 3d, Parameters.DOMAIN.Length,
-						rand));
+						Parameters.DOMAIN.Magnitude(), Parameters.DOMAIN.Length,
+						rand))
+					.Divide(2);
 				this.ParticleGroups[i] = this.NewParticleGroup(center, rand);
 			}
 			this.AllParticles = this.ParticleGroups.SelectMany(g => g.Particles).ToArray();

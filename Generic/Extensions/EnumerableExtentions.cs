@@ -1,12 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using Generic.Models;
 
 namespace Generic.Extensions {
 	public static class EnumerableExtentions {
 		#region Projections
+		public static IEnumerable<T> Zip<I1, I2, I3, T>(this IEnumerable<I1> in1, IEnumerable<I2> in2, IEnumerable<I3> in3, Func<I1, I2, I3, T> projection) {
+			IEnumerator<I1> it1 = in1.GetEnumerator();
+			IEnumerator<I2> it2 = in2.GetEnumerator();
+			IEnumerator<I3> it3 = in3.GetEnumerator();
+			while (it1.MoveNext() && it2.MoveNext() && it3.MoveNext()) {
+				yield return projection(it1.Current, it2.Current, it3.Current);
+			}
+		}
+
 		/// <summary>
 		/// Complement of the Where filter, returning only items that do not return true when using the projection
 		/// </summary>
