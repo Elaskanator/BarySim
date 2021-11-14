@@ -137,7 +137,8 @@ namespace ParticleSimulator {
 			string fmtStr = "0";
 			if (decimals < 1) {
 				double diff = (_currentMax - _currentMin) * Math.Pow(10, -Math.Floor(decimals));
-				if (diff > Parameters.GRAPH_HEIGHT) decimals++;
+				if (diff > Parameters.GRAPH_HEIGHT)
+					decimals++;
 				if (decimals < 1)
 					fmtStr = "." + new string('0', (int)Math.Ceiling(Math.Abs(decimals)));
 			}
@@ -173,9 +174,9 @@ namespace ParticleSimulator {
 
 		private static void RerenderGraph() {
 			StatsInfo[]
-				frameTimeStats = _columnFrameTimeStatsMs.TakeUntil(s => s is null).ToArray(),
-				iterationTimeStats = _columnIterationTimeStatsMs.TakeUntil(s => s is null).ToArray();
-			StatsInfo rangeStats = new StatsInfo(frameTimeStats.Concat(iterationTimeStats).Where(s => !(s is null)).SelectMany(s => s.Data_asc));
+				frameTimeStats = _columnFrameTimeStatsMs.Except(s => s is null).ToArray(),
+				iterationTimeStats = _columnIterationTimeStatsMs.Except(s => s is null).ToArray();
+			StatsInfo rangeStats = new StatsInfo(frameTimeStats.Concat(iterationTimeStats).SelectMany(s => s.Data_asc));
 			
 			double
 				minMean = frameTimeStats.Min(s => s.Mean),
@@ -218,7 +219,7 @@ namespace ParticleSimulator {
 				y075 = frameTimeStats.GetPercentileValue(75),
 				y090 = frameTimeStats.GetPercentileValue(90),
 				y100 = frameTimeStats.Max,
-				yMax = iterationTimeStats.Mean > frameTimeStats.Max ? iterationTimeStats.Mean : frameTimeStats.Max;
+				yMax = iterationTimeStats.Max > y100 ? iterationTimeStats.Max : y100;
 
 			double
 				y000Scaled = Parameters.GRAPH_HEIGHT * (y000 - _currentMin) / (_currentMax - _currentMin),
@@ -229,16 +230,14 @@ namespace ParticleSimulator {
 				y090Scaled = Parameters.GRAPH_HEIGHT * (y090 - _currentMin) / (_currentMax - _currentMin),
 				y100Scaled = Parameters.GRAPH_HEIGHT * (y100 - _currentMin) / (_currentMax - _currentMin),
 				yMaxScaled = Parameters.GRAPH_HEIGHT * (yMax - _currentMin) / (_currentMax - _currentMin);
+			if (yMaxScaled >= Parameters.GRAPH_HEIGHT) yMaxScaled--;
 				
-			int
-				minY = y000Scaled < 0 ? 0 : (int)Math.Floor(y000Scaled),
-				maxY = (int)(yMaxScaled >= Parameters.GRAPH_HEIGHT ? Parameters.GRAPH_HEIGHT - 1 : yMaxScaled);
 			ConsoleColor color; char chr;
-			for (int yIdx = minY; yIdx < maxY; yIdx++) {
+			for (int yIdx = 0; yIdx < Parameters.GRAPH_HEIGHT; yIdx++) {
 				if ((int)yMaxScaled == yIdx) {//top pixel
 					if (yMaxScaled % 1d < 0.5d)//bottom half
 						chr = Parameters.CHAR_LOW;
-					else if (y000Scaled >= yIdx + 0.5d)//top half
+					else if (yMaxScaled >= yIdx + 0.5d)//top half
 						chr = Parameters.CHAR_TOP;
 					else chr = Parameters.CHAR_BOTH;
 				} else if ((int)y000Scaled == yIdx) {//bottom pixel
@@ -251,7 +250,9 @@ namespace ParticleSimulator {
 
 				switch (yIdx.CompareTo((int)y050Scaled)) {
 					case -1://bottom stat
-						if ((int)y010Scaled > yIdx)
+						if ((int)y000Scaled > yIdx)
+							color = ConsoleColor.Black;
+						else if ((int)y010Scaled > yIdx)
 							color = ConsoleColor.DarkGray;
 						else if ((int)y0205caled > yIdx)
 							color = ConsoleColor.Gray;
@@ -272,7 +273,7 @@ namespace ParticleSimulator {
 					default:
 						throw new ImpossibleCompareToException();
 				}
-				if (yIdx == maxY - 1)
+				if (yIdx == (int)yMaxScaled)
 					color = ConsoleColor.DarkBlue;
 
 				result[yIdx] = new ConsoleExtensions.CharInfo(chr, color);

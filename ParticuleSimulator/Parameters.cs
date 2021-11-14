@@ -23,7 +23,7 @@ namespace ParticleSimulator {
 		public const double AUTOSCALING_SMA = 1d;
 		public const int AUTOSCALE_INTERVAL_MS = 500;
 
-		public const int NUM_PARTICLES_PER_GROUP = 10000;
+		public const int NUM_PARTICLES_PER_GROUP = 100;
 		public const int NUM_PARTICLE_GROUPS = 10;
 		public const double INITIAL_SEPARATION = 20;
 		
@@ -48,7 +48,7 @@ namespace ParticleSimulator {
 		#endregion Sizes
 
 		#region Timings
-		public const double TARGET_FPS = -1;
+		public const double TARGET_FPS = 30;
 		public const double MAX_FPS = -1;
 
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times per render
