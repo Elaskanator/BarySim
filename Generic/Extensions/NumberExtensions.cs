@@ -41,7 +41,7 @@ namespace Generic.Extensions {
 			double r = rand.NextDouble();
 			switch (dimensionality) {
 				case 1:
-					return new double[] { radius * r };
+					return new double[] { radius * r - (radius/2d) };
 				case 2:
 					r = Math.Sqrt(radius * radius * r);
 

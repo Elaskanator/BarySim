@@ -176,9 +176,10 @@ namespace ParticleSimulator.Threading {
 		}
 
 		public void Dispose() {
-			this._latch_canAdd.Dispose();
-			this._latch_canPop.Dispose();
 			this._latch_hasAny.Dispose();
+			this._latch_canAdd.Dispose();
+			this._latch_canReturnFromAdd.Dispose();
+			this._latch_canPop.Dispose();
 			foreach (AutoResetEvent e in this.RefreshListeners)
 				e.Dispose();
 		}

@@ -40,14 +40,14 @@ namespace ParticleSimulator.Threading {
 			Thread thread;
 			if (numAssimilationThreads > 0) {
 				ParameterizedThreadStart threadStart;
-				Tuple<int, Prerequisite, EventWaitHandle, EventWaitHandle, EventWaitHandle, EventWaitHandle>[] startInfos
+				Tuple<int, Prerequisite, EventWaitHandle, EventWaitHandle, EventWaitHandle, EventWaitHandle>[] assimilationThreadStartInfos
 					= new Tuple<int, Prerequisite, EventWaitHandle, EventWaitHandle, EventWaitHandle, EventWaitHandle>[numAssimilationThreads];
 
 				Prerequisite req;
 				for (int pIdx = 0; pIdx < this.Step.InputResourceUses.Length; pIdx++) {
 					req = this.Step.InputResourceUses[pIdx];
 
-					startInfos[pIdx] = new(
+					assimilationThreadStartInfos[pIdx] = new(
 						pIdx,
 						req,
 						new AutoResetEvent(true),
@@ -59,20 +59,20 @@ namespace ParticleSimulator.Threading {
 					thread = new(threadStart);
 					this._threads[pIdx + 1] = thread;
 
-					thread.Start(startInfos[pIdx]);
+					thread.Start(assimilationThreadStartInfos[pIdx]);
 				}
 
-				Tuple<EventWaitHandle[], EventWaitHandle[]> moreStartInfos = new(
-					startInfos.Select(t => t.Item4).Except(x => x is null).ToArray(),
-					startInfos.Select(t => t.Item3)
-						.Concat(startInfos.Select(t => t.Item6)).Except(x => x is null).ToArray());
+				Tuple<EventWaitHandle[], EventWaitHandle[]> mainSignalsAndReturns = new(
+					assimilationThreadStartInfos.Select(t => t.Item4).Except(x => x is null).ToArray(),
+					assimilationThreadStartInfos.Select(t => t.Item3)
+						.Concat(assimilationThreadStartInfos.Select(t => t.Item6)).Except(x => x is null).ToArray());
 				
 				this._handles =
-					startInfos.Select(t => t.Item3)
-						.Concat(startInfos.Select(t => t.Item3))
-						.Concat(startInfos.Select(t => t.Item4))
-						.Concat(startInfos.Select(t => t.Item5))
-						.Concat(startInfos.Select(t => t.Item6))
+					assimilationThreadStartInfos.Select(t => t.Item3)
+						.Concat(assimilationThreadStartInfos.Select(t => t.Item3))
+						.Concat(assimilationThreadStartInfos.Select(t => t.Item4))
+						.Concat(assimilationThreadStartInfos.Select(t => t.Item5))
+						.Concat(assimilationThreadStartInfos.Select(t => t.Item6))
 						.Except(x => x is null)
 						.ToArray();
 
@@ -80,7 +80,7 @@ namespace ParticleSimulator.Threading {
 				thread = new(threadStart);
 				this._threads[0] = thread;
 
-				thread.Start(moreStartInfos);
+				thread.Start(mainSignalsAndReturns);
 			} else {
 				this._handles = Array.Empty<EventWaitHandle>();
 
@@ -93,14 +93,16 @@ namespace ParticleSimulator.Threading {
 
 		public void Dispose() {
 			if (!this.IsActive) return;
-
 			this.IsActive = false;
-			foreach (Prerequisite prereq in this.Step.InputResourceUses)
-				prereq.Resource.Dispose();
+
 			foreach (EventWaitHandle handle in this._handles)
 				handle.Dispose();
 			foreach (Thread thread in this._threads)
 				thread.Join(0);
+		}
+
+		public void Stop() {
+			this.IsActive = false;
 		}
 
 		private void ReceiveInput(object info) {
@@ -114,15 +116,17 @@ namespace ParticleSimulator.Threading {
 				refreshSignal = castedInfo.Item5;
 
 			int skips = 0, reuses = 0;
-			bool allowAccess, allowReuse;
+			bool allowAccess, allowReuse, ready;
 			while (this.IsActive) {
 				signal.WaitOne();
+				if (!this.IsActive) return;
 
 				allowAccess = true; allowReuse = false;
 				if (this.NumCompleted > 0) {
 					allowReuse = true;
 					if (req.ReuseAmount < 0) {
 						allowAccess = false;
+						reuses++;
 					} else if (reuses < req.ReuseAmount) {
 						allowAccess = false;
 						reuses++;
@@ -131,47 +135,62 @@ namespace ParticleSimulator.Threading {
 				}
 
 				if (allowReuse) {
-					returnSignal.Set();
 					skips++;
-					if (allowAccess)
-						if (req.Resource.TryDequeue(ref _ingestBuffer[outIdx], TimeSpan.Zero))
-							skips = 0;
-				} else if (allowAccess) {
-					if (!(refreshSignal is null))
-						refreshSignal.WaitOne();
-
-					if (req.DoConsume) {
-						if (req.ReadTimeout.HasValue && req.Resource.TryDequeue(ref _ingestBuffer[outIdx], req.ReadTimeout.Value)) {
-							skips = 0;
-							reuses = 0;
-						} else {
-							if (req.AllowDirtyRead) {
-								skips++;
+					if (allowAccess) {
+						ready = true;
+						if (!(refreshSignal is null))
+							ready = refreshSignal.WaitOne(TimeSpan.Zero);
+						if (ready) {
+							if (req.DoConsume) {
+								if (req.Resource.TryDequeue(ref _ingestBuffer[outIdx], TimeSpan.Zero)) {
+									skips = 0;
+									reuses = 0;
+								} else if (req.AllowDirtyRead) {
+									_ingestBuffer[outIdx] = req.Resource.Current;
+								}
+							} else if (req.AllowDirtyRead) {
 								_ingestBuffer[outIdx] = req.Resource.Current;
-							} else {
-								_ingestBuffer[outIdx] = req.Resource.Dequeue();
-								skips = 0;
-								reuses = 0;
-							}
-						}
-					} else {
-						if (req.ReadTimeout.HasValue && req.Resource.TryPeek(ref _ingestBuffer[outIdx], req.ReadTimeout.Value)) {
-							skips = 0;
-							reuses = 0;
-						} else {
-							if (req.AllowDirtyRead) {
-								skips++;
-								_ingestBuffer[outIdx] = req.Resource.Current;
-							} else {
-								_ingestBuffer[outIdx] = req.Resource.Peek();
-								skips = 0;
-								reuses = 0;
 							}
 						}
 					}
+				} else if (allowAccess) {
+					if (!(refreshSignal is null)) {
+						refreshSignal.WaitOne();
+						if (!this.IsActive) return;
+					}
 
-					returnSignal.Set();
+					if (req.DoConsume) {
+						if (req.ReadTimeout.HasValue && req.Resource.TryDequeue(ref _ingestBuffer[outIdx], req.ReadTimeout.Value)) {
+							if (!this.IsActive) return;
+							skips = 0;
+							reuses = 0;
+						} else if (req.AllowDirtyRead) {
+							skips++;
+							_ingestBuffer[outIdx] = req.Resource.Current;
+						} else {
+							_ingestBuffer[outIdx] = req.Resource.Dequeue();
+							if (!this.IsActive) return;
+							skips = 0;
+							reuses = 0;
+						}
+					} else {
+						if (req.ReadTimeout.HasValue && req.Resource.TryPeek(ref _ingestBuffer[outIdx], req.ReadTimeout.Value)) {
+							if (!this.IsActive) return;
+							skips = 0;
+							reuses = 0;
+						} else if (req.AllowDirtyRead) {
+							skips++;
+							_ingestBuffer[outIdx] = req.Resource.Current;
+						} else {
+							_ingestBuffer[outIdx] = req.Resource.Peek();
+							if (!this.IsActive) return;
+							skips = 0;
+							reuses = 0;
+						}
+					}
 				}
+
+				returnSignal.Set();
 			}
 		}
 
@@ -192,17 +211,21 @@ namespace ParticleSimulator.Threading {
 				this.IterationStartUtc = DateTime.UtcNow;
 				waitHolds = false;
 
-				if (signals.Any())
+				if (signals.Any()) {
 					this.IsPunctual = this.Step.DataLoadingTimeout.HasValue
 						? WaitHandle.WaitAll(signals, this.Step.DataLoadingTimeout.Value)
 						: WaitHandle.WaitAll(signals);
+					if (!this.IsActive) return;
+				}
 
 				this.IterationReceiveUtc = DateTime.UtcNow;
 				if (!(this.Step.DataAssimilationTicksAverager is null))
 					this.Step.DataAssimilationTicksAverager.Update(this.IterationReceiveUtc.Value.Subtract(this.IterationStartUtc.Value).Ticks);
 
-				if (!(this.Step.Synchronizer is null))
+				if (!(this.Step.Synchronizer is null)) {
 					this.Step.Synchronizer.Synchronize();
+					if (!this.IsActive) return;
+				}
 
 				this.IterationSyncResumeUtc = DateTime.UtcNow;
 				if (!(this.Step.SynchronizationTicksAverager is null))
@@ -222,12 +245,10 @@ namespace ParticleSimulator.Threading {
 						this.Step.ExclusiveTicksAverager.Update(this.IterationCalcEndUtc.Value.Subtract(this.IterationSyncResumeUtc.Value).Ticks);
 
 					if (this.Step.OutputSkips < 1 || this.NumCompleted % (this.Step.OutputSkips + 1) == 0) {
-						if (this.Step.IsOutputOverwrite) {
+						if (this.Step.IsOutputOverwrite)
 							this.Step.OutputResource.Overwrite(result);
-						} else {
-							this.Step.OutputResource.Enqueue(result);
-							waitHolds = true;
-						}
+						else this.Step.OutputResource.Enqueue(result);
+						waitHolds = true;
 					}
 				}
 
@@ -239,7 +260,7 @@ namespace ParticleSimulator.Threading {
 				if (!(this.Step.Callback is null))
 					this.Step.Callback(this);
 				
-				if (waitHolds)
+				if (waitHolds && this.IsActive)
 					if (this.Step.OutputResource.ReleaseListeners.Any())
 						WaitHandle.WaitAll(this.Step.OutputResource.ReleaseListeners);
 

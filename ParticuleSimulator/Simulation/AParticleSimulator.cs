@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Generic.Extensions;
@@ -9,14 +10,13 @@ using ParticleSimulator.Rendering;
 
 namespace ParticleSimulator.Simulation {
 	public interface IParticleSimulator : IEnumerable<AParticle> {
-		public bool IsDiscrete { get; }
 		public AParticle[] AllParticles { get; }
 		public SampleSMA[] DensityScale { get; }
 		public int InteractionLimit { get; }
 		public int? NeighborhoodFilteringDepth { get; }
 
 		public ITree RebuildTree();
-		public ConsoleColor ChooseGroupColor(AParticle[] others);
+		public ConsoleColor ChooseColor(AParticle[] others);
 		public Tuple<double[], AParticle>[] RefreshSimulation(object[] parameters);
 		public Tuple<char, AParticle[]>[] Resample(object[] parameters);
 		public void AutoscaleUpdate(object[] parameters);
@@ -26,27 +26,34 @@ namespace ParticleSimulator.Simulation {
 	where P : AParticle
 	where G : AParticleGroup<P> {
 		public AParticleSimulator() {
-			double[] center;
+			double[] spawnCenter;
 			this.ParticleGroups = new G[Parameters.NUM_PARTICLE_GROUPS];
 			for (int i = 0; i < Parameters.NUM_PARTICLE_GROUPS; i++) {
-				center = Parameters.DOMAIN
-					.Add(NumberExtensions.RandomCoordinate_Spherical(
-						Parameters.DOMAIN.Magnitude() / 2d, Parameters.DOMAIN.Length,
-						Program.Random))
-					.Divide(2);
+				double test = Parameters.DOMAIN.Magnitude();
+				spawnCenter = Parameters.DOMAIN.Divide(2).Add(
+					NumberExtensions.RandomCoordinate_Spherical(
+						Parameters.DOMAIN.Max() / 2d, Parameters.DOMAIN.Length,
+						Program.Random));
 				this.ParticleGroups[i] = this.NewParticleGroup();
-				this.ParticleGroups[i].Init(center);
+				this.ParticleGroups[i].Init(spawnCenter);
 			}
 			this.AllParticles = this.ParticleGroups.SelectMany(g => g.Particles).ToArray();
-			this.DensityScale = Enumerable
-				.Range(1, Parameters.DENSITY_COLORS.Length - 1)
-				.Select(x => new SampleSMA(Parameters.AUTOSCALING_SMA_ALPHA, x))
-				.ToArray();
+			int numDensityValues = Parameters.COLOR_ARRAY.Length - 1;
+			if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Depth)
+				this.DensityScale =
+				Enumerable
+					.Range(1, numDensityValues + 1)
+					.Select(x => { SampleSMA result = new SampleSMA(Parameters.AUTOSCALING_SMA); result.Update(x / (1d + numDensityValues)); return result; })
+					.ToArray();
+			else this.DensityScale =
+				Enumerable
+					.Range(1, numDensityValues + 1)
+					.Select(x => { SampleSMA result = new SampleSMA(Parameters.AUTOSCALING_SMA); result.Update(x); return result; })
+					.ToArray();
 		}
 		public virtual int InteractionLimit => Parameters.DESIRED_INTERACTION_NEIGHBORS;
 		public virtual int? NeighborhoodFilteringDepth => null;
 		
-		public abstract bool IsDiscrete { get; }
 		public G[] ParticleGroups { get; private set; }
 		public P[] AllParticles { get; private set; }
 		AParticle[] IParticleSimulator.AllParticles => this.AllParticles;
@@ -76,26 +83,14 @@ namespace ParticleSimulator.Simulation {
 		public Tuple<double[], AParticle>[] RefreshSimulation(object[] parameters) { return this.RefreshSimulation((ParticleTree<P>)parameters[0]); }
 
 		protected virtual void InteractTree(ParticleTree<P> tree) {
-			Parallel.ForEach(tree.Leaves, leaf => {
-				foreach (P p in leaf.NodeElements) {
-					p.AccumulatedImpulse = new double[p.DIMENSIONALITY];
-					p.Interact(leaf.GetNeighbors().Except(p2 => p2.ID == p.ID));
-				}
-			});
-		}
-
-		public virtual ConsoleColor ChooseGroupColor(AParticle[] others) {//treat like a static method
-			int dominantGroupID;
-			if (Parameters.DIMENSIONALITY < 3)
-				dominantGroupID = others.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
-			else dominantGroupID = others.GroupBy(p => p.GroupID).MinBy(g=> g.Min(p => p.TrueCoordinates.Skip(2).ToArray().Magnitude())).Key;
-
-			return (ConsoleColor)(dominantGroupID%15 + 1);
-		}
-
-		private double GetDepthScalar(double[] v) {
-			double h = v.Skip(2).ToArray().Magnitude();
-			return 1d - (h / Parameters.DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT);
+			Parallel.ForEach(
+				tree.NestedChildren.Take(Parameters.SIMULATION_PARALLELISM),
+				child => {
+					foreach (ParticleTree<P> leaf in child.Leaves)
+						foreach (P p in leaf.NodeElements) {
+							p.AccumulatedImpulse = new double[p.DIMENSIONALITY];
+							p.Interact(leaf.GetNeighbors().Except(p2 => p2.ID == p.ID));
+			}});
 		}
 
 		public virtual Tuple<char, AParticle[]>[] Resample(object[] parameters) {
@@ -126,44 +121,73 @@ namespace ParticleSimulator.Simulation {
 			return particleData//Parameters.RENDER_3D_PHI
 				.Select(d => new {
 					X = d.Item1[0] * Renderer.RenderWidth / Parameters.DOMAIN[0],
-					Y = d.Item1[1] * Renderer.RenderHeight / Parameters.DOMAIN[1] / 2d,
+					Y = d.Item1.Length < 2 ? 0d : d.Item1[1] * Renderer.RenderHeight / Parameters.DOMAIN[1] / 2d,
 					Particle = d.Item2})
 				.GroupBy(d => (int)d.X + Renderer.RenderWidthOffset + Parameters.WINDOW_WIDTH*((int)d.Y + Renderer.RenderHeightOffset));
 		}
 
-		public void AutoscaleUpdate(Tuple<char, double>[] sampling) {
-			double[] orderedCounts = ((Tuple<char, double>[])sampling.Clone()).Except(c => c is null).Select(c => c.Item2).Order().ToArray();//TODO use selection sort?
-			if (orderedCounts.Length > 0) {
-				int totalBands = Parameters.DENSITY_COLORS.Length - 1;
+		public void AutoscaleUpdate(Tuple<char, AParticle[]>[] sampling) {
+			double[] orderedDensities = sampling.Except(t => t is null).Select(t => this.GetDensity(t.Item2)).Order().ToArray();
+			if (orderedDensities.Any()) {
+				int totalBands = Parameters.COLOR_ARRAY.Length;
 
-				double curVal = 0d, curValRounded = 0d;
-				double newVal = 0d, newValRounded = 0d;
-				int percentilIdx;
-				for (int band = 1; band <= totalBands; band++) {
-					percentilIdx = (int)(((double)orderedCounts.Length * band / (totalBands + 1d)) - 1d);
+				double curVal = 0d, newVal = 0d;
+				int percentileIdx;
+				for (int bandIdx = 0; bandIdx < this.DensityScale.Length; bandIdx++) {//skip last band
+					percentileIdx = (int)((double)orderedDensities.Length * (bandIdx + 1d) / totalBands);
 
-					if (orderedCounts.Length > percentilIdx) {
-						curVal = curValRounded = this.DensityScale[band - 1].Current;
-						newVal = newValRounded = orderedCounts[percentilIdx];
-						if (Program.Simulator.IsDiscrete) {
-							curValRounded = Math.Floor(curVal);
-							newValRounded = Math.Ceiling(newVal);
-						}
-					} else {
-						newVal = newValRounded = curVal = ++curValRounded;
+					if (percentileIdx < orderedDensities.Length) {
+						curVal = this.DensityScale[bandIdx].Current;
+						newVal = orderedDensities[percentileIdx];
 					}
 
-					if (newValRounded > curVal) {
-						this.DensityScale[band - 1].Update(newValRounded, Program.StepEval_Resample.NumCompleted <= 1 ? 1d : null);
-					} else if (band > 1 && newValRounded <= this.DensityScale[band - 2].Current) {
-						this.DensityScale[band - 1].Update(this.DensityScale[band - 2].Current + 1, 1d);
-					} else {
-						this.DensityScale[band - 1].Update(newValRounded, 1d);
-					}
+					this.DensityScale[bandIdx].Update(newVal);
 				}
 			}
 		}
-		public void AutoscaleUpdate(object[] parameters) { this.AutoscaleUpdate((Tuple<char, double>[])parameters[0]); }
+		public void AutoscaleUpdate(object[] parameters) { this.AutoscaleUpdate((Tuple<char, AParticle[]>[])parameters[0]); }
+
+		public ConsoleColor ChooseColor(P[] particles) {
+			int rank;
+			switch (Parameters.COLOR_SCHEME) {
+				case ParticleColoringMethod.Density:
+					double density = this.GetDensity(particles);
+					rank = Program.Simulator.DensityScale.TakeWhile(a => a.Current < density).Count();
+					rank = rank < Parameters.COLOR_ARRAY.Length ? rank : Parameters.COLOR_ARRAY.Length - 1;
+					return Parameters.COLOR_ARRAY[rank];
+				case ParticleColoringMethod.Group:
+					return this.ChooseGroupColor(particles);
+				case ParticleColoringMethod.Depth:
+					if (Parameters.DIMENSIONALITY > 2) {
+						int numColors = Parameters.COLOR_ARRAY.Length;
+						double depth = 1d - particles.Min(p => GetDepthScalar(p.Coordinates));
+						rank = Program.Simulator.DensityScale.Take(numColors - 1).TakeWhile(a => a.Current < depth).Count();
+						return Parameters.COLOR_ARRAY[rank];
+					} else return Parameters.COLOR_ARRAY[^1];
+				default:
+					throw new InvalidEnumArgumentException(nameof(Parameters.COLOR_SCHEME));
+			}
+		}
+		public ConsoleColor ChooseColor(AParticle[] particles) { return this.ChooseColor(particles.Cast<P>().ToArray()); }
+
+		public virtual ConsoleColor ChooseGroupColor(P[] particles) {
+			int dominantGroupID;
+			if (Parameters.DIMENSIONALITY > 2)
+				dominantGroupID = particles.MinBy(p => this.GetDepthScalar(p.TrueCoordinates)).GroupID;
+			else dominantGroupID  = particles.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
+			return Parameters.COLOR_ARRAY[dominantGroupID % Parameters.COLOR_ARRAY.Length];
+			//return (ConsoleColor)(1 + (dominantGroupID % 15));
+		}
+
+		public virtual double GetDensity(AParticle[] particles) {
+			if (Parameters.DIMENSIONALITY > 2)
+				return particles.Sum(p => this.GetDepthScalar(p.TrueCoordinates));
+			else return particles.Length;
+		}
+
+		public double GetDepthScalar(double[] v) {
+			return 1d - (v.Skip(2).ToArray().Magnitude() / Parameters.DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT);
+		}
 
 		public IEnumerator<AParticle> GetEnumerator() { return this.AllParticles.AsEnumerable().GetEnumerator(); }
 		IEnumerator IEnumerable.GetEnumerator() {return this.AllParticles.GetEnumerator(); }

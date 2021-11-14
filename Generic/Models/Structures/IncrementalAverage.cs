@@ -10,9 +10,6 @@ namespace Generic.Models {
 		protected virtual double UpdateStrength { get { return 1d / this.NumUpdates; } }
 
 		public AIncrementalAverage() { }
-		public AIncrementalAverage(T init) {
-			this.Update(init);
-		}
 
 		public void Update(T value, double? weighting = null) {
 			this.LastUpdate = value;
@@ -42,7 +39,6 @@ namespace Generic.Models {
 	}
 	public class IncrementalAverage : AIncrementalAverage<double> {
 		public IncrementalAverage() : base() { }
-		public IncrementalAverage(double init) : base(init) { }
 
 		protected override double Multiply(double a, double b) { return a * b; }
 		protected override double Add(double a, double b) { return a + b; }
@@ -53,7 +49,6 @@ namespace Generic.Models {
 		private readonly double[] _history;
 
 		public TrackingIncrementalAverage() : base() { }
-		public TrackingIncrementalAverage(double init) : base(init) { }
 
 		public IEnumerable<double> History {
 			get {
@@ -84,11 +79,6 @@ namespace Generic.Models {
 		public SampleSMA(double weighting) {
 			this.Alpha = weighting;
 		}
-
-		public SampleSMA(double weighting, double init)
-		: base(init) {
-			this.Alpha = weighting;
-		}
 	}
 
 	public class SampleSMA_Tracking : TrackingIncrementalAverage {
@@ -96,9 +86,8 @@ namespace Generic.Models {
 		public double Beta { get { return 1d - this.Alpha; } }
 
 		public SampleSMA_Tracking() : base() { }
-		public SampleSMA_Tracking(double init) : base(init) { }
 
-		public SampleSMA_Tracking(double weighting, int historyLength = 100, double? init = null) : base(historyLength, init) {
+		public SampleSMA_Tracking(double weighting, int historyLength = 100) : base(historyLength) {
 			this.Alpha = weighting;
 		}
 		
