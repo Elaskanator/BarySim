@@ -55,7 +55,6 @@ namespace ParticleSimulator {
 						_currentColumnFrameTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
 						_currentColumnIterationTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
 						_graphColumns = _graphColumns.ShiftRight(false);
-						_graphColumns[0] = _graphColumns[1];
 						_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.ShiftRight(false);
 						_columnIterationTimeStatsMs = _columnIterationTimeStatsMs.ShiftRight(false);
 					}

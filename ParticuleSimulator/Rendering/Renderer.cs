@@ -57,7 +57,7 @@ namespace ParticleSimulator.Rendering {
 		public static void FlushScreenBuffer(object[] parameters) {
 			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])parameters[0];
 
-			int xOffset = Parameters.PERF_ENABLE ? 5 : 0,
+			int xOffset = Parameters.PERF_ENABLE ? 6 : 0,
 				yOffset = Parameters.PERF_ENABLE ? 1 : 0;
 
 			if (Program.StepEval_Draw.IsPunctual ?? false) _lastUpdateUtc = DateTime.UtcNow;
