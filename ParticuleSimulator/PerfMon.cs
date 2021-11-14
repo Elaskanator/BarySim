@@ -101,8 +101,8 @@ namespace ParticleSimulator {
 
 		private static void RefreshStatsHedaer() {
 			double
-				fps = 10000000 / Program.StepEval_Draw.Step.IterationTicksAverager.LastUpdate,
-				smoothedFps = 10000000 / Program.StepEval_Draw.Step.IterationTicksAverager.Current;
+				fps = 10000000 / (Program.StepEval_Resample.Step.IterationTicksAverager.LastUpdate + Program.StepEval_Draw.Step.ExclusiveTicksAverager.LastUpdate),
+				smoothedFps = 10000000 / (Program.StepEval_Resample.Step.IterationTicksAverager.Current + Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current);
 			_statsHeaderValues[0] = new("FPS", smoothedFps, ChooseFpsColor(fps));
 
 			if (Parameters.PERF_STATS_ENABLE) {
