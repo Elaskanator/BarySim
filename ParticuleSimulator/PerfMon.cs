@@ -63,12 +63,12 @@ namespace ParticleSimulator {
 					new double[] {
 						Program.StepEval_Simulate.Step.DataAssimilationTicksAverager.Current,
 						Program.StepEval_Simulate.Step.ExclusiveTicksAverager.Current,
-						Program.StepEval_Rasterize.Step.ExclusiveTicksAverager.Current,
 						Program.StepEval_Resample.Step.ExclusiveTicksAverager.Current,
+						Program.StepEval_Rasterize.Step.ExclusiveTicksAverager.Current,
 					}.Max() + Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current
 				) / 10000d;
 				double currentIterationTimeMs =
-					(	Program.StepEval_Resample.Step.IterationTicksAverager.Current
+					(	Program.StepEval_Rasterize.Step.IterationTicksAverager.Current
 						+ Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current)
 					/ 10000d;
 
@@ -101,8 +101,8 @@ namespace ParticleSimulator {
 
 		private static void RefreshStatsHedaer() {
 			double
-				fps = 10000000 / (Program.StepEval_Resample.Step.IterationTicksAverager.LastUpdate + Program.StepEval_Draw.Step.ExclusiveTicksAverager.LastUpdate),
-				smoothedFps = 10000000 / (Program.StepEval_Resample.Step.IterationTicksAverager.Current + Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current);
+				fps = 10000000 / (Program.StepEval_Rasterize.Step.IterationTicksAverager.LastUpdate + Program.StepEval_Draw.Step.ExclusiveTicksAverager.LastUpdate),
+				smoothedFps = 10000000 / (Program.StepEval_Rasterize.Step.IterationTicksAverager.Current + Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current);
 			_statsHeaderValues[0] = new("FPS", smoothedFps, ChooseFpsColor(fps));
 
 			if (Parameters.PERF_STATS_ENABLE) {
