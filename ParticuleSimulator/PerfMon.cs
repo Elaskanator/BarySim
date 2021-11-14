@@ -55,7 +55,6 @@ namespace ParticleSimulator {
 						_currentColumnFrameTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
 						_currentColumnIterationTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
 						_graphColumns = _graphColumns.ShiftRight(false);
-						_graphColumns[0] = _graphColumns[1];
 						_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.ShiftRight(false);
 						_columnIterationTimeStatsMs = _columnIterationTimeStatsMs.ShiftRight(false);
 					}
@@ -263,7 +262,7 @@ namespace ParticleSimulator {
 						break;
 					case 1://top stat
 						if ((int)y100Scaled < yIdx)
-							color = ConsoleColor.DarkGreen;
+							color = ConsoleColor.Black;
 						else if ((int)y090Scaled < yIdx)
 							color = ConsoleColor.DarkGray;
 						else if ((int)y075Scaled < yIdx)

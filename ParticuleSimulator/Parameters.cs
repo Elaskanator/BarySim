@@ -129,13 +129,13 @@ namespace ParticleSimulator {
 		public static readonly Tuple<double, ConsoleColor>[] RatioColors = new Tuple<double, ConsoleColor>[] {
 			new Tuple<double, ConsoleColor>(1.05d, ConsoleColor.Cyan),
 			new Tuple<double, ConsoleColor>(1.00d, ConsoleColor.DarkGreen),
-			new Tuple<double, ConsoleColor>(0.95d, ConsoleColor.Green),
-			new Tuple<double, ConsoleColor>(0.67d, ConsoleColor.Yellow),
-			new Tuple<double, ConsoleColor>(0.50d, ConsoleColor.DarkYellow),
-			new Tuple<double, ConsoleColor>(0.33d, ConsoleColor.Magenta),
-			new Tuple<double, ConsoleColor>(0.25d, ConsoleColor.Red),
+			new Tuple<double, ConsoleColor>(0.90d, ConsoleColor.Green),
+			new Tuple<double, ConsoleColor>(0.75d, ConsoleColor.Gray),
+			new Tuple<double, ConsoleColor>(0.50d, ConsoleColor.Yellow),
+			new Tuple<double, ConsoleColor>(0.33d, ConsoleColor.DarkYellow),
+			new Tuple<double, ConsoleColor>(0.25d, ConsoleColor.Magenta),
 			new Tuple<double, ConsoleColor>(0.10d, ConsoleColor.DarkRed),
-			new Tuple<double, ConsoleColor>(0.00d, ConsoleColor.DarkRed),
+			new Tuple<double, ConsoleColor>(0.00d, ConsoleColor.Red),
 			new Tuple<double, ConsoleColor>(double.NegativeInfinity, ConsoleColor.White)
 		};
 		
