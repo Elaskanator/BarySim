@@ -32,7 +32,7 @@ namespace ParticleSimulator.Simulation {
 				double test = Parameters.DOMAIN.Magnitude();
 				spawnCenter = Parameters.DOMAIN.Divide(2).Add(
 					NumberExtensions.RandomCoordinate_Spherical(
-						Parameters.DOMAIN.Max() / 2d, Parameters.DOMAIN.Length,
+						Parameters.DOMAIN.Max() / 3d, Parameters.DOMAIN.Length,
 						Program.Random));
 				this.ParticleGroups[i] = this.NewParticleGroup();
 				this.ParticleGroups[i].Init(spawnCenter);

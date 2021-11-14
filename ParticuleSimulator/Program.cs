@@ -141,7 +141,7 @@ namespace ParticleSimulator {
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
 				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				//IterationTicksAverager = null,
+				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				//DataLoadingTimeout = null,
 				OutputResource = Resource_Resamplings,
 				//IsOutputOverwrite = false,

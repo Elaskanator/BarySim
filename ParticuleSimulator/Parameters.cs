@@ -5,16 +5,17 @@ using Generic.Models;
 using ParticleSimulator.Rendering;
 
 namespace ParticleSimulator {
+	//NOTE sentinel value is usually -1 for unlimited
 	public static class Parameters {
-		//NOTE sentinel value is usually -1 for unlimited
-
 		public const bool ENABLE_ASYNCHRONOUS = true;
-		public const int PRECALCULATION_LIMIT = 3;
-		public const int SIMULATION_PARALLELISM = 16;
 		public const bool LEGEND_ENABLE = true;
 		public const bool PERF_ENABLE = true;
 		public const bool PERF_STATS_ENABLE = true;
 		public const bool PERF_GRAPH_ENABLE = true;
+
+		public const int PRECALCULATION_LIMIT = 3;
+		public const int SIMULATION_PARALLELISM = 16;
+		public const int DESIRED_INTERACTION_NEIGHBORS = 10;
 
 		#region Particles
 		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Density;
@@ -23,12 +24,11 @@ namespace ParticleSimulator {
 		public const double AUTOSCALING_SMA = 1d;
 		public const int AUTOSCALE_INTERVAL_MS = 500;
 
-		public const int NUM_PARTICLES_PER_GROUP = 100;
+		public const int NUM_PARTICLES_PER_GROUP = 10000;
 		public const int NUM_PARTICLE_GROUPS = 10;
-		public const double INITIAL_SEPARATION = 20;
+		public const double INITIAL_SEPARATION = 10;
 		
 		public const double MAX_STARTING_SPEED = -1;
-		public const int DESIRED_INTERACTION_NEIGHBORS = 8;
 		#endregion Particles
 
 		#region Sizes
@@ -37,8 +37,8 @@ namespace ParticleSimulator {
 
 		public const double RENDER_3D_PHI = Math.PI / 4d;
 
-		public const int DIMENSIONALITY = 3;
-		public const double WORLD_SCALE = 4800d;
+		public const int DIMENSIONALITY = 2;
+		public const double WORLD_SCALE = 10000d;
 		public const double WORLD_EPSILON = 0.0001d;
 		public const bool WORLD_WRAPPING = false;//TODO
 		public const double WORLD_BOUNCE_WEIGHT = 0.004d;
@@ -48,7 +48,7 @@ namespace ParticleSimulator {
 		#endregion Sizes
 
 		#region Timings
-		public const double TARGET_FPS = 30;
+		public const double TARGET_FPS = -1;
 		public const double MAX_FPS = -1;
 
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times per render
@@ -79,18 +79,18 @@ namespace ParticleSimulator {
 
 		public const double BOIDS_BOID_MIN_DIST				= 50d;
 		public const double BOIDS_BOID_COHESION_DIST		= 100d;
-		public const double BOIDS_BOID_GROUP_AVOID_DIST		= 150d;
+		public const double BOIDS_BOID_GROUP_AVOID_DIST		= 400d;
 		public const double BOIDS_PREDATOR_MIN_DIST			= 10d;
 		public const double BOIDS_PREDATOR_COHESION_DIST	= 40d;
 		public const double BOIDS_PREDATOR_GROUP_AVOID_DIST	= 400d;
 
-		public const double BOIDS_BOID_DISPERSE_W			= 0.0005d;
-		public const double BOIDS_BOID_COHESION_W			= 0.06d;
+		public const double BOIDS_BOID_DISPERSE_W			= 0.001d;
+		public const double BOIDS_BOID_COHESION_W			= 0.1d;
 		public const double BOIDS_BOID_ALIGNMENT_W			= 0.2d;
-		public const double BOIDS_BOID_GROUP_AVOID_WE		= 0.3d;
+		public const double BOIDS_BOID_GROUP_AVOID_WE		= 0.1d;
 
 		public const double BOIDS_PREDATOR_DISPERSE_W		= 0.0002d;
-		public const double BOIDS_PREDATOR_COHESION_W		= 0.001d;
+		public const double BOIDS_PREDATOR_COHESION_W		= 0.0005d;
 		public const double BOIDS_PREDATOR_ALIGNMENT_W		= 0.00001d;
 		public const double BOIDS_PREDATOR_GROUP_AVOID_WE	= 2.0d;
 
