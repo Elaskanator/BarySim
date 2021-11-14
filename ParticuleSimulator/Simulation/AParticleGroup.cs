@@ -15,11 +15,11 @@ namespace ParticleSimulator.Simulation {
 		public abstract P NewParticle(double[] position, double[] velocity, Random rand);
 
 		public AParticleGroup() {
-			this.ID = ++_globalID;
+			this.ID = _globalID++;
 		}
 
 		public void Init(double[] center) {
-			double particleVolume = NumberExtensions.HypersphereVolume(Parameters.INITIAL_SEPARATION, Parameters.DOMAIN.Length);
+			double particleVolume = NumberExtensions.HypersphereVolume(Parameters.INITIAL_SEPARATION * 2d, Parameters.DOMAIN.Length);
 			double radius = NumberExtensions.HypersphereRadius(particleVolume * Parameters.NUM_PARTICLES_PER_GROUP, Parameters.DOMAIN.Length);
 
 			double startingSpeedRange = Parameters.MAX_STARTING_SPEED < 0

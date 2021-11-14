@@ -60,11 +60,14 @@ namespace ParticleSimulator {
 						_columnIterationTimeStatsMs = _columnIterationTimeStatsMs.ShiftRight(false);
 					}
 				}
-				double currentFrameTimeMs = new double[] {
-					Program.StepEval_Simulate.Step.ExclusiveTicksAverager.Current,
-					Program.StepEval_Rasterize.Step.ExclusiveTicksAverager.Current,
-					Program.StepEval_Resample.Step.ExclusiveTicksAverager.Current,
-				}.Max() / 10000d;
+				double currentFrameTimeMs = (
+					new double[] {
+						Program.StepEval_Simulate.Step.DataAssimilationTicksAverager.Current,
+						Program.StepEval_Simulate.Step.ExclusiveTicksAverager.Current,
+						Program.StepEval_Rasterize.Step.ExclusiveTicksAverager.Current,
+						Program.StepEval_Resample.Step.ExclusiveTicksAverager.Current,
+					}.Max() + Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current
+				) / 10000d;
 				double currentIterationTimeMs = Program.StepEval_Draw.Step.IterationTicksAverager.Current / 10000d;
 
 				_frameTimingMs.Update(currentFrameTimeMs);
@@ -179,7 +182,7 @@ namespace ParticleSimulator {
 				minMean = frameTimeStats.Min(s => s.Mean),
 				maxMean = frameTimeStats.Max(s => s.Mean),
 				newMin = rangeStats.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_LOW_CUTOFF),
-				newMax = rangeStats.GetPercentileValue(100 - Parameters.PERF_GRAPH_PERCENTILE_HIGH_CUTOFF);
+				newMax = rangeStats.GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_HIGH_CUTOFF);
 
 			if (newMin > minMean)
 				newMin = minMean;
@@ -215,20 +218,22 @@ namespace ParticleSimulator {
 				y050 = frameTimeStats.Mean,
 				y075 = frameTimeStats.GetPercentileValue(75),
 				y090 = frameTimeStats.GetPercentileValue(90),
-				y100 = iterationTimeStats.Mean > frameTimeStats.Max ? iterationTimeStats.Mean : frameTimeStats.Max;
+				y100 = frameTimeStats.Max,
+				yMax = iterationTimeStats.Mean > frameTimeStats.Max ? iterationTimeStats.Mean : frameTimeStats.Max;
 
 			double
 				y000Scaled = Parameters.GRAPH_HEIGHT * (y000 - _currentMin) / (_currentMax - _currentMin),
 				y010Scaled = Parameters.GRAPH_HEIGHT * (y010 - _currentMin) / (_currentMax - _currentMin),
 				y0205caled = Parameters.GRAPH_HEIGHT * (y025 - _currentMin) / (_currentMax - _currentMin),
 				y050Scaled = Parameters.GRAPH_HEIGHT * (y050 - _currentMin) / (_currentMax - _currentMin),
-				Y075Scaled = Parameters.GRAPH_HEIGHT * (y075 - _currentMin) / (_currentMax - _currentMin),
-				Y090Scaled = Parameters.GRAPH_HEIGHT * (y090 - _currentMin) / (_currentMax - _currentMin),
-				yMaxScaled = Parameters.GRAPH_HEIGHT * (y100 - _currentMin) / (_currentMax - _currentMin);
+				y075Scaled = Parameters.GRAPH_HEIGHT * (y075 - _currentMin) / (_currentMax - _currentMin),
+				y090Scaled = Parameters.GRAPH_HEIGHT * (y090 - _currentMin) / (_currentMax - _currentMin),
+				y100Scaled = Parameters.GRAPH_HEIGHT * (y100 - _currentMin) / (_currentMax - _currentMin),
+				yMaxScaled = Parameters.GRAPH_HEIGHT * (yMax - _currentMin) / (_currentMax - _currentMin);
 				
 			int
 				minY = y000Scaled < 0 ? 0 : (int)Math.Floor(y000Scaled),
-				maxY = yMaxScaled >= Parameters.GRAPH_HEIGHT ? Parameters.GRAPH_HEIGHT - 1 : (int)Math.Ceiling(yMaxScaled);
+				maxY = (int)(yMaxScaled >= Parameters.GRAPH_HEIGHT ? Parameters.GRAPH_HEIGHT - 1 : yMaxScaled);
 			ConsoleColor color; char chr;
 			for (int yIdx = minY; yIdx < maxY; yIdx++) {
 				if ((int)yMaxScaled == yIdx) {//top pixel
@@ -257,16 +262,18 @@ namespace ParticleSimulator {
 						color = ConsoleColor.Blue;
 						break;
 					case 1://top stat
-						if ((int)Y090Scaled < yIdx)
+						if ((int)y100Scaled < yIdx)
+							color = ConsoleColor.DarkGreen;
+						else if ((int)y090Scaled < yIdx)
 							color = ConsoleColor.DarkGray;
-						else if ((int)Y075Scaled < yIdx)
+						else if ((int)y075Scaled < yIdx)
 							color = ConsoleColor.Gray;
 						else color = ConsoleColor.White;
 						break;
 					default:
 						throw new ImpossibleCompareToException();
 				}
-				if (yIdx == (int)yMaxScaled)
+				if (yIdx == maxY - 1)
 					color = ConsoleColor.DarkBlue;
 
 				result[yIdx] = new ConsoleExtensions.CharInfo(chr, color);
@@ -280,7 +287,7 @@ namespace ParticleSimulator {
 			Console.SetCursorPosition(0, 1);
 			Console.ForegroundColor = ConsoleColor.White;
 			Console.BackgroundColor = ConsoleColor.Black;
-			Console.WriteLine("---END--- Duration {0:G3}s", Program.Manager.EndTimeUtc.Subtract(Program.Manager.StartTimeUtc).TotalSeconds);
+			Console.WriteLine("---END--- Duration {0}s", Program.Manager.EndTimeUtc.Subtract(Program.Manager.StartTimeUtc).TotalSeconds.ToStringBetter(2));
 			
 			Console.Write("Evaluated ");
 
@@ -290,7 +297,7 @@ namespace ParticleSimulator {
 			Console.ForegroundColor = ConsoleColor.White;
 			Console.Write(" {0} for {1} averaging ",
 				"particle".Pluralize(particleCount),
-				(Program.StepEval_Resample.NumCompleted - Program.Resource_Resamplings.QueueLength).Pluralize("rasters")
+				Program.StepEval_Rasterize.NumCompleted.Pluralize("rasters")
 					+ (Parameters.SIMULATION_SKIPS < 2
 						? ""
 						: " and " + Program.StepEval_Simulate.NumCompleted.Pluralize("simulation steps")));

@@ -9,18 +9,28 @@ namespace ParticleSimulator.Threading {
 		public DateTime EndTimeUtc { get; private set; }
 
 		public RunManager(params StepEvaluator[] steps) {
-			this.Evaluators = steps;
+			this.Evaluators = steps.Except(s => s is null).ToArray();
 		}
 		public RunManager(params EvaluationStep[] steps)
-		: this(steps.Select(s => new StepEvaluator(s)).ToArray()) { }
+		: this(steps.Except(s => Equals(s, default(EvaluationStep))).Select(s => new StepEvaluator(s)).ToArray()) { }
 
 		public void Start() {
 			this.StartTimeUtc = DateTime.UtcNow;
 			foreach (StepEvaluator evaluator in this.Evaluators)
 				evaluator.Start();
 		}
-		public void Dispose() {
+		public void Stop () {
 			this.EndTimeUtc = DateTime.UtcNow;
+			foreach (StepEvaluator evaluator in this.Evaluators)
+				evaluator.Stop();
+		}
+		public void Dispose() {
+			foreach (SynchronizedDataBuffer resource in this.Evaluators
+				.SelectMany(s => s.Step.InputResourceUses.Select(ir => ir.Resource))
+				.Concat(this.Evaluators.Select(s => s.Step.OutputResource))
+				.Except(r => r is null)
+				.Distinct())
+				resource.Dispose();
 			foreach (StepEvaluator evaluator in this.Evaluators)
 				evaluator.Dispose();
 		}

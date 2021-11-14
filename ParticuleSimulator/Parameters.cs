@@ -1,23 +1,30 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Generic.Models;
+using ParticleSimulator.Rendering;
 
 namespace ParticleSimulator {
 	public static class Parameters {
 		//NOTE sentinel value is usually -1 for unlimited
 
 		public const bool ENABLE_ASYNCHRONOUS = true;
-		public const bool LEGEND_ENABLE = false;
-		public const bool DENSITY_AUTOSCALE_ENABLE = false;
+		public const int PRECALCULATION_LIMIT = 3;
+		public const int SIMULATION_PARALLELISM = 16;
+		public const bool LEGEND_ENABLE = true;
 		public const bool PERF_ENABLE = true;
 		public const bool PERF_STATS_ENABLE = true;
 		public const bool PERF_GRAPH_ENABLE = true;
 
 		#region Particles
-		public const bool COLOR_GROUPS = true;
+		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Density;
+		public const ParticleColorScale COLOR_SCALE = ParticleColorScale.Grayscale;
+		public const bool DENSITY_AUTOSCALE_ENABLE = true;//only applies to Density coloring
+		public const double AUTOSCALING_SMA = 1d;
+		public const int AUTOSCALE_INTERVAL_MS = 500;
 
-		public const int NUM_PARTICLES_PER_GROUP = 200;
-		public const int NUM_PARTICLE_GROUPS = 30;//only 14 colors are available
+		public const int NUM_PARTICLES_PER_GROUP = 10000;
+		public const int NUM_PARTICLE_GROUPS = 10;
 		public const double INITIAL_SEPARATION = 20;
 		
 		public const double MAX_STARTING_SPEED = -1;
@@ -31,10 +38,10 @@ namespace ParticleSimulator {
 		public const double RENDER_3D_PHI = Math.PI / 4d;
 
 		public const int DIMENSIONALITY = 3;
-		public const double WORLD_SCALE = 1200d;
+		public const double WORLD_SCALE = 4800d;
 		public const double WORLD_EPSILON = 0.0001d;
 		public const bool WORLD_WRAPPING = false;//TODO
-		public const double WORLD_BOUNCE_WEIGHT = 0.0004d;
+		public const double WORLD_BOUNCE_WEIGHT = 0.004d;
 
 		public const int GRAPH_WIDTH = -1;
 		public const int GRAPH_HEIGHT = 7;//at least 2
@@ -44,16 +51,12 @@ namespace ParticleSimulator {
 		public const double TARGET_FPS = -1;
 		public const double MAX_FPS = -1;
 
-		public const int SIMULATION_SKIPS = 0;
-		public const int TREE_REFRESH_SKIPS = 4;
-		public const int QUADTREE_NODE_CAPACITY = 8;
-		public const int AUTOSCALING_REFRESH_FRAMES = 30;
+		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times per render
+		public const int TREE_REFRESH_REUSE_ALLOWANCE = 7;
+		public const int QUADTREE_NODE_CAPACITY = 5;
 
 		public const bool SYNC_SIMULATION = true;
 		public const bool SYNC_TREE_REFRESH = false;
-		//how far ahead steps can work (when applicable)
-		//set to zero to force everything to be synchronous
-		public const int PRECALCULATION_LIMIT = 2;//no benefit to larger values than one
 		#endregion Timings
 
 		#region Boids
@@ -62,11 +65,11 @@ namespace ParticleSimulator {
 		public const bool BOIDS_ENABLE_SEPARATION			= true;
 		public const double BOIDS_PREDATOR_CHANCE_BIAS		= 0.00d;
 
-		public const double BOIDS_BOID_MIN_SPEED			= 2d;
-		public const double BOIDS_BOID_MAX_SPEED			= 3d;
-		public const double BOIDS_BOID_SPEED_DECAY			= 0.25d;//used as E^-val
+		public const double BOIDS_BOID_MIN_SPEED			= 4d;
+		public const double BOIDS_BOID_MAX_SPEED			= 8d;
+		public const double BOIDS_BOID_SPEED_DECAY			= 0.1d;//used as E^-val
 		public const double BOIDS_PREDATOR_MIN_SPEED		= 1d;
-		public const double BOIDS_PREDATOR_MAX_SPEED		= 5d;
+		public const double BOIDS_PREDATOR_MAX_SPEED		= 12d;
 		public const double BOIDS_PREDATOR_SPEED_DECAY		= 0.02d;//used as E^-val
 
 		public const double BOIDS_BOID_VISION				= 400d;
@@ -74,17 +77,17 @@ namespace ParticleSimulator {
 		public const double BOIDS_PREDATOR_VISION			= 750d;
 		public const double BOIDS_PREDATOR_FOV_RADIANS		= -1;
 
-		public const double BOIDS_BOID_MIN_DIST				= 60d;
+		public const double BOIDS_BOID_MIN_DIST				= 50d;
 		public const double BOIDS_BOID_COHESION_DIST		= 100d;
-		public const double BOIDS_BOID_GROUP_AVOID_DIST		= 200d;
+		public const double BOIDS_BOID_GROUP_AVOID_DIST		= 150d;
 		public const double BOIDS_PREDATOR_MIN_DIST			= 10d;
 		public const double BOIDS_PREDATOR_COHESION_DIST	= 40d;
 		public const double BOIDS_PREDATOR_GROUP_AVOID_DIST	= 400d;
 
 		public const double BOIDS_BOID_DISPERSE_W			= 0.0005d;
-		public const double BOIDS_BOID_COHESION_W			= 0.05d;
-		public const double BOIDS_BOID_ALIGNMENT_W			= 0.1d;
-		public const double BOIDS_BOID_GROUP_AVOID_WE		= 0.2d;
+		public const double BOIDS_BOID_COHESION_W			= 0.06d;
+		public const double BOIDS_BOID_ALIGNMENT_W			= 0.2d;
+		public const double BOIDS_BOID_GROUP_AVOID_WE		= 0.3d;
 
 		public const double BOIDS_PREDATOR_DISPERSE_W		= 0.0002d;
 		public const double BOIDS_PREDATOR_COHESION_W		= 0.001d;
@@ -114,7 +117,7 @@ namespace ParticleSimulator {
 
 		public const int NUMBER_ACCURACY = 2;
 		public const int NUMBER_SPACING = 5;
-		public const double PERF_SMA_ALPHA = 0.1d;
+		public const double PERF_SMA_ALPHA = 0.15d;
 
 		public const int PERF_GRAPH_REFRESH_MS = 125;
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 30;
@@ -122,29 +125,6 @@ namespace ParticleSimulator {
 		public const double PERF_GRAPH_PERCENTILE_LOW_CUTOFF = 0d;
 		public const double PERF_GRAPH_PERCENTILE_HIGH_CUTOFF = 0d;
 		public const int PERF_GRAPH_NUMBER_ACCURACY = 3;
-
-		public const double AUTOSCALING_SMA_ALPHA = 0.4d;
-		public const int AUTOSCALE_INTERVAL_MS = 250;
-
-		public static readonly ConsoleColor[] DENSITY_COLORS = new ConsoleColor[] {
-			ConsoleColor.DarkGray,
-			ConsoleColor.Gray,
-			ConsoleColor.White,
-			ConsoleColor.Yellow,
-			ConsoleColor.Red,
-			ConsoleColor.DarkRed,
-			//ConsoleColor.DarkGray,
-			//ConsoleColor.Gray,
-			//ConsoleColor.White,
-			//ConsoleColor.Blue,
-			//ConsoleColor.DarkBlue,
-			//ConsoleColor.Green,
-			//ConsoleColor.Yellow,
-			//ConsoleColor.Red,
-			//ConsoleColor.DarkRed,
-			//ConsoleColor.Magenta,
-			//ConsoleColor.DarkMagenta,
-		};
 
 		public static readonly Tuple<double, ConsoleColor>[] RatioColors = new Tuple<double, ConsoleColor>[] {
 			new Tuple<double, ConsoleColor>(1.05d, ConsoleColor.Cyan),
@@ -164,6 +144,15 @@ namespace ParticleSimulator {
 		public static readonly double[] DOMAIN_CENTER = DOMAIN.Multiply(0.5d); 
 		public static readonly double DOMAIN_MAX_RADIUS = DOMAIN.Max()/2D;
 		public static readonly double DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT = DOMAIN.Length < 3 ? 0d : DOMAIN.Skip(2).ToArray().Magnitude();
+		public static readonly ConsoleColor[] COLOR_ARRAY =
+			COLOR_SCALE == ParticleColorScale.DefaultConsoleColors
+				? ParticleColoringScales.DEFAULT_CONSOLE_COLORS
+				: COLOR_SCALE == ParticleColorScale.Grayscale
+					? ParticleColoringScales.Grayscale
+					: COLOR_SCALE == ParticleColorScale.ReducedColors
+						? ParticleColoringScales.Reduced
+						: ParticleColoringScales.Radar;
+		public static readonly ParallelOptions MulithreadedOptions = new() { MaxDegreeOfParallelism = Parameters.SIMULATION_PARALLELISM };
 		#endregion Aux
 	}
 }

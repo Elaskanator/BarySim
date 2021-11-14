@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
 using Generic.Extensions;
-using Generic.Models;
 
 namespace ParticleSimulator.Rendering {
 	public static class Renderer {
@@ -45,9 +43,9 @@ namespace ParticleSimulator.Rendering {
 					frameBuffer[i] = rasterization[i] is null ? default :
 						new ConsoleExtensions.CharInfo(
 							rasterization[i].Item1,
-							Parameters.COLOR_GROUPS ? Program.Simulator.ChooseGroupColor(rasterization[i].Item2) : ChooseDensityColor(rasterization[i].Item2.Length));
+							Program.Simulator.ChooseColor(rasterization[i].Item2));
 
-				if (Parameters.LEGEND_ENABLE) DrawLegend(frameBuffer, Program.Simulator.DensityScale);
+				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_SCHEME != ParticleColoringMethod.Depth || Parameters.DOMAIN.Length > 2)) DrawLegend(frameBuffer);
 				if (Parameters.PERF_GRAPH_ENABLE) PerfMon.DrawFpsGraph(frameBuffer);
 			}
 			if (Parameters.PERF_ENABLE) PerfMon.DrawStatsOverlay(frameBuffer);
@@ -74,33 +72,47 @@ namespace ParticleSimulator.Rendering {
 			if (!(buffer is null)) ConsoleExtensions.WriteConsoleOutput(buffer);
 		}
 
-		public static void DrawLegend(ConsoleExtensions.CharInfo[] buffer, SampleSMA[] densityScale) {
-			int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - Parameters.DENSITY_COLORS.Length);
-			Func<double, string> rounding = Program.Simulator.IsDiscrete ? x => ((int)x).ToString() : x => x.ToStringBetter(2);
+		public static void DrawLegend(ConsoleExtensions.CharInfo[] buffer) {
+			int numColors = Parameters.COLOR_ARRAY.Length;
+			string header = Parameters.COLOR_SCHEME.ToString();
+			switch (Parameters.COLOR_SCHEME) {
+				case ParticleColoringMethod.Density:
+					if (Parameters.DOMAIN.Length > 2)
+						header += " (depth scaled)";
+					break;
+				case ParticleColoringMethod.Group:
+					if (Parameters.NUM_PARTICLE_GROUPS > numColors)
+						header += " (ID modulo " + numColors + ")";
+					if (Parameters.NUM_PARTICLE_GROUPS < Parameters.COLOR_ARRAY.Length)
+						numColors = Parameters.NUM_PARTICLE_GROUPS;
+					break;
+			}
 
-			string strData;
-			for (int cIdx = 0; cIdx < Parameters.DENSITY_COLORS.Length; cIdx++) {
+			int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - numColors - 1);
+			for (int i = 0; i < header.Length; i++)
+				buffer[pixelIdx + i] = new ConsoleExtensions.CharInfo(header[i], ConsoleColor.White);
+			
+			string rowStringData;
+			for (int cIdx = 0; cIdx < numColors; cIdx++) {
+				pixelIdx += Parameters.WINDOW_WIDTH;
+
 				buffer[pixelIdx] = new ConsoleExtensions.CharInfo(
 					Parameters.CHAR_BOTH,
-					Parameters.DENSITY_COLORS[cIdx]);
+					Parameters.COLOR_ARRAY[cIdx]);
 
-				if (cIdx == 0) strData = (!Program.Simulator.IsDiscrete || densityScale[cIdx].Current >= 2 ? "≤" : "=") + rounding(densityScale[cIdx].Current);
-				else if (cIdx < densityScale.Length) strData = "=" + rounding(densityScale[cIdx].Current);
-				else strData = ">";
+				if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group) {
+					rowStringData = "=" + cIdx.ToString();
+				} else if (cIdx < numColors - 1){
+					rowStringData =
+						(Parameters.DOMAIN.Length < 3 && cIdx == 0 ? "=" : "≤")
+						+ (Parameters.DOMAIN.Length < 3
+							? ((int)Program.Simulator.DensityScale[cIdx].Current).ToString()
+							: Program.Simulator.DensityScale[cIdx].Current.ToStringBetter(2));
+				} else rowStringData = ">";
 
-				for (int sIdx = 0; sIdx < strData.Length; sIdx++)
-					buffer[pixelIdx + sIdx + 1] = new ConsoleExtensions.CharInfo(strData[sIdx], ConsoleColor.White);
-
-				pixelIdx += Parameters.WINDOW_WIDTH;
+				for (int i = 0; i < rowStringData.Length; i++)
+					buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);
 			}
-		}
-
-		public static ConsoleColor ChooseDensityColor(double count) {
-			Predicate<double> comparer = Program.Simulator.IsDiscrete
-				? a => (int)(2d * a) < (int)(2d * count)
-				: a => a < count;
-			int rank = Program.Simulator.DensityScale.TakeWhile(a => comparer(a.Current)).Count();
-			return Parameters.DENSITY_COLORS[rank];
 		}
 	}
 }

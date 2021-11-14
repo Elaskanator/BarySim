@@ -24,6 +24,20 @@ namespace ParticleSimulator {
 
 		public static void Main(string[] args) {
 			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);//ctrl+c and alt+f4 etc
+			
+			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
+			Console.Title = string.Format("{0} Simulator - {1} ({2}D)",
+				SimType,
+				(Parameters.NUM_PARTICLE_GROUPS * Parameters.NUM_PARTICLES_PER_GROUP).Pluralize("particle"),
+				Parameters.DIMENSIONALITY);
+			Console.WindowWidth = Parameters.WINDOW_WIDTH;
+			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
+			Console.CursorVisible = false;
+			//these require p-invokes
+			ConsoleExtensions.HideScrollbars();
+			//rendering gets *really* messed up if the window gets resized by anything
+			ConsoleExtensions.DisableAllResizing();//note this doesn't work to disable OS window snapping
+			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
 			switch (SimType) {
 				case SimulationType.Boid:
@@ -36,17 +50,6 @@ namespace ParticleSimulator {
 				default:
 					throw new InvalidEnumArgumentException(nameof(SimType), (int)SimType, typeof(SimulationType));
 			}
-			
-			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
-			Console.Title = string.Format("{0} Simulator - {1} ({2}D)", SimType, Simulator.AllParticles.Count().Pluralize("particle"), Parameters.DIMENSIONALITY);
-			Console.WindowWidth = Parameters.WINDOW_WIDTH;
-			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
-			Console.CursorVisible = false;
-			//these require p-invokes
-			ConsoleExtensions.HideScrollbars();
-			//rendering gets *really* messed up if the window gets resized by anything
-			ConsoleExtensions.DisableAllResizing();//note this doesn't work to disable OS window snapping
-			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
 			Manager = BuildRunManager();
 			Manager.Start();
@@ -92,7 +95,7 @@ namespace ParticleSimulator {
 				//Evaluator = null,
 				//Synchronizer = null,
 				//Callback = null,
-				//DataAssimilationTicksAverager = null,
+				DataAssimilationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				//SynchronizationTicksAverager = null,
 				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				//IterationTicksAverager = null,
@@ -105,10 +108,10 @@ namespace ParticleSimulator {
 						Resource = Resource_Tree,
 						DoConsume = true,
 						//OnChange = false,
-						DoHold = true,
+						DoHold = Parameters.SYNC_TREE_REFRESH,
 						//AllowDirtyRead = false,
-						ReuseAmount = Parameters.SYNC_TREE_REFRESH ? Parameters.TREE_REFRESH_SKIPS : 0,
-						ReuseTolerance = Parameters.SYNC_TREE_REFRESH ? 0 : Parameters.TREE_REFRESH_SKIPS,
+						ReuseAmount = Parameters.SYNC_TREE_REFRESH ? Parameters.TREE_REFRESH_REUSE_ALLOWANCE : 0,
+						ReuseTolerance = Parameters.SYNC_TREE_REFRESH ? 0 : Parameters.TREE_REFRESH_REUSE_ALLOWANCE,
 						//ReadTimeout = null
 			}}});
 			StepEval_TreeMaintain = new(new() {
@@ -181,7 +184,7 @@ namespace ParticleSimulator {
 						//ReadTimeout = null
 			}}});
 
-			if (Parameters.DENSITY_AUTOSCALE_ENABLE && !Parameters.COLOR_GROUPS)
+			if (Parameters.DENSITY_AUTOSCALE_ENABLE && Parameters.COLOR_SCHEME == ParticleColoringMethod.Density)
 				StepEval_Autoscale = new(new() {
 					Name = "Autoscaler",
 					//Initializer = null,
@@ -216,20 +219,20 @@ namespace ParticleSimulator {
 					StepEval_TreeMaintain,
 					StepEval_Resample,
 					StepEval_Rasterize,
-				}.Concat(Parameters.DENSITY_AUTOSCALE_ENABLE ? new[] { StepEval_Autoscale } : Array.Empty<StepEvaluator>())
-				.ToArray());
+					StepEval_Autoscale
+				});
 		}
 
 		private static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+c and alt+f4 etc
-			Environment.Exit(0);
 			//keep master thread alive for results output (if enabled)
 			//also necessary to cleanup the application, otherwise any threading calls would immediately kill this thread
 			args.Cancel = true;
 
-			Manager.Dispose();
+			Manager.Stop();
 			PerfMon.WriteEnd();
 
 			ConsoleExtensions.WaitForEnter("Press enter to end");
+			//Manager.Dispose();
 			Environment.Exit(0);
 		}
 	}

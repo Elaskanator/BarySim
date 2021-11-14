@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-
 using Generic.Extensions;
 
 namespace Generic.Models {
@@ -13,6 +12,7 @@ namespace Generic.Models {
 		public IEnumerable NodeElements { get; }
 		public IEnumerable AllElements { get; }
 		public IEnumerable<ITree> Children { get; }
+		public IEnumerable<ITree> NestedChildren { get; }
 		public IEnumerable<ITree> AllNodes { get; }
 		public IEnumerable<ITree> SiblingNodes { get; }
 		public IEnumerable<ITree> Leaves { get; }
@@ -41,47 +41,43 @@ namespace Generic.Models {
 		public abstract IEnumerable<E> NodeElements { get; }
 		IEnumerable ITree.NodeElements => this.NodeElements;
 		public IEnumerable<E> AllElements { get {
-			if (this.IsLeaf)
-				foreach (E e in this.NodeElements)
-					yield return e;
-			else
-				foreach (E e in this.Children.SelectMany(c => c.AllElements))
-					yield return e;
+			if (this.IsLeaf) foreach (E e in this.NodeElements)
+				yield return e;
+			else foreach (E e in this.Children.SelectMany(c => c.AllElements))
+				yield return e;
 		} }
 		IEnumerable ITree.AllElements => this.AllElements;
 		
 		public abstract IEnumerable<ATree<E>> Children { get; }
 		IEnumerable<ITree> ITree.Children => this.Children;
+		public IEnumerable<ITree> NestedChildren { get {
+			foreach (ITree node in this.Children) {
+				yield return node;
+				foreach (ITree subnode in node.NestedChildren)
+					yield return subnode;
+		} } }
 		public IEnumerable<ATree<E>> AllNodes { get {
-			if (this.IsLeaf)
-				yield return this;
-			else
-				foreach (ATree<E> child in this.Children.SelectMany(c => c.AllNodes))
-					yield return child;
+			if (this.IsLeaf) yield return this;
+			else foreach (ATree<E> child in this.Children.SelectMany(c => c.AllNodes))
+				yield return child;
 		} }
 		IEnumerable<ITree> ITree.AllNodes => this.AllNodes;
 		public IEnumerable<ATree<E>> SiblingNodes { get {
-			if (this.IsRoot)
-				return Enumerable.Empty<ATree<E>>();
-			else
-				return this.Parent.Children.Except(n => ReferenceEquals(this, n));
+			if (this.IsRoot) return Enumerable.Empty<ATree<E>>();
+			else return this.Parent.Children.Except(n => ReferenceEquals(this, n));
 		} }
 		IEnumerable<ITree> ITree.SiblingNodes => this.SiblingNodes;
 		public IEnumerable<ATree<E>> Leaves { get {
-			if (this.IsLeaf)
-				yield return this;
-			else
-				foreach (ATree<E> child in this.Children.SelectMany(c => c.Leaves))
-					yield return child;
+			if (this.IsLeaf) yield return this;
+			else foreach (ATree<E> child in this.Children.SelectMany(c => c.Leaves))
+				yield return child;
 		} }
 		IEnumerable<ITree> ITree.Leaves => this.Leaves;
 
 		public void Add(E element) {
 			this.Incorporate(element);
-			if (this.IsLeaf)
-				this.AddElementToNode(element);
-			else
-				this.GetContainingChild(element).Add(element);
+			if (this.IsLeaf) this.AddElementToNode(element);
+			else this.GetContainingChild(element).Add(element);
 		}
 		public void Add(object element) { this.Add((E)element); }
 
@@ -123,19 +119,16 @@ namespace Generic.Models {
 				foreach (ATree<E> n in this.Children.SelectMany(q => q.GetRefinedNeighborNodes(depthLimit - 1)))
 					yield return n;
 
-			if (this.IsRoot)
-				yield break;
-			else
-				foreach (ATree<E> n in this.SiblingNodes.SelectMany(q => q.GetChildren(depthLimit - 1)))
-					yield return n;
+			if (this.IsRoot) yield break;
+			else foreach (ATree<E> n in this.SiblingNodes.SelectMany(q => q.GetChildren(depthLimit - 1)))
+				yield return n;
 		}
 		private IEnumerable<ATree<E>> GetChildren(int? depthLimit = null) {
 			if (!depthLimit.HasValue || depthLimit > 0)
 				foreach (ATree<E> node2 in this.Children.SelectMany(c => c.GetChildren(depthLimit - 1)))
 					yield return node2;
-			else
-				foreach (ATree<E> node in this.Children)
-					yield return node;
+			else foreach (ATree<E> node in this.Children)
+				yield return node;
 		}
 
 		private IEnumerable<ATree<E>> SeekUpward() {
