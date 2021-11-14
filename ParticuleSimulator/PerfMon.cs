@@ -67,7 +67,10 @@ namespace ParticleSimulator {
 						Program.StepEval_Resample.Step.ExclusiveTicksAverager.Current,
 					}.Max() + Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current
 				) / 10000d;
-				double currentIterationTimeMs = Program.StepEval_Draw.Step.IterationTicksAverager.Current / 10000d;
+				double currentIterationTimeMs =
+					(	Program.StepEval_Resample.Step.IterationTicksAverager.Current
+						+ Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current)
+					/ 10000d;
 
 				_frameTimingMs.Update(currentFrameTimeMs);
 				_fpsTimingMs.Update(currentIterationTimeMs);
@@ -224,7 +227,7 @@ namespace ParticleSimulator {
 			double
 				y000Scaled = Parameters.GRAPH_HEIGHT * (y000 - _currentMin) / (_currentMax - _currentMin),
 				y010Scaled = Parameters.GRAPH_HEIGHT * (y010 - _currentMin) / (_currentMax - _currentMin),
-				y0205caled = Parameters.GRAPH_HEIGHT * (y025 - _currentMin) / (_currentMax - _currentMin),
+				y025Scaled = Parameters.GRAPH_HEIGHT * (y025 - _currentMin) / (_currentMax - _currentMin),
 				y050Scaled = Parameters.GRAPH_HEIGHT * (y050 - _currentMin) / (_currentMax - _currentMin),
 				y075Scaled = Parameters.GRAPH_HEIGHT * (y075 - _currentMin) / (_currentMax - _currentMin),
 				y090Scaled = Parameters.GRAPH_HEIGHT * (y090 - _currentMin) / (_currentMax - _currentMin),
@@ -233,48 +236,36 @@ namespace ParticleSimulator {
 			if (yMaxScaled >= Parameters.GRAPH_HEIGHT) yMaxScaled--;
 				
 			ConsoleColor color; char chr;
-			for (int yIdx = 0; yIdx < Parameters.GRAPH_HEIGHT; yIdx++) {
+			for (int yIdx = (int)y000Scaled; yIdx <= yMaxScaled; yIdx++) {
 				if ((int)yMaxScaled == yIdx) {//top pixel
 					if (yMaxScaled % 1d < 0.5d)//bottom half
 						chr = Parameters.CHAR_LOW;
-					else if (yMaxScaled >= yIdx + 0.5d)//top half
+					else if (y000Scaled >= yIdx && yMaxScaled >= yIdx + 0.5d)//top half
 						chr = Parameters.CHAR_TOP;
 					else chr = Parameters.CHAR_BOTH;
 				} else if ((int)y000Scaled == yIdx) {//bottom pixel
 					if (y000Scaled % 1d >= 0.5d)//top half
-							chr = Parameters.CHAR_TOP;
+						chr = Parameters.CHAR_TOP;
 					else if (yMaxScaled < yIdx + 0.5d)//bottom half
 						chr = Parameters.CHAR_LOW;
 					else chr = Parameters.CHAR_BOTH;
 				} else chr = Parameters.CHAR_BOTH;
 
-				switch (yIdx.CompareTo((int)y050Scaled)) {
-					case -1://bottom stat
-						if ((int)y000Scaled > yIdx)
-							color = ConsoleColor.Black;
-						else if ((int)y010Scaled > yIdx)
-							color = ConsoleColor.DarkGray;
-						else if ((int)y0205caled > yIdx)
-							color = ConsoleColor.Gray;
-						else color = ConsoleColor.White;
-						break;
-					case 0://average frame time
-						color = ConsoleColor.Blue;
-						break;
-					case 1://top stat
-						if ((int)y100Scaled < yIdx)
-							color = ConsoleColor.Black;
-						else if ((int)y090Scaled < yIdx)
-							color = ConsoleColor.DarkGray;
-						else if ((int)y075Scaled < yIdx)
-							color = ConsoleColor.Gray;
-						else color = ConsoleColor.White;
-						break;
-					default:
-						throw new ImpossibleCompareToException();
-				}
-				if (yIdx == (int)yMaxScaled)
+				if ((int)yMaxScaled == yIdx)
+					color = ConsoleColor.DarkGreen;
+				else if ((int)y050Scaled == yIdx)
 					color = ConsoleColor.DarkBlue;
+				else if ((int)y100Scaled <= yIdx)
+					color = ConsoleColor.DarkMagenta;
+				else if ((int)y075Scaled <= yIdx)
+					color = ConsoleColor.DarkGray;
+				else if ((int)y050Scaled <= yIdx)
+					color = ConsoleColor.Gray;
+				else if ((int)y025Scaled <= yIdx)
+					color = ConsoleColor.White;
+				else if ((int)y000Scaled <= yIdx)
+					color = ConsoleColor.Gray;
+				else color = ConsoleColor.DarkGray;
 
 				result[yIdx] = new ConsoleExtensions.CharInfo(chr, color);
 			}
