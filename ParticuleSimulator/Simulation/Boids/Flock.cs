@@ -10,7 +10,7 @@ namespace ParticleSimulator.Simulation.Boids {
 		}
 
 		public override Boid NewParticle(double[] position, double[] velocity, Random random) {
-			return new Boid(this.ID, position, velocity, this.Corruption);
+			return new Boid(this.ID, position, velocity, this.Corruption * Parameters.BOIDS_PREDATOR_CHANCE);
 		}
 	}
 }

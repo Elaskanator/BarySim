@@ -13,14 +13,14 @@ namespace Generic.Models {
 
 		public void Update(T value, double? weighting = null) {
 			this.LastUpdate = value;
-			this.NumUpdates++;
 			this.ApplyUpdate(value, weighting);
+			this.NumUpdates++;
 		}
 
 		protected virtual void ApplyUpdate(T value, double? weighting) {
-			if (this.NumUpdates == 0)
+			if (this.NumUpdates == 0) {
 				this._current = value;
-			else {
+			} else {
 				double
 					alpha = (weighting ?? this.UpdateStrength) >= 1d / this.NumUpdates ? (weighting ?? this.UpdateStrength) : 1d / this.NumUpdates,
 					beta = 1 - alpha;
@@ -48,20 +48,13 @@ namespace Generic.Models {
 		public int MaxHistoryLength { get { return this._history.Length; } }
 		private readonly double[] _history;
 
-		public TrackingIncrementalAverage() : base() { }
+		public IEnumerable<double> History { get {
+			for (int i = 0; i < this.MaxHistoryLength && i < this.NumUpdates; i++)
+				yield return this._history[(i + (this.NumUpdates-1 % this.MaxHistoryLength)) % this.MaxHistoryLength];
+		} }
 
-		public IEnumerable<double> History {
-			get {
-				for (int i = 0; i < this.MaxHistoryLength && i < this.NumUpdates; i++) {
-					yield return this._history[(i + (this.NumUpdates % this.MaxHistoryLength)) % this.MaxHistoryLength];
-				}
-			}
-		}
-
-		public TrackingIncrementalAverage(int historyLength = 100, double? init = null) {
+		public TrackingIncrementalAverage(int historyLength = 100) {
 			this._history = new double[historyLength];
-
-			if (init.HasValue) this.Update(init.Value);
 		}
 
 		protected override void ApplyUpdate(double value, double? weighting) {
@@ -75,7 +68,6 @@ namespace Generic.Models {
 		public double Beta { get { return 1d - this.Alpha; } }
 		protected override double UpdateStrength { get { return this.Alpha; } }
 
-		public SampleSMA() : base() { }
 		public SampleSMA(double weighting) {
 			this.Alpha = weighting;
 		}
@@ -84,8 +76,6 @@ namespace Generic.Models {
 	public class SampleSMA_Tracking : TrackingIncrementalAverage {
 		public readonly double Alpha;
 		public double Beta { get { return 1d - this.Alpha; } }
-
-		public SampleSMA_Tracking() : base() { }
 
 		public SampleSMA_Tracking(double weighting, int historyLength = 100) : base(historyLength) {
 			this.Alpha = weighting;

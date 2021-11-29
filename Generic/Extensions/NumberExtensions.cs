@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Linq;
+using Generic.Extensions;
+using Generic.Models;
 
 namespace Generic.Extensions {
 	public static class NumberExtensions {
@@ -63,8 +66,10 @@ namespace Generic.Extensions {
 						r * Math.Sin(phi) * Math.Sin(theta),
 						r * Math.Cos(phi)
 					};
-				default:
-					throw new NotImplementedException("4D+");
+				default://rejection sampling
+					double[] coords;
+					while ((coords = Enumerable.Range(0, dimensionality).Select(i => 2d*(0.5d - rand.NextDouble()) * radius).ToArray()).Magnitude() > radius) { }
+					return coords;
 			}
 		}
 
@@ -92,10 +97,11 @@ namespace Generic.Extensions {
 						Math.Cos(phi)
 					};
 				default:
-					throw new NotImplementedException("4d+");
+					return Enumerable.Range(0, dimensionality).Select(i => rand.NextDouble()).ToArray().Normalize();//TODODODO
 			}
 		}
 
+		//see https://en.wikipedia.org/wiki/Volume_of_an_n-ball#Low_dimensions
 		public static double HypersphereVolume(double radius, int dimensionality) {
 			switch (dimensionality) {
 				case 0:
@@ -106,6 +112,8 @@ namespace Generic.Extensions {
 					return Math.PI * (radius*radius);
 				case 3:
 					return (4d/3d) * Math.PI * (radius*radius*radius);
+				case 4:
+					return Math.PI * Math.PI * radius*radius*radius*radius / 2d;
 				default:
 					throw new NotImplementedException();
 			}
@@ -121,6 +129,8 @@ namespace Generic.Extensions {
 					return Math.Sqrt(volume / Math.PI);
 				case 3:
 					return Math.Cbrt(volume * 3d/4d / Math.PI);
+				case 4:
+					return Math.Pow(2d * volume, 0.25d) / Math.Sqrt(Math.PI);
 				default:
 					throw new NotImplementedException();
 			}

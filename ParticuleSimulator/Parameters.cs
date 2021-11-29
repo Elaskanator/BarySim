@@ -13,18 +13,18 @@ namespace ParticleSimulator {
 		public const bool PERF_STATS_ENABLE = true;
 		public const bool PERF_GRAPH_ENABLE = true;
 
-		public const int PRECALCULATION_LIMIT = 3;
-		public const int SIMULATION_PARALLELISM = 16;
-		public const int DESIRED_INTERACTION_NEIGHBORS = 10;
+		public const int PRECALCULATION_LIMIT = 2;
+		public const int SIMULATION_PARALLELISM = 32;
+		public const int DESIRED_INTERACTION_NEIGHBORS = 8;
 
 		#region Particles
-		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Density;
-		public const ParticleColorScale COLOR_SCALE = ParticleColorScale.Grayscale;
+		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Group;
+		public const ParticleColorScale COLOR_SCALE = ParticleColorScale.DefaultConsoleColors;
 		public const bool DENSITY_AUTOSCALE_ENABLE = true;//only applies to Density coloring
-		public const double AUTOSCALING_SMA = 1d;
 		public const int AUTOSCALE_INTERVAL_MS = 500;
+		public const double AUTOSCALING_SMA = 1d;
 
-		public const int NUM_PARTICLES_PER_GROUP = 10000;
+		public const int NUM_PARTICLES_PER_GROUP = 1000;
 		public const int NUM_PARTICLE_GROUPS = 10;
 		public const double INITIAL_SEPARATION = 10;
 		
@@ -32,16 +32,17 @@ namespace ParticleSimulator {
 		#endregion Particles
 
 		#region Sizes
-		public const int WINDOW_WIDTH = 160;//160 x 80 max, practical min width of graph width if that is enabled
-		public const int WINDOW_HEIGHT = 80;//using top and bottom halves of each character to get double the verticle resolution
+		public const int WINDOW_WIDTH = 120;//160 x 80 max, practical min width of graph width if that is enabled
+		public const int WINDOW_HEIGHT = 60;//using top and bottom halves of each character to get double the verticle resolution
 
 		public const double RENDER_3D_PHI = Math.PI / 4d;
 
-		public const int DIMENSIONALITY = 2;
-		public const double WORLD_SCALE = 10000d;
+		public const int DIMENSIONALITY = 3;
+		public const double WORLD_SCALE = 1200d;
 		public const double WORLD_EPSILON = 0.0001d;
-		public const bool WORLD_WRAPPING = false;//TODO
-		public const double WORLD_BOUNCE_WEIGHT = 0.004d;
+		public const bool WORLD_WRAPPING = true;//TODO
+		public const double WORLD_BOUNCE_EDGE_PCT = 10d;
+		public const double WORLD_BOUNCE_WEIGHT = 0.02d;
 
 		public const int GRAPH_WIDTH = -1;
 		public const int GRAPH_HEIGHT = 7;//at least 2
@@ -63,41 +64,42 @@ namespace ParticleSimulator {
 		public const bool BOIDS_ENABLE_COHESION				= true;
 		public const bool BOIDS_ENABLE_ALIGNMENT			= true;
 		public const bool BOIDS_ENABLE_SEPARATION			= true;
-		public const double BOIDS_PREDATOR_CHANCE_BIAS		= 0.00d;
+		public const double BOIDS_PREDATOR_CHANCE			= 0d;
+		public const double BOIDS_PREDATOR_CHANCE_BIAS		= 1d;
 
-		public const double BOIDS_BOID_MIN_SPEED			= 4d;
-		public const double BOIDS_BOID_MAX_SPEED			= 8d;
-		public const double BOIDS_BOID_SPEED_DECAY			= 0.1d;//used as E^-val
+		public const double BOIDS_BOID_MIN_SPEED			= 3d;
+		public const double BOIDS_BOID_MAX_SPEED			= 5d;
+		public const double BOIDS_BOID_SPEED_DECAY			= 0.0d;//used as E^-val
 		public const double BOIDS_PREDATOR_MIN_SPEED		= 1d;
 		public const double BOIDS_PREDATOR_MAX_SPEED		= 12d;
-		public const double BOIDS_PREDATOR_SPEED_DECAY		= 0.02d;//used as E^-val
+		public const double BOIDS_PREDATOR_SPEED_DECAY		= 0.01d;//used as E^-val
 
 		public const double BOIDS_BOID_VISION				= 400d;
 		public const double BOIDS_BOID_FOV_RADIANS			= -1;
-		public const double BOIDS_PREDATOR_VISION			= 750d;
+		public const double BOIDS_PREDATOR_VISION			= 800d;
 		public const double BOIDS_PREDATOR_FOV_RADIANS		= -1;
 
-		public const double BOIDS_BOID_MIN_DIST				= 50d;
+		public const double BOIDS_BOID_MIN_DIST				= 20d;
 		public const double BOIDS_BOID_COHESION_DIST		= 100d;
-		public const double BOIDS_BOID_GROUP_AVOID_DIST		= 400d;
+		public const double BOIDS_BOID_GROUP_AVOID_DIST		= 150d;
 		public const double BOIDS_PREDATOR_MIN_DIST			= 10d;
 		public const double BOIDS_PREDATOR_COHESION_DIST	= 40d;
-		public const double BOIDS_PREDATOR_GROUP_AVOID_DIST	= 400d;
+		public const double BOIDS_PREDATOR_GROUP_AVOID_DIST	= 500d;
 
-		public const double BOIDS_BOID_DISPERSE_W			= 0.001d;
+		public const double BOIDS_BOID_DISPERSE_W			= 0.01d;
 		public const double BOIDS_BOID_COHESION_W			= 0.1d;
 		public const double BOIDS_BOID_ALIGNMENT_W			= 0.2d;
-		public const double BOIDS_BOID_GROUP_AVOID_WE		= 0.1d;
+		public const double BOIDS_BOID_GROUP_AVOID_WE		= 0.03d;
 
-		public const double BOIDS_PREDATOR_DISPERSE_W		= 0.0002d;
-		public const double BOIDS_PREDATOR_COHESION_W		= 0.0005d;
-		public const double BOIDS_PREDATOR_ALIGNMENT_W		= 0.00001d;
+		public const double BOIDS_PREDATOR_DISPERSE_W		= 0.0003d;
+		public const double BOIDS_PREDATOR_COHESION_W		= 0.0006d;
+		public const double BOIDS_PREDATOR_ALIGNMENT_W		= 0.00002d;
 		public const double BOIDS_PREDATOR_GROUP_AVOID_WE	= 2.0d;
 
-		public const double BOIDS_FLEE_WE					= 3.0d;
-		public const double BOIDS_CHASE_WE					= 2.0d;
+		public const double BOIDS_FLEE_WE					= 4.0d;
+		public const double BOIDS_CHASE_WE					= 4.0d;
 		
-		public const ConsoleColor BOIDS_PREDATOR_COLOR		= ConsoleColor.DarkRed;
+		public const ConsoleColor BOIDS_PREDATOR_COLOR		= ConsoleColor.White;
 		#endregion Boids
 
 		#region Gravity
@@ -134,15 +136,15 @@ namespace ParticleSimulator {
 			new Tuple<double, ConsoleColor>(0.50d, ConsoleColor.Yellow),
 			new Tuple<double, ConsoleColor>(0.33d, ConsoleColor.DarkYellow),
 			new Tuple<double, ConsoleColor>(0.25d, ConsoleColor.Magenta),
-			new Tuple<double, ConsoleColor>(0.10d, ConsoleColor.DarkRed),
-			new Tuple<double, ConsoleColor>(0.00d, ConsoleColor.Red),
+			new Tuple<double, ConsoleColor>(0.10d, ConsoleColor.Red),
+			new Tuple<double, ConsoleColor>(0.00d, ConsoleColor.DarkRed),
 			new Tuple<double, ConsoleColor>(double.NegativeInfinity, ConsoleColor.White)
 		};
 		
 		public static readonly double WORLD_ASPECT_RATIO = WINDOW_WIDTH / (2d * WINDOW_HEIGHT);
 		public static readonly double[] DOMAIN = Enumerable.Repeat(1d, DIMENSIONALITY - 1).Prepend(WORLD_ASPECT_RATIO).ToArray().Multiply(WORLD_SCALE);
 		public static readonly double[] DOMAIN_CENTER = DOMAIN.Multiply(0.5d); 
-		public static readonly double DOMAIN_MAX_RADIUS = DOMAIN.Max()/2D;
+		public static readonly double DOMAIN_MAX_RADIUS = DOMAIN.Max() / (2d + WORLD_BOUNCE_EDGE_PCT/25d);
 		public static readonly double DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT = DOMAIN.Length < 3 ? 0d : DOMAIN.Skip(2).ToArray().Magnitude();
 		public static readonly ConsoleColor[] COLOR_ARRAY =
 			COLOR_SCALE == ParticleColorScale.DefaultConsoleColors

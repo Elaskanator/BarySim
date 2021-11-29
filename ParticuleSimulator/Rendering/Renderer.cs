@@ -106,8 +106,8 @@ namespace ParticleSimulator.Rendering {
 					rowStringData =
 						(Parameters.DOMAIN.Length < 3 && cIdx == 0 ? "=" : "≤")
 						+ (Parameters.DOMAIN.Length < 3
-							? ((int)Program.Simulator.DensityScale[cIdx].Current).ToString()
-							: Program.Simulator.DensityScale[cIdx].Current.ToStringBetter(2));
+							? ((int)Program.Simulator.DensityScale[cIdx]).ToString()
+							: Program.Simulator.DensityScale[cIdx].ToStringBetter(2));
 				} else rowStringData = ">";
 
 				for (int i = 0; i < rowStringData.Length; i++)

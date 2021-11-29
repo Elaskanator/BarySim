@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Generic.Models;
 
@@ -31,7 +32,7 @@ namespace ParticleSimulator {
 				if (Parameters.WORLD_WRAPPING) {
 					this._actuallyTrueCoordinates = this.WrapPosition(value);
 				} else {
-					this._actuallyTrueCoordinates = this.BoundPosition(value);
+					this._actuallyTrueCoordinates = value;
 					this.BounceVelocity();
 				}
 		} }
@@ -68,9 +69,14 @@ namespace ParticleSimulator {
 			return p;
 		}
 		private void BounceVelocity() {
-			double[] toCenter = Parameters.DOMAIN_CENTER.Subtract(this.TrueCoordinates);
-			if (toCenter.Magnitude() > Parameters.DOMAIN_MAX_RADIUS)
-				this.Velocity = this.Velocity.Add(toCenter.Multiply(Parameters.WORLD_BOUNCE_WEIGHT));
+			double dist;
+			for (int d = 0; d < Parameters.DIMENSIONALITY; d++) {
+				dist = this.TrueCoordinates[d] - Parameters.DOMAIN_CENTER[d];
+				if (dist < -Parameters.DOMAIN_MAX_RADIUS)
+					this.Velocity[d] += Parameters.WORLD_BOUNCE_WEIGHT * Math.Pow(Parameters.DOMAIN_MAX_RADIUS - dist, 0.5d);
+				else if (dist > Parameters.DOMAIN_MAX_RADIUS)
+					this.Velocity[d] -= Parameters.WORLD_BOUNCE_WEIGHT * Math.Pow(dist - Parameters.DOMAIN_MAX_RADIUS, 0.5d);
+			}
 		}
 
 		public bool Equals(AParticle other) { return !(other is null) && this.ID == other.ID; }

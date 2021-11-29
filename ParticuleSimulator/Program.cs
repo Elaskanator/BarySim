@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 using ParticleSimulator.Rendering;
@@ -70,7 +69,7 @@ namespace ParticleSimulator {
 				//Callback = null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
 				//OutputResource = null,
@@ -95,9 +94,9 @@ namespace ParticleSimulator {
 				//Evaluator = null,
 				//Synchronizer = null,
 				//Callback = null,
-				DataAssimilationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				DataAssimilationTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA_Tracking(Parameters.PERF_SMA_ALPHA) : null,
 				//IterationTicksAverager = null,
 				//DataLoadingTimeout = null,
 				OutputResource = Resource_Locations,
@@ -123,7 +122,7 @@ namespace ParticleSimulator {
 				//Callback = null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				//DataLoadingTimeout = null,
 				OutputResource = Resource_Tree,
@@ -140,7 +139,7 @@ namespace ParticleSimulator {
 				//Callback = null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				//DataLoadingTimeout = null,
 				OutputResource = Resource_Resamplings,
@@ -166,8 +165,8 @@ namespace ParticleSimulator {
 				Callback = Parameters.PERF_ENABLE ? PerfMon.AfterRasterize : null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				IterationTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 				//DataLoadingTimeout = null,
 				OutputResource = Resource_Rasterization,
 				//IsOutputOverwrite = false,

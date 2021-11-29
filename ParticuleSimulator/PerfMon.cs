@@ -48,16 +48,11 @@ namespace ParticleSimulator {
 			int frameIdx = (result.NumCompleted - 1) % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 			lock (_columnStatsLock) {
 				if (frameIdx == 0) {
-					if (result.NumCompleted - 1 == Parameters.PERF_GRAPH_FRAMES_PER_COLUMN || result.NumCompleted < 4) {//ignore the first couple junk timings
-						_currentColumnFrameTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
-						_currentColumnIterationTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
-					} else {
-						_currentColumnFrameTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
-						_currentColumnIterationTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
-						_graphColumns = _graphColumns.ShiftRight(false);
-						_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.ShiftRight(false);
-						_columnIterationTimeStatsMs = _columnIterationTimeStatsMs.ShiftRight(false);
-					}
+					_currentColumnFrameTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
+					_currentColumnIterationTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
+					_graphColumns = _graphColumns.ShiftRight(false);
+					_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.ShiftRight(false);
+					_columnIterationTimeStatsMs = _columnIterationTimeStatsMs.ShiftRight(false);
 				}
 				double currentFrameTimeMs = (
 					new double[] {

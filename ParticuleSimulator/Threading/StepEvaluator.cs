@@ -103,6 +103,8 @@ namespace ParticleSimulator.Threading {
 
 		public void Stop() {
 			this.IsActive = false;
+			foreach (EventWaitHandle handle in this._handles)
+				handle.Set();
 		}
 
 		private void ReceiveInput(object info) {
@@ -140,6 +142,7 @@ namespace ParticleSimulator.Threading {
 						ready = true;
 						if (!(refreshSignal is null))
 							ready = refreshSignal.WaitOne(TimeSpan.Zero);
+
 						if (ready) {
 							if (req.DoConsume) {
 								if (req.Resource.TryDequeue(ref _ingestBuffer[outIdx], TimeSpan.Zero)) {

@@ -61,23 +61,13 @@ namespace ParticleSimulator.Simulation.Boids {
 		public override void Interact(IEnumerable<AParticle> others) {
 			if (this.FoV > 0)
 				others = others.Where(p => Math.Abs(this.Velocity.AngleTo(p.TrueCoordinates)) < this.FoV/2d);
-			
-			AParticle target = this.IsPredator
-				? others
-					.Take(Parameters.DESIRED_INTERACTION_NEIGHBORS < 0 ? 1 : Parameters.DESIRED_INTERACTION_NEIGHBORS)
-					.OrderBy(p => this.Velocity.AngleTo(p.TrueCoordinates) * this.TrueCoordinates.Distance(p.TrueCoordinates))
-					.FirstOrDefault()
-				: null;
 
 			int count = 0;
 			foreach (Boid other in others.Cast<Boid>()) {
-				if (target is null || target.ID == other.ID) {
-					this.InteractInternal(other);
-					if (++count >= Parameters.DESIRED_INTERACTION_NEIGHBORS && Parameters.DESIRED_INTERACTION_NEIGHBORS > 0)
-						return;
-				}
-
-				if (other.IsPredator && !this.IsPredator)
+				this.InteractInternal(other);
+				if (++count >= Parameters.DESIRED_INTERACTION_NEIGHBORS && Parameters.DESIRED_INTERACTION_NEIGHBORS > 0)
+					return;
+				if (this.IsPredator && !other.IsPredator)
 					return;
 			}
 		}

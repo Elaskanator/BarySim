@@ -11,7 +11,7 @@ using ParticleSimulator.Rendering;
 namespace ParticleSimulator.Simulation {
 	public interface IParticleSimulator : IEnumerable<AParticle> {
 		public AParticle[] AllParticles { get; }
-		public SampleSMA[] DensityScale { get; }
+		public double[] DensityScale { get; }
 		public int InteractionLimit { get; }
 		public int? NeighborhoodFilteringDepth { get; }
 
@@ -32,7 +32,7 @@ namespace ParticleSimulator.Simulation {
 				double test = Parameters.DOMAIN.Magnitude();
 				spawnCenter = Parameters.DOMAIN.Divide(2).Add(
 					NumberExtensions.RandomCoordinate_Spherical(
-						Parameters.DOMAIN.Max() / 3d, Parameters.DOMAIN.Length,
+						Parameters.DOMAIN.Max() / 2d, Parameters.DOMAIN.Length,
 						Program.Random));
 				this.ParticleGroups[i] = this.NewParticleGroup();
 				this.ParticleGroups[i].Init(spawnCenter);
@@ -43,12 +43,12 @@ namespace ParticleSimulator.Simulation {
 				this.DensityScale =
 				Enumerable
 					.Range(1, numDensityValues + 1)
-					.Select(x => { SampleSMA result = new SampleSMA(Parameters.AUTOSCALING_SMA); result.Update(x / (1d + numDensityValues)); return result; })
+					.Select(x => x / (1d + numDensityValues))
 					.ToArray();
 			else this.DensityScale =
 				Enumerable
 					.Range(1, numDensityValues + 1)
-					.Select(x => { SampleSMA result = new SampleSMA(Parameters.AUTOSCALING_SMA); result.Update(x); return result; })
+					.Select(x => (double)x)
 					.ToArray();
 		}
 		public virtual int InteractionLimit => Parameters.DESIRED_INTERACTION_NEIGHBORS;
@@ -57,7 +57,7 @@ namespace ParticleSimulator.Simulation {
 		public G[] ParticleGroups { get; private set; }
 		public P[] AllParticles { get; private set; }
 		AParticle[] IParticleSimulator.AllParticles => this.AllParticles;
-		public SampleSMA[] DensityScale { get; private set; }
+		public double[] DensityScale { get; private set; }
 		protected readonly Random _rand;
 
 		public abstract G NewParticleGroup();
@@ -65,7 +65,9 @@ namespace ParticleSimulator.Simulation {
 		public ParticleTree<P> RebuildTree() {
 			foreach (P p in this.AllParticles)
 				p.Coordinates = (double[])p.TrueCoordinates.Clone();//tree reuse means we don't care about race conditions with dirty access
-			return new ParticleTree<P>(this.AllParticles);
+			ParticleTree<P> result = new ParticleTree<P>();
+			result.AddRange(this.AllParticles.Where(p => p.Coordinates.Select((x, d) => x >= 0 && x < Parameters.DOMAIN[d]).All()));
+			return result;
 		}
 		ITree IParticleSimulator.RebuildTree() { return this.RebuildTree(); }
 
@@ -84,12 +86,12 @@ namespace ParticleSimulator.Simulation {
 
 		protected virtual void InteractTree(ParticleTree<P> tree) {
 			Parallel.ForEach(
-				tree.NestedChildren.Take(Parameters.SIMULATION_PARALLELISM),
-				child => {
-					foreach (ParticleTree<P> leaf in child.Leaves)
-						foreach (P p in leaf.NodeElements) {
-							p.AccumulatedImpulse = new double[p.DIMENSIONALITY];
-							p.Interact(leaf.GetNeighbors().Except(p2 => p2.ID == p.ID));
+				tree.Leaves,
+				Parameters.MulithreadedOptions,
+				leaf => {
+					foreach (P p in leaf.NodeElements) {
+						p.AccumulatedImpulse = new double[p.DIMENSIONALITY];
+						p.Interact(leaf.GetNeighbors().Except(p2 => p2.ID == p.ID));
 			}});
 		}
 
@@ -119,29 +121,35 @@ namespace ParticleSimulator.Simulation {
 
 		public IEnumerable<IGrouping<int, dynamic>> DiscreteParticleBin(Tuple<double[], AParticle>[] particleData) { 
 			return particleData//Parameters.RENDER_3D_PHI
-				.Select(d => new {
-					X = d.Item1[0] * Renderer.RenderWidth / Parameters.DOMAIN[0],
-					Y = d.Item1.Length < 2 ? 0d : d.Item1[1] * Renderer.RenderHeight / Parameters.DOMAIN[1] / 2d,
-					Particle = d.Item2})
-				.GroupBy(d => (int)d.X + Renderer.RenderWidthOffset + Parameters.WINDOW_WIDTH*((int)d.Y + Renderer.RenderHeightOffset));
+				.Where(pd => pd.Item1.Select((x, d) => x >= 0 && x < Parameters.DOMAIN[d]).All())
+				.Select(pd => new {
+					X = pd.Item1[0] * Renderer.RenderWidth / Parameters.DOMAIN[0],
+					Y = pd.Item1.Length < 2 ? 0d : pd.Item1[1] * Renderer.RenderHeight / Parameters.DOMAIN[1] / 2d,
+					Particle = pd.Item2})
+				.GroupBy(pd => (int)pd.X + Renderer.RenderWidthOffset + Parameters.WINDOW_WIDTH*((int)pd.Y + Renderer.RenderHeightOffset));
 		}
 
 		public void AutoscaleUpdate(Tuple<char, AParticle[]>[] sampling) {
 			double[] orderedDensities = sampling.Except(t => t is null).Select(t => this.GetDensity(t.Item2)).Order().ToArray();
+			bool isDiscrete = Parameters.DIMENSIONALITY < 3;
 			if (orderedDensities.Any()) {
 				int totalBands = Parameters.COLOR_ARRAY.Length;
 
-				double curVal = 0d, newVal = 0d;
+				double curVal = 0d, newVal = 0d, lastVal = 0d;
 				int percentileIdx;
 				for (int bandIdx = 0; bandIdx < this.DensityScale.Length; bandIdx++) {//skip last band
 					percentileIdx = (int)((double)orderedDensities.Length * (bandIdx + 1d) / totalBands);
 
 					if (percentileIdx < orderedDensities.Length) {
-						curVal = this.DensityScale[bandIdx].Current;
+						curVal = this.DensityScale[bandIdx];
 						newVal = orderedDensities[percentileIdx];
 					}
 
-					this.DensityScale[bandIdx].Update(newVal);
+					if (isDiscrete && newVal - lastVal < 1d)
+						newVal = lastVal + 1d;
+
+					this.DensityScale[bandIdx] = newVal;
+					lastVal = newVal;
 				}
 			}
 		}
@@ -152,7 +160,7 @@ namespace ParticleSimulator.Simulation {
 			switch (Parameters.COLOR_SCHEME) {
 				case ParticleColoringMethod.Density:
 					double density = this.GetDensity(particles);
-					rank = Program.Simulator.DensityScale.TakeWhile(a => a.Current < density).Count();
+					rank = Program.Simulator.DensityScale.TakeWhile(a => a < density).Count();
 					rank = rank < Parameters.COLOR_ARRAY.Length ? rank : Parameters.COLOR_ARRAY.Length - 1;
 					return Parameters.COLOR_ARRAY[rank];
 				case ParticleColoringMethod.Group:
@@ -161,7 +169,7 @@ namespace ParticleSimulator.Simulation {
 					if (Parameters.DIMENSIONALITY > 2) {
 						int numColors = Parameters.COLOR_ARRAY.Length;
 						double depth = 1d - particles.Min(p => GetDepthScalar(p.Coordinates));
-						rank = Program.Simulator.DensityScale.Take(numColors - 1).TakeWhile(a => a.Current < depth).Count();
+						rank = Program.Simulator.DensityScale.Take(numColors - 1).TakeWhile(a => a < depth).Count();
 						return Parameters.COLOR_ARRAY[rank];
 					} else return Parameters.COLOR_ARRAY[^1];
 				default:
