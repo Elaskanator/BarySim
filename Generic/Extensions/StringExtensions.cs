@@ -12,6 +12,14 @@ namespace Generic.Extensions {
 			} else {
 				double mag = value.BaseExponent();
 				int magnitude = (int)Math.Floor(mag);
+				string exponent = "";
+				if (magnitude > minAccuracy + 2 || magnitude > totalLength - 1) {
+					exponent = "E" + magnitude;
+					value /= Math.Pow(10, magnitude);
+					mag = value.BaseExponent();
+					magnitude = (int)Math.Floor(mag);
+					totalLength -= 1 + (magnitude < 0 ? 1 : 0);
+				}
 
 				int remainingLen;
 				string result;
@@ -22,10 +30,11 @@ namespace Generic.Extensions {
 				else result = ((int)value).ToString();
 
 				if (totalLength.HasValue)
-					return magnitude < 0
+					result = magnitude < 0
 						? new string(result.Take(totalLength.Value).ToArray())
 						: new string(result.Reverse().Take(totalLength.Value).Reverse().ToArray());
-				else return result;
+
+				return result + exponent;
 			}
 		}
 

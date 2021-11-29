@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ParticleSimulator.Rendering {
+namespace ParticleSimulator {
 	public enum ParticleColoringMethod {
 		Group,
 		Density,
@@ -13,7 +13,20 @@ namespace ParticleSimulator.Rendering {
 		ReducedColors
 	}
 
-	public static class ParticleColoringScales {
+	public static class ColoringScales {
+		public static readonly Tuple<double, ConsoleColor>[] RatioColors = new Tuple<double, ConsoleColor>[] {
+			new Tuple<double, ConsoleColor>(1.05d, ConsoleColor.Cyan),
+			new Tuple<double, ConsoleColor>(1.00d, ConsoleColor.DarkGreen),
+			new Tuple<double, ConsoleColor>(0.90d, ConsoleColor.Green),
+			new Tuple<double, ConsoleColor>(0.75d, ConsoleColor.Gray),
+			new Tuple<double, ConsoleColor>(0.50d, ConsoleColor.Yellow),
+			new Tuple<double, ConsoleColor>(0.33d, ConsoleColor.DarkYellow),
+			new Tuple<double, ConsoleColor>(0.25d, ConsoleColor.Magenta),
+			new Tuple<double, ConsoleColor>(0.10d, ConsoleColor.Red),
+			new Tuple<double, ConsoleColor>(0.00d, ConsoleColor.DarkRed),
+			new Tuple<double, ConsoleColor>(double.NegativeInfinity, ConsoleColor.White)
+		};
+
 		public static readonly ConsoleColor[] DEFAULT_CONSOLE_COLORS = new ConsoleColor[] {
 			ConsoleColor.DarkBlue,
 			ConsoleColor.DarkGreen,
@@ -33,9 +46,7 @@ namespace ParticleSimulator.Rendering {
 		};
 		public static readonly ConsoleColor[] Radar = new ConsoleColor[] {
 			ConsoleColor.DarkGray,
-			ConsoleColor.Gray,
 			ConsoleColor.Cyan,
-			ConsoleColor.White,
 			ConsoleColor.DarkCyan,
 			ConsoleColor.Blue,
 			ConsoleColor.DarkBlue,
@@ -46,14 +57,16 @@ namespace ParticleSimulator.Rendering {
 			ConsoleColor.DarkRed,
 			ConsoleColor.Magenta,
 			ConsoleColor.DarkMagenta,
+			ConsoleColor.White,
 		};
 		public static readonly ConsoleColor[] Reduced = new ConsoleColor[] {
 			ConsoleColor.DarkGray,
-			ConsoleColor.Gray,
+			//ConsoleColor.Gray,
+			ConsoleColor.DarkCyan,
+			ConsoleColor.DarkGreen,
+			ConsoleColor.DarkYellow,
+			ConsoleColor.DarkRed,
 			ConsoleColor.White,
-			ConsoleColor.Cyan,
-			ConsoleColor.Yellow,
-			ConsoleColor.Red,
 		};
 		public static readonly ConsoleColor[] Grayscale = new ConsoleColor[] {
 			ConsoleColor.DarkGray,

@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace Generic.Models {
 	public class TimeSynchronizer {
-		public static readonly TimeSpan THREAD_SLEEP_OVERHEAD = TimeSpan.FromMilliseconds(15);
+		public const int THREAD_PULSE_MS = 15;//what is the exact value?
 
 		public TimeSynchronizer(TimeSpan? value, TimeSpan? min = null) {
 			if (min.HasValue && min.Value.Ticks > 0L) this.Min = min.Value;
@@ -12,7 +12,8 @@ namespace Generic.Models {
 		public static TimeSynchronizer FromFps(double? value, double? max = null) {
 			return new TimeSynchronizer(
 				value.HasValue && value.Value > 0d ? TimeSpan.FromSeconds(1d / value.Value) : null,
-				max.HasValue && max.Value > 0d ? TimeSpan.FromSeconds(1d / max.Value) : null); }
+				max.HasValue && max.Value > 0d ? TimeSpan.FromSeconds(1d / max.Value) : null);
+		}
 		
 		private DateTime? _targetTimeUtc = null;
 		public readonly TimeSpan Min = TimeSpan.Zero;
@@ -20,7 +21,7 @@ namespace Generic.Models {
 
 		public void Synchronize() {
 			DateTime nowUtc = DateTime.UtcNow;
-			this._targetTimeUtc ??= nowUtc;
+			this._targetTimeUtc ??= new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, nowUtc.Minute, nowUtc.Second, DateTimeKind.Utc);
 			TimeSpan waitDuration = TimeSpan.Zero;
 
 			if (this.Interval.Ticks > 0L) {
@@ -39,8 +40,8 @@ namespace Generic.Models {
 				else this._targetTimeUtc = nowUtc + this.Min;
 			}
 
-			if (waitDuration >= THREAD_SLEEP_OVERHEAD)
-				Thread.Sleep(waitDuration - THREAD_SLEEP_OVERHEAD);
+			if (waitDuration.TotalMilliseconds > THREAD_PULSE_MS)
+				Thread.Sleep(waitDuration.Subtract(TimeSpan.FromMilliseconds(waitDuration.TotalMilliseconds % THREAD_PULSE_MS)));
 		}
 	}
 }

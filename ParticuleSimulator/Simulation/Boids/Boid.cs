@@ -2,19 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
-using Generic.Models;
+using Generic.Models.Vectors;
 
 namespace ParticleSimulator.Simulation.Boids {
-	public class Boid: AParticle {
+	public class Boid : AParticle {
 		private static double _speedDecay;
 		private static double _predatorSpeedDecay;
 		public Boid(int groupID, double[] position, double[] velocity, double corruption)
 		: base(groupID, position, velocity) {
 			this.IsPredator = Program.Random.NextDouble() < corruption;
-			this._accumDisperse = new double[this.DIMENSIONALITY];
-			this._accumCohere = new double[this.DIMENSIONALITY];
+			this._accumDisperse = new double[Parameters.DIM];
+			this._accumCohere = new double[Parameters.DIM];
 			this._cohesionInteractions = 0;
-			this._accumAlign = new double[this.DIMENSIONALITY];
+			this._accumAlign = new double[Parameters.DIM];
 			this._alignInteractions = 0;
 		}
 		static Boid() {
@@ -45,34 +45,26 @@ namespace ParticleSimulator.Simulation.Boids {
 		private int _cohesionInteractions;
 		private double[] _accumAlign;
 		private int _alignInteractions;
-		public override double[] AccumulatedImpulse {
+		public override double[] Acceleration {
 			get { return
 				this._accumDisperse.Multiply(this.DisperseWeight)
 				.Add(this._accumCohere.Multiply(this.CohesionWeight / (this._cohesionInteractions > 0 ? this._cohesionInteractions : 1)))
 				.Add(this._accumAlign.Multiply(this.AlignmentWeight / (this._alignInteractions > 0 ? this._alignInteractions : 1))); }
 			set {
-				this._accumDisperse = new double[this.DIMENSIONALITY];
-				this._accumCohere = new double[this.DIMENSIONALITY];
+				this._accumDisperse = new double[Parameters.DIM];
+				this._accumCohere = new double[Parameters.DIM];
 				this._cohesionInteractions = 0;
-				this._accumAlign = new double[this.DIMENSIONALITY];
+				this._accumAlign = new double[Parameters.DIM];
 				this._alignInteractions = 0;
-		} }
+		}}
 
-		public override void Interact(IEnumerable<AParticle> others) {
+		protected override IEnumerable<AParticle> Filter(IEnumerable<AParticle> others) {
 			if (this.FoV > 0)
-				others = others.Where(p => Math.Abs(this.Velocity.AngleTo(p.TrueCoordinates)) < this.FoV/2d);
-
-			int count = 0;
-			foreach (Boid other in others.Cast<Boid>()) {
-				this.InteractInternal(other);
-				if (++count >= Parameters.DESIRED_INTERACTION_NEIGHBORS && Parameters.DESIRED_INTERACTION_NEIGHBORS > 0)
-					return;
-				if (this.IsPredator && !other.IsPredator)
-					return;
-			}
+				return others.Where(p => Math.Abs(this.Velocity.AngleTo(p.LiveCoordinates)) < this.FoV/2d);
+			else return others;
 		}
-		private void InteractInternal(Boid other) {
-			double[] vectorAway = this.TrueCoordinates.Subtract(other.TrueCoordinates);
+		protected override void Interact(AParticle other) {
+			double[] vectorAway = this.LiveCoordinates.Subtract(other.LiveCoordinates);
 			double dist = vectorAway.Magnitude();
 
 			if (dist < this.Vision) {
@@ -83,7 +75,7 @@ namespace ParticleSimulator.Simulation.Boids {
 					cohesionWeight = 0,
 					alignmentWeight = 0;
 
-				if (this.IsPredator == other.IsPredator) {
+				if (this.IsPredator == ((Boid)other).IsPredator) {
 					if (this.GroupID == other.GroupID) {
 						if (dist > minDist) {
 							cohesionWeight = 1d;
@@ -98,7 +90,7 @@ namespace ParticleSimulator.Simulation.Boids {
 					minDist = 1d;
 					cohesionDist = 2d;
 					cohesionWeight = Parameters.BOIDS_CHASE_WE;
-				} else if (other.IsPredator) {
+				} else if (((Boid)other).IsPredator) {
 					minDist = this.Vision;
 					dispersionWeight = Parameters.BOIDS_FLEE_WE;
 					cohesionWeight = 1d;
@@ -128,10 +120,10 @@ namespace ParticleSimulator.Simulation.Boids {
 			}
 		}
 
-		public override void AfterInteract() {
+		protected override void AfterInteract() {
 			double speed;
 			while ((speed = this.Velocity.Magnitude()) == 0)
-				this.Velocity = NumberExtensions.RandomUnitVector_Spherical(Parameters.DOMAIN.Length, Program.Random).Multiply(Parameters.BOIDS_BOID_MAX_SPEED * Program.Random.NextDouble());
+				this.Velocity = NumberExtensions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.BOIDS_BOID_MAX_SPEED * Program.Random.NextDouble());
 
 			this.Velocity = speed < this.MinSpeed
 				? this.Velocity.Multiply(this.MinSpeed / speed)

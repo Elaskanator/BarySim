@@ -1,52 +1,35 @@
-﻿//using System;
-//using System.Collections.Generic;
-//using Generic.Extensions;
-//using Generic.Models;
+﻿using System;
+using Generic.Extensions;
+using Generic.Models.Vectors;
 
-//namespace ParticleSimulator.Simulation.Gravity {
-//	public class CelestialBody : AParticle {
-//		public const double GRAVITATIONAL_CONSTANT = 0.66743d;
+namespace ParticleSimulator.Simulation.Gravity {
+	public class CelestialBody : AParticle {
+		public CelestialBody(int groupID, double[] position, double[] velocity, double mass) : base(groupID, position, velocity) {
+			this.Mass = mass;
+		}
 
-//		private readonly double _radius;
-//		public override double Radius => this._radius;
+		private double _mass;
+		public double Mass {
+			get => this._mass;
+			set {
+				this._mass = value;
+				this.Radius = NumberExtensions.HypersphereRadius(
+					this._mass
+					* Math.Pow(1d / this._mass, 1d / Parameters.GRAVITY_COMPRESSION_SCALING_POW)
+					/ Parameters.GRAVITY_DENSITY,
+					Parameters.DIM);
+		}}
+		public double Radius { get; private set; }
 
-//		public CelestialBody(int groupID, double[] position, double[] velocity, double mass) : base(groupID, position, velocity, mass) {
-//			this._contributingBaryonsAcceleration = new double[this.DIMENSIONALITY];
-//			this._radius = NumberExtensions.HypersphereRadius(mass, this.DIMENSIONALITY);
-//		}
-
-//		internal readonly Dictionary<int, double[]> _contributingAccelerations = new();
-//		private double[] _contributingBaryonsAcceleration;
-//		public override void InteractSubtree(ITree node) {
-//			double[] toOther = this.TrueCoordinates.Subtract(((ParticleTree<CelestialBody>)node).Barycenter.Current);
-//			double distance = VectorFunctions.Magnitude(toOther);
-
-//			double[] toOtherNormalized;
-//			if (distance > this.Radius) toOtherNormalized = VectorFunctions.Divide(toOther, distance);
-//			else return;
-
-//			this._contributingBaryonsAcceleration = VectorFunctions.Add(
-//				this._contributingBaryonsAcceleration,
-//				VectorFunctions.Multiply(toOtherNormalized, GRAVITATIONAL_CONSTANT * ((ParticleTree<CelestialBody>)node).TotalMass / distance / distance));
-//		}
-//		public void Interact(CelestialBody other) {
-//			if (this._contributingAccelerations.ContainsKey(other.ID)) return;//handshake optimization
-//			else {
-//				double[] toOther = this.TrueCoordinates.Subtract(other.TrueCoordinates);
-//				double distance = VectorFunctions.Magnitude(toOther);
-				
-//				double[] toOtherNormalized;
-//				if (distance > this.Radius) toOtherNormalized = VectorFunctions.Divide(toOther, distance);
-//				else return;
-
-//				double[] force = VectorFunctions.Multiply(toOtherNormalized, GRAVITATIONAL_CONSTANT * this.Mass * other.Mass / distance / distance);
-
-//				this._contributingAccelerations[other.ID] = VectorFunctions.Divide(force, this.Mass);
-//				other._contributingAccelerations[this.ID] = VectorFunctions.Divide(force, -other.Mass);
-//			}
-//		}
-//		public override void Interact(AParticle other) { this.Interact((CelestialBody)other); }
-		
-//		public override void InteractMany(ATree<AParticle> tree) { throw new NotImplementedException(); }
-//	}
-//}
+		public static double[] ComputeInteraction(double[] coordinates, double mass, double[] otherCoordinates, double otherMass) {
+			double[] toOther = otherCoordinates.Subtract(coordinates);
+			double distance = VectorFunctions.Magnitude(toOther);
+			return VectorFunctions.Multiply(
+				toOther,//one division of distance is to normalize the direction vector
+				Parameters.GRAVITATIONAL_CONSTANT * mass * otherMass / distance / distance / distance);
+		}
+		protected override void Interact(AParticle other) {
+			throw new InvalidOperationException();
+		}
+	}
+}

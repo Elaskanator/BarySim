@@ -1,8 +1,8 @@
-﻿using Generic.Extensions;
-using Generic.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Generic.Extensions;
+using Generic.Models.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public abstract class AParticleGroup<P> : IEquatable<AParticleGroup<P>>, IEqualityComparer<AParticleGroup<P>>
@@ -12,30 +12,28 @@ namespace ParticleSimulator.Simulation {
 
 		public P[] Particles { get; private set; }
 
-		public abstract P NewParticle(double[] position, double[] velocity, Random rand);
+		public abstract P NewParticle(double[] position, double[] groupVelocity, Random rand);
 
 		public AParticleGroup() {
 			this.ID = _globalID++;
 		}
 
 		public void Init(double[] center) {
-			double particleVolume = NumberExtensions.HypersphereVolume(Parameters.INITIAL_SEPARATION * 2d, Parameters.DOMAIN.Length);
-			double radius = NumberExtensions.HypersphereRadius(particleVolume * Parameters.NUM_PARTICLES_PER_GROUP, Parameters.DOMAIN.Length);
+			int numMembers = 1 + (int)(Program.Random.NextDouble() * (Parameters.PARTICLES_PER_GROUP_MAX-1));
 
-			double startingSpeedRange = Parameters.MAX_STARTING_SPEED < 0
-				? 0d
-				: Parameters.MAX_STARTING_SPEED;
+			double particleVolume = NumberExtensions.HypersphereVolume(Parameters.INITIAL_SEPARATION * 2d, Parameters.DIM);
+			double radius = NumberExtensions.HypersphereRadius(particleVolume * numMembers, Parameters.DIM);
+			double[] groupVelocity = NumberExtensions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.MAX_GROUP_STARTING_SPEED_PCT * Parameters.DOMAIN[0]);
+
 			this.Particles = Enumerable
-				.Range(0, Parameters.NUM_PARTICLES_PER_GROUP)
+				.Range(0, numMembers)
 				.Select(d => {
-					double direction = startingSpeedRange < 0 ? 0 : 2d * Math.PI * Program.Random.NextDouble();
+					double direction = Parameters.MAX_GROUP_STARTING_SPEED_PCT < 0 ? 0 : 2d * Math.PI * Program.Random.NextDouble();
 					return this.NewParticle(
-						position:center.Zip(
-							NumberExtensions.RandomCoordinate_Spherical(radius, Parameters.DOMAIN.Length, Program.Random),
+						position: center.Zip(
+							NumberExtensions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Random),
 							(a, b) => a + b).ToArray(),
-						velocity:startingSpeedRange <= 0
-							? new double[Parameters.DOMAIN.Length]
-							: NumberExtensions.RandomUnitVector_Spherical(Parameters.DOMAIN.Length, Program.Random).Multiply(startingSpeedRange * Program.Random.NextDouble()),
+						groupVelocity: groupVelocity,
 						Program.Random);
 					})
 				.ToArray();

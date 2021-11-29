@@ -1,48 +1,49 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Generic.Models;
-using ParticleSimulator.Rendering;
+using Generic.Models.Vectors;
+using ParticleSimulator.Simulation;
 
 namespace ParticleSimulator {
 	//NOTE sentinel value is usually -1 for unlimited
 	public static class Parameters {
+		public const SimulationType SimType = SimulationType.Gravity;
+
 		public const bool ENABLE_ASYNCHRONOUS = true;
 		public const bool LEGEND_ENABLE = true;
 		public const bool PERF_ENABLE = true;
 		public const bool PERF_STATS_ENABLE = true;
 		public const bool PERF_GRAPH_ENABLE = true;
+		
+		public const int PARTICLES_PER_GROUP_MAX = 100;
+		public const int PARTICLE_GROUPS_NUM = 1000;
+
+		public const double WORLD_SCALE = 1E3;
+		public const bool WORLD_WRAPPING = false;
+		public const bool WORLD_BOUNDING = false;
 
 		public const int PRECALCULATION_LIMIT = 2;
-		public const int SIMULATION_PARALLELISM = 32;
-		public const int DESIRED_INTERACTION_NEIGHBORS = 8;
+		public const int SIMULATION_PARALLELISM = 16;
 
 		#region Particles
-		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Group;
-		public const ParticleColorScale COLOR_SCALE = ParticleColorScale.DefaultConsoleColors;
-		public const bool DENSITY_AUTOSCALE_ENABLE = true;//only applies to Density coloring
-		public const int AUTOSCALE_INTERVAL_MS = 500;
-		public const double AUTOSCALING_SMA = 1d;
+		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Density;
+		public const ParticleColorScale COLOR_SCALE = ParticleColorScale.Grayscale;
+		public const bool DENSITY_AUTOSCALE_PERCENTILE = false;//only applies to Density coloring
 
-		public const int NUM_PARTICLES_PER_GROUP = 1000;
-		public const int NUM_PARTICLE_GROUPS = 10;
-		public const double INITIAL_SEPARATION = 10;
+		public const double INITIAL_SEPARATION = 2E0;
 		
-		public const double MAX_STARTING_SPEED = -1;
+		public const double MAX_STARTING_SPEED_PCT = 1E-4;
+		public const double MAX_GROUP_STARTING_SPEED_PCT = 2E-4;
 		#endregion Particles
 
 		#region Sizes
-		public const int WINDOW_WIDTH = 120;//160 x 80 max, practical min width of graph width if that is enabled
-		public const int WINDOW_HEIGHT = 60;//using top and bottom halves of each character to get double the verticle resolution
+		public const int WINDOW_WIDTH = 160;
+		public const int WINDOW_HEIGHT = 80;//using top and bottom halves of each character to get double the verticle resolution
 
-		public const double RENDER_3D_PHI = Math.PI / 4d;
-
-		public const int DIMENSIONALITY = 3;
-		public const double WORLD_SCALE = 1200d;
-		public const double WORLD_EPSILON = 0.0001d;
-		public const bool WORLD_WRAPPING = true;//TODO
+		public const int DIM = 2;
+		public const double WORLD_BOUNCE_WEIGHT = 0d;
 		public const double WORLD_BOUNCE_EDGE_PCT = 10d;
-		public const double WORLD_BOUNCE_WEIGHT = 0.02d;
+		public const double WORLD_EPSILON = 0.0001d;
 
 		public const int GRAPH_WIDTH = -1;
 		public const int GRAPH_HEIGHT = 7;//at least 2
@@ -50,20 +51,38 @@ namespace ParticleSimulator {
 
 		#region Timings
 		public const double TARGET_FPS = -1;
-		public const double MAX_FPS = -1;
+		public const double MAX_FPS = 36;
 
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times per render
 		public const int TREE_REFRESH_REUSE_ALLOWANCE = 7;
-		public const int QUADTREE_NODE_CAPACITY = 5;
 
 		public const bool SYNC_SIMULATION = true;
 		public const bool SYNC_TREE_REFRESH = false;
 		#endregion Timings
 
+		#region Gravity
+		public const double GRAVITATIONAL_CONSTANT = 1E-3;
+
+		public const double GRAVITY_MIN_MASS = 1E-2;
+		public const double GRAVITY_MAX_MASS = 1E1;
+		public const double GRAVITY_MASS_BIAS = 2d;
+
+		public const double GRAVITY_DENSITY = 1d;
+		public const double GRAVITY_COMPRESSION_SCALING_POW = 10d;
+
+		public const double GRAVITY_DEATH_BOUND_CNT = 100d;
+		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 5;
+
+		public const int GRAVITY_NEIGHBORHOOD_FILTER = 2;
+		#endregion Gravity
+
 		#region Boids
 		public const bool BOIDS_ENABLE_COHESION				= true;
 		public const bool BOIDS_ENABLE_ALIGNMENT			= true;
 		public const bool BOIDS_ENABLE_SEPARATION			= true;
+
+		public const int BOIDS_DESIRED_INTERACTION_NEIGHBORS= 8;
+
 		public const double BOIDS_PREDATOR_CHANCE			= 0d;
 		public const double BOIDS_PREDATOR_CHANCE_BIAS		= 1d;
 
@@ -102,13 +121,6 @@ namespace ParticleSimulator {
 		public const ConsoleColor BOIDS_PREDATOR_COLOR		= ConsoleColor.White;
 		#endregion Boids
 
-		#region Gravity
-		public const double MIN_MASS = 1;
-		public const double MAX_MASS = 1;
-
-		public const int NEIGHBORHOOD_FILTER = 5;
-		#endregion Gravity
-
 		#region Aux
 		public const char CHAR_LOW  = '\u2584';//▄
 		public const char CHAR_BOTH = '\u2588';//█
@@ -116,6 +128,8 @@ namespace ParticleSimulator {
 
 		public const double TARGET_FPS_DEFAULT = 30d;
 		public const int PERF_WARN_MS = 2000;
+		public const int CONSOLE_TITLE_INTERVAL_MS = 500;
+		public const int AUTOSCALE_INTERVAL_MS = 1000;
 
 		public const int NUMBER_ACCURACY = 2;
 		public const int NUMBER_SPACING = 5;
@@ -127,34 +141,21 @@ namespace ParticleSimulator {
 		public const double PERF_GRAPH_PERCENTILE_LOW_CUTOFF = 0d;
 		public const double PERF_GRAPH_PERCENTILE_HIGH_CUTOFF = 0d;
 		public const int PERF_GRAPH_NUMBER_ACCURACY = 3;
-
-		public static readonly Tuple<double, ConsoleColor>[] RatioColors = new Tuple<double, ConsoleColor>[] {
-			new Tuple<double, ConsoleColor>(1.05d, ConsoleColor.Cyan),
-			new Tuple<double, ConsoleColor>(1.00d, ConsoleColor.DarkGreen),
-			new Tuple<double, ConsoleColor>(0.90d, ConsoleColor.Green),
-			new Tuple<double, ConsoleColor>(0.75d, ConsoleColor.Gray),
-			new Tuple<double, ConsoleColor>(0.50d, ConsoleColor.Yellow),
-			new Tuple<double, ConsoleColor>(0.33d, ConsoleColor.DarkYellow),
-			new Tuple<double, ConsoleColor>(0.25d, ConsoleColor.Magenta),
-			new Tuple<double, ConsoleColor>(0.10d, ConsoleColor.Red),
-			new Tuple<double, ConsoleColor>(0.00d, ConsoleColor.DarkRed),
-			new Tuple<double, ConsoleColor>(double.NegativeInfinity, ConsoleColor.White)
-		};
 		
 		public static readonly double WORLD_ASPECT_RATIO = WINDOW_WIDTH / (2d * WINDOW_HEIGHT);
-		public static readonly double[] DOMAIN = Enumerable.Repeat(1d, DIMENSIONALITY - 1).Prepend(WORLD_ASPECT_RATIO).ToArray().Multiply(WORLD_SCALE);
+		public static readonly double[] DOMAIN = Enumerable.Repeat(1d, DIM - 1).Prepend(WORLD_ASPECT_RATIO).ToArray().Multiply(WORLD_SCALE);
 		public static readonly double[] DOMAIN_CENTER = DOMAIN.Multiply(0.5d); 
 		public static readonly double DOMAIN_MAX_RADIUS = DOMAIN.Max() / (2d + WORLD_BOUNCE_EDGE_PCT/25d);
-		public static readonly double DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT = DOMAIN.Length < 3 ? 0d : DOMAIN.Skip(2).ToArray().Magnitude();
+		public static readonly double DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT = DIM < 3 ? 0d : DOMAIN.Skip(2).ToArray().Magnitude();
 		public static readonly ConsoleColor[] COLOR_ARRAY =
 			COLOR_SCALE == ParticleColorScale.DefaultConsoleColors
-				? ParticleColoringScales.DEFAULT_CONSOLE_COLORS
+				? ColoringScales.DEFAULT_CONSOLE_COLORS
 				: COLOR_SCALE == ParticleColorScale.Grayscale
-					? ParticleColoringScales.Grayscale
+					? ColoringScales.Grayscale
 					: COLOR_SCALE == ParticleColorScale.ReducedColors
-						? ParticleColoringScales.Reduced
-						: ParticleColoringScales.Radar;
-		public static readonly ParallelOptions MulithreadedOptions = new() { MaxDegreeOfParallelism = Parameters.SIMULATION_PARALLELISM };
+						? ColoringScales.Reduced
+						: ColoringScales.Radar;
+		public static readonly ParallelOptions MulithreadedOptions = new() { MaxDegreeOfParallelism = SIMULATION_PARALLELISM };
 		#endregion Aux
 	}
 }

@@ -1,4 +1,6 @@
 ﻿using System;
+using Generic.Extensions;
+using Generic.Models.Vectors;
 
 namespace ParticleSimulator.Simulation.Boids {
 	public class Flock : AParticleGroup<Boid> {
@@ -9,8 +11,10 @@ namespace ParticleSimulator.Simulation.Boids {
 				: 0d;
 		}
 
-		public override Boid NewParticle(double[] position, double[] velocity, Random random) {
-			return new Boid(this.ID, position, velocity, this.Corruption * Parameters.BOIDS_PREDATOR_CHANCE);
+		public override Boid NewParticle(double[] position, double[] groupVelocity, Random random) {
+			return new Boid(this.ID, position,
+				groupVelocity.Add(NumberExtensions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.MAX_STARTING_SPEED_PCT * Parameters.DOMAIN[0])),
+				this.Corruption * Parameters.BOIDS_PREDATOR_CHANCE);
 		}
 	}
 }

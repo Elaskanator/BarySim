@@ -22,7 +22,7 @@ namespace Generic.Models {
 			} else return this.Data_asc[(int)idx];
 		}
 
-		public StatsInfo(IEnumerable<double> data) {
+		public StatsInfo(params double[] data) {
 			if (data is null) throw new ArgumentNullException();
 			this.Data_asc = data.Order().ToArray();
 			if (this.Data_asc.Length == 0) throw new ArgumentException();
@@ -33,5 +33,7 @@ namespace Generic.Models {
 			this.Mean = this.Data_asc.Average();
 			this.StdDev = Math.Sqrt(this.Data_asc.Average(d => (d-this.Mean)*(d-this.Mean)));
 		}
+		public StatsInfo(IEnumerable<double> data)
+		: this(data.ToArray()) { }
 	}
 }

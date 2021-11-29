@@ -10,19 +10,41 @@ namespace Generic.Extensions {
 			IEnumerator<I1> it1 = in1.GetEnumerator();
 			IEnumerator<I2> it2 = in2.GetEnumerator();
 			IEnumerator<I3> it3 = in3.GetEnumerator();
-			while (it1.MoveNext() && it2.MoveNext() && it3.MoveNext()) {
+			while (it1.MoveNext() && it2.MoveNext() && it3.MoveNext())
 				yield return projection(it1.Current, it2.Current, it3.Current);
-			}
+		}
+
+		public static bool All<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
+			int count = 0;
+			foreach (T t in source)
+				if (!test(t, count++)) return false;
+			return true;
+		}
+
+		public static bool Any<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
+			int count = 0;
+			foreach (T t in source)
+				if (test(t, count++)) return true;
+			return false;
+		}
+
+		public static bool None<TSource>(this IEnumerable<TSource> source) { return !source.Any(); }
+		public static bool None<TSource>(this IEnumerable<TSource> source, Predicate<TSource> predicate) { return !source.Any(x => predicate(x)); }
+		public static bool None<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
+			int count = 0;
+			foreach (T t in source)
+				if (test(t, count++)) return false;
+			return true;
 		}
 
 		/// <summary>
 		/// Complement of the Where filter, returning only items that do not return true when using the projection
 		/// </summary>
-		public static IEnumerable<T> Except<T>(this IEnumerable<T> source, Predicate<T> test) {
+		public static IEnumerable<T> Without<T>(this IEnumerable<T> source, Predicate<T> test) {
 			foreach (T element in source)
 				if (!test(element)) yield return element;
 		}
-		public static IEnumerable<T> Except<T>(this IEnumerable<T> source, T skip)
+		public static IEnumerable<T> Without<T>(this IEnumerable<T> source, T skip)
 		where T :IEquatable<T> {
 			foreach (T element in source)
 				if (!skip.Equals(element)) yield return element;
@@ -57,6 +79,22 @@ namespace Generic.Extensions {
 			return source.OrderByDescending(x => x);
 		}
 
+		public static Tuple<T, T> Range<T>(this IEnumerable<T> source)
+		where T : IComparable<T> {
+			bool isFirst = true;
+			T min = default, max = default;
+			foreach (T element in source) {
+				if (isFirst) {
+					isFirst = false;
+					min = max = element;
+				} else if (element.CompareTo(min) < 0)
+					min = element;
+				else if (element.CompareTo(max) > 0)
+					max = element;
+			}
+			return new(min, max);
+		}
+
 		public static IEnumerable<IEnumerable<T>> Partition<T>(this IEnumerable<T> source, int size) {
 			if (size < 1) throw new ArgumentOutOfRangeException(nameof(size), "Must be strictly positive");
 			Enumerator2<T> iterator = new(source);
@@ -70,17 +108,6 @@ namespace Generic.Extensions {
 		#endregion Projections
 
 		#region Aggregations
-		public static bool All(this IEnumerable<bool> source) {
-			return source.All(x => x);
-		}
-		public static bool Any(this IEnumerable<bool> source) {
-			return source.Any(x => x);
-		}
-		public static bool None(this IEnumerable<bool> source) { 
-			return !source.Any();
-		}
-		public static bool None<TSource>(this IEnumerable<TSource> source) { return !source.Any(); }
-		public static bool None<TSource>(this IEnumerable<TSource> source, Predicate<TSource> predicate) { return !source.Any(x => predicate(x)); }
 
 		public static TSource MinBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection)
 		where TProjected :IComparable<TProjected> {
@@ -110,9 +137,9 @@ namespace Generic.Extensions {
 			if (projection is null) throw new ArgumentNullException("projection");
 
 			using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
-				if (!enumerator.MoveNext()) {
+				if (!enumerator.MoveNext())
 					throw new InvalidOperationException("Sequence contains no elements");
-				}
+
 				TProjected minProjected, currentProjected;
 				TSource min = enumerator.Current;
 				minProjected = projection(min);
@@ -133,9 +160,9 @@ namespace Generic.Extensions {
 			if (projection is null) throw new ArgumentNullException("projection");
 
 			using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
-				if (!enumerator.MoveNext()) {
+				if (!enumerator.MoveNext())
 					throw new InvalidOperationException("Sequence contains no elements");
-				}
+
 				TProjected maxProjected, currentProjected;
 				TSource max = enumerator.Current;
 				maxProjected = projection(max);
@@ -155,9 +182,9 @@ namespace Generic.Extensions {
 			if (projection is null) throw new ArgumentNullException("projection");
 
 			using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
-				if (!enumerator.MoveNext()) {
+				if (!enumerator.MoveNext())
 					throw new InvalidOperationException("Sequence contains no elements");
-				}
+
 				TProjected maxProjected, currentProjected;
 				TSource max = enumerator.Current;
 				maxProjected = projection(max);

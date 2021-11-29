@@ -9,10 +9,10 @@ namespace ParticleSimulator.Threading {
 		public DateTime EndTimeUtc { get; private set; }
 
 		public RunManager(params StepEvaluator[] steps) {
-			this.Evaluators = steps.Except(s => s is null).ToArray();
+			this.Evaluators = steps.Without(s => s is null).ToArray();
 		}
 		public RunManager(params EvaluationStep[] steps)
-		: this(steps.Except(s => Equals(s, default(EvaluationStep))).Select(s => new StepEvaluator(s)).ToArray()) { }
+		: this(steps.Without(s => Equals(s, default(EvaluationStep))).Select(s => new StepEvaluator(s)).ToArray()) { }
 
 		public void Start() {
 			this.StartTimeUtc = DateTime.UtcNow;
@@ -28,7 +28,7 @@ namespace ParticleSimulator.Threading {
 			foreach (SynchronizedDataBuffer resource in this.Evaluators
 				.SelectMany(s => s.Step.InputResourceUses.Select(ir => ir.Resource))
 				.Concat(this.Evaluators.Select(s => s.Step.OutputResource))
-				.Except(r => r is null)
+				.Without(r => r is null)
 				.Distinct())
 				resource.Dispose();
 			foreach (StepEvaluator evaluator in this.Evaluators)

@@ -63,9 +63,9 @@ namespace ParticleSimulator.Threading {
 				}
 
 				Tuple<EventWaitHandle[], EventWaitHandle[]> mainSignalsAndReturns = new(
-					assimilationThreadStartInfos.Select(t => t.Item4).Except(x => x is null).ToArray(),
+					assimilationThreadStartInfos.Select(t => t.Item4).Without(x => x is null).ToArray(),
 					assimilationThreadStartInfos.Select(t => t.Item3)
-						.Concat(assimilationThreadStartInfos.Select(t => t.Item6)).Except(x => x is null).ToArray());
+						.Concat(assimilationThreadStartInfos.Select(t => t.Item6)).Without(x => x is null).ToArray());
 				
 				this._handles =
 					assimilationThreadStartInfos.Select(t => t.Item3)
@@ -73,7 +73,7 @@ namespace ParticleSimulator.Threading {
 						.Concat(assimilationThreadStartInfos.Select(t => t.Item4))
 						.Concat(assimilationThreadStartInfos.Select(t => t.Item5))
 						.Concat(assimilationThreadStartInfos.Select(t => t.Item6))
-						.Except(x => x is null)
+						.Without(x => x is null)
 						.ToArray();
 
 				threadStart = new(this.Process);

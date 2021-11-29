@@ -56,15 +56,14 @@ namespace ParticleSimulator {
 				}
 				double currentFrameTimeMs = (
 					new double[] {
-						Program.StepEval_Simulate.Step.DataAssimilationTicksAverager.Current,
-						Program.StepEval_Simulate.Step.ExclusiveTicksAverager.Current,
-						Program.StepEval_Resample.Step.ExclusiveTicksAverager.Current,
-						Program.StepEval_Rasterize.Step.ExclusiveTicksAverager.Current,
-					}.Max() + Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current
+						Program.StepEval_Simulate.Step.DataAssimilationTicksAverager.LastUpdate + Program.StepEval_Simulate.Step.ExclusiveTicksAverager.LastUpdate,
+						Program.StepEval_Resample.Step.ExclusiveTicksAverager.LastUpdate,
+						Program.StepEval_Rasterize.Step.ExclusiveTicksAverager.LastUpdate,
+						Program.StepEval_Draw.Step.ExclusiveTicksAverager.LastUpdate,
+					}.Max()
 				) / 10000d;
 				double currentIterationTimeMs =
-					(	Program.StepEval_Rasterize.Step.IterationTicksAverager.Current
-						+ Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current)
+					Program.StepEval_Rasterize.Step.IterationTicksAverager.LastUpdate
 					/ 10000d;
 
 				_frameTimingMs.Update(currentFrameTimeMs);
@@ -73,7 +72,9 @@ namespace ParticleSimulator {
 				_currentColumnFrameTimeDataMs[frameIdx] = currentFrameTimeMs;
 				_columnFrameTimeStatsMs[0] = new StatsInfo(_currentColumnFrameTimeDataMs.Take(frameIdx + 1));
 
-				_currentColumnIterationTimeDataMs[frameIdx] = currentIterationTimeMs;
+				if (result.NumCompleted == 1)
+					_currentColumnIterationTimeDataMs[0] = currentFrameTimeMs;
+				else _currentColumnIterationTimeDataMs[frameIdx] = currentIterationTimeMs;
 				_columnIterationTimeStatsMs[0] = new StatsInfo(_currentColumnIterationTimeDataMs.Take(frameIdx + 1));
 			}
 		}
@@ -96,8 +97,8 @@ namespace ParticleSimulator {
 
 		private static void RefreshStatsHedaer() {
 			double
-				fps = 10000000 / (Program.StepEval_Rasterize.Step.IterationTicksAverager.LastUpdate + Program.StepEval_Draw.Step.ExclusiveTicksAverager.LastUpdate),
-				smoothedFps = 10000000 / (Program.StepEval_Rasterize.Step.IterationTicksAverager.Current + Program.StepEval_Draw.Step.ExclusiveTicksAverager.Current);
+				fps = 10000000 / (Program.StepEval_Rasterize.Step.IterationTicksAverager.LastUpdate),
+				smoothedFps = 10000000 / (Program.StepEval_Rasterize.Step.IterationTicksAverager.Current);
 			_statsHeaderValues[0] = new("FPS", smoothedFps, ChooseFpsColor(fps));
 
 			if (Parameters.PERF_STATS_ENABLE) {
@@ -114,22 +115,18 @@ namespace ParticleSimulator {
 
 		public static void DrawFpsGraph(ConsoleExtensions.CharInfo[] frameBuffer) {
 			ConsoleExtensions.CharInfo[][] graphColumnsCopy;
-			StatsInfo frameTimeStats, iterationTimeStats;
 			lock (_columnStatsLock) {
 				if (_columnFrameTimeStatsMs[0] is null)
 					return;
 				else if (_graphColumns[0] is null || DateTime.UtcNow.Subtract(_lastGraphRenderFrameUtc).TotalMilliseconds >= Parameters.PERF_GRAPH_REFRESH_MS)
 					RerenderGraph();
 				graphColumnsCopy = _graphColumns.TakeUntil(s => s is null).ToArray();
-				frameTimeStats = _columnFrameTimeStatsMs[0];
-				iterationTimeStats = _columnIterationTimeStatsMs[0];
 			}
 			
 			ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[GraphWidth * Parameters.GRAPH_HEIGHT];
 
-			for (int i = 0; i < graphColumnsCopy.Length; i++) {
+			for (int i = 0; i < graphColumnsCopy.Length; i++)
 				DrawGraphColumn(result, graphColumnsCopy[i], i);
-			}
 
 			double decimals = (_currentMax - _currentMin).BaseExponent();
 			string fmtStr = "0";
@@ -141,8 +138,8 @@ namespace ParticleSimulator {
 					fmtStr = "." + new string('0', (int)Math.Ceiling(Math.Abs(decimals)));
 			}
 			double
-				frameTime = frameTimeStats.Mean,
-				fullTime = iterationTimeStats.Mean;
+				frameTime = _frameTimingMs.Current,
+				fullTime = _fpsTimingMs.Current;
 			string
 				label_min = _currentMin < 1000 ? _currentMin.ToString(fmtStr) + "ms" : (_currentMin / 1000).ToStringBetter(3) + "s",
 				label_max = _currentMax < 1000 ? _currentMax.ToString(fmtStr) + "ms" : (_currentMax / 1000).ToStringBetter(3) + "s",
@@ -172,8 +169,8 @@ namespace ParticleSimulator {
 
 		private static void RerenderGraph() {
 			StatsInfo[]
-				frameTimeStats = _columnFrameTimeStatsMs.Except(s => s is null).ToArray(),
-				iterationTimeStats = _columnIterationTimeStatsMs.Except(s => s is null).ToArray();
+				frameTimeStats = _columnFrameTimeStatsMs.Without(s => s is null).ToArray(),
+				iterationTimeStats = _columnIterationTimeStatsMs.Without(s => s is null).ToArray();
 			StatsInfo rangeStats = new StatsInfo(frameTimeStats.Concat(iterationTimeStats).SelectMany(s => s.Data_asc));
 			
 			double
@@ -211,21 +208,17 @@ namespace ParticleSimulator {
 
 			double
 				y000 = frameTimeStats.Min,
-				y010 = frameTimeStats.GetPercentileValue(10),
 				y025 = frameTimeStats.GetPercentileValue(25),
 				y050 = frameTimeStats.Mean,
 				y075 = frameTimeStats.GetPercentileValue(75),
-				y090 = frameTimeStats.GetPercentileValue(90),
 				y100 = frameTimeStats.Max,
 				yMax = iterationTimeStats.Max > y100 ? iterationTimeStats.Max : y100;
 
 			double
 				y000Scaled = Parameters.GRAPH_HEIGHT * (y000 - _currentMin) / (_currentMax - _currentMin),
-				y010Scaled = Parameters.GRAPH_HEIGHT * (y010 - _currentMin) / (_currentMax - _currentMin),
 				y025Scaled = Parameters.GRAPH_HEIGHT * (y025 - _currentMin) / (_currentMax - _currentMin),
 				y050Scaled = Parameters.GRAPH_HEIGHT * (y050 - _currentMin) / (_currentMax - _currentMin),
 				y075Scaled = Parameters.GRAPH_HEIGHT * (y075 - _currentMin) / (_currentMax - _currentMin),
-				y090Scaled = Parameters.GRAPH_HEIGHT * (y090 - _currentMin) / (_currentMax - _currentMin),
 				y100Scaled = Parameters.GRAPH_HEIGHT * (y100 - _currentMin) / (_currentMax - _currentMin),
 				yMaxScaled = Parameters.GRAPH_HEIGHT * (yMax - _currentMin) / (_currentMax - _currentMin);
 			if (yMaxScaled >= Parameters.GRAPH_HEIGHT) yMaxScaled--;
@@ -277,7 +270,7 @@ namespace ParticleSimulator {
 			
 			Console.Write("Evaluated ");
 
-			int particleCount = Program.Simulator.AllParticles.Count();
+			int particleCount = Program.Simulator.AllParticles.Length;
 			Console.Write(particleCount);
 
 			Console.ForegroundColor = ConsoleColor.White;
@@ -308,7 +301,7 @@ namespace ParticleSimulator {
 		}
 
 		private static ConsoleColor ChooseColor(double ratioToDesired) {
-			foreach (Tuple<double, ConsoleColor> rank in Parameters.RatioColors) {
+			foreach (Tuple<double, ConsoleColor> rank in ColoringScales.RatioColors) {
 				if (ratioToDesired >= rank.Item1) return rank.Item2;
 			}
 			return ConsoleColor.White;

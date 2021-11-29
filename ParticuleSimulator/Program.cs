@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using Generic.Extensions;
 using Generic.Models;
-using ParticleSimulator.Rendering;
 using ParticleSimulator.Simulation;
 using ParticleSimulator.Threading;
 
@@ -12,23 +11,20 @@ namespace ParticleSimulator {
 	//TODO world wrap interaction: particles look forward only into adjoining quadrant
 	//SEEALSO https://www.youtube.com/watch?v=TrrbshL_0-s
 	public class Program {
-		public static readonly SimulationType SimType = SimulationType.Boid;
-
 		public static readonly Random Random = new();
 		public static IParticleSimulator Simulator { get; private set; }
 		public static RunManager Manager { get; private set; }
 
 		public static SynchronizedDataBuffer Resource_Tree, Resource_Locations, Resource_Resamplings, Resource_Rasterization;
-		public static StepEvaluator StepEval_TreeMaintain, StepEval_Simulate, StepEval_Resample, StepEval_Autoscale, StepEval_Rasterize, StepEval_Draw;
+		public static StepEvaluator StepEval_TreeMaintain, StepEval_Simulate, StepEval_Resample, StepEval_Autoscale, StepEval_Rasterize, StepEval_Draw, StepEval_ConsoleWindow;
 
 		public static void Main(string[] args) {
 			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);//ctrl+c and alt+f4 etc
 			
+			Console.Title = string.Format("{0} Simulator ({1}D)",
+				Parameters.SimType,
+				Parameters.DIM);
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
-			Console.Title = string.Format("{0} Simulator - {1} ({2}D)",
-				SimType,
-				(Parameters.NUM_PARTICLE_GROUPS * Parameters.NUM_PARTICLES_PER_GROUP).Pluralize("particle"),
-				Parameters.DIMENSIONALITY);
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
 			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
 			Console.CursorVisible = false;
@@ -38,16 +34,15 @@ namespace ParticleSimulator {
 			ConsoleExtensions.DisableAllResizing();//note this doesn't work to disable OS window snapping
 			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
-			switch (SimType) {
+			switch (Parameters.SimType) {
 				case SimulationType.Boid:
 					Simulator = new Simulation.Boids.BoidSimulator();
 					break;
 				case SimulationType.Gravity:
-					throw new NotImplementedException();
-					//Simulator = new Simulation.Gravity.GravitySimulator();
+					Simulator = new Simulation.Gravity.GravitySimulator();
 					break;
 				default:
-					throw new InvalidEnumArgumentException(nameof(SimType), (int)SimType, typeof(SimulationType));
+					throw new InvalidEnumArgumentException(nameof(Parameters.SimType), (int)Parameters.SimType, typeof(SimulationType));
 			}
 
 			Manager = BuildRunManager();
@@ -182,8 +177,34 @@ namespace ParticleSimulator {
 						//ReuseTolerance = 0,
 						//ReadTimeout = null
 			}}});
+			StepEval_ConsoleWindow = new(new() {
+				Name = "Console Window Monitor",
+				//Initializer = null,
+				//Calculator = null,
+				Evaluator = Renderer.TitleUpdate,
+				Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.CONSOLE_TITLE_INTERVAL_MS)),
+				//Callback = null,
+				//DataAssimilationTicksAverager = null,
+				//SynchronizationTicksAverager = null,
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				//IterationTicksAverager = null,
+				//DataLoadingTimeout = null,
+				//OutputResource = null,
+				//IsOutputOverwrite = false,
+				//OutputSkips = 0,
+				InputResourceUses = new Prerequisite[] {
+					new() {
+						Resource = Resource_Tree,
+						//DoConsume = false,
+						OnChange = true,
+						//DoHold = false,
+						//AllowDirtyRead = false,
+						//ReuseAmount = 0,
+						//ReuseTolerance = 0,
+						//ReadTimeout = null
+			}}});
 
-			if (Parameters.DENSITY_AUTOSCALE_ENABLE && Parameters.COLOR_SCHEME == ParticleColoringMethod.Density)
+			if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Density)
 				StepEval_Autoscale = new(new() {
 					Name = "Autoscaler",
 					//Initializer = null,
@@ -193,23 +214,23 @@ namespace ParticleSimulator {
 					//Callback = null,
 					//DataAssimilationTicksAverager = null,
 					//SynchronizationTicksAverager = null,
-					ExclusiveTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+					ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
 					//IterationTicksAverager = null,
 					//DataLoadingTimeout = null,
 					//OutputResource = null,
 					//IsOutputOverwrite = false,
 					//OutputSkips = 0,
 					InputResourceUses = new Prerequisite[] {
-						new() {
-							Resource = Resource_Resamplings,
-							//DoConsume = false,
-							OnChange = true,
-							//DoHold = false,
-							//AllowDirtyRead = false,
-							//ReuseAmount = 0,
-							//ReuseTolerance = 0,
-							//ReadTimeout = null
-				}}});
+					new() {
+						Resource = Resource_Resamplings,
+						//DoConsume = false,
+						OnChange = true,
+						//DoHold = false,
+						//AllowDirtyRead = false,
+						//ReuseAmount = 0,
+						//ReuseTolerance = 0,
+						//ReadTimeout = null
+			}}});
 
 			return new RunManager(
 				new[] {
@@ -218,14 +239,15 @@ namespace ParticleSimulator {
 					StepEval_TreeMaintain,
 					StepEval_Resample,
 					StepEval_Rasterize,
-					StepEval_Autoscale
+					StepEval_Autoscale,
+					StepEval_ConsoleWindow
 				});
 		}
 
-		private static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+c and alt+f4 etc
+		public static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+c and alt+f4 etc
 			//keep master thread alive for results output (if enabled)
 			//also necessary to cleanup the application, otherwise any threading calls would immediately kill this thread
-			args.Cancel = true;
+			if (!(args is null)) args.Cancel = true;
 
 			Manager.Stop();
 			PerfMon.WriteEnd();

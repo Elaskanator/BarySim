@@ -1,77 +1,65 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Generic.Models;
+using Generic.Models.Vectors;
 
-namespace ParticleSimulator {
-	public abstract class AParticle : VectorDouble {
+namespace ParticleSimulator.Simulation {
+	public abstract class AParticle : VectorDouble, IEquatable<AParticle>, IEqualityComparer<AParticle> {
 		private static int _globalID = 0;
-
-		private readonly int _myId = ++_globalID;
-		public int ID => this._myId;
-		public virtual int? InteractionLimit => null;
-		public virtual double SpeedDecay => 0d;
-		public int GroupID { get; private set; }
-		public double Mass { get; private set; }
-
-		public AParticle(int groupID, double[] position, double[] velocity, double mass = 1d)
+		public AParticle(int groupID, double[] position, double[] velocity)
 		: base(position) {
 			this.GroupID = groupID;
-			this.Mass = mass;
 			this.Velocity = velocity;
-			this.AccumulatedImpulse = new double[this.DIMENSIONALITY];
-
-			this.TrueCoordinates = position;
-			this.Coordinates = (double[])this.TrueCoordinates.Clone();//now set values used for quadtree build (after clamping)
+			this.Acceleration = new double[this.DIM];
+			this.LiveCoordinates = (double[])this.Coordinates.Clone();
 		}
 
-		private double[] _actuallyTrueCoordinates;//base Vector.Coordinates value is a (stale) snapshot for tree/spatial mapping structures
-		public double[] TrueCoordinates {
-			get { return this._actuallyTrueCoordinates; }
-			private set {
-				if (Parameters.WORLD_WRAPPING) {
-					this._actuallyTrueCoordinates = this.WrapPosition(value);
-				} else {
-					this._actuallyTrueCoordinates = value;
-					this.BounceVelocity();
-				}
-		} }
+		private int _id = ++_globalID;
+		public int ID => this._id;
+		public virtual int? InteractionLimit => null;
+		public virtual double SpeedDecay => 1d;
+
+		public int GroupID { get; private set; }
 		public double[] Velocity { get; set; }
-		public virtual double[] AccumulatedImpulse { get; set; }
+		public double[] LiveCoordinates { get; set; }
+		public virtual double[] Acceleration { get; set; }
+		public bool IsActive = true;
 		
-		public abstract void Interact(IEnumerable<AParticle> others);//returns whether to stop evaluating more
-		public virtual void AfterInteract() { }
-		public virtual void InteractSubtree(ITree node) { }
+		public void Interact(IEnumerable<AParticle> others) {
+			foreach (AParticle other in this.Filter(others))
+				this.Interact(other);
+		}
+		protected virtual IEnumerable<AParticle> Filter(IEnumerable<AParticle> others) {
+			return others;
+		}
+		protected abstract void Interact(AParticle other);
+		protected virtual void AfterInteract() { }
 
 		public void ApplyTimeStep() {
-			this.Velocity = this.Velocity.Multiply(this.SpeedDecay).Add(this.AccumulatedImpulse.Divide(this.Mass));
+			this.Velocity = this.Velocity.Multiply(this.SpeedDecay).Add(this.Acceleration);
 			
 			this.AfterInteract();
 			
-			this.TrueCoordinates = this.TrueCoordinates.Add(this.Velocity);
+			this.LiveCoordinates = this.LiveCoordinates.Add(this.Velocity);
 		}
-		private double[] WrapPosition(double[] p) {
-			for (int i = 0; i < this.DIMENSIONALITY; i++)
-				if (p[i] < 0d)
-					p[i] = (p[i] % Parameters.DOMAIN[i]) + Parameters.DOMAIN[i];//don't want symmetric modulus
-				else if (p[i] >= Parameters.DOMAIN[i])
-					p[i] %= Parameters.DOMAIN[i];
-			return p;
+		public void WrapPosition() {
+			for (int i = 0; i < this.DIM; i++)
+				if (this.LiveCoordinates[i] < 0d)
+					this.LiveCoordinates[i] = (this.LiveCoordinates[i] % Parameters.DOMAIN[i]) + Parameters.DOMAIN[i];//don't want symmetric modulus
+				else if (this.LiveCoordinates[i] >= Parameters.DOMAIN[i])
+					this.LiveCoordinates[i] %= Parameters.DOMAIN[i];
 		}
-		private double[] BoundPosition(double[] p) {
-			for (int i = 0; i < this.DIMENSIONALITY; i++) {
-				if (p[i] < 0d) {
-					p[i] = 0d;
-				} else if (p[i] >= Parameters.DOMAIN[i]) {
-					p[i] = Parameters.DOMAIN[i] - Parameters.WORLD_EPSILON;
-				}
-			}
-			return p;
+		public void BoundPosition() {
+			for (int i = 0; i < this.DIM; i++)
+				if (this.LiveCoordinates[i] < 0d)
+					this.LiveCoordinates[i] = 0d;
+				else if (this.LiveCoordinates[i] >= Parameters.DOMAIN[i])
+					this.LiveCoordinates[i] = Parameters.DOMAIN[i] - Parameters.WORLD_EPSILON;
 		}
-		private void BounceVelocity() {
+		public void BounceVelocity() {
 			double dist;
-			for (int d = 0; d < Parameters.DIMENSIONALITY; d++) {
-				dist = this.TrueCoordinates[d] - Parameters.DOMAIN_CENTER[d];
+			for (int d = 0; d < Parameters.DIM; d++) {
+				dist = this.LiveCoordinates[d] - Parameters.DOMAIN_CENTER[d];
 				if (dist < -Parameters.DOMAIN_MAX_RADIUS)
 					this.Velocity[d] += Parameters.WORLD_BOUNCE_WEIGHT * Math.Pow(Parameters.DOMAIN_MAX_RADIUS - dist, 0.5d);
 				else if (dist > Parameters.DOMAIN_MAX_RADIUS)
@@ -85,8 +73,7 @@ namespace ParticleSimulator {
 		public int GetHashCode(AParticle obj) { return obj.ID.GetHashCode(); }
 		public override int GetHashCode() { return this.ID.GetHashCode(); }
 		public override string ToString() {
-			return string.Format("{0}[ID {1}]<{2}><{3}>", nameof(AParticle), this.ID,
-				string.Join(",", this.TrueCoordinates.Select(i => i.ToString("G5"))),
+			return string.Format("{0}[ID {1}]<{2}>", nameof(AParticle), this.ID,
 				string.Join(",", this.Coordinates.Select(i => i.ToString("G5"))));
 		}
 	}

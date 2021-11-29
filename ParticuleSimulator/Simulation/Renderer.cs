@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Linq;
 using Generic.Extensions;
 
-namespace ParticleSimulator.Rendering {
+namespace ParticleSimulator.Simulation {
 	public static class Renderer {
 		public static readonly int RenderWidthOffset = 0;
 		public static readonly int RenderHeightOffset = 0;
@@ -14,7 +15,7 @@ namespace ParticleSimulator.Rendering {
 			MaxX = Parameters.WINDOW_WIDTH;
 			MaxY = Parameters.WINDOW_HEIGHT * 2;
 
-			if (Parameters.DOMAIN.Length > 1) {
+			if (Parameters.DIM > 1) {
 				double aspectRatio = Parameters.DOMAIN[0] / Parameters.DOMAIN[1];
 				double consoleAspectRatio = (double)MaxX / (double)MaxY;
 				if (aspectRatio > consoleAspectRatio) {//wide
@@ -35,22 +36,34 @@ namespace ParticleSimulator.Rendering {
 		}
 
 		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
-			Tuple<char, AParticle[]>[] rasterization = (Tuple<char, AParticle[]>[])parameters[0];
+			Tuple<char, AParticle[]>[] sampling = (Tuple<char, AParticle[]>[])parameters[0];
 
 			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
-			if (!(rasterization is null)) {
-				for (int i = 0; i < rasterization.Length; i++)
-					frameBuffer[i] = rasterization[i] is null ? default :
+			if (!(sampling is null)) {
+				for (int i = 0; i < sampling.Length; i++)
+					frameBuffer[i] = sampling[i] is null ? default :
 						new ConsoleExtensions.CharInfo(
-							rasterization[i].Item1,
-							Program.Simulator.ChooseColor(rasterization[i].Item2));
+							sampling[i].Item1,
+							Program.Simulator.ChooseColor(sampling[i].Item2));
 
-				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_SCHEME != ParticleColoringMethod.Depth || Parameters.DOMAIN.Length > 2)) DrawLegend(frameBuffer);
+				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_SCHEME != ParticleColoringMethod.Depth || Parameters.DIM > 2)) DrawLegend(frameBuffer);
 				if (Parameters.PERF_GRAPH_ENABLE) PerfMon.DrawFpsGraph(frameBuffer);
 			}
 			if (Parameters.PERF_ENABLE) PerfMon.DrawStatsOverlay(frameBuffer);
 
 			return frameBuffer;
+		}
+		
+		public static void TitleUpdate(object[] parameters) {
+			int visibleParticles = Program.Simulator.AllParticles.Count(p =>
+				Enumerable.Range(0, Parameters.DIM).All(d => p.LiveCoordinates[d] >=0 && p.LiveCoordinates[d] < Parameters.DOMAIN[d]));
+			Console.Title = string.Format("{0} Simulator - {1}{2} - {3}D",
+				Parameters.SimType,
+				Program.Simulator.AllParticles.Length.Pluralize("particle"),
+				visibleParticles < Program.Simulator.AllParticles.Length
+					? string.Format(" ({0} visible)", visibleParticles)
+					: "",
+				Parameters.DIM);
 		}
 
 		private static DateTime? _lastUpdateUtc = null;
@@ -73,18 +86,19 @@ namespace ParticleSimulator.Rendering {
 		}
 
 		public static void DrawLegend(ConsoleExtensions.CharInfo[] buffer) {
+			bool isDiscrete = Parameters.DIM < 3 && Parameters.SimType == SimulationType.Boid;
 			int numColors = Parameters.COLOR_ARRAY.Length;
 			string header = Parameters.COLOR_SCHEME.ToString();
 			switch (Parameters.COLOR_SCHEME) {
 				case ParticleColoringMethod.Density:
-					if (Parameters.DOMAIN.Length > 2)
+					if (Parameters.DIM > 2)
 						header += " (depth scaled)";
 					break;
 				case ParticleColoringMethod.Group:
-					if (Parameters.NUM_PARTICLE_GROUPS > numColors)
+					if (Parameters.PARTICLE_GROUPS_NUM > numColors)
 						header += " (ID modulo " + numColors + ")";
-					if (Parameters.NUM_PARTICLE_GROUPS < Parameters.COLOR_ARRAY.Length)
-						numColors = Parameters.NUM_PARTICLE_GROUPS;
+					if (Parameters.PARTICLE_GROUPS_NUM < Parameters.COLOR_ARRAY.Length)
+						numColors = Parameters.PARTICLE_GROUPS_NUM;
 					break;
 			}
 
@@ -100,15 +114,13 @@ namespace ParticleSimulator.Rendering {
 					Parameters.CHAR_BOTH,
 					Parameters.COLOR_ARRAY[cIdx]);
 
-				if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group) {
+				if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group)
 					rowStringData = "=" + cIdx.ToString();
-				} else if (cIdx < numColors - 1){
-					rowStringData =
-						(Parameters.DOMAIN.Length < 3 && cIdx == 0 ? "=" : "≤")
-						+ (Parameters.DOMAIN.Length < 3
+				else rowStringData =
+						(isDiscrete && cIdx == 0 ? "=" : "≤")
+						+ (isDiscrete
 							? ((int)Program.Simulator.DensityScale[cIdx]).ToString()
 							: Program.Simulator.DensityScale[cIdx].ToStringBetter(2));
-				} else rowStringData = ">";
 
 				for (int i = 0; i < rowStringData.Length; i++)
 					buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);

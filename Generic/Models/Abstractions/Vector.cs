@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Generic.Models {
+namespace Generic.Models.Vectors {
 	public class VectorDouble : ICollection<double>, IEnumerable<double>, IList<double>, ICollection, IEnumerable, IList, IStructuralComparable, IStructuralEquatable, ICloneable {
-		public int DIMENSIONALITY { get { return this.Coordinates.Length; } }
+		public int DIM { get { return this.Coordinates.Length; } }
 		public double[] Coordinates { get; set; }
 
 		double IList<double>.this[int index] { get => this.Coordinates[index]; set => this.Coordinates[index] = value; }
@@ -64,7 +64,6 @@ namespace Generic.Models {
 		public override string ToString() { return string.Format("Vector<{0}>", string.Join(",", this.Coordinates.Select(c => c.ToString("G5")))); }
 	}
 
-
 	public static class VectorFunctions {
 		public static double[] Negate(this double[] v) {
 			return v.Select(n => -n).ToArray();
@@ -95,14 +94,14 @@ namespace Generic.Models {
 		/// Normalizes a vector to have a Euclidean length of 1
 		/// </summary>
 		/// <param name="v">The vector to normalize</param>
-		public static double[] Normalize(this double[] v) {
+		public static double[] Normalize(this double[] v, double len = 1d) {
 			double magnitude = Magnitude(v);
 			if (magnitude > 0) {
-				double componentScale = 1d / magnitude;
+				double componentScale = len / magnitude;
 				return v.Select(n => n * componentScale).ToArray();
 			} else throw new ArgumentOutOfRangeException(nameof(v), "Cannot normalize zero-length vectors");
 		}
-		public static VectorDouble Normalize(this VectorDouble v) { return (VectorDouble)Normalize(v.Coordinates); }
+		public static VectorDouble Normalize(this VectorDouble v, double len = 1d) { return (VectorDouble)Normalize(v.Coordinates, len); }
 
 		public static double[] Clamp(this double[] v, double maxMagnitude) {
 			double magnitude = Magnitude(v);

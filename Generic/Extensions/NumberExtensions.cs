@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
-using Generic.Extensions;
-using Generic.Models;
+using Generic.Models.Vectors;
 
 namespace Generic.Extensions {
 	public static class NumberExtensions {
