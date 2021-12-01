@@ -41,7 +41,7 @@ namespace Generic.Models {
 			}
 
 			if (waitDuration.TotalMilliseconds > THREAD_PULSE_MS)
-				Thread.Sleep(waitDuration.Subtract(TimeSpan.FromMilliseconds(waitDuration.TotalMilliseconds % THREAD_PULSE_MS)));
+				Thread.Sleep(waitDuration.Subtract(TimeSpan.FromMilliseconds(THREAD_PULSE_MS/2d)));
 		}
 	}
 }

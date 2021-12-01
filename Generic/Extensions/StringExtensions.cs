@@ -6,14 +6,14 @@ namespace Generic.Extensions {
 	public static class StringExtensions {
 		public static readonly char[] Base16Chars = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-		public static string ToStringBetter(this double value, int minAccuracy = 4, int? totalLength = 6) {
+		public static string ToStringBetter(this double value, int minAccuracy = 4, bool includeDecimal = false, int? totalLength = 6) {
 			if (value == 0) {
-				return "0";
+				return "0" + (includeDecimal && minAccuracy > 1 ? "." + new string('0', minAccuracy - 1) : "");
 			} else {
 				double mag = value.BaseExponent();
 				int magnitude = (int)Math.Floor(mag);
 				string exponent = "";
-				if (magnitude > minAccuracy + 2 || magnitude > totalLength - 1) {
+				if (magnitude > minAccuracy + 2 || magnitude + (value < 0 ? 1 : 0) > totalLength - 1) {
 					exponent = "E" + magnitude;
 					value /= Math.Pow(10, magnitude);
 					mag = value.BaseExponent();
@@ -23,7 +23,7 @@ namespace Generic.Extensions {
 
 				int remainingLen;
 				string result;
-				remainingLen = minAccuracy - magnitude - (value < 0 ? 2 : 1);
+				remainingLen = minAccuracy - magnitude - (value < 0 ? 0 : 1) - (includeDecimal ? 0 : 1);
 					
 				if (remainingLen > 0)
 					result = value.ToString("0." + new string('0', remainingLen));

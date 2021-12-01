@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ParticleSimulator {
+namespace ParticleSimulator.Simulation {
 	public enum ParticleColoringMethod {
 		Group,
 		Density,
@@ -15,7 +15,7 @@ namespace ParticleSimulator {
 
 	public static class ColoringScales {
 		public static readonly Tuple<double, ConsoleColor>[] RatioColors = new Tuple<double, ConsoleColor>[] {
-			new Tuple<double, ConsoleColor>(1.05d, ConsoleColor.Cyan),
+			new Tuple<double, ConsoleColor>(1.10d, ConsoleColor.Cyan),
 			new Tuple<double, ConsoleColor>(1.00d, ConsoleColor.DarkGreen),
 			new Tuple<double, ConsoleColor>(0.90d, ConsoleColor.Green),
 			new Tuple<double, ConsoleColor>(0.75d, ConsoleColor.Gray),

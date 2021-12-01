@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace ParticleSimulator.Simulation.Boids {
 	public class BoidSimulator : AParticleSimulator<Boid, BoidQuadTree, Flock> {
@@ -17,5 +18,14 @@ namespace ParticleSimulator.Simulation.Boids {
 		protected override BoidQuadTree NewTree(double[] leftCorner, double[] rightCorner) { return new(leftCorner, rightCorner); }
 
 		protected override double GetParticleWeight(Boid particle) { return 1d; }
+
+		protected override void InteractAll(BoidQuadTree tree) {
+			Parallel.ForEach(
+				tree.Leaves,
+				Parameters.MulithreadedOptions,
+				leaf => {
+					
+			});
+		}
 	}
 }

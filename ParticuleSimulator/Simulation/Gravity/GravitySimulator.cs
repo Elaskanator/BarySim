@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Generic.Extensions;
@@ -11,18 +12,39 @@ namespace ParticleSimulator.Simulation.Gravity {
 		protected override void InteractAll(BaryonQuadTree tree) {
 			Parallel.ForEach(
 				tree.Leaves,
-				Parameters.MulithreadedOptions,
+				//Parameters.MulithreadedOptions,
+				Parameters.SinglethreadedOptions,//combining does not work in parallel
 				leaf => {
 					CelestialBody[] particles = leaf.NodeElements.ToArray();
 					if (particles.Length > 0) {
-						Tuple<BaryonQuadTree[], BaryonQuadTree[]> baryonNeighbors = leaf.GetNeighborhoodNodes(Parameters.GRAVITY_NEIGHBORHOOD_FILTER);
-						double[] baryonFarImpulse =
-							baryonNeighbors.Item2
-								.Aggregate(new double[Parameters.DIM], (agg, n) =>
-									agg.Add(CelestialBody.ComputeInteraction(
-										leaf.Barycenter.Current, 1d, n.Barycenter.Current, n.TotalMass)));
+						double[] toOther;
+						double distance;
+
+						List<BaryonQuadTree> nearNodes = new(), farNodes = new();
+						foreach (BaryonQuadTree n in leaf.GetNeighborhoodNodes(Parameters.GRAVITY_NEIGHBORHOOD_FILTER))
+							if (_inRangeTest(leaf, n))
+								nearNodes.Add(n);
+							else farNodes.Add(n);
+
+						Tuple<BaryonQuadTree[], BaryonQuadTree[]> temp, splitInteractionNodes = new(Array.Empty<BaryonQuadTree>(), Array.Empty<BaryonQuadTree>());
+						for (int i = 0; i < nearNodes.Count; i++) {
+							temp = nearNodes[i].RecursiveFilter(n => _inRangeTest(n, leaf));
+							splitInteractionNodes = new(
+								splitInteractionNodes.Item1.Concat(temp.Item1).ToArray(),
+								splitInteractionNodes.Item2.Concat(temp.Item2).ToArray());
+						}
+						BaryonQuadTree[]
+							nearNodes2 = splitInteractionNodes.Item1.ToArray(),
+							farNodes2 = splitInteractionNodes.Item2.Concat(farNodes).ToArray();
+						
+						double[] baryonFarImpulse = farNodes2.Aggregate(new double[Parameters.DIM], (agg, other) => {
+							toOther = other.Barycenter.Current.Subtract(leaf.Barycenter.Current);
+							distance = toOther.Magnitude();
+							return agg.Add(toOther.Multiply(//third division normalizes
+								Parameters.GRAVITATIONAL_CONSTANT * other.Barycenter.TotalWeight / distance / distance / distance));
+						});
+
 						double[] neighborImpulse;
-						double dist;
 						for (int i = 0; i < particles.Length; i++) {
 							if (particles[i].IsActive) {
 								if (particles[i].LiveCoordinates.Any((c, i) =>
@@ -30,40 +52,27 @@ namespace ParticleSimulator.Simulation.Gravity {
 								|| c > Parameters.DOMAIN[i] *(1d + Parameters.GRAVITY_DEATH_BOUND_CNT))) {
 									particles[i].IsActive = false;
 								} else {
-									particles[i].Acceleration = particles[i].Acceleration
-										.Add(baryonFarImpulse)
-										.Add(baryonNeighbors.Item1.Aggregate(new double[Parameters.DIM], (agg, n) =>
-											agg.Add(CelestialBody.ComputeInteraction(particles[i].LiveCoordinates, 1d, n.Barycenter.Current, n.TotalMass))));
+									particles[i].NetForce = particles[i].NetForce.Add(baryonFarImpulse.Multiply(particles[i].Mass));
 
-									for (int j = i + 1; j < particles.Length; j++) {
-										if (particles[j].IsActive) {
-											dist = particles[i].LiveCoordinates.Distance(particles[j].LiveCoordinates);
-											if (dist >= particles[i].Radius + particles[j].Radius) {
-												neighborImpulse = CelestialBody.ComputeInteraction(
-													particles[i].LiveCoordinates,
-													particles[i].Mass,
-													particles[j].LiveCoordinates,
-													particles[j].Mass);
+									for (int j = i + 1; j < particles.Length; j++) {//symmetric interaction
+										neighborImpulse = particles[i].ComputeInteractionForce(particles[j]);
+										particles[i].NetForce = particles[i].NetForce.Add(neighborImpulse);
+										particles[j].NetForce = particles[i].NetForce.Subtract(neighborImpulse);
+									}
 
-												particles[i].Acceleration = particles[i].Acceleration.Add(
-													neighborImpulse.Divide(particles[i].Mass));
-												particles[j].Acceleration = particles[j].Acceleration.Subtract(
-													neighborImpulse.Divide(particles[j].Mass));
-											} else {//collision
-												particles[i].LiveCoordinates =
-													particles[i].LiveCoordinates.Multiply(particles[i].Mass)
-													.Add(particles[j].LiveCoordinates.Multiply(particles[j].Mass))
-													.Divide(particles[i].Mass + particles[j].Mass);
-												particles[i].Velocity =
-													particles[i].Velocity.Multiply(particles[i].Mass)
-													.Add(particles[j].Velocity.Multiply(particles[j].Mass))
-													.Divide(particles[i].Mass + particles[j].Mass);
-
-												particles[j].IsActive = false;
-												particles[i].Mass += particles[j].Mass;
-			}}}}}}}});
+									for (int b = 0; b < nearNodes2.Length; b++)
+										foreach (CelestialBody p in nearNodes2[b].AllElements)//asymmetric interaction
+											particles[i].NetForce = particles[i].NetForce.Add(particles[i].ComputeInteractionForce(p));
+								}
+							}
+						}
+					}});
 		}
-		
+		private static readonly Func<BaryonQuadTree, BaryonQuadTree, bool> _inRangeTest = (a, b) =>
+			a.Barycenter.Current.Distance(b.Barycenter.Current) <=
+				Parameters.GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE*CelestialBody.RadiusOfMass(a.Barycenter.TotalWeight)
+				+ Parameters.GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE*CelestialBody.RadiusOfMass(b.Barycenter.TotalWeight);
+
 		protected override Clustering NewParticleGroup() { return new(); }
 		protected override BaryonQuadTree NewTree(double[] leftCorner, double[] rightCorner) { return new(leftCorner, rightCorner); }
 		protected override double GetParticleWeight(CelestialBody particle) { return particle.Mass; }
