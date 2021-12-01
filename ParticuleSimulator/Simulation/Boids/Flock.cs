@@ -13,7 +13,7 @@ namespace ParticleSimulator.Simulation.Boids {
 
 		public override Boid NewParticle(double[] position, double[] groupVelocity, Random random) {
 			return new Boid(this.ID, position,
-				groupVelocity.Add(NumberExtensions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.MAX_STARTING_SPEED_PCT * Parameters.DOMAIN[0])),
+				groupVelocity.Add(NumberExtensions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.MAX_STARTING_SPEED)),
 				this.Corruption * Parameters.BOIDS_PREDATOR_CHANCE);
 		}
 	}

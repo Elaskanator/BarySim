@@ -6,39 +6,47 @@ using Generic.Models.Vectors;
 namespace ParticleSimulator.Simulation {
 	public abstract class AParticle : VectorDouble, IEquatable<AParticle>, IEqualityComparer<AParticle> {
 		private static int _globalID = 0;
-		public AParticle(int groupID, double[] position, double[] velocity)
+		public AParticle(int groupID, double[] position, double[] velocity, double mass = 1d)
 		: base(position) {
 			this.GroupID = groupID;
+			this.Mass = mass;
 			this.Velocity = velocity;
-			this.Acceleration = new double[this.DIM];
+			this.NetForce = new double[this.DIM];
 			this.LiveCoordinates = (double[])this.Coordinates.Clone();
+
+			this._scaledSpeedFraction = 1d - (1d - this.SpeedFraction)/Parameters.TIME_SCALE;
 		}
 
 		private int _id = ++_globalID;
 		public int ID => this._id;
-		public virtual int? InteractionLimit => null;
-		public virtual double SpeedDecay => 1d;
-
-		public int GroupID { get; private set; }
-		public double[] Velocity { get; set; }
-		public double[] LiveCoordinates { get; set; }
-		public virtual double[] Acceleration { get; set; }
 		public bool IsActive = true;
+		public int GroupID { get; private set; }
+		public virtual double Mass { get; set; }
+		public virtual double Radius { get; protected set; }
+
+		public double[] LiveCoordinates { get; set; }
+		public double[] Velocity { get; set; }
+		public double[] Acceleration => this.NetForce.Divide(this.Mass);
+		public double[] NetForce { get; internal set; }
+
+		public virtual int? InteractionLimit => null;
+		public virtual double SpeedFraction => 1d;
+		private readonly double _scaledSpeedFraction;
 		
-		public void Interact(IEnumerable<AParticle> others) {
-			foreach (AParticle other in this.Filter(others))
-				this.Interact(other);
+		public abstract double[] ComputeInteractionForce(AParticle other);
+		public double[] ComputeInteractionForce(IEnumerable<AParticle> others) {
+			return others.Aggregate(
+				new double[this.DIM],
+				(ag, p) => ag.Add(p.ComputeInteractionForce(p)));
 		}
-		protected virtual IEnumerable<AParticle> Filter(IEnumerable<AParticle> others) {
-			return others;
-		}
-		protected abstract void Interact(AParticle other);
-		protected virtual void AfterInteract() { }
+
+		protected virtual IEnumerable<AParticle> Filter(IEnumerable<AParticle> others) { return others; }
+		protected virtual void AfterUpdate() { }
 
 		public void ApplyTimeStep() {
-			this.Velocity = this.Velocity.Multiply(this.SpeedDecay).Add(this.Acceleration);
+			this.Velocity = this.Velocity.Multiply(this._scaledSpeedFraction).Add(this.Acceleration.Multiply(Parameters.TIME_SCALE));
 			
-			this.AfterInteract();
+			this.AfterUpdate();
 			
 			this.LiveCoordinates = this.LiveCoordinates.Add(this.Velocity);
 		}

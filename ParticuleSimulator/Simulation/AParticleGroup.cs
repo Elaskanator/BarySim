@@ -22,16 +22,16 @@ namespace ParticleSimulator.Simulation {
 			int numMembers = 1 + (int)(Program.Random.NextDouble() * (Parameters.PARTICLES_PER_GROUP_MAX-1));
 
 			double particleVolume = NumberExtensions.HypersphereVolume(Parameters.INITIAL_SEPARATION * 2d, Parameters.DIM);
-			double radius = NumberExtensions.HypersphereRadius(particleVolume * numMembers, Parameters.DIM);
-			double[] groupVelocity = NumberExtensions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.MAX_GROUP_STARTING_SPEED_PCT * Parameters.DOMAIN[0]);
+			double radius = numMembers > 1 ? NumberExtensions.HypersphereRadius(particleVolume * numMembers, Parameters.DIM) : 0d;
+			double[] groupVelocity = NumberExtensions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.MAX_GROUP_STARTING_SPEED);
 
 			this.Particles = Enumerable
 				.Range(0, numMembers)
 				.Select(d => {
-					double direction = Parameters.MAX_GROUP_STARTING_SPEED_PCT < 0 ? 0 : 2d * Math.PI * Program.Random.NextDouble();
+					double direction = Parameters.MAX_GROUP_STARTING_SPEED < 0 ? 0 : 2d * Math.PI * Program.Random.NextDouble();
 					return this.NewParticle(
 						position: center.Zip(
-							NumberExtensions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Random),
+							numMembers > 1 ? NumberExtensions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Random) : new double[Parameters.DIM],
 							(a, b) => a + b).ToArray(),
 						groupVelocity: groupVelocity,
 						Program.Random);

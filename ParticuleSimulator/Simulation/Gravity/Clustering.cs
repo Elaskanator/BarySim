@@ -8,7 +8,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 			return new CelestialBody(this.ID,
 				position,
 				groupVelocity
-					.Add(NumberExtensions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.MAX_STARTING_SPEED_PCT * Parameters.DOMAIN[0])),
+					.Add(NumberExtensions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.MAX_STARTING_SPEED)),
 				Parameters.GRAVITY_MIN_MASS + (Math.Pow(random.NextDouble(), Parameters.GRAVITY_MASS_BIAS) * (Parameters.GRAVITY_MAX_MASS - Parameters.GRAVITY_MIN_MASS)));
 		}
 	}

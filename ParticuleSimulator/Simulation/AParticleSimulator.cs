@@ -28,10 +28,12 @@ namespace ParticleSimulator.Simulation {
 			double[] spawnCenter;
 			this.ParticleGroups = new G[Parameters.PARTICLE_GROUPS_NUM];
 			for (int i = 0; i < Parameters.PARTICLE_GROUPS_NUM; i++) {
-				spawnCenter = Parameters.DOMAIN.Divide(2d).Add(
-					NumberExtensions.RandomCoordinate_Spherical(
-						Parameters.DOMAIN.Max() / 2d, Parameters.DIM,
-						Program.Random));
+				spawnCenter = Parameters
+					.DOMAIN.Divide(2d)
+					.Add(Enumerable
+						.Range(0, Parameters.DIM)
+						.Select(i => (0.5d - (Parameters.WORLD_BOUNCE_EDGE_PCT / 200d) - (Program.Random.NextDouble() * (1d - Parameters.WORLD_BOUNCE_EDGE_PCT / 100d))) * Parameters.DOMAIN[i])
+						.ToArray());
 				this.ParticleGroups[i] = this.NewParticleGroup();
 				this.ParticleGroups[i].Init(spawnCenter);
 			}
@@ -51,8 +53,9 @@ namespace ParticleSimulator.Simulation {
 			this.AllParticles = this.ParticleGroups.SelectMany(g => g.Particles).ToArray();
 			this.HandleBounds();
 		}
-		protected virtual int InteractionLimit => int.MaxValue;
+
 		protected virtual bool UseMaxDensity => false;
+		protected virtual int InteractionLimit => int.MaxValue;
 		
 		public G[] ParticleGroups { get; private set; }
 		public P[] AllParticles { get; private set; }
@@ -84,11 +87,11 @@ namespace ParticleSimulator.Simulation {
 
 		public AParticle[] RefreshSimulation(object[] parameters) {
 			T tree = (T)parameters[0];
-			if (this.AllParticles.None())
+			if (this.AllParticles.Length == 0)
 				Program.CancelAction(null, null);
 
 			foreach (AParticle p in this.AllParticles)
-				p.Acceleration = new double[Parameters.DIM];
+				p.NetForce = new double[Parameters.DIM];
 
 			this.InteractAll(tree);
 
@@ -96,26 +99,15 @@ namespace ParticleSimulator.Simulation {
 				p.ApplyTimeStep();
 
 			this.HandleBounds();
-			this.AllParticles = this.ParticleGroups.SelectMany(g => g.Particles).Where(p => p.IsActive).ToArray();
+			this.AllParticles = this.AllParticles.Where(p => p.IsActive).ToArray();
 			return this.AllParticles;
 		}
 
-		protected virtual void InteractAll(T tree) {
-			Parallel.ForEach(
-				tree.Leaves,
-				Parameters.MulithreadedOptions,
-				leaf => {
-					foreach (P p in leaf.NodeElements)
-						p.Interact(
-							leaf.GetNeighbors()
-								.Without(p2 => p2.ID == p.ID)
-								.Take(this.InteractionLimit));
-			});
-		}
+		protected abstract void InteractAll(T tree);
 
 		private void HandleBounds() {
 			Parallel.ForEach(
-				this.AllParticles,
+				this.AllParticles.Where(p => p.IsActive),
 				Parameters.MulithreadedOptions,
 				p => {
 					if (Parameters.WORLD_WRAPPING)
@@ -134,9 +126,9 @@ namespace ParticleSimulator.Simulation {
 
 			bool top, bottom;
 			char pixelChar;
-			foreach (IGrouping<int, dynamic> bin in this.DiscreteParticleBin(particleData)) {
-				top = bin.Any(t => t.Y % 1d < 0.5d);
-				bottom = bin.Any(t => t.Y % 1d >= 0.5d);
+			foreach (IGrouping<int, Tuple<int, double, P>> bin in DiscreteParticleBin(particleData)) {
+				top = bin.Any(t => t.Item2 % 1d < 0.5d);
+				bottom = bin.Any(t => t.Item2 % 1d >= 0.5d);
 
 				if (top && bottom)
 					pixelChar = Parameters.CHAR_BOTH;
@@ -147,20 +139,67 @@ namespace ParticleSimulator.Simulation {
 				results[bin.Key] =
 					new Tuple<char, AParticle[]>(
 						pixelChar,
-						bin.Select(b => (AParticle)b.Particle).ToArray());
+						bin.Select(t => t.Item3).ToArray());
 			}
 			return results;
 		}
-
-		protected virtual IEnumerable<IGrouping<int, dynamic>> DiscreteParticleBin(P[] particles) { 
+		private static IEnumerable<IGrouping<int, Tuple<int, double, P>>> DiscreteParticleBin(P[] particles) { 
 			return particles
-				.Where(pd => pd.LiveCoordinates.All((x, d) => x >= 0 && x < Parameters.DOMAIN[d]))
-				.Select(pd => new {
-					X = pd.LiveCoordinates[0] * Renderer.RenderWidth / Parameters.DOMAIN[0],
-					Y = Parameters.DIM < 2 ? 0d : pd.LiveCoordinates[1] * Renderer.RenderHeight / Parameters.DOMAIN[1] / 2d,
-					Particle = pd})
-				.GroupBy(pd => (int)pd.X + Renderer.RenderWidthOffset + Parameters.WINDOW_WIDTH*((int)pd.Y + Renderer.RenderHeightOffset));
+				.Where(p =>
+					p.IsActive
+					&& p.LiveCoordinates[0] > -p.Radius && p.LiveCoordinates[0] < p.Radius + Parameters.DOMAIN[0]
+					&& p.LiveCoordinates[1] > -p.Radius && p.LiveCoordinates[1] < p.Radius + Parameters.DOMAIN[1])
+				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < Parameters.WINDOW_HEIGHT))
+				.GroupBy(pd => pd.Item1 + Parameters.WINDOW_WIDTH*(int)pd.Item2);
 		}
+		private static IEnumerable<Tuple<int, double, P>> SpreadSample(P p) {
+			double
+				pixelScalar = Renderer.RenderWidth / Parameters.DOMAIN[0],
+				scaledX = Renderer.RenderWidthOffset + p.LiveCoordinates[0] * pixelScalar,
+				scaledY = Renderer.RenderHeightOffset + (Parameters.DIM < 2 ? 0d : p.LiveCoordinates[1] * pixelScalar);
+
+			yield return new((int)scaledX, scaledY, p);
+
+			if (p.Radius == 0d)
+				yield return new((int)scaledX, scaledY, p);
+			else {
+				double
+					radiusX = p.Radius * pixelScalar,
+					minX = scaledX - radiusX,
+					maxX = scaledX + radiusX,
+					radiusY = Parameters.DIM < 2 ? 0d : radiusX,
+					minY = scaledY - radiusY,
+					maxY = scaledY + radiusY;
+				minX = minX < 0d ? 0d : minX;
+				maxX = maxX < Parameters.WINDOW_WIDTH ? maxX : Parameters.WINDOW_WIDTH - 1;
+				minY = minY < 0d ? 0d : minY;
+				maxY = maxY < 2*Parameters.WINDOW_HEIGHT ? maxY : 2*Parameters.WINDOW_HEIGHT - 1;
+
+				int
+					rangeX = 1 + (int)(maxX) - (int)(minX),
+					rangeY = 1 + (int)(maxY) - (int)(minY);
+				double testX, testY;
+				int roundedX, roundedY;
+
+				for (int x2 = 0; x2 < rangeX; x2++) {
+					roundedX = x2 + (int)minX;
+					if (roundedX > 0d && roundedX < Parameters.WINDOW_WIDTH) {
+						for (int y2 = 0; y2 < rangeY; y2++) {
+							roundedY = y2 + (int)minY;
+							if (roundedY > 0d && roundedY < Parameters.WINDOW_HEIGHT*2) {
+								testX = roundedX == (int)scaledX
+									? p.LiveCoordinates[0] * pixelScalar
+									: roundedX - (roundedX < scaledX ? 1 : -1);
+								if (Parameters.DIM == 1) {
+									if (Math.Abs(testX - p.LiveCoordinates[0]) <= p.Radius)
+										yield return new(roundedX, (y2 + minY) / 2d, p);
+								} else {
+									testY = roundedY == (int)scaledY
+										? p.LiveCoordinates[1] * pixelScalar
+										: roundedY - (roundedY < scaledY ? 1 : -1);
+									if (p.Radius * pixelScalar >= new double[] { testX, testY }.Distance(p.LiveCoordinates.Take(2).Select(c => c * pixelScalar).ToArray()))
+										yield return new(roundedX, roundedY / 2d, p);
+		}}}}}}}
 
 		public void AutoscaleUpdate(object[] parameters) {
 			Tuple<char, AParticle[]>[] sampling = (Tuple<char, AParticle[]>[])parameters[0];
@@ -223,10 +262,8 @@ namespace ParticleSimulator.Simulation {
 
 		private double GetDensity(P[] particles) {
 			if (this.UseMaxDensity)
-				return particles.Max(p =>
-					this.GetParticleWeight(p) * this.GetDepthScalar(p.LiveCoordinates));
-			else return particles.Sum(p =>
-					this.GetParticleWeight(p) * this.GetDepthScalar(p.LiveCoordinates));
+				return particles.Max(p =>this.GetParticleWeight(p));
+			else return particles.Sum(p =>this.GetParticleWeight(p));
 		}
 		protected abstract double GetParticleWeight(P particle);
 

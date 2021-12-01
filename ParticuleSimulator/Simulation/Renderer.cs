@@ -46,10 +46,9 @@ namespace ParticleSimulator.Simulation {
 							sampling[i].Item1,
 							Program.Simulator.ChooseColor(sampling[i].Item2));
 
-				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_SCHEME != ParticleColoringMethod.Depth || Parameters.DIM > 2)) DrawLegend(frameBuffer);
-				if (Parameters.PERF_GRAPH_ENABLE) PerfMon.DrawFpsGraph(frameBuffer);
+				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_SCHEME != ParticleColoringMethod.Depth || Parameters.DIM > 2))
+					DrawLegend(frameBuffer);
 			}
-			if (Parameters.PERF_ENABLE) PerfMon.DrawStatsOverlay(frameBuffer);
 
 			return frameBuffer;
 		}
@@ -57,6 +56,7 @@ namespace ParticleSimulator.Simulation {
 		public static void TitleUpdate(object[] parameters) {
 			int visibleParticles = Program.Simulator.AllParticles.Count(p =>
 				Enumerable.Range(0, Parameters.DIM).All(d => p.LiveCoordinates[d] >=0 && p.LiveCoordinates[d] < Parameters.DOMAIN[d]));
+
 			Console.Title = string.Format("{0} Simulator - {1}{2} - {3}D",
 				Parameters.SimType,
 				Program.Simulator.AllParticles.Length.Pluralize("particle"),
@@ -68,19 +68,23 @@ namespace ParticleSimulator.Simulation {
 
 		private static DateTime? _lastUpdateUtc = null;
 		public static void FlushScreenBuffer(object[] parameters) {
-			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])parameters[0];
+			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])parameters[0]
+				?? new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 
 			int xOffset = Parameters.PERF_ENABLE ? 6 : 0,
 				yOffset = Parameters.PERF_ENABLE ? 1 : 0;
 
 			if (Program.StepEval_Draw.IsPunctual ?? false) _lastUpdateUtc = DateTime.UtcNow;
 			TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(_lastUpdateUtc ?? Program.Manager.StartTimeUtc);
-			if (timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS) {
-				buffer ??= new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			bool isSlow = timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS;
+			if (isSlow) {
 				string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s").PadRight(6);
 				for (int i = 0; i < message.Length; i++)
 					buffer[i + xOffset + Parameters.WINDOW_WIDTH*yOffset] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
 			}
+
+			if (Parameters.PERF_ENABLE)
+				PerfMon.DrawStatsOverlay(buffer, isSlow);
 
 			if (!(buffer is null)) ConsoleExtensions.WriteConsoleOutput(buffer);
 		}
@@ -120,7 +124,7 @@ namespace ParticleSimulator.Simulation {
 						(isDiscrete && cIdx == 0 ? "=" : "≤")
 						+ (isDiscrete
 							? ((int)Program.Simulator.DensityScale[cIdx]).ToString()
-							: Program.Simulator.DensityScale[cIdx].ToStringBetter(2));
+							: Program.Simulator.DensityScale[cIdx].ToStringBetter(2, true));
 
 				for (int i = 0; i < rowStringData.Length; i++)
 					buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);

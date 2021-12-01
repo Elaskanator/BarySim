@@ -5,6 +5,8 @@ using Generic.Extensions;
 
 namespace ParticleSimulator.Threading {
 	public class StepEvaluator : IDisposable {
+		private static int _globalId = 0;
+		public readonly int Id = ++_globalId;
 		public readonly EvaluationStep Step;
 
 		public bool IsActive { get; internal set; }
@@ -15,6 +17,7 @@ namespace ParticleSimulator.Threading {
 		public DateTime? IterationSyncResumeUtc { get; private set; }
 		public DateTime? IterationCalcEndUtc { get; private set; }
 		public DateTime? IterationEndUtc { get; private set; }
+		public bool IsComputing { get; private set; }
 		public bool? IsPunctual { get; private set; }
 		
 		private Thread[] _threads;
@@ -234,16 +237,19 @@ namespace ParticleSimulator.Threading {
 				if (!(this.Step.SynchronizationTicksAverager is null))
 					this.Step.SynchronizationTicksAverager.Update(this.IterationSyncResumeUtc.Value.Subtract(this.IterationReceiveUtc.Value).Ticks);
 
+				this.IsComputing = true;
 				if (this.Step.OutputResource is null) {
 					this.Step.Evaluator(this._ingestBuffer);
 
 					this.IterationCalcEndUtc = DateTime.UtcNow;
+					this.IsComputing = false;
 					if (!(this.Step.ExclusiveTicksAverager is null))
 						this.Step.ExclusiveTicksAverager.Update(this.IterationCalcEndUtc.Value.Subtract(this.IterationSyncResumeUtc.Value).Ticks);
 				} else {
 					result = this.Step.Initializer is null ? this.Step.Calculator(this._ingestBuffer) : this.Step.Initializer();
 
 					this.IterationCalcEndUtc = DateTime.UtcNow;
+					this.IsComputing = false;
 					if (!(this.Step.ExclusiveTicksAverager is null))
 						this.Step.ExclusiveTicksAverager.Update(this.IterationCalcEndUtc.Value.Subtract(this.IterationSyncResumeUtc.Value).Ticks);
 

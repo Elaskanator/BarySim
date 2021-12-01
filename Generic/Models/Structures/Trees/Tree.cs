@@ -108,28 +108,49 @@ namespace Generic.Models {
 					return node.GetContainingLeaf(element);
 			return (T)this;
 		}
-
-		public IEnumerable<E> GetNeighbors() {//must be used from a leaf
-			foreach (E e in this.AllElements)
-				yield return e;
-			if (!this.IsRoot)
-				foreach (E member in this.SeekUpward().SelectMany(n => n.AllElements))
-					yield return member;
+		
+		public IEnumerable<T> GetNeighborhoodNodes(int? limit = null) {//must be used from a leaf
+			return this.GetNeighborhoodNodes_up(limit, this);
 		}
-		private IEnumerable<T> GetChildren(int? depthLimit = null) {
-			if (!depthLimit.HasValue || depthLimit > 0)
-				foreach (T node2 in this.Children.SelectMany(c => c.GetChildren(depthLimit - 1)))
-					yield return node2;
-			else foreach (T node in this.Children)
-				yield return node;
-		}
-
-		private IEnumerable<T> SeekUpward() {
-			foreach (T node in this.SiblingNodes.SelectMany(q => q.AllNodes))
-				yield return node;
-			if (!this.Parent.IsRoot)
-				foreach (T node in this.Parent.SeekUpward())
+		private IEnumerable<T> GetNeighborhoodNodes_up(int? limit, ATree<E, T> start) {
+			if (!this.IsRoot) {
+				foreach (T node in this.SiblingNodes.SelectMany(s => s.GetNeighborhoodNodes_down(limit, start)))
 					yield return node;
+				foreach (T node in this.Parent.GetNeighborhoodNodes_up(limit - 1, start))
+					yield return node;
+			}
+		}
+		private IEnumerable<T> GetNeighborhoodNodes_down(int? limit, ATree<E, T> start) {
+			if (this.NumMembers == 0)
+				yield break;
+			else if (!this.IsLeaf && (limit ?? 1) > 0)
+				foreach (T node in this.Children.SelectMany(c => c.GetNeighborhoodNodes_down(limit - 1, start)))
+					yield return node;
+			else yield return (T)this;
+		}
+
+		public Tuple<T[], T[]> RecursiveFilter(Predicate<T> predicate) {
+			if (this.NumMembers == 0) {
+				return new(Array.Empty<T>(), Array.Empty<T>());
+			} else if (this.IsLeaf) {
+				if (predicate((T)this))
+					return new(new T[] { (T)this }, Array.Empty<T>());
+				else return new(Array.Empty<T>(), new T[] { (T)this });
+			} else {
+				Tuple<bool, T>[] tests = this.Children.Where(c => c.NumMembers > 0).Select(c => new Tuple<bool, T>(predicate(c), c)).ToArray();
+				Tuple<T[], T[]> newJunk =
+					tests.Where(t => t.Item1)
+						.Select(t => t.Item2)
+						.Aggregate(
+							new Tuple<T[], T[]>(Array.Empty<T>(), Array.Empty<T>()), (agg, node) => {
+								Tuple<T[], T[]> moreFiltered = node.RecursiveFilter(predicate);
+								return new(agg.Item1.Concat(moreFiltered.Item1).ToArray(),
+									agg.Item2.Concat(moreFiltered.Item2).ToArray());
+							});
+				return new(
+					newJunk.Item1,
+					newJunk.Item2.Concat(tests.Without(t => t.Item1).Select(t => t.Item2)).ToArray());
+			}
 		}
 
 		public IEnumerator<E> GetEnumerator() { return this.AllElements.GetEnumerator(); }

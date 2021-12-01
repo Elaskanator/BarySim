@@ -4,32 +4,51 @@ using Generic.Models.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
 	public class CelestialBody : AParticle {
-		public CelestialBody(int groupID, double[] position, double[] velocity, double mass) : base(groupID, position, velocity) {
-			this.Mass = mass;
-		}
+		public CelestialBody(int groupID, double[] position, double[] velocity, double mass)
+		: base(groupID, position, velocity, mass) {}
 
 		private double _mass;
-		public double Mass {
+		public override double Mass {
 			get => this._mass;
 			set {
 				this._mass = value;
-				this.Radius = NumberExtensions.HypersphereRadius(
-					this._mass
-					* Math.Pow(1d / this._mass, 1d / Parameters.GRAVITY_COMPRESSION_SCALING_POW)
-					/ Parameters.GRAVITY_DENSITY,
-					Parameters.DIM);
+				this.Radius = RadiusOfMass(this._mass);
 		}}
-		public double Radius { get; private set; }
+		public override double Radius { get; protected set; }
 
-		public static double[] ComputeInteraction(double[] coordinates, double mass, double[] otherCoordinates, double otherMass) {
-			double[] toOther = otherCoordinates.Subtract(coordinates);
-			double distance = VectorFunctions.Magnitude(toOther);
-			return VectorFunctions.Multiply(
-				toOther,//one division of distance is to normalize the direction vector
-				Parameters.GRAVITATIONAL_CONSTANT * mass * otherMass / distance / distance / distance);
+		public static double RadiusOfMass(double mass) {
+			return NumberExtensions.HypersphereRadius(
+				mass
+				/ Math.Pow(mass + 1d, 1d / Parameters.DIM)
+				/ Parameters.GRAVITY_DENSITY,
+				Parameters.DIM);
 		}
-		protected override void Interact(AParticle other) {
-			throw new InvalidOperationException();
+		
+		public double[] ComputeInteractionForce(CelestialBody other) {
+			if (other.IsActive) {
+				double distance;
+				double[] toOther;
+
+				toOther = other.LiveCoordinates.Subtract(this.LiveCoordinates);
+				distance = toOther.Magnitude();
+				if (distance < Parameters.WORLD_EPSILON || distance < this.Radius + other.Radius) {//collision
+					if (Parameters.GRAVITY_DO_COMBINE) {
+						other.IsActive = false;
+						this.LiveCoordinates =
+							this.LiveCoordinates.Multiply(this.Mass)
+							.Add(other.LiveCoordinates.Multiply(other.Mass))
+							.Divide(this.Mass + other.Mass);
+						this.Velocity =
+							this.Velocity.Multiply(this.Mass)
+							.Add(other.Velocity.Multiply(other.Mass))
+							.Divide(this.Mass + other.Mass);
+						this.Mass += other.Mass;
+					} else throw new NotImplementedException();
+				} else return
+					toOther.Multiply(Parameters.GRAVITATIONAL_CONSTANT * this.Mass * other.Mass / distance / distance / distance);
+			}
+			return new double[Parameters.DIM];
 		}
+		public override double[] ComputeInteractionForce(AParticle other) { return this.ComputeInteractionForce(other as CelestialBody); }
 	}
 }

@@ -15,25 +15,26 @@ namespace ParticleSimulator {
 		public const bool PERF_STATS_ENABLE = true;
 		public const bool PERF_GRAPH_ENABLE = true;
 		
-		public const int PARTICLES_PER_GROUP_MAX = 100;
-		public const int PARTICLE_GROUPS_NUM = 1000;
+		public const int PARTICLES_PER_GROUP_MAX = 25;
+		public const int PARTICLE_GROUPS_NUM = 100;
 
-		public const double WORLD_SCALE = 1E3;
+		public const double TIME_SCALE = 1E0;
+		public const double WORLD_SCALE = 1E1;
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNDING = false;
 
 		public const int PRECALCULATION_LIMIT = 2;
-		public const int SIMULATION_PARALLELISM = 16;
+		public const int SIMULATION_PARALLELISM = 24;
 
 		#region Particles
 		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Density;
 		public const ParticleColorScale COLOR_SCALE = ParticleColorScale.Grayscale;
 		public const bool DENSITY_AUTOSCALE_PERCENTILE = false;//only applies to Density coloring
 
-		public const double INITIAL_SEPARATION = 2E0;
+		public const double INITIAL_SEPARATION = 5E-2;
 		
-		public const double MAX_STARTING_SPEED_PCT = 1E-4;
-		public const double MAX_GROUP_STARTING_SPEED_PCT = 2E-4;
+		public const double MAX_STARTING_SPEED = 1E-4;
+		public const double MAX_GROUP_STARTING_SPEED = 1E-3;
 		#endregion Particles
 
 		#region Sizes
@@ -45,13 +46,11 @@ namespace ParticleSimulator {
 		public const double WORLD_BOUNCE_EDGE_PCT = 10d;
 		public const double WORLD_EPSILON = 0.0001d;
 
-		public const int GRAPH_WIDTH = -1;
-		public const int GRAPH_HEIGHT = 7;//at least 2
 		#endregion Sizes
 
 		#region Timings
 		public const double TARGET_FPS = -1;
-		public const double MAX_FPS = 36;
+		public const double MAX_FPS = 30;
 
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times per render
 		public const int TREE_REFRESH_REUSE_ALLOWANCE = 7;
@@ -61,19 +60,20 @@ namespace ParticleSimulator {
 		#endregion Timings
 
 		#region Gravity
-		public const double GRAVITATIONAL_CONSTANT = 1E-3;
+		public const double GRAVITATIONAL_CONSTANT = 1E-11;
+		public const bool GRAVITY_DO_COMBINE = true;
 
-		public const double GRAVITY_MIN_MASS = 1E-2;
-		public const double GRAVITY_MAX_MASS = 1E1;
-		public const double GRAVITY_MASS_BIAS = 2d;
+		public const double GRAVITY_MIN_MASS = 1E0;
+		public const double GRAVITY_MAX_MASS = 1E2;
+		public const double GRAVITY_MASS_BIAS = 4d;
 
-		public const double GRAVITY_DENSITY = 1d;
-		public const double GRAVITY_COMPRESSION_SCALING_POW = 10d;
+		public const double GRAVITY_DENSITY = 1E3;
 
-		public const double GRAVITY_DEATH_BOUND_CNT = 100d;
-		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 5;
+		public const double GRAVITY_DEATH_BOUND_CNT = 10d;
+		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 24;
 
-		public const int GRAVITY_NEIGHBORHOOD_FILTER = 2;
+		public const double GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE = 8d;
+		public const int GRAVITY_NEIGHBORHOOD_FILTER = 3;
 		#endregion Gravity
 
 		#region Boids
@@ -133,13 +133,14 @@ namespace ParticleSimulator {
 
 		public const int NUMBER_ACCURACY = 2;
 		public const int NUMBER_SPACING = 5;
-		public const double PERF_SMA_ALPHA = 0.15d;
+		public const double PERF_SMA_ALPHA = 0.1d;
 
 		public const int PERF_GRAPH_REFRESH_MS = 125;
+		public const int GRAPH_WIDTH = -1;
+		public const int GRAPH_HEIGHT = 10;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 30;
-		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 10;
-		public const double PERF_GRAPH_PERCENTILE_LOW_CUTOFF = 0d;
-		public const double PERF_GRAPH_PERCENTILE_HIGH_CUTOFF = 0d;
+		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
+		public const double PERF_GRAPH_PERCENTILE_CUTOFF = 10d;
 		public const int PERF_GRAPH_NUMBER_ACCURACY = 3;
 		
 		public static readonly double WORLD_ASPECT_RATIO = WINDOW_WIDTH / (2d * WINDOW_HEIGHT);
