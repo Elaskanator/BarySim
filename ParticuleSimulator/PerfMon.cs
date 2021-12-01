@@ -170,8 +170,8 @@ namespace ParticleSimulator {
 				iterationTimeStats = _columnIterationTimeStatsMs.Without(s => s is null).ToArray();
 			StatsInfo rangeStats = new(frameTimeStats.Concat(iterationTimeStats).SelectMany(s => s.Data_asc));
 			double
-				min = frameTimeStats.Min(s => s.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF)),
-				max = iterationTimeStats.Max(s => s.GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF));
+				min = new StatsInfo(frameTimeStats.SelectMany(s => s.Data_asc)).GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
+				max = new StatsInfo(iterationTimeStats.SelectMany(s => s.Data_asc)).GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF);
 
 			min = min >= 1d ? min : 0d;
 			max = max >= min ? max : min + 1d;
