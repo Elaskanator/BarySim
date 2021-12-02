@@ -6,7 +6,7 @@ using System.Linq;
 namespace Generic.Models.Vectors {
 	public class VectorDouble : ICollection<double>, IEnumerable<double>, IList<double>, ICollection, IEnumerable, IList, IStructuralComparable, IStructuralEquatable, ICloneable {
 		public int DIM { get { return this.Coordinates.Length; } }
-		public double[] Coordinates { get; set; }
+		public virtual double[] Coordinates { get; set; }
 
 		double IList<double>.this[int index] { get => this.Coordinates[index]; set => this.Coordinates[index] = value; }
 		object IList.this[int index] { get => this.Coordinates[index]; set => this.Coordinates[index] = (double)value; }
@@ -127,7 +127,7 @@ namespace Generic.Models.Vectors {
 		public static double Distance(this VectorDouble v1, VectorDouble v2) { return Distance(v1.Coordinates, v2.Coordinates); }
 
 		public static double Dot(this double[] v1, double[] v2) {
-			return Enumerable.Range(0, v1.Length).Aggregate(0d, (xs, d) => xs + (v1[d] * v2[d]));
+			return v1.Zip(v2, (x1, x2) => x1 * x2).Sum();
 		}
 		public static double Dot(this VectorDouble v1, VectorDouble v2) { return Dot(v1.Coordinates, v2.Coordinates); }
 

@@ -155,10 +155,17 @@ namespace ParticleSimulator {
 				int offset_frameTime = (int)(Parameters.GRAPH_HEIGHT * (frameTime - _currentMin) / (_currentMax - _currentMin));
 				offset_frameTime = offset_frameTime < 0 ? 0 : offset_frameTime < Parameters.GRAPH_HEIGHT ? offset_frameTime : Parameters.GRAPH_HEIGHT - 1;
 			
-				for (int i = 0; i < label_FpsTime.Length; i++)
-					result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - offset_fps)] = new ConsoleExtensions.CharInfo(label_FpsTime[i], ConsoleColor.Green);
+				bool drawFps = true, drawFrameTime = true;
+				if (offset_frameTime == offset_fps)
+					if (frameTime < fpsTime)
+						drawFps = false;
+					else drawFrameTime = false;
 
-				if (offset_frameTime != offset_fps)
+				if (drawFps)
+					for (int i = 0; i < label_FpsTime.Length; i++)
+						result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - offset_fps)] = new ConsoleExtensions.CharInfo(label_FpsTime[i], ConsoleColor.Green);
+
+				if (drawFrameTime)
 					for (int i = 0; i < label_frameTime.Length; i++)
 						result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - offset_frameTime)] = new ConsoleExtensions.CharInfo(label_frameTime[i], ConsoleColor.Cyan);
 			
@@ -177,8 +184,8 @@ namespace ParticleSimulator {
 					min = new StatsInfo(frameTimeStats.SelectMany(s => s.Data_asc)).GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
 					max = new StatsInfo(iterationTimeStats.SelectMany(s => s.Data_asc)).GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF);
 
-				min = min <= frameTimeStats.Min(s => s.GetPercentileValue(50d)) ? min : frameTimeStats.Min(s => s.GetPercentileValue(50d));
-				max = max >= iterationTimeStats.Max(s => s.GetPercentileValue(50d)) ? max : iterationTimeStats.Max(s => s.GetPercentileValue(50d));
+				min = min <= frameTimeStats.Concat(iterationTimeStats).Min(s => s.GetPercentileValue(50d)) ? min : frameTimeStats.Concat(iterationTimeStats).Min(s => s.GetPercentileValue(50d));
+				max = max >= frameTimeStats.Concat(iterationTimeStats).Max(s => s.GetPercentileValue(50d)) ? max : frameTimeStats.Concat(iterationTimeStats).Max(s => s.GetPercentileValue(50d));
 
 				min = min >= 1d ? min : 0d;
 				max = max >= min ? max : min + 1d;
@@ -245,49 +252,49 @@ namespace ParticleSimulator {
 				y100Scaled = yFps100Scaled >= yTime100Scaled ? yFps100Scaled : yTime100Scaled;
 				
 			ConsoleColor color; char chr;
-			for (int y = y000Scaled >= 0d ? (int)y000Scaled : 0; y < (y100Scaled <= Parameters.GRAPH_HEIGHT ? (int)y100Scaled : Parameters.GRAPH_HEIGHT); y++) {
-				if (y == (int)y000Scaled) {//bottom pixel
+			for (int yIdx = y000Scaled >= 0d ? (int)y000Scaled : 0; yIdx < (y100Scaled <= Parameters.GRAPH_HEIGHT ? y100Scaled : (double)Parameters.GRAPH_HEIGHT); yIdx++) {
+				if (yIdx == (int)y000Scaled) {//bottom pixel
 					if (y000Scaled % 1d >= 0.5d)//top half
 						chr = Parameters.CHAR_TOP;
-					else if (y100Scaled < y + 0.5d)//bottom half
+					else if (y100Scaled < yIdx + 0.5d)//bottom half
 						chr = Parameters.CHAR_LOW;
 					else chr = Parameters.CHAR_BOTH;
-				} else if (y == (int)y100Scaled) {//top pixel
+				} else if (yIdx == (int)y100Scaled) {//top pixel
 					if (y100Scaled % 1d < 0.5d)//bottom half
 						chr = Parameters.CHAR_LOW;
-					else if (y000Scaled >= y && y100Scaled >= y + 0.5d)//top half
+					else if (y000Scaled >= yIdx && y100Scaled >= yIdx + 0.5d)//top half
 						chr = Parameters.CHAR_TOP;
 					else chr = Parameters.CHAR_BOTH;
 				} else chr = Parameters.CHAR_BOTH;
 				
-				if (y == (int)yFps050Scaled)
+				if (yIdx == (int)yFps050Scaled)
 					color = ConsoleColor.DarkGreen;
-				else if (y >= (int)yFps040Scaled && y <= (int)yFps060Scaled)
+				else if (yIdx >= (int)yFps040Scaled && yIdx <= (int)yFps060Scaled)
 					color = ConsoleColor.Green;
 
-				else if (y == (int)yTime050Scaled)
+				else if (yIdx == (int)yTime050Scaled)
 					color = ConsoleColor.DarkCyan;
-				else if (y >= (int)yTime040Scaled && y <= (int)yTime060Scaled)
+				else if (yIdx >= (int)yTime040Scaled && yIdx <= (int)yTime060Scaled)
 					color = ConsoleColor.Cyan;
 
-				else if (y >= (int)yFps025Scaled && y <= (int)yFps075Scaled)
+				else if (yIdx >= (int)yFps025Scaled && yIdx <= (int)yFps075Scaled)
 					color = ConsoleColor.White;
-				else if (y >= (int)yTime025Scaled && y <= (int)yTime075Scaled)
+				else if (yIdx >= (int)yTime025Scaled && yIdx <= (int)yTime075Scaled)
 					color = ConsoleColor.White;
 
-				else if (y >= (int)yFps010Scaled && y <= (int)yFps090Scaled)
+				else if (yIdx >= (int)yFps010Scaled && yIdx <= (int)yFps090Scaled)
 					color = ConsoleColor.Gray;
-				else if (y >= (int)yTime010Scaled && y <= (int)yTime090Scaled)
+				else if (yIdx >= (int)yTime010Scaled && yIdx <= (int)yTime090Scaled)
 					color = ConsoleColor.Gray;
 				
-				else if (y >= (int)yFps000Scaled && y <= (int)yFps100Scaled)
+				else if (yIdx >= (int)yFps000Scaled && yIdx <= (int)yFps100Scaled)
 					color = ConsoleColor.DarkGray;
-				else if (y >= (int)yTime000Scaled && y <= (int)yTime100Scaled)
+				else if (yIdx >= (int)yTime000Scaled && yIdx <= (int)yTime100Scaled)
 					color = ConsoleColor.DarkGray;
 
 				else color = ConsoleColor.Black;
 
-				result[y] = new ConsoleExtensions.CharInfo(chr, color, ConsoleColor.Black);
+				result[yIdx] = new ConsoleExtensions.CharInfo(chr, color, ConsoleColor.Black);
 			}
 			return result;
 		}

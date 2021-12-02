@@ -12,7 +12,17 @@ namespace ParticleSimulator.Simulation.Boids {
 		}
 
 		protected override double[] MakeCenter() {
-			return this.LeftCorner.Zip(this.RightCorner, (a, b) => a + Program.Random.NextDouble() * (b - a)).ToArray();
+			double minDivision = 1d / (1 << (this.Capacity / 2));
+			return Enumerable
+				.Range(0, Parameters.DIM)
+				.Select(d => this._members.Average(m => m.Coordinates[d]))
+				.Select((avg, d) =>
+					avg < this.LeftCorner[d] + minDivision * (this.RightCorner[d] - this.LeftCorner[d])
+						? this.LeftCorner[d] + minDivision * (this.RightCorner[d] - this.LeftCorner[d])
+						: avg > this.RightCorner[d] - minDivision * (this.RightCorner[d] - this.LeftCorner[d])
+							? this.RightCorner[d] - minDivision * (this.RightCorner[d] - this.LeftCorner[d])
+							: avg)
+				.ToArray();
 		}
 		protected override BoidQuadTree GetContainingChild(Boid element) {
 			return this._quadrants.Single(q => q.DoesContain(element));

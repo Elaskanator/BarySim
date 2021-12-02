@@ -28,12 +28,12 @@ namespace ParticleSimulator.Simulation {
 			double[] spawnCenter;
 			this.ParticleGroups = new G[Parameters.PARTICLE_GROUPS_NUM];
 			for (int i = 0; i < Parameters.PARTICLE_GROUPS_NUM; i++) {
-				spawnCenter = Parameters
-					.DOMAIN.Divide(2d)
-					.Add(Enumerable
-						.Range(0, Parameters.DIM)
-						.Select(i => (0.5d - (Parameters.WORLD_BOUNCE_EDGE_PCT / 200d) - (Program.Random.NextDouble() * (1d - Parameters.WORLD_BOUNCE_EDGE_PCT / 100d))) * Parameters.DOMAIN[i])
-						.ToArray());
+				spawnCenter = Enumerable
+					.Range(0, Parameters.DIM)
+					.Select(i => Parameters.DOMAIN[i]
+						* (Program.Random.NextDouble() * (100d - Parameters.WORLD_PADDING_PCT) + 0.5d * Parameters.WORLD_PADDING_PCT)
+						/ 100d)
+					.ToArray();
 				this.ParticleGroups[i] = this.NewParticleGroup();
 				this.ParticleGroups[i].Init(spawnCenter);
 			}
@@ -157,10 +157,8 @@ namespace ParticleSimulator.Simulation {
 				scaledX = Renderer.RenderWidthOffset + p.LiveCoordinates[0] * pixelScalar,
 				scaledY = Renderer.RenderHeightOffset + (Parameters.DIM < 2 ? 0d : p.LiveCoordinates[1] * pixelScalar);
 
-			yield return new((int)scaledX, scaledY, p);
-
 			if (p.Radius == 0d)
-				yield return new((int)scaledX, scaledY, p);
+				yield return new((int)scaledX, scaledY / 2d, p);
 			else {
 				double
 					radiusX = p.Radius * pixelScalar,
@@ -169,9 +167,7 @@ namespace ParticleSimulator.Simulation {
 					radiusY = Parameters.DIM < 2 ? 0d : radiusX,
 					minY = scaledY - radiusY,
 					maxY = scaledY + radiusY;
-				minX = minX < 0d ? 0d : minX;
 				maxX = maxX < Parameters.WINDOW_WIDTH ? maxX : Parameters.WINDOW_WIDTH - 1;
-				minY = minY < 0d ? 0d : minY;
 				maxY = maxY < 2*Parameters.WINDOW_HEIGHT ? maxY : 2*Parameters.WINDOW_HEIGHT - 1;
 
 				int
@@ -219,8 +215,6 @@ namespace ParticleSimulator.Simulation {
 					for (int bandIdx = 1; bandIdx < this.DensityScale.Length - 1; bandIdx++)
 						if (diff > 0d)
 							this.DensityScale[bandIdx] = lowerThreshold + ((bandIdx + 1) * diff / this.DensityScale.Length);
-						else if (bandIdx == 0)
-							this.DensityScale[bandIdx] = stats.Data_asc[0];
 						else this.DensityScale[bandIdx] = this.DensityScale[bandIdx - 1] + 1d;
 					this.DensityScale[0] = lowerThreshold;
 					this.DensityScale[^1] = stats.Data_asc[^1];

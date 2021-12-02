@@ -138,17 +138,18 @@ namespace Generic.Models {
 				else return new(Array.Empty<T>(), new T[] { (T)this });
 			} else {
 				Tuple<bool, T>[] tests = this.Children.Where(c => c.NumMembers > 0).Select(c => new Tuple<bool, T>(predicate(c), c)).ToArray();
-				Tuple<T[], T[]> newJunk =
+				Tuple<T[], T[]> moreFiltered;
+				Tuple<IEnumerable<T>, IEnumerable<T>> newJunk =
 					tests.Where(t => t.Item1)
 						.Select(t => t.Item2)
 						.Aggregate(
-							new Tuple<T[], T[]>(Array.Empty<T>(), Array.Empty<T>()), (agg, node) => {
-								Tuple<T[], T[]> moreFiltered = node.RecursiveFilter(predicate);
-								return new(agg.Item1.Concat(moreFiltered.Item1).ToArray(),
-									agg.Item2.Concat(moreFiltered.Item2).ToArray());
+							new Tuple<IEnumerable<T>, IEnumerable<T>>(Enumerable.Empty<T>(), Enumerable.Empty<T>()), (agg, node) => {
+								moreFiltered = node.RecursiveFilter(predicate);
+								return new(agg.Item1.Concat(moreFiltered.Item1),
+									agg.Item2.Concat(moreFiltered.Item2));
 							});
 				return new(
-					newJunk.Item1,
+					newJunk.Item1.ToArray(),
 					newJunk.Item2.Concat(tests.Without(t => t.Item1).Select(t => t.Item2)).ToArray());
 			}
 		}

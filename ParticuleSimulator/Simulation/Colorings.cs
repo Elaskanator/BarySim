@@ -6,12 +6,6 @@ namespace ParticleSimulator.Simulation {
 		Density,
 		Depth
 	}
-	public enum ParticleColorScale {
-		DefaultConsoleColors,
-		Grayscale,
-		RadarColors,
-		ReducedColors
-	}
 
 	public static class ColoringScales {
 		public static readonly Tuple<double, ConsoleColor>[] RatioColors = new Tuple<double, ConsoleColor>[] {

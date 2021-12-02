@@ -93,17 +93,11 @@ namespace ParticleSimulator.Simulation {
 			bool isDiscrete = Parameters.DIM < 3 && Parameters.SimType == SimulationType.Boid;
 			int numColors = Parameters.COLOR_ARRAY.Length;
 			string header = Parameters.COLOR_SCHEME.ToString();
-			switch (Parameters.COLOR_SCHEME) {
-				case ParticleColoringMethod.Density:
-					if (Parameters.DIM > 2)
-						header += " (depth scaled)";
-					break;
-				case ParticleColoringMethod.Group:
-					if (Parameters.PARTICLE_GROUPS_NUM > numColors)
-						header += " (ID modulo " + numColors + ")";
-					if (Parameters.PARTICLE_GROUPS_NUM < Parameters.COLOR_ARRAY.Length)
-						numColors = Parameters.PARTICLE_GROUPS_NUM;
-					break;
+			if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group) {
+				if (Parameters.PARTICLE_GROUPS_NUM > numColors)
+					header += " (mod " + numColors + ")";
+				if (Parameters.PARTICLE_GROUPS_NUM < Parameters.COLOR_ARRAY.Length)
+					numColors = Parameters.PARTICLE_GROUPS_NUM;
 			}
 
 			int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - numColors - 1);

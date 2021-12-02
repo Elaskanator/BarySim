@@ -44,6 +44,14 @@ namespace Generic.Extensions {
 			foreach (T element in source)
 				if (!test(element)) yield return element;
 		}
+		/// <summary>
+		/// Complement of the Where filter, returning only items that do not return true when using the projection
+		/// </summary>
+		public static IEnumerable<T> Without<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
+			int i = 0;
+			foreach (T element in source)
+				if (!test(element, i++)) yield return element;
+		}
 		public static IEnumerable<T> Without<T>(this IEnumerable<T> source, T skip)
 		where T :IEquatable<T> {
 			foreach (T element in source)

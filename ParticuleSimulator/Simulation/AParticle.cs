@@ -12,7 +12,6 @@ namespace ParticleSimulator.Simulation {
 			this.Mass = mass;
 			this.Velocity = velocity;
 			this.NetForce = new double[this.DIM];
-			this.LiveCoordinates = (double[])this.Coordinates.Clone();
 
 			this._scaledSpeedFraction = 1d - (1d - this.SpeedFraction)/Parameters.TIME_SCALE;
 		}
@@ -24,6 +23,13 @@ namespace ParticleSimulator.Simulation {
 		public virtual double Mass { get; set; }
 		public virtual double Radius { get; protected set; }
 
+		private double[] _coordinates;
+		public override double[] Coordinates {
+			get => this._coordinates;
+			set {
+				this._coordinates = value;
+				this.LiveCoordinates = (double[])value.Clone();
+		}}
 		public double[] LiveCoordinates { get; set; }
 		public double[] Velocity { get; set; }
 		public double[] Acceleration => this.NetForce.Divide(this.Mass);

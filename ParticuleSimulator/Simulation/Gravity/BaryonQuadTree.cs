@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Generic.Extensions;
 using Generic.Models;
 
 namespace ParticleSimulator.Simulation.Gravity {
@@ -16,17 +17,14 @@ namespace ParticleSimulator.Simulation.Gravity {
 		}
 		
 		protected override double[] MakeCenter() {
-			double minDivision = 1d / (1 << (this.Capacity / 2));
-			return Enumerable
-				.Range(0, Parameters.DIM)
-				.Select(d => this._members.Average(m => m.Coordinates[d]))
-				.Select((avg, d) =>
-					avg < this.LeftCorner[d] + minDivision*(this.RightCorner[d] - this.LeftCorner[d])
-						? this.LeftCorner[d] + minDivision*(this.RightCorner[d] - this.LeftCorner[d])
-						: avg > this.RightCorner[d] - minDivision*(this.RightCorner[d] - this.LeftCorner[d])
-							? this.RightCorner[d] - minDivision*(this.RightCorner[d] - this.LeftCorner[d])
-							: avg)
-				.ToArray();
+			return this.LeftCorner.Zip(this.RightCorner, (a, b) => a + Program.Random.NextDouble() * (b - a)).ToArray();
+		}
+		protected override BaryonQuadTree GetContainingChild(CelestialBody element) {
+			return this._quadrants.Single(q => q.DoesContain(element));
+		}
+
+		protected override void ArrangeNodes() {
+			Program.Random.ShuffleInPlace(this._quadrants);
 		}
 		
 		protected override void Incorporate(CelestialBody element) {
