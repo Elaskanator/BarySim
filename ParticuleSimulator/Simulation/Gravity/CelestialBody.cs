@@ -22,7 +22,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 				double distance = toOther.Magnitude();
 				
 				if (distance < this.Radius + other.Radius) {
-					if (distance <= Parameters.WORLD_EPSILON || distance <= (this.Radius > other.Radius ? this.Radius : other.Radius)) {//combine
+					if (distance <= Parameters.WORLD_EPSILON || distance <= (this.Radius > other.Radius ? other.Radius : this.Radius)) {//combine
 						double newMass = this.Mass + other.Mass;
 						double[]
 							newCoordinates = this.LiveCoordinates.Multiply(this.Mass)
@@ -41,10 +41,10 @@ namespace ParticleSimulator.Simulation.Gravity {
 							this.IsActive = false;
 						}
 					} else {//drag
-						netForce = this.Velocity
-							.Multiply(
-								-this.Velocity.Dot(other.Velocity)
-								* (1d - distance / (this.Radius + other.Radius)))
+						netForce = other
+							.Velocity
+							.Subtract(this.Velocity)
+							.Multiply(1d - distance / (this.Radius + other.Radius))
 							.Add(toOther.Multiply(Parameters.GRAVITATIONAL_CONSTANT * this.Mass * other.Mass / distance / distance / distance));
 					}
 				} else netForce = toOther.Multiply(Parameters.GRAVITATIONAL_CONSTANT * this.Mass * other.Mass / distance / distance / distance);

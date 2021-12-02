@@ -12,13 +12,13 @@ namespace ParticleSimulator {
 		public const bool ENABLE_ASYNCHRONOUS = true;
 		public const bool LEGEND_ENABLE = true;
 		public const bool PERF_ENABLE = true;
-		public const bool PERF_STATS_ENABLE = false;
+		public const bool PERF_STATS_ENABLE = true;
 		public const bool PERF_GRAPH_ENABLE = true;
 		
-		public const int PARTICLES_PER_GROUP_MAX = 1;
+		public const int PARTICLES_PER_GROUP_MAX = 20;
 		public const int PARTICLE_GROUPS_NUM = 1000;
 
-		public const double WORLD_SCALE = 2E0;
+		public const double WORLD_SCALE = 1d;
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNDING = false;
 
@@ -33,8 +33,8 @@ namespace ParticleSimulator {
 		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Grayscale;
 		public const bool DENSITY_AUTOSCALE_PERCENTILE = false;//only applies to Density coloring
 		
-		public const double MAX_STARTING_SPEED = 1E-4;
-		public const double MAX_GROUP_STARTING_SPEED = 2E-3;
+		public const double MAX_STARTING_SPEED = 2E-4;
+		public const double MAX_GROUP_STARTING_SPEED = 1E-3;
 		#endregion Particles
 
 		#region Sizes
@@ -43,7 +43,7 @@ namespace ParticleSimulator {
 		public const int WINDOW_WIDTH = 160;
 		public const int WINDOW_HEIGHT = 80;//using top and bottom halves of each character to get double the verticle resolution
 
-		public const double WORLD_PADDING_PCT = 20d;
+		public const double WORLD_PADDING_PCT = 0d;
 		public const double WORLD_BOUNCE_WEIGHT = 0d;
 		public const double WORLD_EPSILON = 0.0001d;
 		#endregion Sizes
@@ -63,7 +63,7 @@ namespace ParticleSimulator {
 		public const double GRAVITATIONAL_CONSTANT = 1E-10;
 
 		public const double GRAVITY_MIN_MASS = 1E0;
-		public const double GRAVITY_MAX_MASS = 1E3;
+		public const double GRAVITY_MAX_MASS = 1E2;
 		public const double GRAVITY_MASS_BIAS = 8d;
 
 		public const double GRAVITY_DENSITY = 1E4;

@@ -54,7 +54,6 @@ namespace ParticleSimulator.Simulation {
 			this.HandleBounds();
 		}
 
-		protected virtual bool UseMaxDensity => false;
 		protected virtual int InteractionLimit => int.MaxValue;
 		
 		public G[] ParticleGroups { get; private set; }
@@ -198,7 +197,7 @@ namespace ParticleSimulator.Simulation {
 
 		public void AutoscaleUpdate(object[] parameters) {
 			Tuple<char, AParticle[]>[] sampling = (Tuple<char, AParticle[]>[])parameters[0];
-			double[] densities = sampling.Without(t => t is null).Select(t => this.GetDensity(t.Item2.Cast<P>().ToArray())).ToArray();
+			double[] densities = sampling.Without(t => t is null).Select(t => this.GetDensity(t.Item2.Cast<P>())).ToArray();
 			if (densities.Length > 0) {
 				StatsInfo stats = new(densities);
 				if (Parameters.DENSITY_AUTOSCALE_PERCENTILE) {
@@ -253,10 +252,8 @@ namespace ParticleSimulator.Simulation {
 			return Parameters.COLOR_ARRAY[dominantGroupID % Parameters.COLOR_ARRAY.Length];
 		}
 
-		private double GetDensity(P[] particles) {
-			if (this.UseMaxDensity)
-				return particles.Max(p =>this.GetParticleWeight(p));
-			else return particles.Sum(p =>this.GetParticleWeight(p));
+		private double GetDensity(IEnumerable<P> particles) {
+			return particles.Sum(p =>this.GetParticleWeight(p));
 		}
 		protected abstract double GetParticleWeight(P particle);
 
