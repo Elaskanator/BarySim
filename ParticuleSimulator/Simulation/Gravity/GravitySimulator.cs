@@ -6,8 +6,6 @@ using Generic.Models.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
 	public class GravitySimulator : AParticleSimulator<CelestialBody, BaryonQuadTree, Clustering> {
-		protected override bool UseMaxDensity => true;
-
 		protected override void InteractAll(BaryonQuadTree tree) {
 			foreach (BaryonQuadTree leaf in tree.Leaves) {
 				CelestialBody[] particles = leaf.NodeElements.ToArray();

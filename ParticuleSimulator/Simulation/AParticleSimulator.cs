@@ -54,7 +54,6 @@ namespace ParticleSimulator.Simulation {
 			this.HandleBounds();
 		}
 
-		protected virtual bool UseMaxDensity => false;
 		protected virtual int InteractionLimit => int.MaxValue;
 		
 		public G[] ParticleGroups { get; private set; }
@@ -226,7 +225,7 @@ namespace ParticleSimulator.Simulation {
 			int rank;
 			switch (Parameters.COLOR_SCHEME) {
 				case ParticleColoringMethod.Density:
-					double density = this.GetDensity(particleData);
+					double density = particleData.Sum(p =>this.GetParticleWeight(p));
 					rank = Program.Simulator.DensityScale.TakeWhile(a => a < density).Count();
 					rank = rank < Parameters.COLOR_ARRAY.Length ? rank : Parameters.COLOR_ARRAY.Length - 1;
 					return Parameters.COLOR_ARRAY[rank];
@@ -253,11 +252,6 @@ namespace ParticleSimulator.Simulation {
 			return Parameters.COLOR_ARRAY[dominantGroupID % Parameters.COLOR_ARRAY.Length];
 		}
 
-		private double GetDensity(P[] particles) {
-			if (this.UseMaxDensity)
-				return particles.Max(p =>this.GetParticleWeight(p));
-			else return particles.Sum(p =>this.GetParticleWeight(p));
-		}
 		protected abstract double GetParticleWeight(P particle);
 
 		public double GetDepthScalar(double[] v) {
