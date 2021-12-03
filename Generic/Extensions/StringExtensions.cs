@@ -6,33 +6,33 @@ namespace Generic.Extensions {
 	public static class StringExtensions {
 		public static readonly char[] Base16Chars = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-		public static string ToStringBetter(this double value, int minAccuracy = 4, bool includeDecimal = false, int? totalLength = 6) {
+		public static string ToStringBetter(this double value, int minAccuracy = 2, int? maxLength = 6) {
 			if (value == 0) {
-				return "0" + (includeDecimal && minAccuracy > 1 ? "." + new string('0', minAccuracy - 1) : "");
+				return "0";
 			} else {
 				double mag = value.BaseExponent();
 				int magnitude = (int)Math.Floor(mag);
 				string exponent = "";
-				if (magnitude > minAccuracy + 2 || magnitude + (value < 0 ? 1 : 0) > totalLength - 1) {
+				if (magnitude > minAccuracy + 2 || magnitude + (value < 0 ? 1 : 0) > maxLength - 1) {
 					exponent = "E" + magnitude;
 					value /= Math.Pow(10, magnitude);
 					mag = value.BaseExponent();
 					magnitude = (int)Math.Floor(mag);
-					totalLength -= 1 + (magnitude < 0 ? 1 : 0);
+					maxLength -= 1 + (magnitude < 0 ? 1 : 0);
 				}
 
 				int remainingLen;
 				string result;
-				remainingLen = minAccuracy - magnitude - (value < 0 ? 0 : 1) - (includeDecimal ? 0 : 1);
+				remainingLen = minAccuracy - magnitude - (value < 0 ? 0 : 1);
 					
 				if (remainingLen > 0)
 					result = value.ToString("0." + new string('0', remainingLen));
 				else result = ((int)value).ToString();
 
-				if (totalLength.HasValue)
+				if (maxLength.HasValue)
 					result = magnitude < 0
-						? new string(result.Take(totalLength.Value).ToArray())
-						: new string(result.Reverse().Take(totalLength.Value).Reverse().ToArray());
+						? new string(result.Take(maxLength.Value).ToArray())
+						: new string(result.Reverse().Take(maxLength.Value).Reverse().ToArray());
 
 				return result + exponent;
 			}
@@ -43,6 +43,17 @@ namespace Generic.Extensions {
 		}
 		public static string ToNumericString(this string noun, double number) {
 			return string.Format("{0} {1}", number, noun.Pluralize(number));
+		}
+
+		private static string DecimalFmtString(int precision) {
+			if (precision < 1) throw new ArgumentOutOfRangeException(nameof(precision), precision, "Must be strictly positive");
+			return "{0:0." + new string('0', precision - 1) + "E+0}";
+		}
+		public static string ToStringScientificNotation(this decimal value, int precision = 3) {
+			return string.Format(DecimalFmtString(precision), value);
+		}
+		public static string ToStringScientificNotation(this double value, int precision = 3) {
+			return string.Format(DecimalFmtString(precision), value);
 		}
 
 		public static string Pluralize(this string noun, int number) {

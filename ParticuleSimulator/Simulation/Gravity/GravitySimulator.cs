@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Generic.Extensions;
-using Generic.Models.Vectors;
+using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
-	public class GravitySimulator : AParticleSimulator<CelestialBody, BaryonQuadTree, Clustering> {
+	public class GravitySimulator : AParticleSimulator<MatterClump, BaryonQuadTree, Galaxy> {
 		protected override void InteractAll(BaryonQuadTree tree) {
 			Parallel.ForEach(
 				tree.Leaves,
 				Parameters.MulithreadedOptions,
 				leaf => {
-					CelestialBody[] particles = leaf.NodeElements.ToArray();
+					MatterClump[] particles = leaf.NodeElements.ToArray();
 					if (particles.Length > 0) {
 						double[] toOther;
 						double distance;
@@ -45,8 +45,8 @@ namespace ParticleSimulator.Simulation.Gravity {
 						for (int i = 0; i < particles.Length; i++) {
 							if (particles[i].IsActive) {
 								if (particles[i].LiveCoordinates.Any((c, i) =>
-								c < -Parameters.GRAVITY_DEATH_BOUND_CNT*Parameters.DOMAIN[i]
-								|| c > Parameters.DOMAIN[i] *(1d + Parameters.GRAVITY_DEATH_BOUND_CNT))) {
+								c < -Parameters.GRAVITY_DEATH_BOUND_CNT*Parameters.DOMAIN_SIZE[i]
+								|| c > Parameters.DOMAIN_SIZE[i] *(1d + Parameters.GRAVITY_DEATH_BOUND_CNT))) {
 									particles[i].IsActive = false;
 								} else {
 									particles[i].NetForce = particles[i].NetForce.Add(baryonFarImpulse.Multiply(particles[i].Mass));
@@ -58,18 +58,18 @@ namespace ParticleSimulator.Simulation.Gravity {
 									}
 
 									for (int b = 0; b < nearNodes2.Length; b++)
-										foreach (CelestialBody p in nearNodes2[b].AllElements)//asymmetric interaction
+										foreach (MatterClump p in nearNodes2[b].AllElements)//asymmetric interaction
 											particles[i].NetForce = particles[i].NetForce.Add(particles[i].ComputeInteractionForce(p));
 			}}}}});
 		}
 
 		private static readonly Func<BaryonQuadTree, BaryonQuadTree, bool> _inRangeTest = (a, b) =>
 			a.Barycenter.Current.Distance(b.Barycenter.Current) <=
-				Parameters.GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE*CelestialBody.RadiusOfMass(a.Barycenter.TotalWeight)
-				+ Parameters.GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE*CelestialBody.RadiusOfMass(b.Barycenter.TotalWeight);
+				Parameters.GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE*MatterClump.RadiusOfMass(a.Barycenter.TotalWeight)
+				+ Parameters.GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE*MatterClump.RadiusOfMass(b.Barycenter.TotalWeight);
 
-		protected override Clustering NewParticleGroup() { return new(); }
+		protected override Galaxy NewParticleGroup() { return new(); }
 		protected override BaryonQuadTree NewTree(double[] leftCorner, double[] rightCorner) { return new(leftCorner, rightCorner); }
-		protected override double GetParticleWeight(CelestialBody particle) { return particle.Mass; }
+		protected override double GetParticleWeight(MatterClump particle) { return particle.Mass; }
 	}
 }

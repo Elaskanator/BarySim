@@ -37,6 +37,12 @@ namespace Generic.Extensions {
 			return true;
 		}
 
+		public static IEnumerable<T> WithoutIndex<T>(this IEnumerable<T> source, int idx) {
+			int i = 0;
+			foreach (T t in source)
+				if (i++ != idx)
+					yield return t;
+		}
 		/// <summary>
 		/// Complement of the Where filter, returning only items that do not return true when using the projection
 		/// </summary>

@@ -16,15 +16,15 @@ namespace ParticleSimulator.Simulation {
 			MaxY = Parameters.WINDOW_HEIGHT * 2;
 
 			if (Parameters.DIM > 1) {
-				double aspectRatio = Parameters.DOMAIN[0] / Parameters.DOMAIN[1];
+				double aspectRatio = Parameters.DOMAIN_SIZE[0] / Parameters.DOMAIN_SIZE[1];
 				double consoleAspectRatio = (double)MaxX / (double)MaxY;
 				if (aspectRatio > consoleAspectRatio) {//wide
 					RenderWidth = MaxX;
-					RenderHeight = (int)(MaxX * Parameters.DOMAIN[1] / Parameters.DOMAIN[0]);
+					RenderHeight = (int)(MaxX * Parameters.DOMAIN_SIZE[1] / Parameters.DOMAIN_SIZE[0]);
 					if (RenderHeight < 1) RenderHeight = 1;
 					RenderHeightOffset = (MaxY - RenderHeight) / 4;
 				} else {//tall
-					RenderWidth = (int)(MaxY * Parameters.DOMAIN[0] / Parameters.DOMAIN[1]);
+					RenderWidth = (int)(MaxY * Parameters.DOMAIN_SIZE[0] / Parameters.DOMAIN_SIZE[1]);
 					RenderHeight = MaxY;
 					RenderWidthOffset = (MaxX - RenderWidth) / 2;
 				}
@@ -55,7 +55,8 @@ namespace ParticleSimulator.Simulation {
 		
 		public static void TitleUpdate(object[] parameters) {
 			int visibleParticles = Program.Simulator.AllParticles.Count(p =>
-				Enumerable.Range(0, Parameters.DIM).All(d => p.LiveCoordinates[d] >=0 && p.LiveCoordinates[d] < Parameters.DOMAIN[d]));
+				Enumerable.Range(0, Parameters.DIM).All(d =>
+					p.LiveCoordinates[d] + p.Radius >= 0 && p.LiveCoordinates[d] - p.Radius < Parameters.DOMAIN_SIZE[d]));
 
 			Console.Title = string.Format("{0} Simulator - {1}{2} - {3}D",
 				Parameters.SimType,
@@ -94,10 +95,10 @@ namespace ParticleSimulator.Simulation {
 			int numColors = Parameters.COLOR_ARRAY.Length;
 			string header = Parameters.COLOR_SCHEME.ToString();
 			if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group) {
-				if (Parameters.PARTICLE_GROUPS_NUM > numColors)
+				if (Parameters.PARTICLES_GROUP_COUNT > numColors)
 					header += " (mod " + numColors + ")";
-				if (Parameters.PARTICLE_GROUPS_NUM < Parameters.COLOR_ARRAY.Length)
-					numColors = Parameters.PARTICLE_GROUPS_NUM;
+				if (Parameters.PARTICLES_GROUP_COUNT < Parameters.COLOR_ARRAY.Length)
+					numColors = Parameters.PARTICLES_GROUP_COUNT;
 			}
 
 			int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - numColors - 1);
@@ -118,7 +119,7 @@ namespace ParticleSimulator.Simulation {
 						(isDiscrete && cIdx == 0 ? "=" : "≤")
 						+ (isDiscrete
 							? ((int)Program.Simulator.DensityScale[cIdx]).ToString()
-							: Program.Simulator.DensityScale[cIdx].ToStringBetter(2, true));
+							: Program.Simulator.DensityScale[cIdx].ToStringBetter(2));
 
 				for (int i = 0; i < rowStringData.Length; i++)
 					buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);

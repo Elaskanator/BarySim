@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Generic.Models.Vectors;
+using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public abstract class AParticle : VectorDouble, IEquatable<AParticle>, IEqualityComparer<AParticle> {
@@ -23,7 +23,7 @@ namespace ParticleSimulator.Simulation {
 		public virtual double Mass { get; set; }
 		public virtual double Radius { get; protected set; }
 
-		private double[] _coordinates;
+		internal double[] _coordinates;
 		public override double[] Coordinates {
 			get => this._coordinates;
 			set {
@@ -59,16 +59,16 @@ namespace ParticleSimulator.Simulation {
 		public void WrapPosition() {
 			for (int i = 0; i < this.DIM; i++)
 				if (this.LiveCoordinates[i] < 0d)
-					this.LiveCoordinates[i] = (this.LiveCoordinates[i] % Parameters.DOMAIN[i]) + Parameters.DOMAIN[i];//don't want symmetric modulus
-				else if (this.LiveCoordinates[i] >= Parameters.DOMAIN[i])
-					this.LiveCoordinates[i] %= Parameters.DOMAIN[i];
+					this.LiveCoordinates[i] = (this.LiveCoordinates[i] % Parameters.DOMAIN_SIZE[i]) + Parameters.DOMAIN_SIZE[i];//don't want symmetric modulus
+				else if (this.LiveCoordinates[i] >= Parameters.DOMAIN_SIZE[i])
+					this.LiveCoordinates[i] %= Parameters.DOMAIN_SIZE[i];
 		}
 		public void BoundPosition() {
 			for (int i = 0; i < this.DIM; i++)
 				if (this.LiveCoordinates[i] < 0d)
 					this.LiveCoordinates[i] = 0d;
-				else if (this.LiveCoordinates[i] >= Parameters.DOMAIN[i])
-					this.LiveCoordinates[i] = Parameters.DOMAIN[i] - Parameters.WORLD_EPSILON;
+				else if (this.LiveCoordinates[i] >= Parameters.DOMAIN_SIZE[i])
+					this.LiveCoordinates[i] = Parameters.DOMAIN_SIZE[i] - Parameters.WORLD_EPSILON;
 		}
 		public void BounceVelocity() {
 			double dist;
@@ -88,7 +88,7 @@ namespace ParticleSimulator.Simulation {
 		public override int GetHashCode() { return this.ID.GetHashCode(); }
 		public override string ToString() {
 			return string.Format("{0}[ID {1}]<{2}>", nameof(AParticle), this.ID,
-				string.Join(",", this.Coordinates.Select(i => i.ToString("G5"))));
+				string.Join(",", this.LiveCoordinates.Select(i => i.ToString("G5"))));
 		}
 	}
 }

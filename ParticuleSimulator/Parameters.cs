@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Generic.Models.Vectors;
+using Generic.Vectors;
 using ParticleSimulator.Simulation;
 
 namespace ParticleSimulator {
@@ -9,65 +9,59 @@ namespace ParticleSimulator {
 	public static class Parameters {
 		public const SimulationType SimType = SimulationType.Gravity;
 
-		public const bool ENABLE_ASYNCHRONOUS = true;
-		public const bool LEGEND_ENABLE = true;
-		public const bool PERF_ENABLE = true;
-		public const bool PERF_STATS_ENABLE = true;
-		public const bool PERF_GRAPH_ENABLE = true;
-		
-		public const int PARTICLES_PER_GROUP_MAX = 20;
-		public const int PARTICLE_GROUPS_NUM = 1000;
+		public const int DIM = 2;
+		public const double WORLD_SCALE = 4d;
+		public const double TIME_SCALE = 1d;
 
-		public const double WORLD_SCALE = 1d;
+		public const int PARTICLES_GROUP_COUNT = 100;
+		public const int PARTICLES_GROUP_MIN = 1;
+		public const int PARTICLES_GROUP_MAX = 5000;
+		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 2d;
+
+		public const double PARTICLES_MAX_STARTING_SPEED = 0.5E-3;
+		public const double PARTICLES_MAX_GROUP_STARTING_SPEED = 0.4E-3;
+		
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNDING = false;
-
-		public const double TIME_SCALE = 1E0;
-
-		public const int PRECALCULATION_LIMIT = 1;
-		public const int SIMULATION_PARALLELISM = 16;
-
-		#region Particles
-		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Density;
-		//public static readonly ConsoleColor[] COLOR_ARRAY = new ConsoleColor[] { ConsoleColor.Gray };
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Grayscale;
-		public const bool DENSITY_AUTOSCALE_PERCENTILE = false;//only applies to Density coloring
+		public const double WORLD_PADDING_PCT = 10d;
+		public const double WORLD_BOUNCE_WEIGHT = 0d;
+		public const double WORLD_EPSILON = 1E-8;
 		
-		public const double MAX_STARTING_SPEED = 2E-4;
-		public const double MAX_GROUP_STARTING_SPEED = 1E-3;
-		#endregion Particles
-
-		#region Sizes
-		public const int DIM = 2;
-
+		public const bool LEGEND_ENABLE = true;
+		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Density;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Reduced;
+		public const bool DENSITY_AUTOSCALE_PERCENTILE = true;//only applies to Density coloring
+		public const double DENSITY_AUTOSCALE_CUTOFF_PCT = 0.1d;
+		
+		public const double TARGET_FPS = -1;
+		public const double MAX_FPS = 30;
 		public const int WINDOW_WIDTH = 160;
 		public const int WINDOW_HEIGHT = 80;//using top and bottom halves of each character to get double the verticle resolution
 
-		public const double WORLD_PADDING_PCT = 0d;
-		public const double WORLD_BOUNCE_WEIGHT = 0d;
-		public const double WORLD_EPSILON = 0.0001d;
-		#endregion Sizes
-
-		#region Timings
-		public const double TARGET_FPS = -1;
-		public const double MAX_FPS = 30;
-
+		public const bool PERF_ENABLE = true;
+		public const bool PERF_STATS_ENABLE = true;
+		public const bool PERF_GRAPH_ENABLE = false;
+		
+		public const bool ENABLE_ASYNCHRONOUS = true;
+		public const int PRECALCULATION_LIMIT = 1;
+		public const int SIMULATION_PARALLELISM = 16;
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times per render
 		public const int TREE_REFRESH_REUSE_ALLOWANCE = 7;
-
 		public const bool SYNC_SIMULATION = true;
 		public const bool SYNC_TREE_REFRESH = false;
-		#endregion Timings
 
 		#region Gravity
 		public const double GRAVITATIONAL_CONSTANT = 1E-10;
+		public const double GRAVITY_DENSITY = 5E2;
+		public const double GRAVITY_INITIAL_SEPARATION = 0.025d;
+		public const double GRAVITY_ALIGNMENT_SKEW_POW = 4d;
+		public const double GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0d;
 
 		public const double GRAVITY_MIN_MASS = 1E0;
-		public const double GRAVITY_MAX_MASS = 1E2;
+		public const double GRAVITY_MAX_MASS = 1E0;
 		public const double GRAVITY_MASS_BIAS = 8d;
-
-		public const double GRAVITY_DENSITY = 1E4;
-
+		
+		public const double GRAVITY_MAX_ACCEL = 1d;
 		public const double GRAVITY_DEATH_BOUND_CNT = 1E3;
 		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 24;
 
@@ -142,13 +136,12 @@ namespace ParticleSimulator {
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 30;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
 		public const double PERF_GRAPH_PERCENTILE_CUTOFF = 10d;
-		public const int PERF_GRAPH_NUMBER_ACCURACY = 2;
 		
 		public static readonly double WORLD_ASPECT_RATIO = WINDOW_WIDTH / (2d * WINDOW_HEIGHT);
-		public static readonly double[] DOMAIN = Enumerable.Repeat(1d, DIM - 1).Prepend(WORLD_ASPECT_RATIO).ToArray().Multiply(WORLD_SCALE);
-		public static readonly double[] DOMAIN_CENTER = DOMAIN.Multiply(0.5d); 
-		public static readonly double DOMAIN_MAX_RADIUS = DOMAIN.Max() / (2d + WORLD_PADDING_PCT/25d);
-		public static readonly double DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT = DIM < 3 ? 0d : DOMAIN.Skip(2).ToArray().Magnitude();
+		public static readonly double[] DOMAIN_SIZE = Enumerable.Repeat(1d, DIM - 1).Prepend(WORLD_ASPECT_RATIO).ToArray().Multiply(WORLD_SCALE);
+		public static readonly double[] DOMAIN_CENTER = DOMAIN_SIZE.Multiply(0.5d); 
+		public static readonly double DOMAIN_MAX_RADIUS = DOMAIN_SIZE.Max() / (2d + WORLD_PADDING_PCT/25d);
+		public static readonly double DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT = DIM < 3 ? 0d : DOMAIN_SIZE.Skip(2).ToArray().Magnitude();
 		public static readonly ParallelOptions MulithreadedOptions = new() { MaxDegreeOfParallelism = SIMULATION_PARALLELISM };
 		#endregion Aux
 	}

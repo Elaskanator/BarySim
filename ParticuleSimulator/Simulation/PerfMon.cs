@@ -2,10 +2,9 @@
 using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
-using ParticleSimulator.Simulation;
 using ParticleSimulator.Threading;
 
-namespace ParticleSimulator {
+namespace ParticleSimulator.Simulation {
 	internal static class PerfMon {
 		public static readonly int GraphWidth;
 
@@ -90,7 +89,7 @@ namespace ParticleSimulator {
 				for (int j = 0; j < _statsHeaderValues[i].Item1.Length; j++)
 					frameBuffer[position + j] = new ConsoleExtensions.CharInfo(_statsHeaderValues[i].Item1[j], ConsoleColor.White);
 				position += _statsHeaderValues[i].Item1.Length;
-				numberStr = _statsHeaderValues[i].Item2.ToStringBetter(Parameters.NUMBER_ACCURACY, true, Parameters.NUMBER_SPACING).PadCenter(Parameters.NUMBER_SPACING);
+				numberStr = _statsHeaderValues[i].Item2.ToStringBetter(Parameters.NUMBER_ACCURACY, Parameters.NUMBER_SPACING).PadCenter(Parameters.NUMBER_SPACING);
 				for (int j = 0; j < numberStr.Length; j++)
 					frameBuffer[position + j] = new ConsoleExtensions.CharInfo(numberStr[j], _statsHeaderValues[i].Item3, _statsHeaderValues[i].Item4);
 				position += numberStr.Length;
@@ -139,16 +138,15 @@ namespace ParticleSimulator {
 					frameTime = _frameTimingMs.Current,
 					fpsTime = _fpsTimingMs.Current;
 				string
-					label_min = _currentMin < 1000 ? _currentMin.ToStringBetter(Parameters.PERF_GRAPH_NUMBER_ACCURACY, false) + "ms" : (_currentMin / 1000).ToStringBetter(Parameters.PERF_GRAPH_NUMBER_ACCURACY, false) + "s",
-					label_max = _currentMax < 1000 ? _currentMax.ToStringBetter(Parameters.PERF_GRAPH_NUMBER_ACCURACY, false) + "ms" : (_currentMax / 1000).ToStringBetter(Parameters.PERF_GRAPH_NUMBER_ACCURACY, false) + "s",
-					label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(Parameters.PERF_GRAPH_NUMBER_ACCURACY, true) + "ms" : (frameTime / 1000).ToStringBetter(Parameters.PERF_GRAPH_NUMBER_ACCURACY, true) + "s",
-					label_FpsTime = fpsTime < 1000 ? fpsTime.ToStringBetter(Parameters.PERF_GRAPH_NUMBER_ACCURACY, true) + "ms" : (fpsTime / 1000).ToStringBetter(Parameters.PERF_GRAPH_NUMBER_ACCURACY, true) + "s";
+					label_min = _currentMin < 1000 ? _currentMin.ToStringBetter(2) + "ms" : (_currentMin / 1000).ToStringBetter(2) + "s",
+					label_max = _currentMax < 1000 ? _currentMax.ToStringBetter(2) + "ms" : (_currentMax / 1000).ToStringBetter(2) + "s",
+					label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(3) + "ms" : (frameTime / 1000).ToStringBetter(3) + "s",
+					label_FpsTime = fpsTime < 1000 ? fpsTime.ToStringBetter(3) + "ms" : (fpsTime / 1000).ToStringBetter(3) + "s";
 
 				for (int i = 0; i < label_max.Length; i++)
-					result[i] = new ConsoleExtensions.CharInfo(label_max[i], ConsoleColor.DarkGray);
-
+					result[i] = new ConsoleExtensions.CharInfo(label_max[i], ConsoleColor.Gray);
 				for (int i = 0; i < label_min.Length; i++)
-					result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1)] = new ConsoleExtensions.CharInfo(label_min[i], ConsoleColor.DarkGray);
+					result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1)] = new ConsoleExtensions.CharInfo(label_min[i], ConsoleColor.Gray);
 
 				int offset_fps = (int)(Parameters.GRAPH_HEIGHT * (fpsTime - _currentMin) / (_currentMax - _currentMin));
 				offset_fps = offset_fps < 0 ? 0 : offset_fps < Parameters.GRAPH_HEIGHT ? offset_fps : Parameters.GRAPH_HEIGHT - 1;
@@ -164,7 +162,6 @@ namespace ParticleSimulator {
 				if (drawFps)
 					for (int i = 0; i < label_FpsTime.Length; i++)
 						result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - offset_fps)] = new ConsoleExtensions.CharInfo(label_FpsTime[i], ConsoleColor.Green);
-
 				if (drawFrameTime)
 					for (int i = 0; i < label_frameTime.Length; i++)
 						result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - offset_frameTime)] = new ConsoleExtensions.CharInfo(label_frameTime[i], ConsoleColor.Cyan);

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
-using Generic.Models.Vectors;
+using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Boids {
 	public class Boid : AParticle {
@@ -10,7 +10,7 @@ namespace ParticleSimulator.Simulation.Boids {
 		private static double _predatorSpeedDecay;
 		public Boid(int groupID, double[] position, double[] velocity, double corruption)
 		: base(groupID, position, velocity) {
-			this.IsPredator = Program.Random.NextDouble() < corruption;
+			this.IsPredator = Program.Random.NextDouble() * Parameters.BOIDS_PREDATOR_CHANCE < corruption;
 		}
 		static Boid() {
 			_speedDecay = Math.Exp(-Parameters.BOIDS_BOID_SPEED_DECAY);
@@ -93,7 +93,7 @@ namespace ParticleSimulator.Simulation.Boids {
 		protected override void AfterUpdate() {
 			double speed;
 			while ((speed = this.Velocity.Magnitude()) == 0)
-				this.Velocity = NumberExtensions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.BOIDS_BOID_MAX_SPEED * Program.Random.NextDouble());
+				this.Velocity = HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.BOIDS_BOID_MAX_SPEED * Program.Random.NextDouble());
 
 			this.Velocity = speed < this.MinSpeed
 				? this.Velocity.Multiply(this.MinSpeed / speed)
