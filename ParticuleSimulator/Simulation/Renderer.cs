@@ -36,7 +36,7 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
-			Tuple<char, AParticle[]>[] sampling = (Tuple<char, AParticle[]>[])parameters[0];
+			Tuple<char, AParticle[], double, bool>[] sampling = (Tuple<char, AParticle[], double, bool>[])parameters[0];
 
 			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 			if (!(sampling is null)) {
@@ -44,7 +44,7 @@ namespace ParticleSimulator.Simulation {
 					frameBuffer[i] = sampling[i] is null ? default :
 						new ConsoleExtensions.CharInfo(
 							sampling[i].Item1,
-							Program.Simulator.ChooseColor(sampling[i].Item2));
+							Program.Simulator.ChooseColor(sampling[i]));
 
 				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_SCHEME != ParticleColoringMethod.Depth || Parameters.DIM > 2))
 					DrawLegend(frameBuffer);

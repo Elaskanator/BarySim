@@ -8,12 +8,13 @@ namespace ParticleSimulator.Simulation {
 	where P : AParticle {
 		public AParticleGroup() {
 			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_SKEW_POWER) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
+
 			if (Parameters.PARTICLES_GROUP_COUNT < 2)
 				this.SpawnCenter = Parameters.DOMAIN_CENTER;
 			else this.SpawnCenter = Parameters.DOMAIN_SIZE
-				.Select(x =>
-					x * (Program.Random.NextDouble() * (100d - Parameters.WORLD_PADDING_PCT) + 0.5d * Parameters.WORLD_PADDING_PCT) / 100d)
+				.Select(x => x * (Program.Random.NextDouble() * (100d - Parameters.WORLD_PADDING_PCT) + 0.5d * Parameters.WORLD_PADDING_PCT) / 100d)
 				.ToArray();
+
 			this.InitialVelocity = this.NewInitialDirection(Parameters.DOMAIN_CENTER, this.SpawnCenter).Multiply(Parameters.PARTICLES_MAX_GROUP_STARTING_SPEED)
 				.Add(HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.PARTICLES_MAX_STARTING_SPEED));
 
@@ -41,11 +42,14 @@ namespace ParticleSimulator.Simulation {
 		protected abstract P NewParticle(double[] position, double[] velocity);
 
 		protected virtual double[] NewParticlePosition(double[] center, double radius) {
-			return center.Add(HyperspaceFunctions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Random));
+			return center.Add(
+				HyperspaceFunctions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Random));
 		}
 
 		protected virtual double[] NewInitialDirection(double[] center, double[] position) {
-			return HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random);
+			return HyperspaceFunctions
+				.RandomUnitVector_Spherical(Parameters.DIM, Program.Random)
+				.Multiply(Math.Log(center.Distance(position) + 1d));
 		}
 
 		public bool Equals(AParticleGroup<P> other) { return !(other is null) && this.ID == other.ID; }

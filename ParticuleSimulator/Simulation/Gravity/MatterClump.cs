@@ -16,20 +16,22 @@ namespace ParticleSimulator.Simulation.Gravity {
 		public double[] ComputeInteractionForce(MatterClump other) {
 			double[] netForce = new double[Parameters.DIM];
 			if (this.IsActive && other.IsActive) {
+				//compute gravity
+				double[] toOther = other.LiveCoordinates.Subtract(this.LiveCoordinates);
+				double distance = toOther.Magnitude();
+				//third division by distance to normalize direction vector
+				netForce = toOther.Multiply(Parameters.GRAVITATIONAL_CONSTANT * this.Mass * other.Mass / distance / distance / distance);
+				
 				MatterClump
 					smaller = this.Mass < other.Mass ? this : other,
 					larger = this.Mass < other.Mass ? other : this;
-				double[] toOther = other.LiveCoordinates.Subtract(this.LiveCoordinates);
-				double distance = toOther.Magnitude();
-
-				netForce = toOther.Multiply(Parameters.GRAVITATIONAL_CONSTANT * this.Mass * other.Mass / distance / distance / distance);//gravity only
 				bool doCombine = 
 					distance <= Parameters.WORLD_EPSILON
-					|| distance <= larger.Radius - smaller.Radius
-					|| netForce.Magnitude() / this.Mass / distance / distance / Parameters.TIME_SCALE > Parameters.GRAVITY_MAX_ACCEL;
-				if (doCombine) {
-					netForce = new double[Parameters.DIM];
-
+					|| distance <= larger.Radius - smaller.Radius//engulfed
+					|| netForce.Magnitude() / this.Mass / distance / distance / Parameters.TIME_SCALE > Parameters.GRAVITY_MAX_ACCEL;//time step of resulting velocity
+				if (doCombine) {//into one larger particle
+					netForce = new double[Parameters.DIM];//ignore any gravitational effects
+					//momentum-preserving
 					double newMass = this.Mass + other.Mass;
 					double[]
 						newCoordinates = this.LiveCoordinates.Multiply(this.Mass)
@@ -38,15 +40,16 @@ namespace ParticleSimulator.Simulation.Gravity {
 						newVelocity = this.Velocity.Multiply(this.Mass)
 							.Add(other.Velocity.Multiply(other.Mass))
 							.Divide(this.Mass + other.Mass);
+					//remove smaller particle
 					larger.LiveCoordinates = newCoordinates;
 					larger.Velocity = newVelocity;
 					larger.Mass = newMass;
 					smaller.IsActive = false;
-				} else if (distance < this.Radius + other.Radius) {//drag
+				} else if (distance < this.Radius + other.Radius) {//overlap - drag
 					netForce = netForce.Add(
 						other.Velocity
 							.Subtract(this.Velocity)
-							.Multiply(1d - distance / (this.Radius + other.Radius)));
+							.Multiply(smaller.Mass * distance * smaller.Radius / (this.Radius + other.Radius)));
 				}
 			}
 

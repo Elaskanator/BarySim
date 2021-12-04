@@ -9,17 +9,17 @@ namespace ParticleSimulator {
 	public static class Parameters {
 		public const SimulationType SimType = SimulationType.Gravity;
 
-		public const int PARTICLES_GROUP_COUNT = 50;
+		public const int PARTICLES_GROUP_COUNT = 100;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 1000;
-		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 2d;
+		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 3d;
 
-		public const double WORLD_SCALE = 1d;
+		public const double WORLD_SCALE = 2d;
 		public const double TIME_SCALE = 1d;
 		public const int DIM = 2;
 
-		public const double PARTICLES_MAX_STARTING_SPEED = 0.0E-3;
-		public const double PARTICLES_MAX_GROUP_STARTING_SPEED = 0.1E-3;
+		public const double PARTICLES_MAX_STARTING_SPEED = 0E-3;
+		public const double PARTICLES_MAX_GROUP_STARTING_SPEED = 0.8E-3;
 		
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNDING = false;
@@ -29,7 +29,7 @@ namespace ParticleSimulator {
 		
 		public const bool LEGEND_ENABLE = true;
 		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Density;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Reduced;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Grayscale;
 		public const bool DENSITY_AUTOSCALE_PERCENTILE = true;//only applies to Density coloring
 		public const double DENSITY_AUTOSCALE_CUTOFF_PCT = 0d;
 		
@@ -40,7 +40,7 @@ namespace ParticleSimulator {
 
 		public const bool PERF_ENABLE = true;
 		public const bool PERF_STATS_ENABLE = false;
-		public const bool PERF_GRAPH_ENABLE = true;
+		public const bool PERF_GRAPH_ENABLE = false;
 		
 		public const bool ENABLE_ASYNCHRONOUS = true;
 		public const int PRECALCULATION_LIMIT = 1;
@@ -51,8 +51,8 @@ namespace ParticleSimulator {
 		public const bool SYNC_TREE_REFRESH = false;
 
 		#region Gravity
-		public const double GRAVITATIONAL_CONSTANT = 4E-12;
-		public const double GRAVITY_DENSITY = 1E3;
+		public const double GRAVITATIONAL_CONSTANT = 1E-10;
+		public const double GRAVITY_DENSITY = 5E2;
 		public const double GRAVITY_INITIAL_SEPARATION = 0.025d;
 		public const double GRAVITY_ALIGNMENT_SKEW_POW = 4d;
 		public const double GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0d;

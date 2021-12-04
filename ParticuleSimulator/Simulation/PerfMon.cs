@@ -89,7 +89,7 @@ namespace ParticleSimulator.Simulation {
 				for (int j = 0; j < _statsHeaderValues[i].Item1.Length; j++)
 					frameBuffer[position + j] = new ConsoleExtensions.CharInfo(_statsHeaderValues[i].Item1[j], ConsoleColor.White);
 				position += _statsHeaderValues[i].Item1.Length;
-				numberStr = _statsHeaderValues[i].Item2.ToStringBetter(Parameters.NUMBER_ACCURACY, Parameters.NUMBER_SPACING).PadCenter(Parameters.NUMBER_SPACING);
+				numberStr = _statsHeaderValues[i].Item2.ToStringBetter(Parameters.NUMBER_ACCURACY, false, Parameters.NUMBER_SPACING).PadCenter(Parameters.NUMBER_SPACING);
 				for (int j = 0; j < numberStr.Length; j++)
 					frameBuffer[position + j] = new ConsoleExtensions.CharInfo(numberStr[j], _statsHeaderValues[i].Item3, _statsHeaderValues[i].Item4);
 				position += numberStr.Length;
@@ -140,8 +140,8 @@ namespace ParticleSimulator.Simulation {
 				string
 					label_min = _currentMin < 1000 ? _currentMin.ToStringBetter(2) + "ms" : (_currentMin / 1000).ToStringBetter(2) + "s",
 					label_max = _currentMax < 1000 ? _currentMax.ToStringBetter(2) + "ms" : (_currentMax / 1000).ToStringBetter(2) + "s",
-					label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(3) + "ms" : (frameTime / 1000).ToStringBetter(3) + "s",
-					label_FpsTime = fpsTime < 1000 ? fpsTime.ToStringBetter(3) + "ms" : (fpsTime / 1000).ToStringBetter(3) + "s";
+					label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(2) + "ms" : (frameTime / 1000).ToStringBetter(2) + "s",
+					label_FpsTime = fpsTime < 1000 ? fpsTime.ToStringBetter(2) + "ms" : (fpsTime / 1000).ToStringBetter(2) + "s";
 
 				for (int i = 0; i < label_max.Length; i++)
 					result[i] = new ConsoleExtensions.CharInfo(label_max[i], ConsoleColor.Gray);
