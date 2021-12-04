@@ -64,6 +64,17 @@ namespace Generic.Extensions {
 				if (!skip.Equals(element)) yield return element;
 		}
 
+		public static IEnumerable<T> Drop<T>(this IEnumerable<T> source, int count) {
+			T[] stuff = new T[count];
+			int i = 0;
+			foreach (T element in source) {
+				if (i >= count)
+					yield return stuff[i % count];
+				stuff[i % count] = element;
+				i++;
+			}
+		}
+
 		public static IEnumerable<T> TakeUntil<T>(this IEnumerable<T> source, Predicate<T> test) {
 			foreach (T element in source)
 				if (test(element)) yield break;

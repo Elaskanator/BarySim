@@ -1,25 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Generic.Extensions;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Boids {
 	public class Boid : AParticle {
-		private static double _speedDecay;
-		private static double _predatorSpeedDecay;
 		public Boid(int groupID, double[] position, double[] velocity, double corruption)
 		: base(groupID, position, velocity) {
 			this.IsPredator = Program.Random.NextDouble() * Parameters.BOIDS_PREDATOR_CHANCE < corruption;
 		}
-		static Boid() {
-			_speedDecay = Math.Exp(-Parameters.BOIDS_BOID_SPEED_DECAY);
-			_predatorSpeedDecay = Math.Exp(-Parameters.BOIDS_PREDATOR_SPEED_DECAY);
-		}
 		
 		public bool IsPredator { get; private set; }
 
-		public override double SpeedFraction => this.IsPredator ? _predatorSpeedDecay : _speedDecay;
 		public double MinSpeed => this.IsPredator ? Parameters.BOIDS_PREDATOR_MIN_SPEED : Parameters.BOIDS_BOID_MIN_SPEED;
 		public double MaxSpeed => this.IsPredator ? Parameters.BOIDS_PREDATOR_MAX_SPEED : Parameters.BOIDS_BOID_MAX_SPEED;
 

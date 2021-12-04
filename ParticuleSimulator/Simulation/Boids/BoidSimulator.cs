@@ -17,8 +17,6 @@ namespace ParticleSimulator.Simulation.Boids {
 		protected override Flock NewParticleGroup() { return new Flock(); }
 		protected override BoidQuadTree NewTree(double[] leftCorner, double[] rightCorner) { return new(leftCorner, rightCorner); }
 
-		protected override double GetParticleWeight(Boid particle) { return 1d; }
-
 		protected override void InteractAll(BoidQuadTree tree) {
 			Parallel.ForEach(
 				tree.Leaves,

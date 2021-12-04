@@ -54,9 +54,7 @@ namespace ParticleSimulator.Simulation {
 		}
 		
 		public static void TitleUpdate(object[] parameters) {
-			int visibleParticles = Program.Simulator.AllParticles.Count(p =>
-				Enumerable.Range(0, Parameters.DIM).All(d =>
-					p.LiveCoordinates[d] + p.Radius >= 0 && p.LiveCoordinates[d] - p.Radius < Parameters.DOMAIN_SIZE[d]));
+			int visibleParticles = Program.Simulator.AllParticles.Count(p => p.IsVisible);
 
 			Console.Title = string.Format("{0} Simulator - {1}{2} - {3}D",
 				Parameters.SimType,
@@ -91,38 +89,40 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public static void DrawLegend(ConsoleExtensions.CharInfo[] buffer) {
-			bool isDiscrete = Parameters.DIM < 3 && Parameters.SimType == SimulationType.Boid;
-			int numColors = Parameters.COLOR_ARRAY.Length;
-			string header = Parameters.COLOR_SCHEME.ToString();
-			if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group) {
-				if (Parameters.PARTICLES_GROUP_COUNT > numColors)
-					header += " (mod " + numColors + ")";
-				if (Parameters.PARTICLES_GROUP_COUNT < Parameters.COLOR_ARRAY.Length)
-					numColors = Parameters.PARTICLES_GROUP_COUNT;
-			}
+			int numColors = Program.Simulator.DensityScale.Length;
+			if (numColors > 0) {
+				bool isDiscrete = Parameters.DIM < 3 && Parameters.SimType == SimulationType.Boid;
+				string header = Parameters.COLOR_SCHEME.ToString();
+				if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group) {
+					if (Parameters.PARTICLES_GROUP_COUNT > numColors)
+						header += " (mod " + numColors + ")";
+					if (Parameters.PARTICLES_GROUP_COUNT < Parameters.COLOR_ARRAY.Length)
+						numColors = Parameters.PARTICLES_GROUP_COUNT;
+				}
 
-			int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - numColors - 1);
-			for (int i = 0; i < header.Length; i++)
-				buffer[pixelIdx + i] = new ConsoleExtensions.CharInfo(header[i], ConsoleColor.White);
+				int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - numColors - 1);
+				for (int i = 0; i < header.Length; i++)
+					buffer[pixelIdx + i] = new ConsoleExtensions.CharInfo(header[i], ConsoleColor.White);
 			
-			string rowStringData;
-			for (int cIdx = 0; cIdx < numColors; cIdx++) {
-				pixelIdx += Parameters.WINDOW_WIDTH;
+				string rowStringData;
+				for (int cIdx = 0; cIdx < numColors; cIdx++) {
+					pixelIdx += Parameters.WINDOW_WIDTH;
 
-				buffer[pixelIdx] = new ConsoleExtensions.CharInfo(
-					Parameters.CHAR_BOTH,
-					Parameters.COLOR_ARRAY[cIdx]);
+					buffer[pixelIdx] = new ConsoleExtensions.CharInfo(
+						Parameters.CHAR_BOTH,
+						Parameters.COLOR_ARRAY[cIdx]);
 
-				if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group)
-					rowStringData = "=" + cIdx.ToString();
-				else rowStringData =
-						(isDiscrete && cIdx == 0 ? "=" : "≤")
-						+ (isDiscrete
-							? ((int)Program.Simulator.DensityScale[cIdx]).ToString()
-							: Program.Simulator.DensityScale[cIdx].ToStringBetter(2));
+					if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group)
+						rowStringData = "=" + cIdx.ToString();
+					else rowStringData =
+							(isDiscrete && cIdx == 0 ? "=" : "≤")
+							+ (isDiscrete
+								? ((int)Program.Simulator.DensityScale[cIdx]).ToString()
+								: Program.Simulator.DensityScale[cIdx].ToStringBetter(2));
 
-				for (int i = 0; i < rowStringData.Length; i++)
-					buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);
+					for (int i = 0; i < rowStringData.Length; i++)
+						buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);
+				}
 			}
 		}
 	}

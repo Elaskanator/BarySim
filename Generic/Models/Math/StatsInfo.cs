@@ -11,7 +11,7 @@ namespace Generic.Models {
 		public StatsInfo(IEnumerable<double> data)
 		: this(data.ToArray()) { }
 
-		public double[] Data_asc { get; private set; }
+		public double[] Data_asc { get; set; }
 		public double Min => this.Data_asc[0];
 		public double Median => this.GetPercentileValue(50);
 		public double Max => this.Data_asc[^1];

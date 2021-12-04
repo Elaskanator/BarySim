@@ -70,6 +70,5 @@ namespace ParticleSimulator.Simulation.Gravity {
 
 		protected override Galaxy NewParticleGroup() { return new(); }
 		protected override BaryonQuadTree NewTree(double[] leftCorner, double[] rightCorner) { return new(leftCorner, rightCorner); }
-		protected override double GetParticleWeight(MatterClump particle) { return particle.Mass; }
 	}
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Generic.Extensions;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
@@ -12,8 +13,6 @@ namespace ParticleSimulator.Simulation {
 			this.Mass = mass;
 			this.Velocity = velocity;
 			this.NetForce = new double[this.DIM];
-
-			this._scaledSpeedFraction = 1d - (1d - this.SpeedFraction)/Parameters.TIME_SCALE;
 		}
 
 		private int _id = ++_globalID;
@@ -35,9 +34,8 @@ namespace ParticleSimulator.Simulation {
 		public double[] Acceleration => this.NetForce.Divide(this.Mass);
 		public double[] NetForce { get; internal set; }
 
+		public bool IsVisible => this.LiveCoordinates.All((x, d) => x + this.Radius >= 0 && x - this.Radius < Parameters.DOMAIN_SIZE[d]);
 		public virtual int? InteractionLimit => null;
-		public virtual double SpeedFraction => 1d;
-		private readonly double _scaledSpeedFraction;
 		
 		public abstract double[] ComputeInteractionForce(AParticle other);
 		public double[] ComputeInteractionForce(IEnumerable<AParticle> others) {
@@ -50,7 +48,7 @@ namespace ParticleSimulator.Simulation {
 		protected virtual void AfterUpdate() { }
 
 		public void ApplyTimeStep() {
-			this.Velocity = this.Velocity.Multiply(this._scaledSpeedFraction).Add(this.Acceleration.Multiply(Parameters.TIME_SCALE));
+			this.Velocity = this.Velocity.Add(this.Acceleration.Multiply(Parameters.TIME_SCALE));
 			
 			this.AfterUpdate();
 			

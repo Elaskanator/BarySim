@@ -29,18 +29,20 @@ namespace ParticleSimulator.Simulation {
 			for (int i = 0; i < Parameters.PARTICLES_GROUP_COUNT; i++) {
 				this.ParticleGroups[i] = this.NewParticleGroup();
 			}
-			int numDensityValues = Parameters.COLOR_ARRAY.Length - 1;
+
 			if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Depth)
 				this.DensityScale =
 					Enumerable
-						.Range(1, numDensityValues + 1)
-						.Select(x => x / (1d + numDensityValues))
+						.Range(1, Parameters.COLOR_ARRAY.Length)
+						.Select(x => (double)x / Parameters.COLOR_ARRAY.Length)
 						.ToArray();
-			else this.DensityScale =
+			else if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group)
+				this.DensityScale =
 					Enumerable
-						.Range(1, numDensityValues + 1)
+						.Range(1, Parameters.COLOR_ARRAY.Length)
 						.Select(x => (double)x)
 						.ToArray();
+			else this.DensityScale = new double[0];
 
 			this.AllParticles = this.ParticleGroups.SelectMany(g => g.Particles).ToArray();
 			this.HandleBounds();
@@ -137,7 +139,7 @@ namespace ParticleSimulator.Simulation {
 				.Where(p =>
 					p.IsActive
 					&& p.LiveCoordinates[0] > -p.Radius && p.LiveCoordinates[0] < p.Radius + Parameters.DOMAIN_SIZE[0]
-					&& p.LiveCoordinates[1] > -p.Radius && p.LiveCoordinates[1] < p.Radius + Parameters.DOMAIN_SIZE[1])
+					&& (Parameters.DIM < 2 || p.LiveCoordinates[1] > -p.Radius && p.LiveCoordinates[1] < p.Radius + Parameters.DOMAIN_SIZE[1]))
 				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < 2*Parameters.WINDOW_HEIGHT))
 				.GroupBy(pd => pd.Item1 + (Parameters.WINDOW_WIDTH * (pd.Item2 / 2)));
 		}
@@ -187,8 +189,7 @@ namespace ParticleSimulator.Simulation {
 		}}}}}}}
 
 		public void AutoscaleUpdate(object[] parameters) {
-			Tuple<char, AParticle[]>[] sampling = (Tuple<char, AParticle[]>[])parameters[0];
-			double[] densities = sampling.Without(t => t is null).Select(t => this.GetDensity(t.Item2.Cast<P>())).ToArray();
+			double[] densities = this.AllParticles.Where(p => p.IsVisible).Select(p => p.Mass).ToArray();
 			if (densities.Length > 0) {
 				StatsInfo stats = new(densities);
 				double
@@ -196,18 +197,39 @@ namespace ParticleSimulator.Simulation {
 					max = stats.Data_asc[^1];
 				stats.FilterData(Parameters.DENSITY_AUTOSCALE_CUTOFF_PCT);
 				if (stats.Data_asc.Length > 0) {
-					double
-						range = max - min,
-						step = range == 0d ? 1d : range / this.DensityScale.Length;
-					this.DensityScale = Enumerable.Range(1, this.DensityScale.Length).Select(i => min + step*i).ToArray();
-
 					if (Parameters.DENSITY_AUTOSCALE_PERCENTILE) {
-						int totalBands = 1 + (this.DensityScale.Length < stats.Data_asc.Length ? this.DensityScale.Length : stats.Data_asc.Length);
-						for (int bandIdx = 0; bandIdx < totalBands - 1; bandIdx++) {
-							this.DensityScale[bandIdx] = stats.GetPercentileValue(100d * (bandIdx + 1d) / totalBands);
-							if (bandIdx > 0 && this.DensityScale[bandIdx] <= this.DensityScale[bandIdx-1])
-								this.DensityScale[bandIdx] = this.DensityScale[bandIdx-1] + 1d;
+						List<double> results = new(Parameters.COLOR_ARRAY.Length);
+						int totalBands = (Parameters.COLOR_ARRAY.Length < stats.Data_asc.Length ? Parameters.COLOR_ARRAY.Length : stats.Data_asc.Length);
+						double newValue;
+						for (int bandIdx = 0; bandIdx < totalBands; bandIdx++) {
+							newValue = stats.GetPercentileValue(100d * bandIdx / (totalBands + 1d), false);
+							if (results.Count == 0) {
+								results.Add(newValue);
+							} else {
+								int position = 0, diff;
+								while ((newValue - results[^1]) / results[^1] <= 0.1d) {
+									diff = stats.Data_asc.Skip(position).TakeWhile(x => x <= newValue).Count();
+									position += diff;
+									if (position < stats.Data_asc.Length) {
+										if (diff > 0)
+											newValue = stats.Data_asc[position];
+									} else break;
+								}
+								if (position < stats.Data_asc.Length && (newValue - results[^1]) / results[^1] >= 0.1d) {
+									results.Add(newValue);
+									stats.Data_asc = stats.Data_asc.Skip(position).ToArray();
+									totalBands -= bandIdx;
+									bandIdx = 0;
+								}
+							}
 						}
+						this.DensityScale = results.ToArray();
+					} else {
+						double range = max - min;
+						if (range > 0) {
+							double step = range / (Parameters.COLOR_ARRAY.Length + 1);
+							this.DensityScale = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => min + step*i).ToArray();
+						} else this.DensityScale = new double[] { min };
 					}
 				}
 			}
@@ -217,9 +239,8 @@ namespace ParticleSimulator.Simulation {
 			int rank;
 			switch (Parameters.COLOR_SCHEME) {
 				case ParticleColoringMethod.Density:
-					double density = this.GetDensity(particleData);
-					rank = Program.Simulator.DensityScale.TakeWhile(a => a < density).Count();
-					rank = rank < Parameters.COLOR_ARRAY.Length ? rank : Parameters.COLOR_ARRAY.Length - 1;
+					double density = particleData.Sum(p => p.Mass);
+					rank = Program.Simulator.DensityScale.Drop(1).Count(ds => ds <= density);
 					return Parameters.COLOR_ARRAY[rank];
 				case ParticleColoringMethod.Group:
 					return this.ChooseGroupColor(particleData);
@@ -243,11 +264,6 @@ namespace ParticleSimulator.Simulation {
 			else dominantGroupID  = particles.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
 			return Parameters.COLOR_ARRAY[dominantGroupID % Parameters.COLOR_ARRAY.Length];
 		}
-
-		private double GetDensity(IEnumerable<P> particles) {
-			return particles.Sum(p =>this.GetParticleWeight(p));
-		}
-		protected abstract double GetParticleWeight(P particle);
 
 		public double GetDepthScalar(double[] v) {
 			if (Parameters.DIM > 2)
