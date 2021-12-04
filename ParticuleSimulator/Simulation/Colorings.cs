@@ -40,27 +40,18 @@ namespace ParticleSimulator.Simulation {
 		};
 		public static readonly ConsoleColor[] Radar = new ConsoleColor[] {
 			ConsoleColor.DarkGray,
-			ConsoleColor.Blue,
 			ConsoleColor.DarkBlue,
+			ConsoleColor.Blue,
 			ConsoleColor.DarkCyan,
 			ConsoleColor.Cyan,
-			//ConsoleColor.DarkGreen,
 			ConsoleColor.Green,
+			ConsoleColor.DarkYellow,
 			ConsoleColor.Yellow,
+			ConsoleColor.Red,
 			ConsoleColor.DarkRed,
-			ConsoleColor.Red,
-			//ConsoleColor.Magenta,
-			//ConsoleColor.DarkMagenta,
+			ConsoleColor.Magenta,
+			ConsoleColor.DarkMagenta,
 			//ConsoleColor.White,
-		};
-		public static readonly ConsoleColor[] Reduced = new ConsoleColor[] {
-			ConsoleColor.DarkGray,
-			ConsoleColor.DarkBlue,
-			ConsoleColor.Blue,
-			ConsoleColor.DarkCyan,
-			ConsoleColor.Green,
-			ConsoleColor.Yellow,
-			ConsoleColor.Red,
 		};
 		public static readonly ConsoleColor[] Grayscale = new ConsoleColor[] {
 			ConsoleColor.DarkGray,

@@ -53,7 +53,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 					Math.Sin(angle)};
 				if (Parameters.DIM > 2)
 					rotation = rotation.Concat(Enumerable.Repeat(0d, Parameters.DIM - 2));
-				return rotation.ToArray();
+				return rotation.ToArray().Multiply(Math.Log(1d + center.Distance(position), Parameters.GRAVITY_INITIAL_SEPARATION));
 			}
 		}
 

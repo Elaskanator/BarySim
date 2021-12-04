@@ -14,9 +14,9 @@ namespace ParticleSimulator.Simulation {
 		public double[] DensityScale { get; }
 
 		public ITree RebuildTree();
-		public ConsoleColor ChooseColor(AParticle[] others);
+		public ConsoleColor ChooseColor(Tuple<char, AParticle[], double, bool> others);
 		public AParticle[] RefreshSimulation(object[] parameters);
-		public Tuple<char, AParticle[]>[] Resample(object[] parameters);
+		public Tuple<char, AParticle[], double, bool>[] Resample(object[] parameters);
 		public void AutoscaleUpdate(object[] parameters);
 	}
 
@@ -111,13 +111,13 @@ namespace ParticleSimulator.Simulation {
 			});
 		}
 
-		public Tuple<char, AParticle[]>[] Resample(object[] parameters) {
+		public Tuple<char, AParticle[], double, bool>[] Resample(object[] parameters) {
 			P[] particleData = (P[])parameters[0];
-			Tuple<char, AParticle[]>[] results = new Tuple<char, AParticle[]>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			Tuple<char, AParticle[], double, bool>[] results = new Tuple<char, AParticle[], double, bool>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 
 			char pixelChar;
 			P[] topStuff, bottomStuff;
-			foreach (IGrouping<int, Tuple<int, int, P>> bin in DiscreteParticleBin(particleData)) {
+			foreach (IGrouping<int, Tuple<int, int, P, double>> bin in DiscreteParticleBin(particleData)) {
 				topStuff = bin.Where(t => t.Item2 % 2 == 0).Select(t => t.Item3).ToArray();
 				bottomStuff = bin.Where(t => t.Item2 % 2 == 1).Select(t => t.Item3).ToArray();
 
@@ -128,13 +128,15 @@ namespace ParticleSimulator.Simulation {
 				else pixelChar = Parameters.CHAR_LOW;
 
 				results[bin.Key] =
-					new Tuple<char, AParticle[]>(
+					new Tuple<char, AParticle[], double, bool>(
 						pixelChar,
-						topStuff.Concat(bottomStuff).Distinct().ToArray());
+						bin.Select(b => b.Item3).Distinct().ToArray(),
+						bin.Sum(b => b.Item3.Mass * b.Item4),
+						bin.Any(b => b.Item4 == 1d));
 			}
 			return results;
 		}
-		private static IEnumerable<IGrouping<int, Tuple<int, int, P>>> DiscreteParticleBin(P[] particles) { 
+		private static IEnumerable<IGrouping<int, Tuple<int, int, P, double>>> DiscreteParticleBin(P[] particles) { 
 			return particles
 				.Where(p =>
 					p.IsActive
@@ -143,14 +145,14 @@ namespace ParticleSimulator.Simulation {
 				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < 2*Parameters.WINDOW_HEIGHT))
 				.GroupBy(pd => pd.Item1 + (Parameters.WINDOW_WIDTH * (pd.Item2 / 2)));
 		}
-		private static IEnumerable<Tuple<int, int, P>> SpreadSample(P p) {
+		private static IEnumerable<Tuple<int, int, P, double>> SpreadSample(P p) {
 			double
 				pixelScalar = Renderer.RenderWidth / Parameters.DOMAIN_SIZE[0],
 				scaledX = Renderer.RenderWidthOffset + p.LiveCoordinates[0] * pixelScalar,
 				scaledY = Renderer.RenderHeightOffset + (Parameters.DIM < 2 ? 0d : p.LiveCoordinates[1] * pixelScalar);
 
 			if (p.Radius == 0d)
-				yield return new((int)scaledX, (int)scaledY, p);
+				yield return new((int)scaledX, (int)scaledY, p, 1d);
 			else {
 				double
 					radiusX = p.Radius * pixelScalar,
@@ -165,7 +167,7 @@ namespace ParticleSimulator.Simulation {
 				int
 					rangeX = 1 + (int)(maxX) - (int)(minX),
 					rangeY = 1 + (int)(maxY) - (int)(minY);
-				double testX, testY;
+				double testX, testY, dist, massScalar;
 				int roundedX, roundedY;
 
 				for (int x2 = 0; x2 < rangeX; x2++) {
@@ -174,22 +176,37 @@ namespace ParticleSimulator.Simulation {
 						for (int y2 = 0; y2 < rangeY; y2++) {
 							roundedY = y2 + (int)minY;
 							if (roundedY > 0d && roundedY < Parameters.WINDOW_HEIGHT*2) {
-								testX = roundedX == (int)scaledX
-									? p.LiveCoordinates[0] * pixelScalar
-									: roundedX - (roundedX < scaledX ? 1 : -1);
+								testX = roundedX == (int)scaledX//particle in current bin
+									? p.LiveCoordinates[0] * pixelScalar//use exact value
+									: roundedX + (roundedX < scaledX ? 1 : 0);//nearer edge
 								if (Parameters.DIM == 1) {
-									if (Math.Abs(testX - p.LiveCoordinates[0]) <= p.Radius)
-										yield return new(roundedX, roundedY, p);
+									dist = Math.Abs(testX - p.LiveCoordinates[0]);
+									if (dist <= p.Radius) {
+										massScalar = 1d - dist/p.Radius/pixelScalar;
+										yield return new(roundedX, roundedY, p, massScalar);
+									}
 								} else {
-									testY = roundedY == (int)scaledY
-										? p.LiveCoordinates[1] * pixelScalar
-										: roundedY - (roundedY < scaledY ? 1 : -1);
-									if (p.Radius * pixelScalar >= new double[] { testX, testY }.Distance(p.LiveCoordinates.Take(2).Select(c => c * pixelScalar).ToArray()))
-										yield return new(roundedX, roundedY, p);
-		}}}}}}}
+									testY = roundedY == (int)scaledY//particle in current bin
+										? p.LiveCoordinates[1] * pixelScalar//use exact value
+										: roundedY + (roundedY < scaledY ? 1 : 0);//nearer edge
+									dist = new double[] { testX, testY }.Distance(p.LiveCoordinates.Take(2).Select(c => c * pixelScalar).ToArray());
+									if (p.Radius * pixelScalar >= dist) {
+										massScalar = 1d - 
+											(roundedY == (int)scaledY && roundedX == (int)scaledX
+												? 0d
+												: - Math.Sqrt(dist/p.Radius/pixelScalar));
+										yield return new(roundedX, roundedY, p, massScalar);
+		}}}}}}}}
 
 		public void AutoscaleUpdate(object[] parameters) {
-			double[] densities = this.AllParticles.Where(p => p.IsVisible).Select(p => p.Mass).ToArray();
+			Tuple<char, AParticle[], double, bool>[] sampling = ((Tuple<char, AParticle[], double, bool>[])parameters[0]).Without(t => t is null).ToArray();
+			double[] densities;
+			//if (sampling.Sum(t => t.Item2.Count()) < this.AllParticles.Where(p => p.IsActive).Count())
+				densities = sampling
+					.Where(t => t.Item4)
+					.Select(t => t.Item3)
+					.ToArray();
+			//else densities = this.AllParticles.Where(p => p.IsActive).Select(p => p.Mass).ToArray();
 			if (densities.Length > 0) {
 				StatsInfo stats = new(densities);
 				double
@@ -235,19 +252,18 @@ namespace ParticleSimulator.Simulation {
 			}
 		}
 
-		public ConsoleColor ChooseColor(P[] particleData) {
+		public ConsoleColor ChooseColor(Tuple<char, AParticle[], double, bool> particleData) {
 			int rank;
 			switch (Parameters.COLOR_SCHEME) {
 				case ParticleColoringMethod.Density:
-					double density = particleData.Sum(p => p.Mass);
-					rank = Program.Simulator.DensityScale.Drop(1).Count(ds => ds <= density);
+					rank = Program.Simulator.DensityScale.Drop(1).TakeWhile(ds => ds < particleData.Item3).Count();
 					return Parameters.COLOR_ARRAY[rank];
 				case ParticleColoringMethod.Group:
-					return this.ChooseGroupColor(particleData);
+					return this.ChooseGroupColor(particleData.Item2);
 				case ParticleColoringMethod.Depth:
 					if (Parameters.DIM > 2) {
 						int numColors = Parameters.COLOR_ARRAY.Length;
-						double depth = 1d - particleData.Min(p => GetDepthScalar(p.LiveCoordinates));
+						double depth = 1d - particleData.Item2.Min(p => GetDepthScalar(p.LiveCoordinates));
 						rank = Program.Simulator.DensityScale.Take(numColors - 1).TakeWhile(a => a < depth).Count();
 						return Parameters.COLOR_ARRAY[rank];
 					} else return Parameters.COLOR_ARRAY[^1];
@@ -255,7 +271,6 @@ namespace ParticleSimulator.Simulation {
 					throw new InvalidEnumArgumentException(nameof(Parameters.COLOR_SCHEME));
 			}
 		}
-		ConsoleColor IParticleSimulator.ChooseColor(AParticle[] particleData) { return this.ChooseColor(particleData.Cast<P>().ToArray()); }
 
 		public virtual ConsoleColor ChooseGroupColor(AParticle[] particles) {
 			int dominantGroupID;
