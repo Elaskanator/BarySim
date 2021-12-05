@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -9,14 +8,14 @@ using Generic.Models;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public interface IParticleSimulator : IEnumerable<AParticle> {
+	public interface IParticleSimulator {
 		public AParticle[] AllParticles { get; }
 		public double[] DensityScale { get; }
 
 		public ITree RebuildTree();
-		public ConsoleColor ChooseColor(Tuple<char, AParticle[], double, bool> others);
+		public ConsoleColor ChooseColor(Tuple<char, AParticle[], double> others);
 		public AParticle[] RefreshSimulation(object[] parameters);
-		public Tuple<char, AParticle[], double, bool>[] Resample(object[] parameters);
+		public Tuple<char, AParticle[], double>[] Resample(object[] parameters);
 		public void AutoscaleUpdate(object[] parameters);
 	}
 
@@ -81,16 +80,17 @@ namespace ParticleSimulator.Simulation {
 			if (this.AllParticles.Length == 0)
 				Program.CancelAction(null, null);
 
-			foreach (AParticle p in this.AllParticles)
-				p.NetForce = new double[Parameters.DIM];
+			for (int i = 0; i < this.AllParticles.Length; i++)
+				this.AllParticles[i].NetForce = new double[Parameters.DIM];
 
 			this.InteractAll(tree);
 
-			foreach (P p in this.AllParticles)
-				p.ApplyTimeStep();
-
 			this.HandleBounds();
 			this.AllParticles = this.AllParticles.Where(p => p.IsActive).ToArray();
+			
+			for (int i = 0; i < this.AllParticles.Length; i++)
+				this.AllParticles[i].ApplyTimeStep();
+
 			return this.AllParticles;
 		}
 
@@ -98,28 +98,31 @@ namespace ParticleSimulator.Simulation {
 
 		private void HandleBounds() {
 			Parallel.ForEach(
-				this.AllParticles.Where(p => p.IsActive),
+				this.AllParticles,
 				Parameters.MulithreadedOptions,
 				p => {
 					if (Parameters.WORLD_WRAPPING)
 						p.WrapPosition();
 					else if (Parameters.WORLD_BOUNDING)
 						p.BoundPosition();
+					else if (p.LiveCoordinates.Any((c, d) => c < -Parameters.WORLD_DEATH_BOUND_CNT*Parameters.DOMAIN_SIZE[d] || c > Parameters.DOMAIN_SIZE[d] *(1d + Parameters.WORLD_DEATH_BOUND_CNT)))
+						p.IsActive = false;
 
 					if (Parameters.WORLD_BOUNCE_WEIGHT > 0d)
 						p.BounceVelocity();
 			});
 		}
 
-		public Tuple<char, AParticle[], double, bool>[] Resample(object[] parameters) {
+		public Tuple<char, AParticle[], double>[] Resample(object[] parameters) {
 			P[] particleData = (P[])parameters[0];
-			Tuple<char, AParticle[], double, bool>[] results = new Tuple<char, AParticle[], double, bool>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			Tuple<char, AParticle[], double>[] results = new Tuple<char, AParticle[], double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 
 			char pixelChar;
-			P[] topStuff, bottomStuff;
-			foreach (IGrouping<int, Tuple<int, int, P, double>> bin in DiscreteParticleBin(particleData)) {
+			P[] topStuff, bottomStuff, distinct;
+			foreach (IGrouping<int, Tuple<int, int, P>> bin in DiscreteParticleBin(particleData)) {
 				topStuff = bin.Where(t => t.Item2 % 2 == 0).Select(t => t.Item3).ToArray();
 				bottomStuff = bin.Where(t => t.Item2 % 2 == 1).Select(t => t.Item3).ToArray();
+				distinct = bin.Select(b => b.Item3).Distinct().ToArray();
 
 				if (topStuff.Length > 0 && bottomStuff.Length > 0)
 					pixelChar = Parameters.CHAR_BOTH;
@@ -128,31 +131,30 @@ namespace ParticleSimulator.Simulation {
 				else pixelChar = Parameters.CHAR_LOW;
 
 				results[bin.Key] =
-					new Tuple<char, AParticle[], double, bool>(
+					new Tuple<char, AParticle[], double>(
 						pixelChar,
-						bin.Select(b => b.Item3).Distinct().ToArray(),
-						bin.Sum(b => b.Item3.Mass * b.Item4),
-						bin.Any(b => b.Item4 == 1d));
+						distinct,
+						distinct.Sum(p => p.Mass));
 			}
 			return results;
 		}
-		private static IEnumerable<IGrouping<int, Tuple<int, int, P, double>>> DiscreteParticleBin(P[] particles) { 
+		private static IEnumerable<IGrouping<int, Tuple<int, int, P>>> DiscreteParticleBin(P[] particles) { 
 			return particles
 				.Where(p =>
 					p.IsActive
-					&& p.LiveCoordinates[0] > -p.Radius && p.LiveCoordinates[0] < p.Radius + Parameters.DOMAIN_SIZE[0]
+					&& p.LiveCoordinates[0] + p.Radius >= 0 && p.LiveCoordinates[0] - p.Radius < Parameters.DOMAIN_SIZE[0]
 					&& (Parameters.DIM < 2 || p.LiveCoordinates[1] > -p.Radius && p.LiveCoordinates[1] < p.Radius + Parameters.DOMAIN_SIZE[1]))
 				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < 2*Parameters.WINDOW_HEIGHT))
 				.GroupBy(pd => pd.Item1 + (Parameters.WINDOW_WIDTH * (pd.Item2 / 2)));
 		}
-		private static IEnumerable<Tuple<int, int, P, double>> SpreadSample(P p) {
+		private static IEnumerable<Tuple<int, int, P>> SpreadSample(P p) {
 			double
 				pixelScalar = Renderer.RenderWidth / Parameters.DOMAIN_SIZE[0],
 				scaledX = Renderer.RenderWidthOffset + p.LiveCoordinates[0] * pixelScalar,
 				scaledY = Renderer.RenderHeightOffset + (Parameters.DIM < 2 ? 0d : p.LiveCoordinates[1] * pixelScalar);
 
 			if (p.Radius == 0d)
-				yield return new((int)scaledX, (int)scaledY, p, 1d);
+				yield return new((int)scaledX, (int)scaledY, p);
 			else {
 				double
 					radiusX = p.Radius * pixelScalar,
@@ -167,9 +169,9 @@ namespace ParticleSimulator.Simulation {
 				int
 					rangeX = 1 + (int)(maxX) - (int)(minX),
 					rangeY = 1 + (int)(maxY) - (int)(minY);
-				double testX, testY, dist, massScalar;
-				int roundedX, roundedY;
 
+				double testX, testY, dist;
+				int roundedX, roundedY;
 				for (int x2 = 0; x2 < rangeX; x2++) {
 					roundedX = x2 + (int)minX;
 					if (roundedX > 0d && roundedX < Parameters.WINDOW_WIDTH) {
@@ -182,78 +184,79 @@ namespace ParticleSimulator.Simulation {
 								if (Parameters.DIM == 1) {
 									dist = Math.Abs(testX - p.LiveCoordinates[0]);
 									if (dist <= p.Radius) {
-										massScalar = 1d - dist/p.Radius/pixelScalar;
-										yield return new(roundedX, roundedY, p, massScalar);
+										yield return new(roundedX, roundedY, p);
 									}
 								} else {
 									testY = roundedY == (int)scaledY//particle in current bin
 										? p.LiveCoordinates[1] * pixelScalar//use exact value
 										: roundedY + (roundedY < scaledY ? 1 : 0);//nearer edge
 									dist = new double[] { testX, testY }.Distance(p.LiveCoordinates.Take(2).Select(c => c * pixelScalar).ToArray());
-									if (p.Radius * pixelScalar >= dist) {
-										massScalar = 1d - 
-											(roundedY == (int)scaledY && roundedX == (int)scaledX
-												? 0d
-												: - Math.Sqrt(dist/p.Radius/pixelScalar));
-										yield return new(roundedX, roundedY, p, massScalar);
-		}}}}}}}}
+									if (p.Radius * pixelScalar >= dist)
+										yield return new(roundedX, roundedY, p);
+		}}}}}}}
 
 		public void AutoscaleUpdate(object[] parameters) {
-			Tuple<char, AParticle[], double, bool>[] sampling = ((Tuple<char, AParticle[], double, bool>[])parameters[0]).Without(t => t is null).ToArray();
+			Tuple<char, AParticle[], double>[] sampling = ((Tuple<char, AParticle[], double>[])parameters[0]).Without(t => t is null).ToArray();
 			double[] densities;
-			//if (sampling.Sum(t => t.Item2.Count()) < this.AllParticles.Where(p => p.IsActive).Count())
-				densities = sampling
-					//.Where(t => t.Item4)
-					.Select(t => t.Item3)
-					.ToArray();
-			//else densities = this.AllParticles.Where(p => p.IsActive).Select(p => p.Mass).ToArray();
+			densities = sampling.Select(t => t.Item3).ToArray();
+			//densities = this.AllParticles.Where(p => p.IsActive).Select(p => p.Mass).ToArray();
+
 			if (densities.Length > 0) {
 				StatsInfo stats = new(densities);
-				double
-					min = stats.Data_asc[0],
-					max = stats.Data_asc[^1];
-				stats.FilterData(Parameters.DENSITY_AUTOSCALE_CUTOFF_PCT);
-				if (stats.Data_asc.Length > 0) {
-					if (Parameters.DENSITY_AUTOSCALE_PERCENTILE) {
-						List<double> results = new(Parameters.COLOR_ARRAY.Length);
-						int totalBands = (Parameters.COLOR_ARRAY.Length < stats.Data_asc.Length ? Parameters.COLOR_ARRAY.Length : stats.Data_asc.Length);
-						double newValue;
-						for (int bandIdx = 0; bandIdx < totalBands; bandIdx++) {
-							newValue = stats.GetPercentileValue(100d * bandIdx / (totalBands + 1d), false);
-							if (results.Count == 0) {
+				if (Parameters.DENSITY_AUTOSCALE_CUTOFF_PCT > 0) {
+					stats.FilterData(Parameters.DENSITY_AUTOSCALE_CUTOFF_PCT);
+					if (stats.Data_asc.Length == 0)
+						return;
+				}
+
+				if (Parameters.DENSITY_AUTOSCALE_PERCENTILE) {
+					List<double> results = new(Parameters.COLOR_ARRAY.Length);
+					int position, diff,
+						totalBands = (Parameters.COLOR_ARRAY.Length < stats.Data_asc.Length ? Parameters.COLOR_ARRAY.Length : stats.Data_asc.Length);
+					double newValue;
+					for (int bandIdx = 0; bandIdx < totalBands && stats.Data_asc.Length > 0; bandIdx++) {
+						newValue = stats.GetPercentileValue(100d * bandIdx / (totalBands + 1d), false);
+						if (results.Count == 0) {
+							results.Add(newValue);
+							stats.Data_asc = stats.Data_asc
+								//.SkipWhile(d => d == newValue)
+								.ToArray();
+						} else {
+							position = 0;
+							while (newValue <= results[^1]) {
+								diff = stats.Data_asc.Skip(position).TakeWhile(x => x <= newValue).Count();
+								position += diff;
+								if (position < stats.Data_asc.Length) {
+									if (diff > 0)
+										newValue = stats.Data_asc[position];
+								} else break;
+							}
+							if (position < stats.Data_asc.Length && newValue > results[^1]) {
 								results.Add(newValue);
-								stats.Data_asc = stats.Data_asc.SkipWhile(d => d == newValue).ToArray();
-							} else {
-								int position = 0, diff;
-								while ((newValue - results[^1]) / results[^1] <= 0.1d) {
-									diff = stats.Data_asc.Skip(position).TakeWhile(x => x <= newValue).Count();
-									position += diff;
-									if (position < stats.Data_asc.Length) {
-										if (diff > 0)
-											newValue = stats.Data_asc[position];
-									} else break;
-								}
-								if (position < stats.Data_asc.Length && (newValue - results[^1]) / results[^1] >= 0.1d) {
-									results.Add(newValue);
-									stats.Data_asc = stats.Data_asc.Skip(position).SkipWhile(d => d == newValue).ToArray();
-									totalBands -= bandIdx;
-									bandIdx = 0;
-								}
+								stats.Data_asc = stats.Data_asc
+									.Skip(position)
+									//.SkipWhile(d => d == newValue)
+									.ToArray();
+								totalBands -= bandIdx;
+								bandIdx = 0;
 							}
 						}
-						this.DensityScale = results.ToArray();
-					} else {
-						double range = max - min;
-						if (range > 0) {
-							double step = range / (Parameters.COLOR_ARRAY.Length + 1);
-							this.DensityScale = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => min + step*i).ToArray();
-						} else this.DensityScale = new double[] { min };
 					}
+					this.DensityScale = results.ToArray();
+				} else {
+					double
+						min = stats.Data_asc[0],
+						max = stats.Data_asc[^1],
+						range = max - min;
+					if (range > 0) {
+						double step = range / (Parameters.COLOR_ARRAY.Length + 1);
+						this.DensityScale = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => min + step*i).ToArray();
+					} else this.DensityScale = new double[] { min };
 				}
 			}
 		}
 
-		public ConsoleColor ChooseColor(Tuple<char, AParticle[], double, bool> particleData) {
+		public ConsoleColor ChooseColor(Tuple<char, AParticle[], double> particleData) {
 			int rank;
 			switch (Parameters.COLOR_SCHEME) {
 				case ParticleColoringMethod.Density:
@@ -286,8 +289,5 @@ namespace ParticleSimulator.Simulation {
 				return 1d - (v.Skip(2).ToArray().Magnitude() / Parameters.DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT);
 			else return 1d;
 		}
-
-		public IEnumerator<AParticle> GetEnumerator() { return this.AllParticles.AsEnumerable().GetEnumerator(); }
-		IEnumerator IEnumerable.GetEnumerator() {return this.AllParticles.GetEnumerator(); }
 	}
 }

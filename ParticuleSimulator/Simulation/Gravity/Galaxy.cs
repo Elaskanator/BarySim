@@ -18,7 +18,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 
 		protected override double[] NewParticlePosition(double[] center, double radius) {
 			double[] result = base
-				.NewParticlePosition(new double[Parameters.DIM].Take(2).ToArray(), radius * Program.Random.NextDouble())//cluster more in the center
+				.NewParticlePosition(new double[Parameters.DIM].Take(2).ToArray(), radius)
 				.Concat(new double[2])
 				.Take(Parameters.DIM)
 				.ToArray()

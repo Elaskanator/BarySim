@@ -39,11 +39,13 @@ namespace ParticleSimulator.Simulation.Gravity {
 							.Divide(newMass),
 						newVelocity = this.Velocity.Multiply(this.Mass)
 							.Add(other.Velocity.Multiply(other.Mass))
-							.Divide(this.Mass + other.Mass);
+							.Divide(this.Mass + other.Mass),
+						newNetForce = this.NetForce.Add(other.NetForce);
 					//remove smaller particle
 					larger.LiveCoordinates = newCoordinates;
 					larger.Velocity = newVelocity;
 					larger.Mass = newMass;
+					larger.NetForce = newNetForce;
 					smaller.IsActive = false;
 				} else if (distance < this.Radius + other.Radius) {//overlap - drag
 					netForce = netForce.Add(

@@ -18,9 +18,12 @@ namespace ParticleSimulator {
 		public const double TIME_SCALE = 1d;
 		public const int DIM = 2;
 
-		public const double PARTICLES_MAX_STARTING_SPEED = 0E-3;
-		public const double PARTICLES_MAX_GROUP_STARTING_SPEED = 0.8E-3;
+		public const double STARTING_SPEED_MAx_GROUP = 8E-3;
+		public const double STARTING_SPEED_MAX_GROUP_RAND = 0E-3;
+		public const double STARTING_SPEED_MAX_INTRAGROUP = 8E-3;
+		public const double STARTING_SPEED_MAX_INTRAGROUP_RAND = 0E-3;
 		
+		public const double WORLD_DEATH_BOUND_CNT = 1E3;
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNDING = false;
 		public const double WORLD_PADDING_PCT = 10d;
@@ -35,12 +38,12 @@ namespace ParticleSimulator {
 		
 		public const double TARGET_FPS = -1;
 		public const double MAX_FPS = 30;
-		public const int WINDOW_WIDTH = 160;
-		public const int WINDOW_HEIGHT = 80;//using top and bottom halves of each character to get double the verticle resolution
+		public const int WINDOW_WIDTH = 140;
+		public const int WINDOW_HEIGHT = 70;//using top and bottom halves of each character to get double the verticle resolution
 
 		public const bool PERF_ENABLE = true;
-		public const bool PERF_STATS_ENABLE = false;
-		public const bool PERF_GRAPH_ENABLE = false;
+		public const bool PERF_STATS_ENABLE = true;
+		public const bool PERF_GRAPH_ENABLE = true;
 		
 		public const bool ENABLE_ASYNCHRONOUS = true;
 		public const int PRECALCULATION_LIMIT = 1;
@@ -52,8 +55,8 @@ namespace ParticleSimulator {
 
 		#region Gravity
 		public const double GRAVITATIONAL_CONSTANT = 1E-10;
-		public const double GRAVITY_DENSITY = 5E2;
-		public const double GRAVITY_INITIAL_SEPARATION = 0.025d;
+		public const double GRAVITY_DENSITY = 1E3;
+		public const double GRAVITY_INITIAL_SEPARATION = 0.008d;
 		public const double GRAVITY_ALIGNMENT_SKEW_POW = 4d;
 		public const double GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0d;
 
@@ -61,8 +64,7 @@ namespace ParticleSimulator {
 		public const double GRAVITY_MAX_MASS = 1E0;
 		public const double GRAVITY_MASS_BIAS = 3d;
 		
-		public const double GRAVITY_MAX_ACCEL = 1d;
-		public const double GRAVITY_DEATH_BOUND_CNT = 1E3;
+		public const double GRAVITY_MAX_ACCEL = 10d;
 		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 24;
 
 		public const double GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE = 8d;
@@ -73,7 +75,6 @@ namespace ParticleSimulator {
 		public const bool BOIDS_ENABLE_COHESION				= true;
 		public const bool BOIDS_ENABLE_ALIGNMENT			= true;
 		public const bool BOIDS_ENABLE_SEPARATION			= true;
-		
 
 		public const double BOIDS_INITIAL_SEPARATION		= 3E-2;
 		public const int BOIDS_DESIRED_INTERACTION_NEIGHBORS= 8;

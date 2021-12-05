@@ -205,7 +205,7 @@ namespace ParticleSimulator {
 						//ReadTimeout = null
 			}}});
 
-			if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Density)
+			if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Density && Parameters.COLOR_ARRAY.Length > 1)
 				StepEval_Autoscale = new(new() {
 					Name = "Autoscaler",
 					//Initializer = null,

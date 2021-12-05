@@ -15,8 +15,8 @@ namespace ParticleSimulator.Simulation {
 				.Select(x => x * (Program.Random.NextDouble() * (100d - Parameters.WORLD_PADDING_PCT) + 0.5d * Parameters.WORLD_PADDING_PCT) / 100d)
 				.ToArray();
 
-			this.InitialVelocity = this.NewInitialDirection(Parameters.DOMAIN_CENTER, this.SpawnCenter).Multiply(Parameters.PARTICLES_MAX_GROUP_STARTING_SPEED)
-				.Add(HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.PARTICLES_MAX_STARTING_SPEED));
+			this.InitialVelocity = this.NewInitialDirection(Parameters.DOMAIN_CENTER, this.SpawnCenter).Multiply(Parameters.STARTING_SPEED_MAx_GROUP)
+				.Add(HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.STARTING_SPEED_MAX_GROUP_RAND));
 
 			double particleVolume = HyperspaceFunctions.HypersphereVolume(this.InitialSeparationRadius * Math.Pow(2d, 1d / Parameters.DIM), Parameters.DIM);
 			double radius = this.NumParticles > 1 ? HyperspaceFunctions.HypersphereRadius(particleVolume * this.NumParticles, Parameters.DIM) : 0d;
@@ -26,8 +26,8 @@ namespace ParticleSimulator.Simulation {
 				.Select(p => this.NewParticle(
 					p,
 					this.InitialVelocity
-						.Add(this.NewInitialDirection(this.SpawnCenter, p).Multiply(Parameters.PARTICLES_MAX_GROUP_STARTING_SPEED))
-						.Add(HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.PARTICLES_MAX_STARTING_SPEED))))
+						.Add(this.NewInitialDirection(this.SpawnCenter, p).Multiply(Parameters.STARTING_SPEED_MAX_INTRAGROUP))
+						.Add(HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.STARTING_SPEED_MAX_INTRAGROUP_RAND))))
 				.ToArray();
 		}
 

@@ -16,13 +16,12 @@ namespace ParticleSimulator.Simulation.Gravity {
 					if (particles.Length > 0) {
 						double[] toOther;
 						double distance;
-
+						//recursively discover near and far nodes
 						List<BaryonQuadTree> nearNodes = new(), farNodes = new();
 						foreach (BaryonQuadTree n in leaf.GetNeighborhoodNodes(Parameters.GRAVITY_NEIGHBORHOOD_FILTER))
 							if (_inRangeTest(leaf, n))
 								nearNodes.Add(n);
 							else farNodes.Add(n);
-
 						Tuple<BaryonQuadTree[], BaryonQuadTree[]> temp, splitInteractionNodes = new(Array.Empty<BaryonQuadTree>(), Array.Empty<BaryonQuadTree>());
 						for (int i = 0; i < nearNodes.Count; i++) {
 							temp = nearNodes[i].RecursiveFilter(n => _inRangeTest(n, leaf));
@@ -43,24 +42,18 @@ namespace ParticleSimulator.Simulation.Gravity {
 
 						double[] neighborImpulse;
 						for (int i = 0; i < particles.Length; i++) {
-							if (particles[i].IsActive) {
-								if (particles[i].LiveCoordinates.Any((c, i) =>
-								c < -Parameters.GRAVITY_DEATH_BOUND_CNT*Parameters.DOMAIN_SIZE[i]
-								|| c > Parameters.DOMAIN_SIZE[i] *(1d + Parameters.GRAVITY_DEATH_BOUND_CNT))) {
-									particles[i].IsActive = false;
-								} else {
-									particles[i].NetForce = particles[i].NetForce.Add(baryonFarImpulse.Multiply(particles[i].Mass));
+							particles[i].NetForce = particles[i].NetForce.Add(baryonFarImpulse.Multiply(particles[i].Mass));
 
-									for (int j = i + 1; j < particles.Length; j++) {//symmetric interaction
-										neighborImpulse = particles[i].ComputeInteractionForce(particles[j]);
-										particles[i].NetForce = particles[i].NetForce.Add(neighborImpulse);
-										particles[j].NetForce = particles[j].NetForce.Subtract(neighborImpulse);
-									}
+							for (int j = i + 1; j < particles.Length; j++) {//symmetric interaction
+								neighborImpulse = particles[i].ComputeInteractionForce(particles[j]);
+								particles[i].NetForce = particles[i].NetForce.Add(neighborImpulse);
+								particles[j].NetForce = particles[j].NetForce.Subtract(neighborImpulse);
+							}
 
-									for (int b = 0; b < nearNodes2.Length; b++)
-										foreach (MatterClump p in nearNodes2[b].AllElements)//asymmetric interaction
-											particles[i].NetForce = particles[i].NetForce.Add(particles[i].ComputeInteractionForce(p));
-			}}}}});
+							for (int b = 0; b < nearNodes2.Length; b++)
+								foreach (MatterClump p in nearNodes2[b].AllElements)//asymmetric interaction
+									particles[i].NetForce = particles[i].NetForce.Add(particles[i].ComputeInteractionForce(p));
+			}}});
 		}
 
 		private static readonly Func<BaryonQuadTree, BaryonQuadTree, bool> _inRangeTest = (a, b) =>

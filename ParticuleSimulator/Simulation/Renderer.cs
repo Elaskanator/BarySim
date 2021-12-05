@@ -36,7 +36,7 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
-			Tuple<char, AParticle[], double, bool>[] sampling = (Tuple<char, AParticle[], double, bool>[])parameters[0];
+			Tuple<char, AParticle[], double>[] sampling = (Tuple<char, AParticle[], double>[])parameters[0];
 
 			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 			if (!(sampling is null)) {
