@@ -11,18 +11,21 @@ namespace ParticleSimulator.Simulation.Boids {
 			return new(cornerA, cornerB, parent);
 		}
 
+		//protected override double[] MakeCenter() {
+		//	double minDivision = 1d / (1 << (this.Capacity / 2));
+		//	return Enumerable
+		//		.Range(0, Parameters.DIM)
+		//		.Select(d => this._members.Average(m => m.Coordinates[d]))
+		//		.Select((avg, d) =>
+		//			avg < this.CornerLeft[d] + minDivision * (this.CornerRight[d] - this.CornerLeft[d])
+		//				? this.CornerLeft[d] + minDivision * (this.CornerRight[d] - this.CornerLeft[d])
+		//				: avg > this.CornerRight[d] - minDivision * (this.CornerRight[d] - this.CornerLeft[d])
+		//					? this.CornerRight[d] - minDivision * (this.CornerRight[d] - this.CornerLeft[d])
+		//					: avg)
+		//		.ToArray();
+		//}
 		protected override double[] MakeCenter() {
-			double minDivision = 1d / (1 << (this.Capacity / 2));
-			return Enumerable
-				.Range(0, Parameters.DIM)
-				.Select(d => this._members.Average(m => m.Coordinates[d]))
-				.Select((avg, d) =>
-					avg < this.CornerLeft[d] + minDivision * (this.CornerRight[d] - this.CornerLeft[d])
-						? this.CornerLeft[d] + minDivision * (this.CornerRight[d] - this.CornerLeft[d])
-						: avg > this.CornerRight[d] - minDivision * (this.CornerRight[d] - this.CornerLeft[d])
-							? this.CornerRight[d] - minDivision * (this.CornerRight[d] - this.CornerLeft[d])
-							: avg)
-				.ToArray();
+			return this.CornerLeft.Zip(this.CornerRight, (a, b) => a + Program.Random.NextDouble() * (b - a)).ToArray();
 		}
 		protected override BoidQuadTree GetContainingChild(Boid element) {
 			return this._quadrants.Single(q => q.DoesContain(element));

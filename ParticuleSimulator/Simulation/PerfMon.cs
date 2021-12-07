@@ -187,8 +187,10 @@ namespace ParticleSimulator.Simulation {
 				min = min >= 1d ? min : 0d;
 				max = max >= min ? max : min + 1d;
 
-				_currentMin = min;
-				_currentMax = max;
+				if (Math.Abs(min - _currentMin) / _currentMin > 0.05d)
+					_currentMin = min;
+				if (Math.Abs(max - _currentMax) / _currentMax > 0.05d)
+					_currentMax = max;
 
 				for (int i = 0; i < frameTimeStats.Length; i++)
 					_graphColumns[i] = RenderGraphColumn(_columnIterationTimeStatsMs[i], _columnFrameTimeStatsMs[i]);

@@ -108,6 +108,21 @@ namespace Generic.Models {
 					return node.GetContainingLeaf(element);
 			return (T)this;
 		}
+
+		public IEnumerable<E> GetNeighbors() {
+			foreach (E e in this.AllElements)
+				yield return e;
+			if (!this.IsRoot)
+				foreach (E member in this.SeekUpward().SelectMany(n => n.AllElements))
+					yield return member;
+		}
+		private IEnumerable<ATree<E, T>> SeekUpward() {
+			foreach (ATree<E, T> node in this.SiblingNodes.SelectMany(q => q.AllNodes))
+				yield return node;
+			if (!this.Parent.IsRoot)
+				foreach (ATree<E, T> node in this.Parent.SeekUpward())
+					yield return node;
+		}
 		
 		public IEnumerable<T> GetNeighborhoodNodes(int? limit = null) {//must be used from a leaf
 			return this.GetNeighborhoodNodes_up(limit, this);

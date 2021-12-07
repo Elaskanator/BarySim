@@ -9,6 +9,66 @@ namespace Generic.Vectors {
 	// https://www.av8n.com/physics/clifford-intro.htm
 	// http://scipp.ucsc.edu/~haber/archives/physics251_11/Clifford_Slides.pdf
 	public static class HyperspaceFunctions {
+		public static double AngleTo_FullRange(this double[] v1, double[] v2) {
+			switch (v1.Length) {
+				case 0:
+					throw new Exception("0D vectors have no angle");
+				case 1:
+					return Math.Atan2(0d, v1[0] - v2[0]);
+				case 2:
+					return Math.Atan2(v1[1] - v2[1], v1[0] - v2[0]);
+				default:
+					double angle = Math.Acos(v1.DotProduct(v2)) / v1.Magnitude() / v2.Magnitude();
+					double[][] sqMatrixCols = new double[][] { v1, v2 }
+						.Concat(Enumerable
+							.Range(0, v1.Length - 2)
+							.Select(cIdx => Enumerable
+								.Range(0, v1.Length)
+								.Select(idx => idx == cIdx + 2 ? 1d : 0d)
+								.ToArray()))
+						.ToArray();
+					int orientation = Math.Sign(sqMatrixCols.Determinant());
+					return angle + (orientation < 0 ? Math.PI : 0d);
+			}
+		}
+
+		//see https://www.math10.com/en/algebra/matrices/determinant.html
+		public static double Determinant(this double[][] squareVectorColumns) {
+			if (squareVectorColumns.Length == 1)
+				return squareVectorColumns[0][0];
+			//else if (squareVectorColumns.Length == 2)
+			//	return	squareVector[0][0]*squareVector[1][1]
+			//		-	squareVector[0][1]*squareVector[1][0];
+			//else if (squareVectorColumns.Length == 3)//Leibniz formula
+			//	return	squareVector[0][0]*squareVector[1][1]*squareVector[2][2]
+			//		-	squareVector[0][0]*squareVector[1][2]*squareVector[2][1];
+			//		-	squareVector[0][1]*squareVector[1][0]*squareVector[2][2]
+			//		+	squareVector[0][1]*squareVector[1][2]*squareVector[2][0]
+			//		+	squareVector[0][2]*squareVector[1][0]*squareVector[2][1]
+			//		-	squareVector[0][2]*squareVector[1][1]*squareVector[2][0]
+			else return Enumerable
+				.Range(0, squareVectorColumns.Length)
+				.Select(i => squareVectorColumns[0][i] * squareVectorColumns.Cofactor(0, i))
+				.Sum();
+		}
+
+		//https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
+		//https://en.wikipedia.org/wiki/Rotations_in_4-dimensional_Euclidean_space#Relation_to_quaternions
+		//public static double[] Rotate(this double[] v, double[] axis, double angle) {//Rodrigues's rotation formula (3d max)
+
+		//}
+		
+		public static double Cofactor(this double[][] squareVectorColumns, int colIdx, int rowIdx) {
+			return squareVectorColumns
+				.Without((col, c) => c == colIdx)
+				.Select((col, c) => col
+					.Without((x, r) => r == rowIdx)
+					.Select((x, r) => c + r % 2 == 0 ? 1d : -1d)
+					.ToArray())
+				.ToArray()
+				.Determinant();
+		}
+
 		public static double[] RandomCoordinate_Spherical(this double radius, int dimensionality, Random rand = null) {
 			if (dimensionality < 1) throw new ArgumentOutOfRangeException(nameof(dimensionality));
 			rand ??= new Random();
@@ -133,43 +193,6 @@ namespace Generic.Vectors {
 						(i % 2 == 0 ? 1d : -1d)
 						* orthonormalization.Without((x, j) => i == j).ToArray().Determinant()))
 				.Aggregate(new double[orthonormalization.Length + 1], (x, agg) => agg.Add(x));
-		}
-
-		//https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
-		//https://en.wikipedia.org/wiki/Rotations_in_4-dimensional_Euclidean_space#Relation_to_quaternions
-		//public static double[] Rotate(this double[] v, double[] axis, double angle) {//Rodrigues's rotation formula (3d max)
-
-		//}
-
-		//see https://www.math10.com/en/algebra/matrices/determinant.html
-		public static double Determinant(this double[][] squareVectorColumns) {
-			if (squareVectorColumns.Length == 1)
-				return squareVectorColumns[0][0];
-			//else if (size == 2)
-			//	return	squareVector[0][0]*squareVector[1][1]
-			//		-	squareVector[0][1]*squareVector[1][0];
-			//else if (size == 3)//Leibniz formula
-			//	return	squareVector[0][0]*squareVector[1][1]*squareVector[2][2]
-			//		-	squareVector[0][0]*squareVector[1][2]*squareVector[2][1];
-			//		-	squareVector[0][1]*squareVector[1][0]*squareVector[2][2]
-			//		+	squareVector[0][1]*squareVector[1][2]*squareVector[2][0]
-			//		+	squareVector[0][2]*squareVector[1][0]*squareVector[2][1]
-			//		-	squareVector[0][2]*squareVector[1][1]*squareVector[2][0]
-			else return Enumerable
-				.Range(0, squareVectorColumns.Length)
-				.Select(i => squareVectorColumns[0][i] * squareVectorColumns.Cofactor(0, i))
-				.Sum();
-		}
-		
-		public static double Cofactor(this double[][] squareVectorColumns, int colIdx, int rowIdx) {
-			return squareVectorColumns
-				.Without((col, c) => c == colIdx)
-				.Select((col, c) => col
-					.Without((x, r) => r == rowIdx)
-					.Select((x, r) => c + r % 2 == 0 ? 1d : -1d)
-					.ToArray())
-				.ToArray()
-				.Determinant();
 		}
 	}
 }

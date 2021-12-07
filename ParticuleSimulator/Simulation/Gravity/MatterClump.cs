@@ -57,7 +57,6 @@ namespace ParticleSimulator.Simulation.Gravity {
 
 			return netForce;
 		}
-		public override double[] ComputeInteractionForce(AParticle other) { return this.ComputeInteractionForce(other as MatterClump); }
 
 		public static double RadiusOfMass(double mass) {
 			return Math.Cbrt(mass) / Parameters.GRAVITY_DENSITY;

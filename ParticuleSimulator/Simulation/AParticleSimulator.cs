@@ -235,7 +235,7 @@ namespace ParticleSimulator.Simulation {
 								results.Add(newValue);
 								stats.Data_asc = stats.Data_asc
 									.Skip(position)
-									//.SkipWhile(d => d == newValue)
+									.SkipWhile(d => d == newValue)
 									.ToArray();
 								totalBands -= bandIdx;
 								bandIdx = 0;

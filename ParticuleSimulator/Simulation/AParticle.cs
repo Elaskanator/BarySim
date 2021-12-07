@@ -36,13 +36,6 @@ namespace ParticleSimulator.Simulation {
 
 		public bool IsVisible => this.LiveCoordinates.All((x, d) => x + this.Radius >= 0 && x - this.Radius < Parameters.DOMAIN_SIZE[d]);
 		public virtual int? InteractionLimit => null;
-		
-		public abstract double[] ComputeInteractionForce(AParticle other);
-		public double[] ComputeInteractionForce(IEnumerable<AParticle> others) {
-			return others.Aggregate(
-				new double[this.DIM],
-				(ag, p) => ag.Add(p.ComputeInteractionForce(p)));
-		}
 
 		protected virtual IEnumerable<AParticle> Filter(IEnumerable<AParticle> others) { return others; }
 		protected virtual void AfterUpdate() { }
