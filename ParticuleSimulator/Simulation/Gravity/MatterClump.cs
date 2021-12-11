@@ -28,7 +28,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 				bool doCombine = 
 					distance <= Parameters.WORLD_EPSILON
 					|| distance <= larger.Radius - smaller.Radius//engulfed
-					|| netForce.Magnitude() / this.Mass / distance / distance / Parameters.TIME_SCALE > Parameters.GRAVITY_MAX_ACCEL;//time step of resulting velocity
+					|| netForce.Magnitude() / this.Mass / distance / distance > Parameters.TIME_SCALE * Parameters.GRAVITY_MAX_ACCEL;//time step of resulting velocity
 				if (doCombine) {//into one larger particle
 					netForce = new double[Parameters.DIM];//ignore any gravitational effects
 					//momentum-preserving
@@ -48,10 +48,13 @@ namespace ParticleSimulator.Simulation.Gravity {
 					larger.NetForce = newNetForce;
 					smaller.IsActive = false;
 				} else if (distance < this.Radius + other.Radius) {//overlap - drag
-					netForce = netForce.Add(
+					double overlapRange = this.Radius + other.Radius - larger.Radius;
+					double[] dragForce =
 						other.Velocity
 							.Subtract(this.Velocity)
-							.Multiply(smaller.Mass * distance * smaller.Radius / (this.Radius + other.Radius)));
+							.Multiply(smaller.Radius * (distance - larger.Radius) / overlapRange);
+					this.NetForce = this.NetForce.Add(dragForce);
+					other.NetForce = other.NetForce.Subtract(dragForce);
 				}
 			}
 

@@ -50,7 +50,7 @@ namespace ParticleSimulator.Simulation {
 			ConsoleColor.DarkRed,
 			ConsoleColor.DarkMagenta,
 			ConsoleColor.Magenta,
-			//ConsoleColor.Gray,
+			ConsoleColor.Gray,
 			ConsoleColor.White,
 		};
 		public static readonly ConsoleColor[] Grayscale = new ConsoleColor[] {

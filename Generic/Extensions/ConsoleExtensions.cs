@@ -10,12 +10,16 @@ using System.Runtime.InteropServices;
 namespace Generic.Extensions {
 	public static class ConsoleExtensions {
         public static void WaitForEnter(string message) {
+			bool oldVisibility = Console.CursorVisible;
+
             Console.Write(message);
 			Console.CursorVisible = true;
 
             ConsoleKeyInfo keyInfo = Console.ReadKey(true);
 			while(keyInfo.Key != ConsoleKey.Enter)
 				keyInfo = Console.ReadKey(true);
+
+			Console.CursorVisible = oldVisibility;
         }
 
 		public static void ClearLine(int line) {
@@ -26,14 +30,14 @@ namespace Generic.Extensions {
 
 		public static bool WriteConsoleOutput(CharInfo[] buffer) {
 			SafeFileHandle h = CreateFile("CONOUT$", 0x40000000, 2, IntPtr.Zero, FileMode.Open, 0, IntPtr.Zero);
-
-			if (h.IsInvalid) return false;
-			else {
+			if (h.IsInvalid) {
+				return false;
+			} else {
 				SmallRect rect = new SmallRect() { Left = 0, Top = 0, Right = (ushort)Console.WindowWidth, Bottom = (ushort)Console.WindowHeight };
 				return WriteConsoleOutput(h, buffer,
-				  new Coord() { X = (ushort)Console.WindowWidth, Y = (ushort)Console.WindowHeight },
-				  new Coord() { X = 0, Y = 0 },
-				  ref rect);
+					new Coord() { X = (ushort)Console.WindowWidth, Y = (ushort)Console.WindowHeight },
+					new Coord() { X = 0, Y = 0 },
+					ref rect);
 			}
 		}
 
@@ -291,7 +295,7 @@ namespace Generic.Extensions {
 		/// <summary>
 		/// Prevents window resizing and maximizing, but does not prevent system window snapping (e.g. Win+Right)
 		/// </summary>
-		public static void DisableAllResizing() {
+		public static void DisableResizing() {
 			IntPtr handle = GetConsoleWindow();
             IntPtr sysMenu = GetSystemMenu(handle, false);
 
@@ -302,8 +306,6 @@ namespace Generic.Extensions {
                 DeleteMenu(sysMenu, SC_MAXIMIZE, MF_BYCOMMAND);
                 DeleteMenu(sysMenu, SC_SIZE, MF_BYCOMMAND);
             }
-
-			Console.CursorVisible = false;
 		}
 
 		//copied from

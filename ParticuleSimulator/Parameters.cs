@@ -7,39 +7,39 @@ using ParticleSimulator.Simulation;
 namespace ParticleSimulator {
 	//NOTE sentinel value is usually -1 for unlimited
 	public static class Parameters {
-		public const SimulationType SimType = SimulationType.Boid;
+		public const SimulationType SimType = SimulationType.Gravity;
 
-		public const int PARTICLES_GROUP_COUNT = 10;
+		public const int PARTICLES_GROUP_COUNT = 500;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1000;
-		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 0d;
+		public const int PARTICLES_GROUP_MAX = 200;
+		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 4d;
 
-		public const int DIM = 3;
-		public const double WORLD_SCALE = 2d;
+		public const double WORLD_SCALE = 1d;
 		public const double TIME_SCALE = 1d;
+		public const int DIM = 2;
 
-		public const double STARTING_SPEED_MAX_GROUP = 0E-3;
+		public const double STARTING_SPEED_MAX_GROUP = 8E-3;
 		public const double STARTING_SPEED_MAX_GROUP_RAND = 0E-3;
-		public const double STARTING_SPEED_MAX_INTRAGROUP = 0;//8E-3;
+		public const double STARTING_SPEED_MAX_INTRAGROUP = 8E-3;
 		public const double STARTING_SPEED_MAX_INTRAGROUP_RAND = 0E-3;
 		
 		public const double WORLD_DEATH_BOUND_CNT = 1E3;
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNDING = false;
 		public const double WORLD_PADDING_PCT = 10d;
-		public const double WORLD_BOUNCE_WEIGHT = 0.00001d;
+		public const double WORLD_BOUNCE_WEIGHT = 0;//0.00001d;
 		public const double WORLD_EPSILON = 1E-8;
 		
 		public const bool LEGEND_ENABLE = true;
-		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Group;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.DEFAULT_CONSOLE_COLORS;
+		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Density;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Grayscale;
 		public const bool DENSITY_AUTOSCALE_PERCENTILE = true;//only applies to Density coloring
 		public const double DENSITY_AUTOSCALE_CUTOFF_PCT = 0d;
 		
 		public const double TARGET_FPS = -1;
 		public const double MAX_FPS = 30;
-		public const int WINDOW_WIDTH = 140;
-		public const int WINDOW_HEIGHT = 70;//using top and bottom halves of each character to get double the verticle resolution
+		public static readonly int WINDOW_WIDTH = Console.LargestWindowWidth;
+		public static readonly int WINDOW_HEIGHT = Console.LargestWindowHeight;//using top and bottom halves of each character to get double the verticle resolution
 
 		public const bool PERF_ENABLE = true;
 		public const bool PERF_STATS_ENABLE = true;
@@ -73,40 +73,44 @@ namespace ParticleSimulator {
 
 		#region Boids;
 		public const int BOIDS_DESIRED_INTERACTION_NEIGHBORS= 8;
+		public const int BOIDS_QUADTREE_NODE_CAPACITY		= 5;
 
-		public const double BOIDS_BOID_DISPERSE_W			= 0.0001d;
-		public const double BOIDS_BOID_COHESION_W			= 0.00002d;
-		public const double BOIDS_BOID_ALIGNMENT_W			= 0.00001d;
-		
-		public const double BOIDS_INITIAL_SEPARATION		= 0.05;
-		
-		public const double BOIDS_BOID_VISION				= -1;
-		public const double BOIDS_BOID_FOV_RADIANS			= -1;
+		public const double BOIDS_INITIAL_SEPARATION	= 0.015;
 
-		public const double BOIDS_BOID_MIN_DIST				= 0.02d;
+		public const double BOIDS_BOID_VISION			= -1;
+		public const double BOIDS_PREDATOR_VISION		= -1;
+		public const double BOIDS_BOID_FOV_RADIANS		= -1;
+		public const double BOIDS_PREDATOR_FOV_RADIANS	= -1;
+
+		public const double BOIDS_BOID_MIN_SPEED		= 0.0005d;
+		public const double BOIDS_PREDATOR_MIN_SPEED	= 0d;
+		public const double BOIDS_BOID_MAX_SPEED		= 0.002d;
+		public const double BOIDS_PREDATOR_MAX_SPEED	= 0.01d;
+		
+		public const double BOIDS_PREDATOR_CHANCE		= 0d;
+		public const double BOIDS_PREDATOR_CHANCE_BIAS	= 1d;
+		public const ConsoleColor BOIDS_PREDATOR_COLOR	= ConsoleColor.White;
+
+		public const bool BOIDS_REPULSION_ENABLE				= true;
+		public const double BOIDS_BOID_REPULSION_DIST			= 0.05d;
+		public const double BOIDS_BOID_GROUP_REPULSION_DIST		= 0.05d;
+		public const double BOIDS_BOID_REPULSION_W				= 0.001d;
+		public const double BOIDS_BOID_FLEE_REPULSION_W			= 0.005d;
+		public const double BOIDS_BOID_GROUP_REPULSION_W		= 0.0015d;
+		public const double BOIDS_PREDATOR_REPULSION_DIST		= 0.01d;
+		public const double BOIDS_PREDATOR_GROUP_REPULSION_DIST	= 0.4d;
+		public const double BOIDS_PREDATOR_REPULSION_W			= 0.0003d;
+		public const double BOIDS_PREDATOR_GROUP_REPULSION_W	= 0.001d;
+
+		public const bool BOIDS_COHERE_ENABLE				= true;
+		public const double BOIDS_BOID_COHESION_W			= 0.0001d;
 		public const double BOIDS_BOID_COHESION_DIST		= 0.1d;
-		public const double BOIDS_BOID_GROUP_AVOID_DIST		= 0.2d;
-
-		public const double BOIDS_BOID_MIN_SPEED			= 0.0005d;
-		public const double BOIDS_BOID_MAX_SPEED			= 0.002d;
-		
-		public const double BOIDS_PREDATOR_CHANCE			= 0d;
-		public const double BOIDS_PREDATOR_CHANCE_BIAS		= 1d;
-		public const ConsoleColor BOIDS_PREDATOR_COLOR		= ConsoleColor.White;
-
-		public const double BOIDS_PREDATOR_DISPERSE_W		= 0.0003d;
 		public const double BOIDS_PREDATOR_COHESION_W		= 0.0006d;
-		public const double BOIDS_PREDATOR_ALIGNMENT_W		= 0.00002d;
-
-		public const double BOIDS_PREDATOR_VISION			= -1;
-		public const double BOIDS_PREDATOR_FOV_RADIANS		= -1;
-
-		public const double BOIDS_PREDATOR_MIN_DIST			= 0.01d;
 		public const double BOIDS_PREDATOR_COHESION_DIST	= 0.1d;
-		public const double BOIDS_PREDATOR_GROUP_AVOID_DIST	= 0.4d;
 
-		public const double BOIDS_PREDATOR_MIN_SPEED		= 0d;
-		public const double BOIDS_PREDATOR_MAX_SPEED		= 0.01d;
+		public const bool BOIDS_ALIGN_ENABLE			= true;
+		public const double BOIDS_BOID_ALIGNMENT_W		= 0.01d;
+		public const double BOIDS_PREDATOR_ALIGNMENT_W	= 0.00002d;
 		#endregion Boids
 
 		#region Aux

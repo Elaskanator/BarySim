@@ -174,10 +174,10 @@ namespace ParticleSimulator.Simulation {
 				int roundedX, roundedY;
 				for (int x2 = 0; x2 < rangeX; x2++) {
 					roundedX = x2 + (int)minX;
-					if (roundedX > 0d && roundedX < Parameters.WINDOW_WIDTH) {
+					if (roundedX >= 0d && roundedX < Parameters.WINDOW_WIDTH) {
 						for (int y2 = 0; y2 < rangeY; y2++) {
 							roundedY = y2 + (int)minY;
-							if (roundedY > 0d && roundedY < Parameters.WINDOW_HEIGHT*2) {
+							if (roundedY >= 0d && roundedY < Parameters.WINDOW_HEIGHT*2) {
 								testX = roundedX == (int)scaledX//particle in current bin
 									? p.LiveCoordinates[0] * pixelScalar//use exact value
 									: roundedX + (roundedX < scaledX ? 1 : 0);//nearer edge
@@ -219,7 +219,7 @@ namespace ParticleSimulator.Simulation {
 						if (results.Count == 0) {
 							results.Add(newValue);
 							stats.Data_asc = stats.Data_asc
-								//.SkipWhile(d => d == newValue)
+								.SkipWhile(d => d == newValue)
 								.ToArray();
 						} else {
 							position = 0;
@@ -231,14 +231,16 @@ namespace ParticleSimulator.Simulation {
 										newValue = stats.Data_asc[position];
 								} else break;
 							}
-							if (position < stats.Data_asc.Length && newValue > results[^1]) {
+							if (position < stats.Data_asc.Length) {
+								if (newValue <= results[^1]) {
+									totalBands -= bandIdx;
+									bandIdx = 0;
+								}
 								results.Add(newValue);
 								stats.Data_asc = stats.Data_asc
 									.Skip(position)
 									.SkipWhile(d => d == newValue)
 									.ToArray();
-								totalBands -= bandIdx;
-								bandIdx = 0;
 							}
 						}
 					}

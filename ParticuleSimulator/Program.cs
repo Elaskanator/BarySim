@@ -31,7 +31,7 @@ namespace ParticleSimulator {
 			//these require p-invokes
 			ConsoleExtensions.HideScrollbars();
 			//rendering gets *really* messed up if the window gets resized by anything
-			ConsoleExtensions.DisableAllResizing();//note this doesn't work to disable OS window snapping
+			ConsoleExtensions.DisableResizing();//note this doesn't work to disable OS window snapping
 			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
 			switch (Parameters.SimType) {

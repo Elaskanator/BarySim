@@ -6,6 +6,8 @@ namespace ParticleSimulator.Simulation.Boids {
 	public sealed class BoidQuadTree : AVectorQuadTree<Boid, BoidQuadTree> {
 		public BoidQuadTree(double[] corner1 = null, double[] corner2 = null, BoidQuadTree parent = null)
 		: base(corner1 ?? new double[Parameters.DIM], corner2 ?? Parameters.DOMAIN_SIZE, parent) { }
+		
+		public override int Capacity => Parameters.BOIDS_QUADTREE_NODE_CAPACITY;
 
 		protected override BoidQuadTree NewNode(double[] cornerA, double[] cornerB, BoidQuadTree parent) {
 			return new(cornerA, cornerB, parent);

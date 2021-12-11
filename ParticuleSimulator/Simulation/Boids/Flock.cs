@@ -4,7 +4,7 @@ namespace ParticleSimulator.Simulation.Boids {
 	public class Flock : AParticleGroup<Boid> {
 		public Flock() : base() {
 			this.Corruption = Parameters.BOIDS_PREDATOR_CHANCE_BIAS > 0d
-				? Math.Pow(Program.Random.NextDouble(), 1d / Parameters.BOIDS_PREDATOR_CHANCE_BIAS)
+				? Math.Pow(Program.Random.NextDouble(), Parameters.BOIDS_PREDATOR_CHANCE_BIAS)
 				: 0d;
 		}
 

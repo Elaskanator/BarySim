@@ -1,4 +1,5 @@
-﻿using Generic.Vectors;
+﻿using System.Collections.Generic;
+using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Boids {
 	public class Boid : AParticle {
@@ -9,18 +10,62 @@ namespace ParticleSimulator.Simulation.Boids {
 		
 		public bool IsPredator { get; private set; }
 
-		public double MinSpeed => this.IsPredator ? Parameters.BOIDS_PREDATOR_MIN_SPEED : Parameters.BOIDS_BOID_MIN_SPEED;
-		public double MaxSpeed => this.IsPredator ? Parameters.BOIDS_PREDATOR_MAX_SPEED : Parameters.BOIDS_BOID_MAX_SPEED;
-
-		public double FlockSeparation => this.IsPredator ? Parameters.BOIDS_PREDATOR_GROUP_AVOID_DIST : Parameters.BOIDS_BOID_GROUP_AVOID_DIST;
-		public double SeparationDist => this.IsPredator ? Parameters.BOIDS_PREDATOR_MIN_DIST : Parameters.BOIDS_BOID_MIN_DIST;
-		public double CohesionDist => this.IsPredator ? Parameters.BOIDS_PREDATOR_COHESION_DIST : Parameters.BOIDS_BOID_COHESION_DIST;
 		public double Vision => this.IsPredator ? Parameters.BOIDS_PREDATOR_VISION : Parameters.BOIDS_BOID_VISION;
 		public double FoV => this.IsPredator ? Parameters.BOIDS_PREDATOR_FOV_RADIANS : Parameters.BOIDS_BOID_FOV_RADIANS;
 
-		public double RepulsionWeight => this.IsPredator ? Parameters.BOIDS_PREDATOR_DISPERSE_W : Parameters.BOIDS_BOID_DISPERSE_W;
+		public double MinSpeed => this.IsPredator ? Parameters.BOIDS_PREDATOR_MIN_SPEED : Parameters.BOIDS_BOID_MIN_SPEED;
+		public double MaxSpeed => this.IsPredator ? Parameters.BOIDS_PREDATOR_MAX_SPEED : Parameters.BOIDS_BOID_MAX_SPEED;
+
+		public double FlockDist => this.IsPredator ? Parameters.BOIDS_PREDATOR_GROUP_REPULSION_DIST : Parameters.BOIDS_BOID_GROUP_REPULSION_DIST;
+		public double NeighborDist => this.IsPredator ? Parameters.BOIDS_PREDATOR_REPULSION_DIST : Parameters.BOIDS_BOID_REPULSION_DIST;
+		public double CohesionDist => this.IsPredator ? Parameters.BOIDS_PREDATOR_COHESION_DIST : Parameters.BOIDS_BOID_COHESION_DIST;
+
+		public double NeighborRepulsionWeight => this.IsPredator ? Parameters.BOIDS_PREDATOR_REPULSION_W : Parameters.BOIDS_BOID_REPULSION_W;
+		public double GroupRepulsionWeight => this.IsPredator ? Parameters.BOIDS_PREDATOR_GROUP_REPULSION_W : Parameters.BOIDS_BOID_GROUP_REPULSION_W;
 		public double CohesionWeight => this.IsPredator ? Parameters.BOIDS_PREDATOR_COHESION_W : Parameters.BOIDS_BOID_COHESION_W;
 		public double AlignmentWeight => this.IsPredator ? Parameters.BOIDS_PREDATOR_ALIGNMENT_W : Parameters.BOIDS_BOID_ALIGNMENT_W;
+
+		public double[] ComputeInteractionForce(IEnumerable<Boid> others) {
+			VectorIncrementalAverage centerAvg = new(), directionAvg = new();
+			double[] awayVector, repulsion = new double[Parameters.DIM];
+			double dist, repulsionDist, repulsionWeight, cohesionDist;
+			foreach (Boid other in others) {
+				if (this.IsPredator == other.IsPredator) {
+					if (this.GroupID == other.GroupID) {
+						repulsionDist = this.NeighborDist;
+						repulsionWeight = this.NeighborRepulsionWeight;
+						cohesionDist = this.CohesionDist;
+					} else {
+						repulsionDist = this.FlockDist;
+						repulsionWeight = this.GroupRepulsionWeight;
+						cohesionDist = double.PositiveInfinity;
+					}
+				} else if (this.IsPredator) {//chase
+					repulsionDist = 0d;
+					repulsionWeight = 0d;
+					cohesionDist = double.PositiveInfinity;
+				} else {//flee
+					repulsionDist = double.PositiveInfinity;
+					repulsionWeight = Parameters.BOIDS_BOID_FLEE_REPULSION_W;
+					cohesionDist = double.PositiveInfinity;
+				}
+
+				awayVector = this.LiveCoordinates.Subtract(other.LiveCoordinates);
+				dist = awayVector.Magnitude();
+
+				if ((this.Vision < 0 || this.Vision <= dist))
+					if (dist < Parameters.WORLD_EPSILON || this.FoV < 0 || this.FoV >= this.LiveCoordinates.AngleTo_FullRange(other.LiveCoordinates))
+						if (dist < cohesionDist)
+							if (dist < repulsionDist)
+								repulsion = repulsion.Add(awayVector.Multiply(repulsionWeight * (1d - dist/repulsionDist)));
+							else directionAvg.Update(other.Velocity);
+						else centerAvg.Update(other.LiveCoordinates);
+			}
+						
+			return (Parameters.BOIDS_REPULSION_ENABLE ? repulsion : new double[Parameters.DIM])
+				.Add(Parameters.BOIDS_COHERE_ENABLE && centerAvg.NumUpdates > 0 ? centerAvg.Current.Subtract(this.LiveCoordinates).Normalize().Multiply(this.CohesionWeight) : new double[Parameters.DIM])
+				.Add(Parameters.BOIDS_ALIGN_ENABLE && directionAvg.NumUpdates > 0 && directionAvg.Current.Magnitude() > Parameters.WORLD_EPSILON ? directionAvg.Current.Subtract(this.Velocity).Multiply(this.AlignmentWeight) : new double[Parameters.DIM]);
+		}
 
 		protected override void AfterUpdate() {
 			double speed;

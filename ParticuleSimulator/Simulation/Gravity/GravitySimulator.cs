@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Generic.Extensions;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
