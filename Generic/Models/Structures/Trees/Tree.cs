@@ -26,13 +26,12 @@ namespace Generic.Models {
 		public bool DoesContain(object element);
 	}
 
-	public abstract class ATree<E, T> : ITree, IEnumerable<E>
-	where T : ATree<E, T> {
+	public abstract class ATree<E> : ITree, IEnumerable<E> {
 		public int Depth { get; private set; }
-		public T Parent { get; private set; }
+		public ATree<E> Parent { get; private set; }
 
 		public ATree() { }
-		public ATree(T parent) {
+		public ATree(ATree<E> parent) {
 			this.Depth = parent is null ? 0 : parent.Depth + 1;
 			this.Parent = parent;
 		}
@@ -51,29 +50,29 @@ namespace Generic.Models {
 		} }
 		IEnumerable ITree.AllElements => this.AllElements;
 		
-		public abstract IEnumerable<T> Children { get; }
+		public abstract IEnumerable<ATree<E>> Children { get; }
 		IEnumerable<ITree> ITree.Children => this.Children;
-		public IEnumerable<T> NestedChildren { get {
-			foreach (T node in this.Children) {
+		public IEnumerable<ATree<E>> NestedChildren { get {
+			foreach (ATree<E> node in this.Children) {
 				yield return node;
-				foreach (T subnode in node.NestedChildren)
+				foreach (ATree<E> subnode in node.NestedChildren)
 					yield return subnode;
 		} } }
 		IEnumerable<ITree> ITree.NestedChildren { get { return this.NestedChildren; } }
-		public IEnumerable<T> AllNodes { get {
-			if (this.IsLeaf) yield return (T)this;
-			else foreach (T child in this.Children.SelectMany(c => c.AllNodes))
+		public IEnumerable<ATree<E>> AllNodes { get {
+			if (this.IsLeaf) yield return this;
+			else foreach (ATree<E> child in this.Children.SelectMany(c => c.AllNodes))
 				yield return child;
 		} }
 		IEnumerable<ITree> ITree.AllNodes => this.AllNodes;
-		public IEnumerable<T> SiblingNodes { get {
-			if (this.IsRoot) return Enumerable.Empty<T>();
+		public IEnumerable<ATree<E>> SiblingNodes { get {
+			if (this.IsRoot) return Enumerable.Empty<ATree<E>>();
 			else return this.Parent.Children.Without(n => ReferenceEquals(this, n));
 		} }
 		IEnumerable<ITree> ITree.SiblingNodes => this.SiblingNodes;
-		public IEnumerable<T> Leaves { get {
-			if (this.IsLeaf) yield return (T)this;
-			else foreach (T child in this.Children.SelectMany(c => c.Leaves))
+		public IEnumerable<ATree<E>> Leaves { get {
+			if (this.IsLeaf) yield return this;
+			else foreach (ATree<E> child in this.Children.SelectMany(c => c.Leaves))
 				yield return child;
 		} }
 		IEnumerable<ITree> ITree.Leaves => this.Leaves;
@@ -98,15 +97,15 @@ namespace Generic.Models {
 
 		public abstract bool DoesContain(E element);
 		public bool DoesContain(object element) { return this.DoesContain((E)element); }
-		protected virtual T GetContainingChild(E element) {
+		protected virtual ATree<E> GetContainingChild(E element) {
 			return this.Children.First(c => c.Contains(element));
 			throw new Exception("Element is not contained");
 		}
-		protected T GetContainingLeaf(E element) {
-			foreach (T node in this.Children)
+		protected ATree<E> GetContainingLeaf(E element) {
+			foreach (ATree<E> node in this.Children)
 				if (node.Contains(element))
 					return node.GetContainingLeaf(element);
-			return (T)this;
+			return this;
 		}
 
 		public IEnumerable<E> GetNeighbors() {
@@ -116,61 +115,61 @@ namespace Generic.Models {
 				foreach (E member in this.SeekUpward().SelectMany(n => n.AllElements))
 					yield return member;
 		}
-		private IEnumerable<ATree<E, T>> SeekUpward() {
-			foreach (ATree<E, T> node in this.SiblingNodes.SelectMany(q => q.AllNodes))
+		private IEnumerable<ATree<E>> SeekUpward() {
+			foreach (ATree<E> node in this.SiblingNodes.SelectMany(q => q.AllNodes).Where(n => n.NumMembers > 0))
 				yield return node;
 			if (!this.Parent.IsRoot)
-				foreach (ATree<E, T> node in this.Parent.SeekUpward())
+				foreach (ATree<E> node in this.Parent.SeekUpward())
 					yield return node;
 		}
 		
-		public IEnumerable<T> GetNeighborhoodNodes(int? limit = null) {//must be used from a leaf
+		public IEnumerable<ATree<E>> GetNeighborhoodNodes(int? limit = null) {//must be used from a leaf
 			return this.GetNeighborhoodNodes_up(limit, this);
 		}
-		private IEnumerable<T> GetNeighborhoodNodes_up(int? limit, ATree<E, T> start) {
+		private IEnumerable<ATree<E>> GetNeighborhoodNodes_up(int? limit, ATree<E> start) {
 			if (!this.IsRoot) {
-				foreach (T node in this.SiblingNodes.SelectMany(s => s.GetNeighborhoodNodes_down(limit, start)))
+				foreach (ATree<E> node in this.SiblingNodes.SelectMany(s => s.GetNeighborhoodNodes_down(limit, start)))
 					yield return node;
-				foreach (T node in this.Parent.GetNeighborhoodNodes_up(limit - 1, start))
+				foreach (ATree<E> node in this.Parent.GetNeighborhoodNodes_up(limit - 1, start))
 					yield return node;
 			}
 		}
-		private IEnumerable<T> GetNeighborhoodNodes_down(int? limit, ATree<E, T> start) {
+		private IEnumerable<ATree<E>> GetNeighborhoodNodes_down(int? limit, ATree<E> start) {
 			if (this.NumMembers == 0)
 				yield break;
 			else if (!this.IsLeaf && (limit ?? 1) > 0)
-				foreach (T node in this.Children.SelectMany(c => c.GetNeighborhoodNodes_down(limit - 1, start)))
+				foreach (ATree<E> node in this.Children.SelectMany(c => c.GetNeighborhoodNodes_down(limit - 1, start)))
 					yield return node;
-			else yield return (T)this;
+			else yield return this;
 		}
 
-		public Tuple<T[], T[]> RecursiveFilter(Predicate<T> predicate) {
+		public Tuple<ATree<E>[], ATree<E>[]> RecursiveFilter(Predicate<ATree<E>> predicate) {
 			if (this.NumMembers == 0) {
-				return new(Array.Empty<T>(), Array.Empty<T>());
+				return new(Array.Empty<ATree<E>>(), Array.Empty<ATree<E>>());
 			} else if (this.IsLeaf) {
-				if (predicate((T)this))
-					return new(new T[] { (T)this }, Array.Empty<T>());
-				else return new(Array.Empty<T>(), new T[] { (T)this });
+				if (predicate(this))
+					return new(new ATree<E>[] { this }, Array.Empty<ATree<E>>());
+				else return new(Array.Empty<ATree<E>>(), new ATree<E>[] { this });
 			} else {
-				Tuple<bool, T>[] tests = this.Children.Where(c => c.NumMembers > 0).Select(c => new Tuple<bool, T>(predicate(c), c)).ToArray();
-				Tuple<T[], T[]> moreFiltered;
-				Tuple<IEnumerable<T>, IEnumerable<T>> newJunk =
-					tests.Where(t => t.Item1)
-						.Select(t => t.Item2)
+				Tuple<bool, ATree<E>>[] tests = this.Children.Where(c => c.NumMembers > 0).Select(c => new Tuple<bool, ATree<E>>(predicate(c), c)).ToArray();
+				Tuple<ATree<E>[], ATree<E>[]> moreFiltered;
+				Tuple<IEnumerable<ATree<E>>, IEnumerable<ATree<E>>> newJunk =
+					tests.Where(test => test.Item1)
+						.Select(test => test.Item2)
 						.Aggregate(
-							new Tuple<IEnumerable<T>, IEnumerable<T>>(Enumerable.Empty<T>(), Enumerable.Empty<T>()), (agg, node) => {
+							new Tuple<IEnumerable<ATree<E>>, IEnumerable<ATree<E>>>(Enumerable.Empty<ATree<E>>(), Enumerable.Empty<ATree<E>>()), (agg, node) => {
 								moreFiltered = node.RecursiveFilter(predicate);
 								return new(agg.Item1.Concat(moreFiltered.Item1),
 									agg.Item2.Concat(moreFiltered.Item2));
 							});
 				return new(
 					newJunk.Item1.ToArray(),
-					newJunk.Item2.Concat(tests.Without(t => t.Item1).Select(t => t.Item2)).ToArray());
+					newJunk.Item2.Concat(tests.Without(test => test.Item1).Select(test => test.Item2)).ToArray());
 			}
 		}
 
 		public IEnumerator<E> GetEnumerator() { return this.AllElements.GetEnumerator(); }
 		IEnumerator IEnumerable.GetEnumerator() { return this.AllElements.GetEnumerator(); }
-		public override string ToString() { return string.Format("{0}[Depth {1}]", nameof(T), this.Depth); }
+		public override string ToString() { return string.Format("{0}[Depth {1}]", nameof(ATree<E>), this.Depth); }
 	}
 }

@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Simulation\Boids\ExecutionManager.cs" />
+    <Compile Remove="Simulation\Simulators\Boids\ExecutionManager.cs" />
   </ItemGroup>
 
   <ItemGroup>

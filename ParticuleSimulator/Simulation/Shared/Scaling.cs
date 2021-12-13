@@ -25,7 +25,7 @@ namespace ParticleSimulator.Simulation {
 		public double[] Values { get; private set; }
 
 		public void Update(object[] parameters) {
-			Tuple<char, AParticle[], double>[] sampling = ((Tuple<char, AParticle[], double>[])parameters[0]).Without(t => t is null).ToArray();
+			Tuple<char, AClassicalParticle[], double>[] sampling = ((Tuple<char, AClassicalParticle[], double>[])parameters[0]).Without(t => t is null).ToArray();
 			double[] densities;
 			densities = sampling.Select(t => t.Item3).ToArray();
 			//densities = Program.Simulator.AllParticles.Where(p => p.IsActive).Select(p => p.Mass).ToArray();

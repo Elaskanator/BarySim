@@ -1,7 +1,7 @@
 ﻿using System;
 
 namespace ParticleSimulator.Simulation.Boids {
-	public class Flock : AParticleGroup<Boid> {
+	public class Flock : AParticleGroup {
 		public Flock() : base() {
 			this.Corruption = Parameters.BOIDS_PREDATOR_CHANCE_BIAS > 0d
 				? Math.Pow(Program.Random.NextDouble(), Parameters.BOIDS_PREDATOR_CHANCE_BIAS)
@@ -10,7 +10,7 @@ namespace ParticleSimulator.Simulation.Boids {
 
 		public readonly double Corruption;
 
-		protected override double InitialSeparationRadius => Parameters.BOIDS_INITIAL_SEPARATION;
+		public override double InitialSeparationRadius => Parameters.BOIDS_INITIAL_SEPARATION;
 		public override double StartSpeedMax_Group_Angular => Parameters.BOIDS_STARTING_SPEED_MAX_GROUP;
 		public override double StartSpeedMax_Group_Rand => Parameters.BOIDS_STARTING_SPEED_MAX_GROUP_RAND;
 		public override double StartSpeedMax_Particle_Angular => Parameters.BOIDS_STARTING_SPEED_MAX_INTRAGROUP;

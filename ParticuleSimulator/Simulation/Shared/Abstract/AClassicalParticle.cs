@@ -1,52 +1,68 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public abstract class AParticle : VectorDouble, IEquatable<AParticle>, IEqualityComparer<AParticle> {
+	public abstract class AClassicalParticle : VectorDouble, IEquatable<AClassicalParticle>, IEqualityComparer<AClassicalParticle> {
 		private static int _globalID = 0;
-		public AParticle(int groupID, double[] position, double[] velocity, double mass = 1d)
+		public AClassicalParticle(int groupID, double[] position, double[] velocity, double mass = 1d, double charge = 0d)
 		: base(position) {
+			this.Momentum = new double[Parameters.DIM];
+			this.Impulse = new double[Parameters.DIM];
 			this.GroupID = groupID;
-			this.Mass = mass;
 			this.Velocity = velocity;
-			this.NetForce = new double[this.DIM];
+			this.Mass = mass;
+			this.Charge = charge;
 		}
 
 		private int _id = ++_globalID;
 		public int ID => this._id;
-		public bool IsActive = true;
-		public int GroupID { get; private set; }
-		public virtual double Mass { get; set; }
-		public virtual double Radius { get; protected set; }
+		public bool IsAlive = true;
+		public readonly int GroupID;
+		public virtual double Radius => 0d;
+		public double Mass { get; set; }
+		public double Charge { get; set; }
 
 		internal double[] _coordinates;
 		public override double[] Coordinates {
 			get => this._coordinates;
 			set {
 				this._coordinates = value;
-				this.LiveCoordinates = (double[])value.Clone();
-		}}
+				this.LiveCoordinates = (double[])value.Clone(); }}
 		public double[] LiveCoordinates { get; set; }
-		public double[] Velocity { get; set; }
-		public double[] Acceleration => this.NetForce.Divide(this.Mass);
-		public double[] NetForce { get; internal set; }
+		public double[] Velocity {
+			get => this.Momentum.Divide(this.Mass);
+			set { this.Momentum = value.Multiply(this.Mass); }}
+		public double[] Momentum { get; set; }
+		public double[] Impulse { get; set; }
 
 		public bool IsVisible => this.LiveCoordinates.All((x, d) => x + this.Radius >= 0 && x - this.Radius < Parameters.DOMAIN_SIZE[d]);
 		public virtual int? InteractionLimit => null;
 
-		protected virtual IEnumerable<AParticle> Filter(IEnumerable<AParticle> others) { return others; }
-		protected virtual void AfterUpdate() { }
+		protected virtual IEnumerable<AClassicalParticle> Filter(IEnumerable<AClassicalParticle> others) { return others; }
 
 		public void ApplyTimeStep() {
-			this.Velocity = this.Velocity.Add(this.Acceleration.Multiply(Parameters.TIME_SCALE));
-			
+			this.Momentum = this.Momentum.Add(this.Impulse.Multiply(Parameters.TIME_SCALE));
 			this.AfterUpdate();
-			
-			this.LiveCoordinates = this.LiveCoordinates.Add(this.Velocity);
+			this.LiveCoordinates = this.LiveCoordinates.Add(this.Velocity.Multiply(Parameters.TIME_SCALE));
 		}
+
+		public double GetPhysicalAttribute(PhysicalAttribute attr) {
+			switch (attr) {
+				case PhysicalAttribute.Mass:
+					return this.Mass;
+				case PhysicalAttribute.Charge:
+					return this.Charge;
+				default:
+					throw new InvalidEnumArgumentException(nameof(attr), (int)attr, typeof(PhysicalAttribute));
+			}
+		}
+
+		protected virtual void AfterUpdate() { }
+
 		public void WrapPosition() {
 			for (int i = 0; i < this.DIM; i++)
 				if (this.LiveCoordinates[i] < 0d)
@@ -72,13 +88,13 @@ namespace ParticleSimulator.Simulation {
 			}
 		}
 
-		public bool Equals(AParticle other) { return !(other is null) && this.ID == other.ID; }
-		public override bool Equals(object other) { return !(other is null) && (other is AParticle) && this.ID == (other as AParticle).ID; }
-		public bool Equals(AParticle x, AParticle y) { return x.ID == y.ID; }
-		public int GetHashCode(AParticle obj) { return obj.ID.GetHashCode(); }
+		public bool Equals(AClassicalParticle other) { return !(other is null) && this.ID == other.ID; }
+		public override bool Equals(object other) { return !(other is null) && (other is AClassicalParticle) && this.ID == (other as AClassicalParticle).ID; }
+		public bool Equals(AClassicalParticle x, AClassicalParticle y) { return x.ID == y.ID; }
+		public int GetHashCode(AClassicalParticle obj) { return obj.ID.GetHashCode(); }
 		public override int GetHashCode() { return this.ID.GetHashCode(); }
 		public override string ToString() {
-			return string.Format("{0}[ID {1}]<{2}>", nameof(AParticle), this.ID,
+			return string.Format("{0}[ID {1}]<{2}>", nameof(AClassicalParticle), this.ID,
 				string.Join(",", this.LiveCoordinates.Select(i => i.ToString("G5"))));
 		}
 	}

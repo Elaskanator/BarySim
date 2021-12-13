@@ -5,10 +5,8 @@ using Generic.Extensions;
 using Generic.Models;
 
 namespace Generic.Vectors {
-	public abstract class AVectorQuadTree<E, T> : ATree<E, T>
-	where E : VectorDouble
-	where T : AVectorQuadTree<E, T> {
-		public AVectorQuadTree(double[] corner1, double[] corner2, T parent = null) 
+	public abstract class AVectorQuadTree<E> : ATree<E> where E : VectorDouble{
+		public AVectorQuadTree(double[] corner1, double[] corner2, AVectorQuadTree<E> parent = null) 
 		: base(parent) {//make sure all values in x1 are smaller than x2 (the corners of a cubic volume)
 			this.CornerLeft = corner1;
 			this.CornerRight = corner2;
@@ -31,7 +29,7 @@ namespace Generic.Vectors {
 		protected double[] _center;
 		
 		public int Dimensionality { get { return this.CornerLeft.Length; } }
-		public override IEnumerable<T> Children { get { return this._quadrants; } }
+		public override IEnumerable<AVectorQuadTree<E>> Children { get { return this._quadrants; } }
 		public override bool IsLeaf { get { return this._quadrants.Length == 0; } }
 		public override IEnumerable<E> NodeElements { get {
 			if (this.NumMembers <= this.Capacity)
@@ -41,7 +39,7 @@ namespace Generic.Vectors {
 			else return this._members.Concat(this._leftovers);
 		} }
 
-		protected T[] _quadrants = Array.Empty<T>();
+		protected AVectorQuadTree<E>[] _quadrants = Array.Empty<AVectorQuadTree<E>>();
 		protected readonly E[] _members;//entries in non-leaves are leftovers that must be ignored
 		private List<E> _leftovers;
 
@@ -70,14 +68,14 @@ namespace Generic.Vectors {
 		protected virtual double[] MakeCenter() {
 			return this.CornerLeft.Zip(this.CornerRight, (a, b) => (a + b) / 2d).ToArray();
 		}
-		protected override T GetContainingChild(E element) {
+		protected override AVectorQuadTree<E> GetContainingChild(E element) {
 			return this._quadrants[Enumerable.Range(0, this.Dimensionality).Sum(d => element.Coordinates[d] >= this._center[d] ? 1 << d : 0)];
 		}
 
-		protected abstract T NewNode(double[] cornerA, double[] cornerB, T parent);
+		protected abstract AVectorQuadTree<E> NewNode(double[] cornerA, double[] cornerB, AVectorQuadTree<E> parent);
 		protected virtual void ArrangeNodes() { return; }//MUST override GetContainingChild if rearranging nodes
 
-		protected virtual T[] FormNodes() {
+		protected virtual AVectorQuadTree<E>[] FormNodes() {
 			return Enumerable
 				.Range(0, 1 << this.Dimensionality)//the 2^dimension "quadrants" of the Euclidean hyperplane
 				.Select(q => {
@@ -88,7 +86,7 @@ namespace Generic.Vectors {
 					return new {
 						LeftCorner = isLeft.Select((l, i) => l ? this.CornerLeft[i] : this._center[i]).ToArray(),
 						RightCorner = isLeft.Select((l, i) => l ? this._center[i] : this.CornerRight[i]).ToArray()
-				};}).Select(x => this.NewNode(x.LeftCorner, x.RightCorner, (T)this))
+				};}).Select(x => this.NewNode(x.LeftCorner, x.RightCorner, this))
 				.ToArray();
 		}
 	}

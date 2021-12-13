@@ -4,8 +4,7 @@ using System.Linq;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public abstract class AParticleGroup<P> : IEquatable<AParticleGroup<P>>, IEqualityComparer<AParticleGroup<P>>
-	where P : AParticle {
+	public abstract class AParticleGroup : IEquatable<AParticleGroup>, IEqualityComparer<AParticleGroup> {
 		public AParticleGroup() {
 			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_SKEW_POWER) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
 
@@ -36,15 +35,15 @@ namespace ParticleSimulator.Simulation {
 		public readonly double[] SpawnCenter;
 		public readonly double[] InitialVelocity;
 		public readonly int NumParticles;
-		public P[] Particles { get; private set; }
-		protected abstract double InitialSeparationRadius { get; }
+		public AClassicalParticle[] Particles { get; private set; }
+		public abstract double InitialSeparationRadius { get; }
 
 		public abstract double StartSpeedMax_Group_Angular { get; }
 		public abstract double StartSpeedMax_Group_Rand { get; }
 		public abstract double StartSpeedMax_Particle_Angular { get; }
 		public abstract double StartSpeedMax_Particle_Range { get; }
 
-		protected abstract P NewParticle(double[] position, double[] velocity);
+		protected abstract AClassicalParticle NewParticle(double[] position, double[] velocity);
 
 		protected virtual double[] NewParticlePosition(double[] center, double radius) {
 			return center.Add(
@@ -57,11 +56,11 @@ namespace ParticleSimulator.Simulation {
 				.Multiply(Math.Log(center.Distance(position) + 1d));
 		}
 
-		public bool Equals(AParticleGroup<P> other) { return !(other is null) && this.ID == other.ID; }
-		public override bool Equals(object other) { return !(other is null) && (other is AParticleGroup<P>) && this.ID == (other as AParticleGroup<P>).ID; }
-		public bool Equals(AParticleGroup<P> x, AParticleGroup<P> y) { return x.ID == y.ID; }
-		public int GetHashCode(AParticleGroup<P> obj) { return obj.ID.GetHashCode(); }
+		public bool Equals(AParticleGroup other) { return !(other is null) && this.ID == other.ID; }
+		public override bool Equals(object other) { return !(other is null) && (other is AParticleGroup) && this.ID == (other as AParticleGroup).ID; }
+		public bool Equals(AParticleGroup x, AParticleGroup y) { return x.ID == y.ID; }
+		public int GetHashCode(AParticleGroup obj) { return obj.ID.GetHashCode(); }
 		public override int GetHashCode() { return this.ID.GetHashCode(); }
-		public override string ToString() { return string.Format("{0}[ID {1}]", nameof(AParticleGroup<P>), this.ID); }
+		public override string ToString() { return string.Format("{0}[ID {1}]", nameof(AParticleGroup), this.ID); }
 	}
 }

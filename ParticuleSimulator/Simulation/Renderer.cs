@@ -38,7 +38,7 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
-			Tuple<char, AParticle[], double>[] sampling = (Tuple<char, AParticle[], double>[])parameters[0];
+			Tuple<char, AClassicalParticle[], double>[] sampling = (Tuple<char, AClassicalParticle[], double>[])parameters[0];
 
 			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 			if (!(sampling is null)) {
@@ -128,13 +128,13 @@ namespace ParticleSimulator.Simulation {
 			}
 		}
 
-		public static Tuple<char, AParticle[], double>[] Resample(object[] parameters) {
-			AParticle[] particleData = (AParticle[])parameters[0];
-			Tuple<char, AParticle[], double>[] results = new Tuple<char, AParticle[], double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+		public static Tuple<char, AClassicalParticle[], double>[] Resample(object[] parameters) {
+			AClassicalParticle[] particleData = (AClassicalParticle[])parameters[0];
+			Tuple<char, AClassicalParticle[], double>[] results = new Tuple<char, AClassicalParticle[], double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 
 			char pixelChar;
-			AParticle[] topStuff, bottomStuff, distinct;
-			foreach (IGrouping<int, Tuple<int, int, AParticle>> bin in DiscreteParticleBin(particleData)) {
+			AClassicalParticle[] topStuff, bottomStuff, distinct;
+			foreach (IGrouping<int, Tuple<int, int, AClassicalParticle>> bin in DiscreteParticleBin(particleData)) {
 				topStuff = bin.Where(t => t.Item2 % 2 == 0).Select(t => t.Item3).ToArray();
 				bottomStuff = bin.Where(t => t.Item2 % 2 == 1).Select(t => t.Item3).ToArray();
 				distinct = bin.Select(b => b.Item3).Distinct().ToArray();
@@ -146,23 +146,23 @@ namespace ParticleSimulator.Simulation {
 				else pixelChar = Parameters.CHAR_LOW;
 
 				results[bin.Key] =
-					new Tuple<char, AParticle[], double>(
+					new Tuple<char, AClassicalParticle[], double>(
 						pixelChar,
 						distinct,
-						distinct.Sum(p => p.Mass));
+						bin.Count());
 			}
 			return results;
 		}
-		private static IEnumerable<IGrouping<int, Tuple<int, int, AParticle>>> DiscreteParticleBin(AParticle[] particles) { 
+		private static IEnumerable<IGrouping<int, Tuple<int, int, AClassicalParticle>>> DiscreteParticleBin(AClassicalParticle[] particles) { 
 			return particles
 				.Where(p =>
-					p.IsActive
+					p.IsAlive
 					&& p.LiveCoordinates[0] + p.Radius >= 0 && p.LiveCoordinates[0] - p.Radius < Parameters.DOMAIN_SIZE[0]
 					&& (Parameters.DIM < 2 || p.LiveCoordinates[1] > -p.Radius && p.LiveCoordinates[1] < p.Radius + Parameters.DOMAIN_SIZE[1]))
 				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < 2*Parameters.WINDOW_HEIGHT))
 				.GroupBy(pd => pd.Item1 + (Parameters.WINDOW_WIDTH * (pd.Item2 / 2)));
 		}
-		private static IEnumerable<Tuple<int, int, AParticle>> SpreadSample(AParticle p) {
+		private static IEnumerable<Tuple<int, int, AClassicalParticle>> SpreadSample(AClassicalParticle p) {
 			double
 				pixelScalar = RenderWidth / Parameters.DOMAIN_SIZE[0],
 				scaledX = RenderWidthOffset + p.LiveCoordinates[0] * pixelScalar,

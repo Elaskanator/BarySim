@@ -11,11 +11,12 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 8192;
+		public const int PARTICLES_GROUP_MAX = 2048;
 		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 0d;
 
 		public const double WORLD_SCALE = 1d;
 		public const double TIME_SCALE = 1d;
+		public const int MAX_ADAPTIVE_TIME_DIVISIONS = 0;
 		public const int DIM = 2;
 		
 		public const double WORLD_DEATH_BOUND_CNT = 1E3;
@@ -44,18 +45,23 @@ namespace ParticleSimulator {
 		public const int SIMULATION_PARALLELISM = 16;
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times per render
 		public const int TREE_REFRESH_REUSE_ALLOWANCE = 7;
+		public const double TREE_FARFIELD_LIMIT = 0.01d;
 		public const bool SYNC_SIMULATION = true;
 		public const bool SYNC_TREE_REFRESH = false;
 
 		#region Gravity
+		public const double ELECTROSTATIC_CONSTANT = 1E-10;
+		public const double ELECTROSTATIC_MIN_CHARGE = 0d;
+		public const double ELECTROSTATIC_MAX_CHARGE = 1d;
+
 		public const double GRAVITATIONAL_CONSTANT = 1E-10;
 		public const double GRAVITY_INITIAL_SEPARATION = 0.008d;
-		public const double GRAVITY_MAX_ACCEL = 40d;
+		//public const double GRAVITY_MAX_ACCEL = 40d;
 		
-		public const double GRAVITY_DENSITY = 1E3;
 		public const double GRAVITY_MIN_MASS = 1E0;
 		public const double GRAVITY_MAX_MASS = 1E0;
 		public const double GRAVITY_MASS_BIAS = 3d;
+		public const double GRAVITY_DENSITY = 1E3;
 
 		public const double GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-2;
 		public const double GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0d;
@@ -64,12 +70,12 @@ namespace ParticleSimulator {
 		public const double GRAVITY_ALIGNMENT_SKEW_POW = 4d;
 		public const double GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0d;
 
+		//public const bool GRAVITY_COLLISION_
+		public const double GRAVITY_COLLISION_DRAG_STRENGTH = 0d;
 		public const bool GRAVITY_COLLISION_COMBINE = true;
 		public const double GRAVITY_COMBINE_OVERLAP_CUTOFF = 0.95d;
-		public const double GRAVITY_COLLISION_DRAG_STRENGTH = 1d;
 		
 		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 24;
-		public const double GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE = 8d;
 		public const int GRAVITY_NEIGHBORHOOD_FILTER = 3;
 		#endregion Gravity
 
