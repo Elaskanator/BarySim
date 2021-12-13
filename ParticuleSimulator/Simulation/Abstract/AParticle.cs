@@ -61,14 +61,14 @@ namespace ParticleSimulator.Simulation {
 				else if (this.LiveCoordinates[i] >= Parameters.DOMAIN_SIZE[i])
 					this.LiveCoordinates[i] = Parameters.DOMAIN_SIZE[i] - Parameters.WORLD_EPSILON;
 		}
-		public void BounceVelocity() {
+		public void BounceVelocity(double weight) {
 			double dist;
 			for (int d = 0; d < Parameters.DIM; d++) {
 				dist = this.LiveCoordinates[d] - Parameters.DOMAIN_CENTER[d];
 				if (dist < -Parameters.DOMAIN_MAX_RADIUS)
-					this.Velocity[d] += Parameters.WORLD_BOUNCE_WEIGHT * Math.Pow(Parameters.DOMAIN_MAX_RADIUS - dist, 0.5d);
+					this.Velocity[d] += weight * Math.Pow(Parameters.DOMAIN_MAX_RADIUS - dist, 0.5d);
 				else if (dist > Parameters.DOMAIN_MAX_RADIUS)
-					this.Velocity[d] -= Parameters.WORLD_BOUNCE_WEIGHT * Math.Pow(dist - Parameters.DOMAIN_MAX_RADIUS, 0.5d);
+					this.Velocity[d] -= weight * Math.Pow(dist - Parameters.DOMAIN_MAX_RADIUS, 0.5d);
 			}
 		}
 

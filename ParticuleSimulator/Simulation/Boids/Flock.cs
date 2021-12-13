@@ -11,6 +11,10 @@ namespace ParticleSimulator.Simulation.Boids {
 		public readonly double Corruption;
 
 		protected override double InitialSeparationRadius => Parameters.BOIDS_INITIAL_SEPARATION;
+		public override double StartSpeedMax_Group_Angular => Parameters.BOIDS_STARTING_SPEED_MAX_GROUP;
+		public override double StartSpeedMax_Group_Rand => Parameters.BOIDS_STARTING_SPEED_MAX_GROUP_RAND;
+		public override double StartSpeedMax_Particle_Angular => Parameters.BOIDS_STARTING_SPEED_MAX_INTRAGROUP;
+		public override double StartSpeedMax_Particle_Range => Parameters.BOIDS_STARTING_SPEED_MAX_INTRAGROUP_RAND;
 
 		protected override Boid NewParticle(double[] position, double[] velocity) {
 			return new Boid(this.ID, position, velocity, this.Corruption);

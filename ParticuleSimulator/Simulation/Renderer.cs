@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
+using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public static class Renderer {
@@ -53,7 +55,7 @@ namespace ParticleSimulator.Simulation {
 			return frameBuffer;
 		}
 		
-		public static void TitleUpdate(object[] parameters) {
+		public static void TitleUpdate(object[] parameters = null) {
 			int visibleParticles = Program.Simulator.AllParticles.Count(p => p.IsVisible);
 
 			Console.Title = string.Format("{0} Simulator - {1}{2} - {3}D",
@@ -89,7 +91,7 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public static void DrawLegend(ConsoleExtensions.CharInfo[] buffer) {
-			int numColors = Program.Simulator.DensityScale.Length;
+			int numColors = Program.Simulator.Scaling.Values.Length;
 			if (numColors > 0) {
 				bool isDiscrete = Parameters.DIM < 3 && Parameters.SimType == SimulationType.Boid;
 				string header = Parameters.COLOR_SCHEME.ToString();
@@ -117,13 +119,95 @@ namespace ParticleSimulator.Simulation {
 					else rowStringData =
 							(isDiscrete && cIdx == 0 ? "=" : "≤")
 							+ (isDiscrete
-								? ((int)Program.Simulator.DensityScale[cIdx]).ToString()
-								: Program.Simulator.DensityScale[cIdx].ToStringBetter(2));
+								? ((int)Program.Simulator.Scaling.Values[cIdx]).ToString()
+								: Program.Simulator.Scaling.Values[cIdx].ToStringBetter(2));
 
 					for (int i = 0; i < rowStringData.Length; i++)
 						buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);
 				}
 			}
 		}
+
+		public static Tuple<char, AParticle[], double>[] Resample(object[] parameters) {
+			AParticle[] particleData = (AParticle[])parameters[0];
+			Tuple<char, AParticle[], double>[] results = new Tuple<char, AParticle[], double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+
+			char pixelChar;
+			AParticle[] topStuff, bottomStuff, distinct;
+			foreach (IGrouping<int, Tuple<int, int, AParticle>> bin in DiscreteParticleBin(particleData)) {
+				topStuff = bin.Where(t => t.Item2 % 2 == 0).Select(t => t.Item3).ToArray();
+				bottomStuff = bin.Where(t => t.Item2 % 2 == 1).Select(t => t.Item3).ToArray();
+				distinct = bin.Select(b => b.Item3).Distinct().ToArray();
+
+				if (topStuff.Length > 0 && bottomStuff.Length > 0)
+					pixelChar = Parameters.CHAR_BOTH;
+				else if (topStuff.Length > 0)
+					pixelChar = Parameters.CHAR_TOP;
+				else pixelChar = Parameters.CHAR_LOW;
+
+				results[bin.Key] =
+					new Tuple<char, AParticle[], double>(
+						pixelChar,
+						distinct,
+						distinct.Sum(p => p.Mass));
+			}
+			return results;
+		}
+		private static IEnumerable<IGrouping<int, Tuple<int, int, AParticle>>> DiscreteParticleBin(AParticle[] particles) { 
+			return particles
+				.Where(p =>
+					p.IsActive
+					&& p.LiveCoordinates[0] + p.Radius >= 0 && p.LiveCoordinates[0] - p.Radius < Parameters.DOMAIN_SIZE[0]
+					&& (Parameters.DIM < 2 || p.LiveCoordinates[1] > -p.Radius && p.LiveCoordinates[1] < p.Radius + Parameters.DOMAIN_SIZE[1]))
+				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < 2*Parameters.WINDOW_HEIGHT))
+				.GroupBy(pd => pd.Item1 + (Parameters.WINDOW_WIDTH * (pd.Item2 / 2)));
+		}
+		private static IEnumerable<Tuple<int, int, AParticle>> SpreadSample(AParticle p) {
+			double
+				pixelScalar = RenderWidth / Parameters.DOMAIN_SIZE[0],
+				scaledX = RenderWidthOffset + p.LiveCoordinates[0] * pixelScalar,
+				scaledY = RenderHeightOffset + (Parameters.DIM < 2 ? 0d : p.LiveCoordinates[1] * pixelScalar);
+
+			if (p.Radius == 0d)
+				yield return new((int)scaledX, (int)scaledY, p);
+			else {
+				double
+					radiusX = p.Radius * pixelScalar,
+					minX = scaledX - radiusX,
+					maxX = scaledX + radiusX,
+					radiusY = Parameters.DIM < 2 ? 0d : radiusX,
+					minY = scaledY - radiusY,
+					maxY = scaledY + radiusY;
+				maxX = maxX < Parameters.WINDOW_WIDTH ? maxX : Parameters.WINDOW_WIDTH - 1;
+				maxY = maxY < 2*Parameters.WINDOW_HEIGHT ? maxY : 2*Parameters.WINDOW_HEIGHT - 1;
+
+				int
+					rangeX = 1 + (int)(maxX) - (int)(minX),
+					rangeY = 1 + (int)(maxY) - (int)(minY);
+
+				double testX, testY, dist;
+				int roundedX, roundedY;
+				for (int x2 = 0; x2 < rangeX; x2++) {
+					roundedX = x2 + (int)minX;
+					if (roundedX >= 0d && roundedX < Parameters.WINDOW_WIDTH) {
+						for (int y2 = 0; y2 < rangeY; y2++) {
+							roundedY = y2 + (int)minY;
+							if (roundedY >= 0d && roundedY < Parameters.WINDOW_HEIGHT*2) {
+								testX = roundedX == (int)scaledX//particle in current bin
+									? p.LiveCoordinates[0] * pixelScalar//use exact value
+									: roundedX + (roundedX < scaledX ? 1 : 0);//nearer edge
+								if (Parameters.DIM == 1) {
+									dist = Math.Abs(testX - p.LiveCoordinates[0]);
+									if (dist <= p.Radius) {
+										yield return new(roundedX, roundedY, p);
+									}
+								} else {
+									testY = roundedY == (int)scaledY//particle in current bin
+										? p.LiveCoordinates[1] * pixelScalar//use exact value
+										: roundedY + (roundedY < scaledY ? 1 : 0);//nearer edge
+									dist = new double[] { testX, testY }.Distance(p.LiveCoordinates.Take(2).Select(c => c * pixelScalar).ToArray());
+									if (p.Radius * pixelScalar >= dist)
+										yield return new(roundedX, roundedY, p);
+		}}}}}}}
 	}
 }

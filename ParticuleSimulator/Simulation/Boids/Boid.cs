@@ -7,7 +7,7 @@ namespace ParticleSimulator.Simulation.Boids {
 		: base(groupID, position, velocity) {
 			this.IsPredator = Program.Random.NextDouble() * Parameters.BOIDS_PREDATOR_CHANCE < corruption;
 		}
-		
+
 		public bool IsPredator { get; private set; }
 
 		public double Vision => this.IsPredator ? Parameters.BOIDS_PREDATOR_VISION : Parameters.BOIDS_BOID_VISION;

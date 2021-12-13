@@ -5,29 +5,23 @@ using Generic.Vectors;
 using ParticleSimulator.Simulation;
 
 namespace ParticleSimulator {
-	//NOTE sentinel value is usually -1 for unlimited
+	//sentinel value is usually -1 for unlimited
 	public static class Parameters {
 		public const SimulationType SimType = SimulationType.Gravity;
 
-		public const int PARTICLES_GROUP_COUNT = 500;
+		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 200;
-		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 4d;
+		public const int PARTICLES_GROUP_MAX = 8192;
+		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 0d;
 
 		public const double WORLD_SCALE = 1d;
 		public const double TIME_SCALE = 1d;
 		public const int DIM = 2;
-
-		public const double STARTING_SPEED_MAX_GROUP = 8E-3;
-		public const double STARTING_SPEED_MAX_GROUP_RAND = 0E-3;
-		public const double STARTING_SPEED_MAX_INTRAGROUP = 8E-3;
-		public const double STARTING_SPEED_MAX_INTRAGROUP_RAND = 0E-3;
 		
 		public const double WORLD_DEATH_BOUND_CNT = 1E3;
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNDING = false;
 		public const double WORLD_PADDING_PCT = 10d;
-		public const double WORLD_BOUNCE_WEIGHT = 0;//0.00001d;
 		public const double WORLD_EPSILON = 1E-8;
 		
 		public const bool LEGEND_ENABLE = true;
@@ -55,18 +49,26 @@ namespace ParticleSimulator {
 
 		#region Gravity
 		public const double GRAVITATIONAL_CONSTANT = 1E-10;
-		public const double GRAVITY_DENSITY = 1E3;
 		public const double GRAVITY_INITIAL_SEPARATION = 0.008d;
-		public const double GRAVITY_ALIGNMENT_SKEW_POW = 4d;
-		public const double GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0d;
-
+		public const double GRAVITY_MAX_ACCEL = 40d;
+		
+		public const double GRAVITY_DENSITY = 1E3;
 		public const double GRAVITY_MIN_MASS = 1E0;
 		public const double GRAVITY_MAX_MASS = 1E0;
 		public const double GRAVITY_MASS_BIAS = 3d;
-		
-		public const double GRAVITY_MAX_ACCEL = 10d;
-		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 24;
 
+		public const double GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-2;
+		public const double GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0d;
+		public const double GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 0E-2;
+		public const double GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 0d;
+		public const double GRAVITY_ALIGNMENT_SKEW_POW = 4d;
+		public const double GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0d;
+
+		public const bool GRAVITY_COLLISION_COMBINE = true;
+		public const double GRAVITY_COMBINE_OVERLAP_CUTOFF = 0.95d;
+		public const double GRAVITY_COLLISION_DRAG_STRENGTH = 1d;
+		
+		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 24;
 		public const double GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE = 8d;
 		public const int GRAVITY_NEIGHBORHOOD_FILTER = 3;
 		#endregion Gravity
@@ -76,6 +78,7 @@ namespace ParticleSimulator {
 		public const int BOIDS_QUADTREE_NODE_CAPACITY		= 5;
 
 		public const double BOIDS_INITIAL_SEPARATION	= 0.015;
+		public const double BOIDS_WORLD_BOUNCE_WEIGHT	= 0.00001d;
 
 		public const double BOIDS_BOID_VISION			= -1;
 		public const double BOIDS_PREDATOR_VISION		= -1;
@@ -86,6 +89,11 @@ namespace ParticleSimulator {
 		public const double BOIDS_PREDATOR_MIN_SPEED	= 0d;
 		public const double BOIDS_BOID_MAX_SPEED		= 0.002d;
 		public const double BOIDS_PREDATOR_MAX_SPEED	= 0.01d;
+
+		public const double BOIDS_STARTING_SPEED_MAX_GROUP = 0d;
+		public const double BOIDS_STARTING_SPEED_MAX_GROUP_RAND = 5E-3;
+		public const double BOIDS_STARTING_SPEED_MAX_INTRAGROUP = 0d;
+		public const double BOIDS_STARTING_SPEED_MAX_INTRAGROUP_RAND = 2E-3;
 		
 		public const double BOIDS_PREDATOR_CHANCE		= 0d;
 		public const double BOIDS_PREDATOR_CHANCE_BIAS	= 1d;

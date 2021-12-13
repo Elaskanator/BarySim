@@ -4,8 +4,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Generic.Vectors;
 
-namespace ParticleSimulator.Simulation.Gravity {
+namespace ParticleSimulator.Simulation.Gravity {//known as the Barnes-Hut Algorithm by using quadtrees
 	public class GravitySimulator : AParticleSimulator<MatterClump, BaryonQuadTree, Galaxy> {
+		private static readonly Func<BaryonQuadTree, BaryonQuadTree, bool> _inRangeTest = (a, b) =>
+			a.Barycenter.Current.Distance(b.Barycenter.Current) <=
+				Parameters.GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE*MatterClump.RadiusOfMass(a.Barycenter.TotalWeight)
+				+ Parameters.GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE*MatterClump.RadiusOfMass(b.Barycenter.TotalWeight);
+
+		protected override Galaxy NewParticleGroup() { return new(); }
+		protected override BaryonQuadTree NewTree(double[] leftCorner, double[] rightCorner) { return new(leftCorner, rightCorner); }
+
 		protected override void InteractAll(BaryonQuadTree tree) {
 			Parallel.ForEach(
 				tree.Leaves,
@@ -54,13 +62,5 @@ namespace ParticleSimulator.Simulation.Gravity {
 									particles[i].NetForce = particles[i].NetForce.Add(particles[i].ComputeInteractionForce(p));
 			}}});
 		}
-
-		private static readonly Func<BaryonQuadTree, BaryonQuadTree, bool> _inRangeTest = (a, b) =>
-			a.Barycenter.Current.Distance(b.Barycenter.Current) <=
-				Parameters.GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE*MatterClump.RadiusOfMass(a.Barycenter.TotalWeight)
-				+ Parameters.GRAVITY_NEIGHBORHOOD_RADIUS_MULTIPLE*MatterClump.RadiusOfMass(b.Barycenter.TotalWeight);
-
-		protected override Galaxy NewParticleGroup() { return new(); }
-		protected override BaryonQuadTree NewTree(double[] leftCorner, double[] rightCorner) { return new(leftCorner, rightCorner); }
 	}
 }

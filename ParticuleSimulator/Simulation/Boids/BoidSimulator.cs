@@ -7,8 +7,9 @@ using Generic.Vectors;
 namespace ParticleSimulator.Simulation.Boids {
 	public class BoidSimulator : AParticleSimulator<Boid, BoidQuadTree, Flock> {
 		public BoidSimulator() : base() { }
-
-		protected override int InteractionLimit => Parameters.BOIDS_DESIRED_INTERACTION_NEIGHBORS < 0 ? int.MaxValue : Parameters.BOIDS_DESIRED_INTERACTION_NEIGHBORS;
+		
+		public override double WorldBounceWeight => Parameters.BOIDS_WORLD_BOUNCE_WEIGHT;
+		public override int InteractionLimit => Parameters.BOIDS_DESIRED_INTERACTION_NEIGHBORS < 0 ? int.MaxValue : Parameters.BOIDS_DESIRED_INTERACTION_NEIGHBORS;
 
 		public override ConsoleColor ChooseGroupColor(AParticle[] others) {
 			return others.Cast<Boid>().Any(p => p.IsPredator)

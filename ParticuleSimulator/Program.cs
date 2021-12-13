@@ -44,8 +44,10 @@ namespace ParticleSimulator {
 				default:
 					throw new InvalidEnumArgumentException(nameof(Parameters.SimType), (int)Parameters.SimType, typeof(SimulationType));
 			}
+			Renderer.TitleUpdate();
 
 			Manager = BuildRunManager();
+			//ConsoleExtensions.WaitForEnter("Press enter to start");
 			Manager.Start();
 		}
 
@@ -128,7 +130,7 @@ namespace ParticleSimulator {
 			StepEval_Resample = new(new() {
 				Name = "Density Sampling",
 				//Initializer = null,
-				Calculator = Simulator.Resample,
+				Calculator = Renderer.Resample,
 				//Evaluator = null,
 				//Synchronizer = null,
 				//Callback = null,
@@ -210,7 +212,7 @@ namespace ParticleSimulator {
 					Name = "Autoscaler",
 					//Initializer = null,
 					//Calculator = null,
-					Evaluator = Simulator.AutoscaleUpdate,
+					Evaluator = Simulator.Scaling.Update,
 					Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS)),
 					//Callback = null,
 					//DataAssimilationTicksAverager = null,

@@ -6,6 +6,10 @@ using Generic.Vectors;
 namespace ParticleSimulator.Simulation.Gravity {
 	public class Galaxy : AParticleGroup<MatterClump> {
 		protected override double InitialSeparationRadius => Parameters.GRAVITY_INITIAL_SEPARATION;
+		public override double StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
+		public override double StartSpeedMax_Group_Rand => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND;
+		public override double StartSpeedMax_Particle_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP;
+		public override double StartSpeedMax_Particle_Range => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
 
 		protected override MatterClump NewParticle(double[] position, double[] velocity) {
 			return new MatterClump(this.ID,
@@ -45,7 +49,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 				double angle = Math.Atan2(position[1] - center[1], position[0] - center[0]);
 				angle += 2 * Math.PI
 					* (0.25d
-						+ ( Math.Pow(Program.Random.NextDouble(), Parameters.GRAVITY_ALIGNMENT_SKEW_POW)
+						+ (Math.Pow(Program.Random.NextDouble(), Parameters.GRAVITY_ALIGNMENT_SKEW_POW)
 							* Parameters.GRAVITY_ALIGNMENT_SKEW_RANGE_PCT / 100d));
 
 				IEnumerable<double> rotation = new double[] {
@@ -56,50 +60,5 @@ namespace ParticleSimulator.Simulation.Gravity {
 				return rotation.ToArray().Multiply(Math.Log(1d + center.Distance(position), Parameters.GRAVITY_INITIAL_SEPARATION));
 			}
 		}
-
-		//public Galaxy() {
-			//while ((this.OrbitalPlane = Enumerable
-			//	.Range(0, Parameters.DIM - 1)
-			//	.Select(n => HyperspaceFunctions
-			//		.RandomUnitVector_Spherical(Parameters.DIM, Program.Random)
-			//		.ToArray())
-			//	.ToArray())
-			//	.Determinant() == 0d);//cannot be linearly dependent
-			//this.OrbitalPlane = this.OrbitalPlane.Orthonormalize();
-			//this.OrbitalPlaneNormal = this.OrbitalPlane.NewNormalVector();
-			//this.OrbitalPlaneNormal = HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random);
-		//}
-
-		//public readonly double[][] OrbitalPlane;
-		//public readonly double[] OrbitalPlaneNormal;
-		//public readonly double[] OrbitalPlaneDiagonal;
-		
-		/*
-		protected override double[] NewInitialPosition(double radius) {
-			return this.SpawnCenter.Add(
-				HyperspaceFunctions.RandomCoordinate_Spherical(
-					radius * Program.Random.NextDouble(), Parameters.DIM, Program.Random));//cluster more in the center
-			//result = base.NewInitialPosition(radius);
-			//if (Parameters.DIM > 2) {//does work for 2 but does nothing
-			//	double range = result.Distance(this.SpawnCenter);
-			//	result = result.Add(//random "height" from the orbital plane
-			//		this.OrbitalPlaneNormal.Multiply(
-			//			Math.Pow(Program.Random.NextDouble() * (1d - range/radius), 2d)
-			//			* this.InitialSeparationRadius
-			//			/ Math.Pow(2d, Parameters.DIM - 1d)));
-			//}
-		}
-		protected override double[] NewInitialDirection(double[] center, double[] position) {
-			double dist = center.Distance(position);
-			if (dist <= Parameters.WORLD_EPSILON) {
-				return new double[Parameters.DIM];
-			} else {
-				//double perpendicularity = 1d - position.Subtract(center).Normalize().DotProduct(this.OrbitalPlaneNormal);
-				//double[]
-				//	projected = ,
-				//	fromCenter = projected.Subtract(center);
-			}
-		}
-		*/
 	}
 }
