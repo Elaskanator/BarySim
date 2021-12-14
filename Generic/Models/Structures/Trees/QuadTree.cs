@@ -8,10 +8,12 @@ namespace Generic.Models {
 	public class QuadTree<TElement> : ATree<TElement>
 	where TElement : VectorDouble {//supports any dimensionality
 		public QuadTree(double[] corner1, double[] corner2, QuadTree<TElement> parent = null) 
-		: base(parent) {//make sure all values in x1 are smaller than x2 (the corners of a cubic volume)
+		: base(parent) {//caller needs to ensure all values in x1 are smaller than x2 (the corners of a cubic volume)
 			this.CornerLeft = corner1;
 			this.CornerRight = corner2;
-			this.Center = corner1.Zip(corner2, (a, b) => (a + b) / 2d).ToArray();
+
+			this.Dimensionality = corner1.Length;
+			this.Center = corner1.Zip(corner2, (l, r) => (l + r) / 2d).ToArray();
 
 			this._members = new TElement[this.Capacity];
 		}
@@ -31,8 +33,8 @@ namespace Generic.Models {
 		public readonly double[] CornerLeft;
 		public readonly double[] CornerRight;
 		public readonly double[] Center;
+		public readonly int Dimensionality;
 		
-		public int Dimensionality { get { return this.CornerLeft.Length; } }
 		public override IEnumerable<QuadTree<TElement>> Children { get { return this._quadrants; } }
 		public override bool IsLeaf { get { return this._quadrants.Length == 0; } }
 		public override IEnumerable<TElement> NodeElements { get {

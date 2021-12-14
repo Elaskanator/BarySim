@@ -11,13 +11,13 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 512;
+		public const int PARTICLES_GROUP_MAX = 1024;
 		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 0d;
 
 		public const double WORLD_SCALE = 1d;
 		public const double TIME_SCALE = 1d;
-		public const double PARTICLE_MAX_ACCEL = 0.01d;
-		public const int MAX_ADAPTIVE_TIME_DIVISIONS = 0;
+		public const double PARTICLE_ADAPTIVE_TIME_CRITERION_GRANULARITY = 0.2d;//subdivide time steps as necessary for very close interactions
+		public const int MAX_ADAPTIVE_TIME_DIVISIONS = 16;
 		public const int FARFIELD_NEIGHBORHOOD_FILTER = 2;
 		public const double TREE_FARFIELD_THRESHOLD = 0.1d;
 		public const int DIM = 2;

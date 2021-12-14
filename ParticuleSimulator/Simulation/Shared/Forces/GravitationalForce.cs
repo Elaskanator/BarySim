@@ -1,5 +1,5 @@
 ﻿namespace ParticleSimulator.Simulation {
-	public class GravitationalForce : AInverseSquareForce {
+	public class GravitationalForce : AForce {
 		public override double ForceConstant => Parameters.GRAVITATIONAL_CONSTANT;
 		public override bool IsAttractionForce => true;
 

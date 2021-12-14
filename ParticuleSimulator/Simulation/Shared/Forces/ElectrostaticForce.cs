@@ -1,5 +1,5 @@
 ﻿namespace ParticleSimulator.Simulation {
-	public class ElectrostaticForce : AInverseSquareForce {
+	public class ElectrostaticForce : AForce {
 		public override double ForceConstant => Parameters.ELECTROSTATIC_CONSTANT;
 		public override bool IsAttractionForce => false;
 

@@ -12,7 +12,7 @@ namespace ParticleSimulator.Simulation {
 	public interface IParticleSimulator {
 		public AClassicalParticle[] AllParticles { get; }
 		public Scaling Scaling { get; }
-		public AInverseSquareForce[] Forces { get; }
+		public AForce[] Forces { get; }
 
 		public ITree RebuildTree();
 		public ConsoleColor ChooseColor(Tuple<char, AClassicalParticle[], double> others);
@@ -20,7 +20,7 @@ namespace ParticleSimulator.Simulation {
 	}
 
 	public abstract class AParticleSimulator : IParticleSimulator {
-		public AParticleSimulator(params AInverseSquareForce[] forces) {
+		public AParticleSimulator(params AForce[] forces) {
 			this.Forces = forces;
 
 			this.Scaling = new();
@@ -33,7 +33,7 @@ namespace ParticleSimulator.Simulation {
 
 		public AClassicalParticle[] AllParticles { get; private set; }
 		public AParticleGroup[] ParticleGroups { get; private set; }
-		public AInverseSquareForce[] Forces { get; private set; }
+		public AForce[] Forces { get; private set; }
 		public Scaling Scaling { get; private set; }
 
 		public virtual double WorldBounceWeight => 0d;
@@ -41,8 +41,8 @@ namespace ParticleSimulator.Simulation {
 
 		protected abstract AParticleGroup NewParticleGroup();
 
-		protected virtual double[] ComputeCollisionImpulse(double distance, double[] toOther, AClassicalParticle smaller, AClassicalParticle larger) { return new double[Parameters.DIM]; }
 		protected virtual bool DoCombine(double distance, AClassicalParticle smaller, AClassicalParticle larger) { return false; }
+		protected virtual double[] ComputeCollisionImpulse(double distance, double[] toOther, AClassicalParticle smaller, AClassicalParticle larger) { return new double[Parameters.DIM]; }
 
 		public AClassicalParticle[] RefreshSimulation(object[] parameters) {
 			if (this.AllParticles.Length == 0)
@@ -93,12 +93,13 @@ namespace ParticleSimulator.Simulation {
 
 					this.AdaptiveTimeStepIntegration(
 						leaf,
-						splitInteractionNodes.Item1.ToArray(),
+						splitInteractionNodes.Item1,
 						splitInteractionNodes.Item2.Concat(farNodes).ToArray());
 				});
 		}
 
 		private void AdaptiveTimeStepIntegration(ATree<AClassicalParticle> leaf, ATree<AClassicalParticle>[] nearfieldLeaves, ATree<AClassicalParticle>[] farfieldNodes) {
+			//Parameters.PARTICLE_ADAPTIVE_TIME_CRITERION_GRANULARITY
 			AClassicalParticle[] particles = leaf.NodeElements.ToArray();
 			double[] baryonFarImpulse = farfieldNodes.Aggregate(new double[Parameters.DIM], (totalImpuse, other) =>
 				totalImpuse.Add(
@@ -109,7 +110,7 @@ namespace ParticleSimulator.Simulation {
 			for (int i = 0; i < particles.Length; i++) {
 				particles[i].Impulse = particles[i].Impulse.Add(baryonFarImpulse);//asymmetric interaction
 
-				for (int j = i + 1; j < particles.Length; j++) {//symmetric interaction
+				for (int j = i + 1; j < particles.Length; j++) {//symmetric interaction (handshake optimization)
 					totalImpulse = new double[Parameters.DIM];
 					for (int fIdx = 0; fIdx < this.Forces.Length; fIdx++) {
 						impulse = this.Forces[fIdx].ComputeImpulse(particles[i], particles[j]);
@@ -131,6 +132,47 @@ namespace ParticleSimulator.Simulation {
 				}
 			}
 		}
+
+		//public virtual double[] ClampImpulse(double[] impulse, double distance, double smallerMass) {
+		//	double
+		//		val = impulse.Magnitude(),
+		//		max = Parameters.PARTICLE_MAX_ACCEL * Parameters.TIME_SCALE / smallerMass;
+		//	return val > max ? impulse.Multiply(max / val) : impulse;
+		//}
+
+		//private void AdaptiveTimeStepIntegration(ATree<AClassicalParticle> leaf, ATree<AClassicalParticle>[] nearfieldLeaves, ATree<AClassicalParticle>[] farfieldNodes) {
+		//	AClassicalParticle[] particles = leaf.NodeElements.ToArray();
+		//	double[] baryonFarImpulse = farfieldNodes.Aggregate(new double[Parameters.DIM], (totalImpuse, other) =>
+		//		totalImpuse.Add(
+		//			this.Forces.Aggregate(new double[Parameters.DIM], (impulse, force) =>
+		//				impulse.Add(force.ComputeImpulse((FarFieldQuadTree)leaf, (FarFieldQuadTree)other)))));
+
+		//	double[] impulse, totalImpulse;
+		//	for (int i = 0; i < particles.Length; i++) {
+		//		particles[i].Impulse = particles[i].Impulse.Add(baryonFarImpulse);//asymmetric interaction
+
+		//		for (int j = i + 1; j < particles.Length; j++) {//symmetric interaction
+		//			totalImpulse = new double[Parameters.DIM];
+		//			for (int fIdx = 0; fIdx < this.Forces.Length; fIdx++) {
+		//				impulse = this.Forces[fIdx].ComputeImpulse(particles[i], particles[j]);
+		//				totalImpulse = totalImpulse.Add(impulse);
+		//			}
+		//			particles[i].Impulse = particles[i].Impulse.Add(totalImpulse);
+		//			particles[j].Impulse = particles[j].Impulse.Subtract(totalImpulse);
+		//		}
+
+		//		for (int b = 0; b < nearfieldLeaves.Length; b++) {//asymmetric interaction
+		//			foreach (AClassicalParticle p in nearfieldLeaves[b].AllElements) {
+		//				totalImpulse = new double[Parameters.DIM];
+		//				for (int fIdx = 0; fIdx < this.Forces.Length; fIdx++) {
+		//					impulse = this.Forces[fIdx].ComputeImpulse(particles[i], p);
+		//					totalImpulse = totalImpulse.Add(impulse);
+		//				}
+		//				particles[i].Impulse = particles[i].Impulse.Add(totalImpulse);
+		//			}
+		//		}
+		//	}
+		//}
 
 		private void HandleCollisions() {
 			double distance, newMass;
@@ -188,11 +230,14 @@ namespace ParticleSimulator.Simulation {
 					rightCorner[d] = rightCorner[d] > particle.Coordinates[d] ? rightCorner[d] : particle.Coordinates[d];
 				}
 			}
+			rightCorner = rightCorner.Select(x => x += Parameters.WORLD_EPSILON).ToArray();
+			
+			double maxSize = leftCorner.Zip(rightCorner, (l, r) => r - l).Max();
+			rightCorner = leftCorner.Select(l => l + maxSize).ToArray();
 
-			QuadTree<AClassicalParticle> result;
-			if (this.Forces.Length > 0)
-				result = new FarFieldQuadTree(leftCorner, rightCorner.Select(x => x += Parameters.WORLD_EPSILON).ToArray(), null);
-			else result = new NearFieldQuadTree(leftCorner, rightCorner.Select(x => x += Parameters.WORLD_EPSILON).ToArray());
+			QuadTree<AClassicalParticle> result = this.Forces.Length > 0
+				? new FarFieldQuadTree(leftCorner, rightCorner)
+				: new NearFieldQuadTree(leftCorner, rightCorner);
 			result.AddRange(particles);
 			return result;
 		}
