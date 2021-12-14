@@ -8,15 +8,19 @@ namespace Generic.Vectors {
 		public int DIM { get { return this.Coordinates.Length; } }
 		public virtual double[] Coordinates { get; set; }
 
+		public VectorDouble() {
+			this.Coordinates = null;
+		}
+		protected VectorDouble(double[] coordinates) {
+			this.Coordinates = coordinates;
+		}
+
 		double IList<double>.this[int index] { get => this.Coordinates[index]; set => this.Coordinates[index] = value; }
 		object IList.this[int index] { get => this.Coordinates[index]; set => this.Coordinates[index] = (double)value; }
 
-		public VectorDouble(int dimensionality) { this.Coordinates = new double[dimensionality]; }
-		public VectorDouble(double[] v) { this.Coordinates = v; }
-
-		public static readonly VectorDouble Zero1D = new(1);
-		public static readonly VectorDouble Zero2D = new(2);
-		public static readonly VectorDouble Zero3D = new(3);
+		public static readonly VectorDouble Zero1D = new(new double[1]);
+		public static readonly VectorDouble Zero2D = new(new double[2]);
+		public static readonly VectorDouble Zero3D = new(new double[3]);
 
 		public double this[int dimension] => this.Coordinates[dimension];
 

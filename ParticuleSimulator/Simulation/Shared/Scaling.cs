@@ -32,7 +32,7 @@ namespace ParticleSimulator.Simulation {
 
 			if (densities.Length > 0) {
 				StatsInfo stats = new(densities);
-				if (Parameters.DENSITY_AUTOSCALE_CUTOFF_PCT > 0) {
+				if (Parameters.DENSITY_AUTOSCALE_CUTOFF_PCT > 0d) {
 					stats.FilterData(Parameters.DENSITY_AUTOSCALE_CUTOFF_PCT);
 					if (stats.Data_asc.Length == 0)
 						return;
@@ -79,7 +79,7 @@ namespace ParticleSimulator.Simulation {
 						min = stats.Data_asc[0],
 						max = stats.Data_asc[^1],
 						range = max - min;
-					if (range > 0) {
+					if (range > Parameters.WORLD_EPSILON) {
 						double step = range / (Parameters.COLOR_ARRAY.Length + 1);
 						this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => min + step*i).ToArray();
 					} else this.Values = new double[] { min };

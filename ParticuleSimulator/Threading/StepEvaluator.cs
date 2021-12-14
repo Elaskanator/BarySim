@@ -95,8 +95,7 @@ namespace ParticleSimulator.Threading {
 		}
 
 		public void Dispose() {
-			if (!this.IsActive) return;
-			this.IsActive = false;
+			this.Stop();
 
 			foreach (EventWaitHandle handle in this._handles)
 				handle.Dispose();

@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Generic.Extensions;
+using Generic.Models;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Boids {
@@ -19,7 +20,7 @@ namespace ParticleSimulator.Simulation.Boids {
 				: base.ChooseGroupColor(others);
 		}
 
-		protected override void InteractNearField(AVectorQuadTree<AClassicalParticle> tree) {
+		protected override void InteractNearField(QuadTree<AClassicalParticle> tree) {
 			Parallel.ForEach(
 				tree.Leaves.Where(n => n.NumMembers > 0),
 				Parameters.MulithreadedOptions,

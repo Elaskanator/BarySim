@@ -62,7 +62,7 @@ namespace ParticleSimulator {
 				//Initializer = null,
 				//Calculator = null,
 				Evaluator = Renderer.FlushScreenBuffer,
-				Synchronizer = Parameters.TARGET_FPS > 0 || Parameters.MAX_FPS > 0 ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
+				Synchronizer = Parameters.TARGET_FPS > 0d || Parameters.MAX_FPS > 0d ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
 				//Callback = null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
