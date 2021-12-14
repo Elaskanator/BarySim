@@ -54,8 +54,8 @@ namespace ParticleSimulator.Simulation.Boids {
 				awayVector = this.LiveCoordinates.Subtract(other.LiveCoordinates);
 				dist = awayVector.Magnitude();
 
-				if ((this.Vision < 0 || this.Vision <= dist))
-					if (dist < Parameters.WORLD_EPSILON || this.FoV < 0 || this.FoV >= this.LiveCoordinates.AngleTo_FullRange(other.LiveCoordinates))
+				if ((this.Vision < 0d || this.Vision <= dist))
+					if (dist < Parameters.WORLD_EPSILON || this.FoV < 0d || this.FoV >= this.LiveCoordinates.AngleTo_FullRange(other.LiveCoordinates))
 						if (dist < cohesionDist)
 							if (dist < repulsionDist)
 								repulsion = repulsion.Add(awayVector.Multiply(repulsionWeight * (1d - dist/repulsionDist)));
@@ -64,8 +64,12 @@ namespace ParticleSimulator.Simulation.Boids {
 			}
 						
 			return (Parameters.BOIDS_REPULSION_ENABLE ? repulsion : new double[Parameters.DIM])
-				.Add(Parameters.BOIDS_COHERE_ENABLE && centerAvg.NumUpdates > 0 ? centerAvg.Current.Subtract(this.LiveCoordinates).Normalize().Multiply(this.CohesionWeight) : new double[Parameters.DIM])
-				.Add(Parameters.BOIDS_ALIGN_ENABLE && directionAvg.NumUpdates > 0 && directionAvg.Current.Magnitude() > Parameters.WORLD_EPSILON ? directionAvg.Current.Subtract(this.Velocity).Multiply(this.AlignmentWeight) : new double[Parameters.DIM]);
+				.Add(Parameters.BOIDS_COHERE_ENABLE && centerAvg.NumUpdates > 0
+					? centerAvg.Current.Subtract(this.LiveCoordinates).Normalize().Multiply(this.CohesionWeight)
+					: new double[Parameters.DIM])
+				.Add(Parameters.BOIDS_ALIGN_ENABLE && directionAvg.NumUpdates > 0 && directionAvg.Current.Magnitude() > Parameters.WORLD_EPSILON
+					? directionAvg.Current.Subtract(this.Velocity).Multiply(this.AlignmentWeight)
+					: new double[Parameters.DIM]);
 		}
 
 		protected override void AfterUpdate() {
@@ -73,11 +77,11 @@ namespace ParticleSimulator.Simulation.Boids {
 			if ((speed = this.Velocity.Magnitude()) <= Parameters.WORLD_EPSILON)
 				this.Velocity = HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(Parameters.BOIDS_BOID_MAX_SPEED * Program.Random.NextDouble());
 
-			this.Velocity = this.MinSpeed >= 0 && speed < this.MinSpeed
+			this.Velocity = this.MinSpeed >= 0d && speed < this.MinSpeed
 				? speed < Parameters.WORLD_EPSILON
 					? HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Multiply(this.MaxSpeed)
 					: this.Velocity.Multiply(this.MinSpeed / speed)
-				: this.MaxSpeed >= 0 && speed > this.MaxSpeed
+				: this.MaxSpeed >= 0d && speed > this.MaxSpeed
 					? this.Velocity.Multiply(this.MaxSpeed / speed)
 					: this.Velocity;
 		}

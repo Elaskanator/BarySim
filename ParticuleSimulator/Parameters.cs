@@ -11,12 +11,15 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 2048;
+		public const int PARTICLES_GROUP_MAX = 512;
 		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 0d;
 
 		public const double WORLD_SCALE = 1d;
 		public const double TIME_SCALE = 1d;
+		public const double PARTICLE_MAX_ACCEL = 0.01d;
 		public const int MAX_ADAPTIVE_TIME_DIVISIONS = 0;
+		public const int FARFIELD_NEIGHBORHOOD_FILTER = 2;
+		public const double TREE_FARFIELD_THRESHOLD = 0.1d;
 		public const int DIM = 2;
 		
 		public const double WORLD_DEATH_BOUND_CNT = 1E3;
@@ -44,24 +47,22 @@ namespace ParticleSimulator {
 		public const int PRECALCULATION_LIMIT = 1;
 		public const int SIMULATION_PARALLELISM = 16;
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times per render
-		public const int TREE_REFRESH_REUSE_ALLOWANCE = 7;
-		public const double TREE_FARFIELD_LIMIT = 0.01d;
+		public const int TREE_REFRESH_REUSE_ALLOWANCE = 1;
 		public const bool SYNC_SIMULATION = true;
 		public const bool SYNC_TREE_REFRESH = false;
 
 		#region Gravity
-		public const double ELECTROSTATIC_CONSTANT = 1E-10;
-		public const double ELECTROSTATIC_MIN_CHARGE = 0d;
-		public const double ELECTROSTATIC_MAX_CHARGE = 1d;
+		public const double GRAVITY_INITIAL_SEPARATION = 0.01d;
 
-		public const double GRAVITATIONAL_CONSTANT = 1E-10;
-		public const double GRAVITY_INITIAL_SEPARATION = 0.008d;
-		//public const double GRAVITY_MAX_ACCEL = 40d;
-		
+		public const double GRAVITATIONAL_CONSTANT = 0.8E-10;
 		public const double GRAVITY_MIN_MASS = 1E0;
-		public const double GRAVITY_MAX_MASS = 1E0;
+		public const double GRAVITY_MAX_MASS = 1E1;
 		public const double GRAVITY_MASS_BIAS = 3d;
 		public const double GRAVITY_DENSITY = 1E3;
+
+		public const double ELECTROSTATIC_CONSTANT = 1E-10;
+		public const double ELECTROSTATIC_MIN_CHARGE = 0d;
+		public const double ELECTROSTATIC_MAX_CHARGE = 0d;
 
 		public const double GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-2;
 		public const double GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0d;
@@ -70,19 +71,14 @@ namespace ParticleSimulator {
 		public const double GRAVITY_ALIGNMENT_SKEW_POW = 4d;
 		public const double GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0d;
 
-		//public const bool GRAVITY_COLLISION_
-		public const double GRAVITY_COLLISION_DRAG_STRENGTH = 0d;
+		public const double GRAVITY_COLLISION_DRAG_STRENGTH = 0d;//1 means instant stop
 		public const bool GRAVITY_COLLISION_COMBINE = true;
 		public const double GRAVITY_COMBINE_OVERLAP_CUTOFF = 0.95d;
 		
 		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 24;
-		public const int GRAVITY_NEIGHBORHOOD_FILTER = 3;
 		#endregion Gravity
 
 		#region Boids;
-		public const int BOIDS_DESIRED_INTERACTION_NEIGHBORS= 8;
-		public const int BOIDS_QUADTREE_NODE_CAPACITY		= 5;
-
 		public const double BOIDS_INITIAL_SEPARATION	= 0.015;
 		public const double BOIDS_WORLD_BOUNCE_WEIGHT	= 0.00001d;
 
@@ -125,6 +121,9 @@ namespace ParticleSimulator {
 		public const bool BOIDS_ALIGN_ENABLE			= true;
 		public const double BOIDS_BOID_ALIGNMENT_W		= 0.01d;
 		public const double BOIDS_PREDATOR_ALIGNMENT_W	= 0.00002d;
+
+		public const int BOIDS_QUADTREE_NODE_CAPACITY		= 5;
+		public const int BOIDS_DESIRED_INTERACTION_NEIGHBORS= 8;
 		#endregion Boids
 
 		#region Aux
@@ -143,7 +142,7 @@ namespace ParticleSimulator {
 		public const double PERF_SMA_ALPHA = 0.1d;
 
 		public const int GRAPH_WIDTH = -1;
-		public const int GRAPH_HEIGHT = 5;//at least 2
+		public const int GRAPH_HEIGHT = 8;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
 		public const double PERF_GRAPH_PERCENTILE_CUTOFF = 10d;

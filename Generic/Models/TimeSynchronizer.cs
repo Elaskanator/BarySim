@@ -3,7 +3,8 @@ using System.Threading;
 
 namespace Generic.Models {
 	public class TimeSynchronizer {
-		public const int THREAD_PULSE_MS = 15;//what is the exact value?
+		//see https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-sleep
+		public const double THREAD_PULSE_MS = 15.6d;//TODO read exact value for your system
 
 		public TimeSynchronizer(TimeSpan? value, TimeSpan? min = null) {
 			if (min.HasValue && min.Value.Ticks > 0L) this.Min = min.Value;
@@ -21,6 +22,7 @@ namespace Generic.Models {
 
 		public void Synchronize() {
 			DateTime nowUtc = DateTime.UtcNow;
+			//optional rounding down to nearest second:
 			this._targetTimeUtc ??= new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, nowUtc.Minute, nowUtc.Second, DateTimeKind.Utc);
 			TimeSpan waitDuration = TimeSpan.Zero;
 
@@ -37,10 +39,10 @@ namespace Generic.Models {
 				waitDuration = this._targetTimeUtc.Value - nowUtc;
 				if (waitDuration.Ticks > 0L)
 					this._targetTimeUtc += this.Min;
-				else this._targetTimeUtc = nowUtc + this.Min;
+				else this._targetTimeUtc = nowUtc + this.Min;//missed it (this does not preserve absolute synchronization and can de-phase from metered interval times)
 			}
 
-			if (waitDuration.TotalMilliseconds > THREAD_PULSE_MS)
+			if (waitDuration.TotalMilliseconds > THREAD_PULSE_MS/2d)
 				Thread.Sleep(waitDuration.Subtract(TimeSpan.FromMilliseconds(THREAD_PULSE_MS/2d)));
 		}
 	}

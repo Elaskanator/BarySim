@@ -36,24 +36,6 @@ namespace ParticleSimulator.Simulation {
 				RenderHeightOffset = MaxY / 4;
 			}
 		}
-
-		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
-			Tuple<char, AClassicalParticle[], double>[] sampling = (Tuple<char, AClassicalParticle[], double>[])parameters[0];
-
-			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
-			if (!(sampling is null)) {
-				for (int i = 0; i < sampling.Length; i++)
-					frameBuffer[i] = sampling[i] is null ? default :
-						new ConsoleExtensions.CharInfo(
-							sampling[i].Item1,
-							Program.Simulator.ChooseColor(sampling[i]));
-
-				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_SCHEME != ParticleColoringMethod.Depth || Parameters.DIM > 2))
-					DrawLegend(frameBuffer);
-			}
-
-			return frameBuffer;
-		}
 		
 		public static void TitleUpdate(object[] parameters = null) {
 			int visibleParticles = Program.Simulator.AllParticles.Count(p => p.IsVisible);
@@ -128,6 +110,24 @@ namespace ParticleSimulator.Simulation {
 			}
 		}
 
+		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
+			Tuple<char, AClassicalParticle[], double>[] sampling = (Tuple<char, AClassicalParticle[], double>[])parameters[0];
+
+			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			if (!(sampling is null)) {
+				for (int i = 0; i < sampling.Length; i++)
+					frameBuffer[i] = sampling[i] is null ? default :
+						new ConsoleExtensions.CharInfo(
+							sampling[i].Item1,
+							Program.Simulator.ChooseColor(sampling[i]));
+
+				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_SCHEME != ParticleColoringMethod.Depth || Parameters.DIM > 2))
+					DrawLegend(frameBuffer);
+			}
+
+			return frameBuffer;
+		}
+
 		public static Tuple<char, AClassicalParticle[], double>[] Resample(object[] parameters) {
 			AClassicalParticle[] particleData = (AClassicalParticle[])parameters[0];
 			Tuple<char, AClassicalParticle[], double>[] results = new Tuple<char, AClassicalParticle[], double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
@@ -149,7 +149,7 @@ namespace ParticleSimulator.Simulation {
 					new Tuple<char, AClassicalParticle[], double>(
 						pixelChar,
 						distinct,
-						bin.Count());
+						distinct.Length);
 			}
 			return results;
 		}
@@ -157,7 +157,7 @@ namespace ParticleSimulator.Simulation {
 			return particles
 				.Where(p =>
 					p.IsAlive
-					&& p.LiveCoordinates[0] + p.Radius >= 0 && p.LiveCoordinates[0] - p.Radius < Parameters.DOMAIN_SIZE[0]
+					&& p.LiveCoordinates[0] + p.Radius >= 0d && p.LiveCoordinates[0] - p.Radius < Parameters.DOMAIN_SIZE[0]
 					&& (Parameters.DIM < 2 || p.LiveCoordinates[1] > -p.Radius && p.LiveCoordinates[1] < p.Radius + Parameters.DOMAIN_SIZE[1]))
 				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < 2*Parameters.WINDOW_HEIGHT))
 				.GroupBy(pd => pd.Item1 + (Parameters.WINDOW_WIDTH * (pd.Item2 / 2)));
@@ -168,7 +168,7 @@ namespace ParticleSimulator.Simulation {
 				scaledX = RenderWidthOffset + p.LiveCoordinates[0] * pixelScalar,
 				scaledY = RenderHeightOffset + (Parameters.DIM < 2 ? 0d : p.LiveCoordinates[1] * pixelScalar);
 
-			if (p.Radius == 0d)
+			if (p.Radius <= Parameters.WORLD_EPSILON)
 				yield return new((int)scaledX, (int)scaledY, p);
 			else {
 				double

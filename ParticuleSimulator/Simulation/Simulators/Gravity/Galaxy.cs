@@ -19,8 +19,8 @@ namespace ParticleSimulator.Simulation.Gravity {
 					+ (Math.Pow(Program.Random.NextDouble(), Parameters.GRAVITY_MASS_BIAS)
 						* (Parameters.GRAVITY_MAX_MASS - Parameters.GRAVITY_MIN_MASS)),
 				Parameters.ELECTROSTATIC_MIN_CHARGE
-					+ Program.Random.NextDouble()
-						* (Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE));
+					+ (Program.Random.NextDouble()
+						* (Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE)));
 		}
 
 		protected override double[] NewParticlePosition(double[] center, double radius) {

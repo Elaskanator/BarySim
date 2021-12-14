@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Vectors;
@@ -13,9 +13,9 @@ namespace ParticleSimulator.Simulation {
 			this.Momentum = new double[Parameters.DIM];
 			this.Impulse = new double[Parameters.DIM];
 			this.GroupID = groupID;
-			this.Velocity = velocity;
 			this.Mass = mass;
 			this.Charge = charge;
+			this.Velocity = velocity;
 		}
 
 		private int _id = ++_globalID;
@@ -23,7 +23,7 @@ namespace ParticleSimulator.Simulation {
 		public bool IsAlive = true;
 		public readonly int GroupID;
 		public virtual double Radius => 0d;
-		public double Mass { get; set; }
+		public virtual double Mass { get; set; }
 		public double Charge { get; set; }
 
 		internal double[] _coordinates;
@@ -38,8 +38,10 @@ namespace ParticleSimulator.Simulation {
 			set { this.Momentum = value.Multiply(this.Mass); }}
 		public double[] Momentum { get; set; }
 		public double[] Impulse { get; set; }
+		public readonly ConcurrentQueue<AClassicalParticle> Collisions = new();
+		public readonly HashSet<AClassicalParticle> EvaluatedCollisions = new();
 
-		public bool IsVisible => this.LiveCoordinates.All((x, d) => x + this.Radius >= 0 && x - this.Radius < Parameters.DOMAIN_SIZE[d]);
+		public bool IsVisible => this.LiveCoordinates.All((x, d) => x + this.Radius >= 0d && x - this.Radius < Parameters.DOMAIN_SIZE[d]);
 		public virtual int? InteractionLimit => null;
 
 		protected virtual IEnumerable<AClassicalParticle> Filter(IEnumerable<AClassicalParticle> others) { return others; }
@@ -48,17 +50,6 @@ namespace ParticleSimulator.Simulation {
 			this.Momentum = this.Momentum.Add(this.Impulse.Multiply(Parameters.TIME_SCALE));
 			this.AfterUpdate();
 			this.LiveCoordinates = this.LiveCoordinates.Add(this.Velocity.Multiply(Parameters.TIME_SCALE));
-		}
-
-		public double GetPhysicalAttribute(PhysicalAttribute attr) {
-			switch (attr) {
-				case PhysicalAttribute.Mass:
-					return this.Mass;
-				case PhysicalAttribute.Charge:
-					return this.Charge;
-				default:
-					throw new InvalidEnumArgumentException(nameof(attr), (int)attr, typeof(PhysicalAttribute));
-			}
 		}
 
 		protected virtual void AfterUpdate() { }

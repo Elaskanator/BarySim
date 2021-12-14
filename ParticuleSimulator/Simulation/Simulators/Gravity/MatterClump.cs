@@ -6,10 +6,14 @@ namespace ParticleSimulator.Simulation.Gravity {
 		private double _radius = 0d;
 		public override double Radius => this._radius;
 
+		private double _mass = 0d;
+		public override double Mass {
+			get => this._mass;
+			set { this._mass = value;
+				this._radius = RadiusOfMass(value); }}
+
 		public MatterClump(int groupID, double[] position, double[] velocity, double mass, double charge = 0d)
-		: base(groupID, position, velocity, mass, charge) {
-			this._radius = RadiusOfMass(mass);
-		}
+		: base(groupID, position, velocity, mass, charge) { }
 
 		public static double RadiusOfMass(double mass) {
 			return Math.Cbrt(mass) / Parameters.GRAVITY_DENSITY;

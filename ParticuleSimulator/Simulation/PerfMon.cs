@@ -11,11 +11,11 @@ namespace ParticleSimulator.Simulation {
 		private static SampleSMA _frameTimingMs = new SampleSMA(Parameters.PERF_SMA_ALPHA);
 		private static SampleSMA _fpsTimingMs = new SampleSMA(Parameters.PERF_SMA_ALPHA);
 		private static double[] _currentColumnFrameTimeDataMs;
-		private static double[] _currentColumnIterationTimeDataMs;
+		private static double[] _currentColumnFpsDataMs;
 		private static double _currentMin = 0;
 		private static double _currentMax = 0;
 		private static StatsInfo[] _columnFrameTimeStatsMs;
-		private static StatsInfo[] _columnIterationTimeStatsMs;
+		private static StatsInfo[] _columnFpsStatsMs;
 		private static ConsoleExtensions.CharInfo[][] _graphColumns;
 		private static DateTime _lastGraphRenderFrameUtc = DateTime.UtcNow;
 		private static readonly object _columnStatsLock = new();
@@ -25,7 +25,7 @@ namespace ParticleSimulator.Simulation {
 		static PerfMon() {
 			_statsHeaderValues = new Tuple<string, double, ConsoleColor, ConsoleColor>[
 				1 + (Parameters.PERF_STATS_ENABLE
-					? Program.Manager.Evaluators.Count()
+					? 1 + Program.Manager.Evaluators.Count()
 					: 0)];
 
 			int width =
@@ -33,14 +33,13 @@ namespace ParticleSimulator.Simulation {
 					? Parameters.GRAPH_WIDTH > 0
 						? Parameters.GRAPH_WIDTH
 						: 3 + Parameters.NUMBER_SPACING
-							+ Program.Manager.Evaluators.Sum(s =>
-								Parameters.NUMBER_SPACING
-								+ 1)
+							+ (1 + Program.Manager.Evaluators.Count())
+								* (1 + Parameters.NUMBER_SPACING)
 					: Parameters.PERF_GRAPH_DEFAULT_WIDTH;
 			GraphWidth = Console.WindowWidth > width ? width : Console.WindowWidth;
 
 			_columnFrameTimeStatsMs = new StatsInfo[GraphWidth];
-			_columnIterationTimeStatsMs = new StatsInfo[GraphWidth];
+			_columnFpsStatsMs = new StatsInfo[GraphWidth];
 			_graphColumns = new ConsoleExtensions.CharInfo[GraphWidth][];
 		}
 
@@ -48,11 +47,11 @@ namespace ParticleSimulator.Simulation {
 			int frameIdx = (result.NumCompleted - 1) % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 			lock (_columnStatsLock) {
 				if (frameIdx == 0) {
+					_currentColumnFpsDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
 					_currentColumnFrameTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
-					_currentColumnIterationTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
 					_graphColumns = _graphColumns.ShiftRight(false);
+					_columnFpsStatsMs = _columnFpsStatsMs.ShiftRight(false);
 					_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.ShiftRight(false);
-					_columnIterationTimeStatsMs = _columnIterationTimeStatsMs.ShiftRight(false);
 				}
 				double currentFrameTimeMs = (
 					new double[] {
@@ -69,14 +68,14 @@ namespace ParticleSimulator.Simulation {
 					}.Max()
 					/ 10000d;
 
-				_frameTimingMs.Update(currentFrameTimeMs);
 				_fpsTimingMs.Update(currentIterationTimeMs);
+				_currentColumnFpsDataMs[frameIdx] = currentIterationTimeMs;
+				_columnFpsStatsMs[0] = new StatsInfo(_currentColumnFpsDataMs.Take(frameIdx + 1));
 
+				_frameTimingMs.Update(currentFrameTimeMs);
 				_currentColumnFrameTimeDataMs[frameIdx] = currentFrameTimeMs;
 				_columnFrameTimeStatsMs[0] = new StatsInfo(_currentColumnFrameTimeDataMs.Take(frameIdx + 1));
 
-				_currentColumnIterationTimeDataMs[frameIdx] = currentIterationTimeMs;
-				_columnIterationTimeStatsMs[0] = new StatsInfo(_currentColumnIterationTimeDataMs.Take(frameIdx + 1));
 			}
 		}
 
@@ -99,24 +98,32 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		private static void RefreshStatsHedaer(bool isSlow) {
-			if (Program.StepEval_Rasterize.Step.IterationTicksAverager.NumUpdates > 0) {
-				double
-					fps = 10000000 / (Program.StepEval_Rasterize.Step.IterationTicksAverager.LastUpdate),
-					smoothedFps = 10000000 / (Program.StepEval_Rasterize.Step.IterationTicksAverager.Current);
-				_statsHeaderValues[0] = new("FPS", smoothedFps, ChooseFpsColor(fps), ConsoleColor.Black);
-			} else _statsHeaderValues[0] = new("FPS", 0, ChooseFrameIntervalColor(0), ConsoleColor.Black);
+			double raw, smoothed;
+			if (_fpsTimingMs.NumUpdates > 0) {
+				raw = 1000d / _fpsTimingMs.LastUpdate;
+				smoothed = 1000d / _fpsTimingMs.Current;
+				_statsHeaderValues[0] = new("FPS", smoothed, ChooseFpsColor(raw), ConsoleColor.Black);
+			} else _statsHeaderValues[0] = new("FPS", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
+			if (_frameTimingMs.NumUpdates > 0) {
+				raw = _frameTimingMs.LastUpdate;
+				smoothed = _frameTimingMs.Current;
+				_statsHeaderValues[1] = new("Time(ms)", smoothed, ChooseFrameIntervalColor(raw), ConsoleColor.Black);
+			} else _statsHeaderValues[1] = new("Time(ms)", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 
 			if (Parameters.PERF_STATS_ENABLE) {
 				string label;
-				double timeVal, colorVal;
 				for (int i = 0; i < Program.Manager.Evaluators.Length; i++) {
 					label = Program.Manager.Evaluators[i].Step.Name[0].ToString();
-					timeVal = Program.Manager.Evaluators[i].Step.ExclusiveTicksAverager.Current / 10000d;
-					colorVal = Program.Manager.Evaluators[i].Step.ExclusiveTicksAverager.LastUpdate / 10000d;
-					if (isSlow && Program.Manager.Evaluators[i].Id != Program.StepEval_Draw.Id && Program.Manager.Evaluators[i].IsComputing)
-						_statsHeaderValues[i + 1] = new(label, DateTime.UtcNow.Subtract(Program.Manager.Evaluators[i].IterationReceiveUtc.Value).TotalMilliseconds, ConsoleColor.White, ConsoleColor.DarkRed);
-					else _statsHeaderValues[i + 1] = new(label, timeVal, ChooseFrameIntervalColor(colorVal), ConsoleColor.Black);
-		}}}
+					if (isSlow && Program.Manager.Evaluators[i].Id != Program.StepEval_Draw.Id && Program.Manager.Evaluators[i].IsComputing) {
+						_statsHeaderValues[i + 2] = new(label, DateTime.UtcNow.Subtract(Program.Manager.Evaluators[i].IterationReceiveUtc.Value).TotalMilliseconds, ConsoleColor.White, ConsoleColor.DarkRed);
+					} else if (Program.Manager.Evaluators[i].Step.ExclusiveTicksAverager.NumUpdates > 0) {
+						raw = Program.Manager.Evaluators[i].Step.ExclusiveTicksAverager.Current / 10000d;
+						smoothed = Program.Manager.Evaluators[i].Step.ExclusiveTicksAverager.LastUpdate / 10000d;
+						_statsHeaderValues[i + 2] = new(label, smoothed, ChooseFrameIntervalColor(raw), ConsoleColor.Black);
+					} else _statsHeaderValues[i + 2] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
+				}
+			}
+		}
 
 		private static void DrawFpsGraph(ConsoleExtensions.CharInfo[] frameBuffer) {
 			if (Program.StepEval_Rasterize.Step.IterationTicksAverager.NumUpdates > 0) {
@@ -165,7 +172,7 @@ namespace ParticleSimulator.Simulation {
 				if (drawFrameTime)
 					for (int i = 0; i < label_frameTime.Length; i++)
 						result[i + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - offset_frameTime)] = new ConsoleExtensions.CharInfo(label_frameTime[i], ConsoleColor.Cyan);
-			
+
 				frameBuffer.RegionMerge(Parameters.WINDOW_WIDTH, result, GraphWidth, 0, 1, true);
 			}
 		}
@@ -173,13 +180,13 @@ namespace ParticleSimulator.Simulation {
 		private static void RerenderGraph() {
 			StatsInfo[]
 				frameTimeStats = _columnFrameTimeStatsMs.Without(s => s is null).ToArray(),
-				iterationTimeStats = _columnIterationTimeStatsMs.Without(s => s is null).ToArray();
+				iterationTimeStats = _columnFpsStatsMs.Without(s => s is null).ToArray();
 			if (frameTimeStats.Length + iterationTimeStats.Length > 0) {
 				StatsInfo rangeStats = new(frameTimeStats.Concat(iterationTimeStats).SelectMany(s => s.Data_asc));
 			
 				double
-					min = new StatsInfo(frameTimeStats.SelectMany(s => s.Data_asc)).GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
-					max = new StatsInfo(iterationTimeStats.SelectMany(s => s.Data_asc)).GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF);
+					min = rangeStats.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
+					max = rangeStats.GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF);
 
 				min = min <= frameTimeStats.Concat(iterationTimeStats).Min(s => s.GetPercentileValue(50d)) ? min : frameTimeStats.Concat(iterationTimeStats).Min(s => s.GetPercentileValue(50d));
 				max = max >= frameTimeStats.Concat(iterationTimeStats).Max(s => s.GetPercentileValue(50d)) ? max : frameTimeStats.Concat(iterationTimeStats).Max(s => s.GetPercentileValue(50d));
@@ -192,8 +199,8 @@ namespace ParticleSimulator.Simulation {
 				if (Math.Abs(max - _currentMax) / _currentMax > 0.05d)
 					_currentMax = max;
 
-				for (int i = 0; i < frameTimeStats.Length; i++)
-					_graphColumns[i] = RenderGraphColumn(_columnIterationTimeStatsMs[i], _columnFrameTimeStatsMs[i]);
+				for (int i = 0; i < frameTimeStats.Length || i < iterationTimeStats.Length; i++)
+					_graphColumns[i] = RenderGraphColumn(_columnFpsStatsMs[i], _columnFrameTimeStatsMs[i]);
 
 			}
 			_lastGraphRenderFrameUtc = DateTime.UtcNow;
@@ -209,22 +216,22 @@ namespace ParticleSimulator.Simulation {
 
 			double
 				yFps000 = fpsStats.Min,
-				yFps010 = fpsStats.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
-				yFps025 = fpsStats.GetPercentileValue(25),
-				yFps040 = fpsStats.GetPercentileValue(40),
-				yFps050 = fpsStats.GetPercentileValue(50),
-				yFps060 = fpsStats.GetPercentileValue(60),
-				yFps075 = fpsStats.GetPercentileValue(75),
-				yFps090 = fpsStats.GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
+				yFps010 = fpsStats.GetPercentileValue(10d),
+				yFps025 = fpsStats.GetPercentileValue(25d),
+				yFps040 = fpsStats.GetPercentileValue(40d),
+				yFps050 = fpsStats.GetPercentileValue(50d),
+				yFps060 = fpsStats.GetPercentileValue(60d),
+				yFps075 = fpsStats.GetPercentileValue(75d),
+				yFps090 = fpsStats.GetPercentileValue(90d),
 				yFps100 = fpsStats.Max,
 				yTime000 = frameTimeStats.Min,
-				yTime010 = frameTimeStats.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
-				yTime025 = frameTimeStats.GetPercentileValue(25),
-				yTime040 = frameTimeStats.GetPercentileValue(40),
-				yTime050 = frameTimeStats.GetPercentileValue(50),
-				yTime060 = frameTimeStats.GetPercentileValue(60),
-				yTime075 = frameTimeStats.GetPercentileValue(75),
-				yTime090 = frameTimeStats.GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
+				yTime010 = frameTimeStats.GetPercentileValue(10d),
+				yTime025 = frameTimeStats.GetPercentileValue(25d),
+				yTime040 = frameTimeStats.GetPercentileValue(40d),
+				yTime050 = frameTimeStats.GetPercentileValue(50d),
+				yTime060 = frameTimeStats.GetPercentileValue(60d),
+				yTime075 = frameTimeStats.GetPercentileValue(75d),
+				yTime090 = frameTimeStats.GetPercentileValue(90d),
 				yTime100 = frameTimeStats.Max;
 
 			double
@@ -325,7 +332,7 @@ namespace ParticleSimulator.Simulation {
 			Console.ForegroundColor = ConsoleColor.White;
 			Console.Write(" FPS");
 
-			if (Parameters.TARGET_FPS > 0) {
+			if (Parameters.TARGET_FPS > 0d) {
 				double expectedFramesRendered = Parameters.TARGET_FPS * (double)totalDuration.TotalSeconds;
 				double fpsRatio = (double)Program.StepEval_Rasterize.NumCompleted / ((int)(1 + expectedFramesRendered));
 
@@ -345,11 +352,11 @@ namespace ParticleSimulator.Simulation {
 			return ConsoleColor.White;
 		}
 		private static ConsoleColor ChooseFpsColor(double fps) {
-			double ratioToDesired = fps / (Parameters.TARGET_FPS > 0 ? Parameters.TARGET_FPS : Parameters.TARGET_FPS_DEFAULT);
+			double ratioToDesired = fps / (Parameters.TARGET_FPS > 0d ? Parameters.TARGET_FPS : Parameters.TARGET_FPS_DEFAULT);
 			return ChooseColor(ratioToDesired);
 		}
 		private static ConsoleColor ChooseFrameIntervalColor(double timeMs) {
-			double ratioToDesired = 1000d / (Parameters.TARGET_FPS > 0 ? Parameters.TARGET_FPS : Parameters.TARGET_FPS_DEFAULT) / timeMs;
+			double ratioToDesired = 1000d / (Parameters.TARGET_FPS > 0d ? Parameters.TARGET_FPS : Parameters.TARGET_FPS_DEFAULT) / timeMs;
 			return ChooseColor(ratioToDesired);
 		}
 	}
