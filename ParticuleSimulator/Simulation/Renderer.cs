@@ -38,17 +38,17 @@ namespace ParticleSimulator.Simulation {
 		}
 		
 		public static void TitleUpdate(object[] parameters = null) {
-			int visibleParticles = Program.Simulator.AllParticles.Count(p => p.IsVisible);
+			int visibleParticles = Program.Simulator.AliveParticles.Count(p => p.IsVisible);
 
 			Console.Title = string.Format("{0} Simulator - {1}{2}{3} - {4}D",
 				Parameters.SimType,
-				visibleParticles == Program.Simulator.AllParticles.Length
+				Program.NumStartingParticles == Program.Simulator.AliveParticles.Length
 					? ""
-					: visibleParticles.ToString() + "/",
-				Program.NumStartingParticles == Program.Simulator.AllParticles.Length
-					? ""
-					: Program.Simulator.AllParticles.Length.ToString() + "/",
+					: Program.Simulator.AliveParticles.Length.ToString() + "/",
 				Program.NumStartingParticles.Pluralize("particle"),
+				visibleParticles == Program.Simulator.AliveParticles.Length
+					? ""
+					: " (" + visibleParticles.ToString() + " visible)",
 				Parameters.DIM);
 		}
 

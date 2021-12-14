@@ -9,7 +9,8 @@ using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public interface IParticleSimulator {
-		public AClassicalParticle[] AllParticles { get; }
+		public AClassicalParticle[] AliveParticles { get; }
+		public AParticleGroup[] ParticleGroups { get; }
 		public Scaling Scaling { get; }
 		public AForce[] Forces { get; }
 
@@ -26,11 +27,11 @@ namespace ParticleSimulator.Simulation {
 			this.ParticleGroups = Enumerable.Range(0, Parameters.PARTICLES_GROUP_COUNT)
 				.Select(i => this.NewParticleGroup())
 				.ToArray();
-			this.AllParticles = this.ParticleGroups.SelectMany(g => g.Particles).ToArray();
+			this.AliveParticles = this.ParticleGroups.SelectMany(g => g.Particles).ToArray();
 			this.HandleBounds();
 		}
 
-		public AClassicalParticle[] AllParticles { get; private set; }
+		public AClassicalParticle[] AliveParticles { get; private set; }
 		public AParticleGroup[] ParticleGroups { get; private set; }
 		public AForce[] Forces { get; private set; }
 		public Scaling Scaling { get; private set; }
@@ -44,22 +45,22 @@ namespace ParticleSimulator.Simulation {
 		protected virtual double[] ComputeCollisionImpulse(double distance, double[] toOther, AClassicalParticle smaller, AClassicalParticle larger) { return new double[Parameters.DIM]; }
 
 		public AClassicalParticle[] RefreshSimulation(object[] parameters) {
-			if (this.AllParticles.Length == 0)
+			if (this.AliveParticles.Length == 0)
 				Program.CancelAction(null, null);
 
-			for (int i = 0; i < this.AllParticles.Length; i++) {
-				this.AllParticles[i].CollisionImpulse = new double[Parameters.DIM];
+			for (int i = 0; i < this.AliveParticles.Length; i++) {
+				this.AliveParticles[i].CollisionImpulse = new double[Parameters.DIM];
 			}
 
 			this.Refresh((FarFieldQuadTree)parameters[0]);
 
-			this.HandleCollisions(this.AllParticles, false);//outside of node
+			this.HandleCollisions(this.AliveParticles, false);//outside of node
 
 			this.HandleBounds();
 
-			this.AllParticles = this.AllParticles.Where(p => p.IsAlive).ToArray();
+			this.AliveParticles = this.AliveParticles.Where(p => p.IsAlive).ToArray();
 
-			return this.AllParticles;
+			return this.AliveParticles;
 		}
 
 		private void Refresh(FarFieldQuadTree tree) {//modified Barnes-Hut Algorithm
@@ -252,7 +253,7 @@ namespace ParticleSimulator.Simulation {
 			double[]
 				leftCorner = Enumerable.Repeat(double.PositiveInfinity, Parameters.DIM).ToArray(),
 				rightCorner = Enumerable.Repeat(double.NegativeInfinity, Parameters.DIM).ToArray();
-			AClassicalParticle[] particles = (AClassicalParticle[])this.AllParticles.Clone();
+			AClassicalParticle[] particles = (AClassicalParticle[])this.AliveParticles.Clone();
 			AClassicalParticle particle;
 			for (int i = 0; i < particles.Length; i++) {
 				particle = particles[i];
@@ -310,7 +311,7 @@ namespace ParticleSimulator.Simulation {
 
 		private void HandleBounds() {
 			Parallel.ForEach(
-				this.AllParticles.Where(p => p.IsAlive),
+				this.AliveParticles.Where(p => p.IsAlive),
 				Parameters.MulithreadedOptions,
 				p => {
 					if (Parameters.WORLD_WRAPPING)

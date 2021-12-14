@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 using ParticleSimulator.Simulation;
@@ -45,7 +46,7 @@ namespace ParticleSimulator {
 				default:
 					throw new InvalidEnumArgumentException(nameof(Parameters.SimType), (int)Parameters.SimType, typeof(SimulationType));
 			}
-			NumStartingParticles = Simulator.AllParticles.Length;
+			NumStartingParticles = Simulator.ParticleGroups.Sum(g => g.NumParticles);
 			Renderer.TitleUpdate();
 
 			Manager = BuildRunManager();

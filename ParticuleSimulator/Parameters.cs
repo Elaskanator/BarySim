@@ -9,14 +9,14 @@ namespace ParticleSimulator {
 	public static class Parameters {
 		public const SimulationType SimType = SimulationType.Gravity;
 
-		public const int PARTICLES_GROUP_COUNT = 64;
+		public const int PARTICLES_GROUP_COUNT = 128;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 16;
+		public const int PARTICLES_GROUP_MAX = 32;
 		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 0d;
 
-		public const double WORLD_SCALE = 0.25d;
+		public const double WORLD_SCALE = 0.5d;
 		public const double TIME_SCALE = 1d;
-		public const int DIM = 3;
+		public const int DIM = 2;
 		
 		public const double PARTICLE_MAX_ACCELERATION = 0.001d;
 		public const double ADAPTIVE_TIME_GRANULARITY = 0.5d;//subdivide time steps as necessary for very close interactions
@@ -66,7 +66,7 @@ namespace ParticleSimulator {
 		public const double ELECTROSTATIC_MIN_CHARGE = 0d;
 		public const double ELECTROSTATIC_MAX_CHARGE = 0d;
 
-		public const double GRAVITY_STARTING_SPEED_MAX_GROUP = 1E-2;
+		public const double GRAVITY_STARTING_SPEED_MAX_GROUP = 0.5E-2;
 		public const double GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0d;
 		public const double GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 1E-2;
 		public const double GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 0d;

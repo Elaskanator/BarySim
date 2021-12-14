@@ -315,7 +315,7 @@ namespace ParticleSimulator.Simulation {
 			
 			Console.Write("Evaluated ");
 
-			int particleCount = Program.Simulator.AllParticles.Length;
+			int particleCount = Program.Simulator.AliveParticles.Length;
 			Console.Write(particleCount);
 
 			Console.ForegroundColor = ConsoleColor.White;
