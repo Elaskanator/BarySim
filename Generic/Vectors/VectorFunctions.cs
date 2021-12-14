@@ -35,20 +35,17 @@ namespace Generic.Vectors {
 		/// <param name="v">The vector to normalize</param>
 		public static double[] Normalize(this double[] v, double len = 1d) {
 			double magnitude = Magnitude(v);
-			if (magnitude == len)
-				return v;
-			else if (magnitude > 0) {
-				double componentScale = len / magnitude;
-				return v.Select(n => n * componentScale).ToArray();
-			} else throw new ArgumentOutOfRangeException(nameof(v), "Cannot normalize zero-length vectors");
+			return magnitude == len
+				? v
+				: v.Multiply(magnitude / len);
 		}
 		public static VectorDouble Normalize(this VectorDouble v, double len = 1d) { return (VectorDouble)Normalize(v.Coordinates, len); }
 
 		public static double[] Clamp(this double[] v, double maxMagnitude) {
 			double magnitude = Magnitude(v);
-			if (magnitude > maxMagnitude)
-				return v.Select(n => n * maxMagnitude / magnitude).ToArray();
-			else return v;
+			return magnitude > maxMagnitude
+				? v.Multiply(maxMagnitude / magnitude)
+				: v;
 		}
 		public static VectorDouble Clamp(this VectorDouble v, double maxMagnitude) { return (VectorDouble)Clamp(v.Coordinates, maxMagnitude); }
 

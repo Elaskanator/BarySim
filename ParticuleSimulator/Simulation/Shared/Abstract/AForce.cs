@@ -8,14 +8,11 @@ namespace ParticleSimulator.Simulation {
 		public abstract double GetInteractedPhysicalParameter(AClassicalParticle particle);
 		public abstract BaryonCenter GetInteractedPhysicalParameter(FarFieldQuadTree baryonTree);
 
-		public double[] ComputeImpulse(AClassicalParticle p1, AClassicalParticle p2) {
-			double[] toOther = p2.LiveCoordinates.Subtract(p1.LiveCoordinates);
-			double distance = toOther.Magnitude();
-
-			if (distance < p1.Radius + p2.Radius)
-				p1.Collisions.Enqueue(p2);
-
-			return this.ComputeImpulse(toOther, distance, this.GetInteractedPhysicalParameter(p1), this.GetInteractedPhysicalParameter(p2));
+		public double[] ComputeImpulse(double distance, double[] toOther, AClassicalParticle p1, AClassicalParticle p2, out bool collision) {
+			collision = distance < p1.Radius + p2.Radius;
+			return distance > Parameters.WORLD_EPSILON
+				? this.ComputeImpulse(toOther, distance, this.GetInteractedPhysicalParameter(p1), this.GetInteractedPhysicalParameter(p2))
+				:  new double[Parameters.DIM];
 		}
 		public double[] ComputeImpulse(FarFieldQuadTree p1, FarFieldQuadTree p2) {
 			BaryonCenter c1 = this.GetInteractedPhysicalParameter(p1),

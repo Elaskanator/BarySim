@@ -9,7 +9,8 @@ namespace ParticleSimulator.Simulation.Gravity {
 
 		protected override bool DoCombine(double distance, AClassicalParticle smaller, AClassicalParticle larger) {
 			return Parameters.GRAVITY_COLLISION_COMBINE
-				&& distance <= larger.Radius - smaller.Radius*Parameters.GRAVITY_COMBINE_OVERLAP_CUTOFF;
+				&& (distance <= Parameters.WORLD_EPSILON
+					|| distance <= larger.Radius + smaller.Radius * (1d - Parameters.GRAVITY_COMBINE_OVERLAP_CUTOFF));
 		}
 
 		//TODO

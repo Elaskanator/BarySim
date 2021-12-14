@@ -14,6 +14,7 @@ namespace ParticleSimulator {
 		public static readonly Random Random = new();
 		public static IParticleSimulator Simulator { get; private set; }
 		public static RunManager Manager { get; private set; }
+		public static int NumStartingParticles { get; private set; }
 
 		public static SynchronizedDataBuffer Resource_Tree, Resource_Locations, Resource_Resamplings, Resource_Rasterization;
 		public static StepEvaluator StepEval_TreeMaintain, StepEval_Simulate, StepEval_Resample, StepEval_Autoscale, StepEval_Rasterize, StepEval_Draw, StepEval_ConsoleWindow;
@@ -44,6 +45,7 @@ namespace ParticleSimulator {
 				default:
 					throw new InvalidEnumArgumentException(nameof(Parameters.SimType), (int)Parameters.SimType, typeof(SimulationType));
 			}
+			NumStartingParticles = Simulator.AllParticles.Length;
 			Renderer.TitleUpdate();
 
 			Manager = BuildRunManager();

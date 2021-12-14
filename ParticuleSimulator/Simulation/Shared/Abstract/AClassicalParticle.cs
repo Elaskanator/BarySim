@@ -11,7 +11,9 @@ namespace ParticleSimulator.Simulation {
 		public AClassicalParticle(int groupID, double[] position, double[] velocity, double mass = 1d, double charge = 0d)
 		: base(position) {
 			this.Momentum = new double[Parameters.DIM];
-			this.Impulse = new double[Parameters.DIM];
+			this.NearfieldImpulse = new double[Parameters.DIM];
+			this.FarfieldImpulse = new double[Parameters.DIM];
+			this.CollisionImpulse = new double[Parameters.DIM];
 			this.GroupID = groupID;
 			this.Mass = mass;
 			this.Charge = charge;
@@ -37,19 +39,26 @@ namespace ParticleSimulator.Simulation {
 			get => this.Momentum.Divide(this.Mass);
 			set { this.Momentum = value.Multiply(this.Mass); }}
 		public double[] Momentum { get; set; }
-		public double[] Impulse { get; set; }
-		public readonly ConcurrentQueue<AClassicalParticle> Collisions = new();
-		public readonly HashSet<AClassicalParticle> EvaluatedCollisions = new();
+		public double[] NearfieldImpulse { get; set; }
+		public double[] FarfieldImpulse { get; set; }
+		public double[] CollisionImpulse { get; set; }
+
+		public readonly ConcurrentQueue<AClassicalParticle> NeighborNodeCollisions = new();
+		public readonly Queue<AClassicalParticle> NodeCollisions = new();
 
 		public bool IsVisible => this.LiveCoordinates.All((x, d) => x + this.Radius >= 0d && x - this.Radius < Parameters.DOMAIN_SIZE[d]);
 		public virtual int? InteractionLimit => null;
 
 		protected virtual IEnumerable<AClassicalParticle> Filter(IEnumerable<AClassicalParticle> others) { return others; }
 
-		public void ApplyTimeStep() {
-			this.Momentum = this.Momentum.Add(this.Impulse.Multiply(Parameters.TIME_SCALE));
+		public void ApplyTimeStep(double timeStep) {
+			this.Momentum = this.Momentum.Add(
+				this.NearfieldImpulse.Clamp(Parameters.PARTICLE_MAX_ACCELERATION * this.Mass)
+				.Add(this.CollisionImpulse)
+				.Add(this.FarfieldImpulse)
+				.Multiply(timeStep));
 			this.AfterUpdate();
-			this.LiveCoordinates = this.LiveCoordinates.Add(this.Velocity.Multiply(Parameters.TIME_SCALE));
+			this.LiveCoordinates = this.LiveCoordinates.Add(this.Velocity.Multiply(timeStep));
 		}
 
 		protected virtual void AfterUpdate() { }
