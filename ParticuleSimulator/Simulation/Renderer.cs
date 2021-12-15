@@ -106,13 +106,13 @@ namespace ParticleSimulator.Simulation {
 			}
 		}
 
-		public static Tuple<char, IParticle[], double>[] Resample(object[] parameters) {
-			IParticle[] particleData = (IParticle[])parameters[0];
-			Tuple<char, IParticle[], double>[] results = new Tuple<char, IParticle[], double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+		public static Tuple<char, ParticleData[], double>[] Resample(object[] parameters) {
+			ParticleData[] particleData = (ParticleData[])parameters[0];
+			Tuple<char, ParticleData[], double>[] results = new Tuple<char, ParticleData[], double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 
 			char pixelChar;
-			IParticle[] topStuff, bottomStuff, distinct;
-			foreach (IGrouping<int, Tuple<int, int, IParticle>> bin in DiscreteParticleBin(particleData)) {
+			ParticleData[] topStuff, bottomStuff, distinct;
+			foreach (IGrouping<int, Tuple<int, int, ParticleData>> bin in DiscreteParticleBin(particleData)) {
 				topStuff = bin.Where(t => t.Item2 % 2 == 0).Select(t => t.Item3).ToArray();
 				bottomStuff = bin.Where(t => t.Item2 % 2 == 1).Select(t => t.Item3).ToArray();
 				distinct = bin.Select(b => b.Item3).Distinct().ToArray();
@@ -124,16 +124,16 @@ namespace ParticleSimulator.Simulation {
 				else pixelChar = Parameters.CHAR_LOW;
 
 				results[bin.Key] =
-					new Tuple<char, IParticle[], double>(
+					new Tuple<char, ParticleData[], double>(
 						pixelChar,
 						distinct,
 						Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity
 							? new double[] {
 								topStuff.Length > 0
-									? topStuff.OrderBy(p => GetDepthScalar(p.LiveCoordinates)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
+									? topStuff.OrderBy(p => GetDepthScalar(p.Coordinates)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
 									: 0d,
 								bottomStuff.Length > 0
-									? bottomStuff.OrderBy(p => GetDepthScalar(p.LiveCoordinates)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
+									? bottomStuff.OrderBy(p => GetDepthScalar(p.Coordinates)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
 									: 0d
 							}.Max()
 							: Parameters.COLOR_METHOD == ParticleColoringMethod.Density
@@ -142,17 +142,16 @@ namespace ParticleSimulator.Simulation {
 			}
 			return results;
 		}
-		private static IEnumerable<IGrouping<int, Tuple<int, int, IParticle>>> DiscreteParticleBin(IParticle[] particles) { 
+		private static IEnumerable<IGrouping<int, Tuple<int, int, ParticleData>>> DiscreteParticleBin(ParticleData[] particles) { 
 			return particles
-				.Where(p => p.Enabled && p.Visible)
 				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < 2*Parameters.WINDOW_HEIGHT))
 				.GroupBy(pd => pd.Item1 + (Parameters.WINDOW_WIDTH * (pd.Item2 / 2)));
 		}
-		private static IEnumerable<Tuple<int, int, IParticle>> SpreadSample(IParticle p) {
+		private static IEnumerable<Tuple<int, int, ParticleData>> SpreadSample(ParticleData p) {
 			double
 				pixelScalar = RenderWidth / Parameters.DOMAIN_SIZE[0],
-				scaledX = RenderWidthOffset + p.LiveCoordinates[0] * pixelScalar,
-				scaledY = RenderHeightOffset + (Parameters.DIM < 2 ? 0d : p.LiveCoordinates[1] * pixelScalar);
+				scaledX = RenderWidthOffset + p.Coordinates[0] * pixelScalar,
+				scaledY = RenderHeightOffset + (Parameters.DIM < 2 ? 0d : p.Coordinates[1] * pixelScalar);
 
 			if (p.Radius <= Parameters.WORLD_EPSILON)
 				yield return new((int)scaledX, (int)scaledY, p);
@@ -180,24 +179,24 @@ namespace ParticleSimulator.Simulation {
 							roundedY = y2 + (int)minY;
 							if (roundedY >= 0d && roundedY < Parameters.WINDOW_HEIGHT*2) {
 								testX = roundedX == (int)scaledX//particle in current bin
-									? p.LiveCoordinates[0] * pixelScalar//use exact value
+									? p.Coordinates[0] * pixelScalar//use exact value
 									: roundedX + (roundedX < scaledX ? 1 : 0);//nearer edge
 								if (Parameters.DIM == 1) {
-									dist = Math.Abs(testX - p.LiveCoordinates[0]);
+									dist = Math.Abs(testX - p.Coordinates[0]);
 									if (dist <= p.Radius) {
 										yield return new(roundedX, roundedY, p);
 									}
 								} else {
 									testY = roundedY == (int)scaledY//particle in current bin
-										? p.LiveCoordinates[1] * pixelScalar//use exact value
+										? p.Coordinates[1] * pixelScalar//use exact value
 										: roundedY + (roundedY < scaledY ? 1 : 0);//nearer edge
-									dist = new double[] { testX, testY }.Distance(p.LiveCoordinates.Take(2).Select(c => c * pixelScalar).ToArray());
+									dist = new double[] { testX, testY }.Distance(p.Coordinates.Take(2).Select(c => c * pixelScalar).ToArray());
 									if (p.Radius * pixelScalar >= dist)
 										yield return new(roundedX, roundedY, p);
 		}}}}}}}
 
 		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
-			Tuple<char, IParticle[], double>[] sampling = (Tuple<char, IParticle[], double>[])parameters[0];
+			Tuple<char, ParticleData[], double>[] sampling = (Tuple<char, ParticleData[], double>[])parameters[0];
 
 			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 			if (!(sampling is null)) {
@@ -214,7 +213,7 @@ namespace ParticleSimulator.Simulation {
 			return frameBuffer;
 		}
 
-		public static ConsoleColor ChooseColor(Tuple<char, IParticle[], double> particleData) {
+		public static ConsoleColor ChooseColor(Tuple<char, ParticleData[], double> particleData) {
 			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Count
 			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Density
 			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity)
@@ -224,7 +223,7 @@ namespace ParticleSimulator.Simulation {
 			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth)
 				if (Parameters.DIM > 2) {
 					int numColors = Parameters.COLOR_ARRAY.Length;
-					double depth = 1d - particleData.Item2.Min(p => GetDepthScalar(p.LiveCoordinates));
+					double depth = 1d - particleData.Item2.Min(p => GetDepthScalar(p.Coordinates));
 					int rank = Scaling.Values.Take(numColors - 1).TakeWhile(a => a < depth).Count();
 					return Parameters.COLOR_ARRAY[rank];
 				} else return Parameters.COLOR_ARRAY[^1];

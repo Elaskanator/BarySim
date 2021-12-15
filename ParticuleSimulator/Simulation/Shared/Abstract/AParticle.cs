@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Vectors;
@@ -9,15 +10,34 @@ namespace ParticleSimulator.Simulation {
 	public interface IParticle : IVectorDouble, IEquatable<IParticle>, IEqualityComparer<IParticle> {
 		public int ID { get; }
 		public int GroupID { get; }
-		public bool Enabled { get; set; }
+		public bool Enabled { get; }
 		public bool Visible { get; }
-
-		public double[] LiveCoordinates { get; set; }
-		public double[] Velocity { get; set; }
 
 		public double Radius { get; }
 		public double Density { get; }
 		public double Luminosity { get; }
+	}
+
+	public struct ParticleData : IParticle {
+		public int ID { get; set; }
+		public int GroupID { get; set; }
+		public bool Enabled => true;
+		public bool Visible => true;
+		public int DIM => this.Coordinates.Length;
+		public double[] Coordinates { get; set; }
+		public double Radius { get; set; }
+		public double Density { get; set; }
+		public double Luminosity { get; set; }
+
+		public bool Equals(IParticle other) {
+			return this.ID == other.ID;
+		}
+		public bool Equals(IParticle x, IParticle y) {
+			return x.ID == y.ID;
+		}
+		public int GetHashCode([DisallowNull] IParticle obj) {
+			return obj.ID.GetHashCode();
+		}
 	}
 
 	public abstract class AParticle<TSelf> : VectorDouble, IParticle
@@ -42,11 +62,11 @@ namespace ParticleSimulator.Simulation {
 		public virtual double Radius => 0d;
 		public virtual double Density => 1d;
 		public virtual double Luminosity => 1d;
-
+		
 		internal double[] _coordinates;
 		public override double[] Coordinates {
 			get => this._coordinates;
-			set {
+			protected set {
 				this._coordinates = value;
 				this.LiveCoordinates = (double[])value.Clone(); }}
 		public double[] LiveCoordinates { get; set; }
@@ -98,6 +118,17 @@ namespace ParticleSimulator.Simulation {
 				else if (dist > Parameters.DOMAIN_MAX_RADIUS)
 					this.Velocity[d] -= weight * Math.Pow(dist - Parameters.DOMAIN_MAX_RADIUS, 0.5d);
 			}
+		}
+
+		public ParticleData CloneData() {
+			return new() {
+				ID = this.ID,
+				GroupID = this.GroupID,
+				Coordinates = (double[])this.LiveCoordinates.Clone(),
+				Radius = this.Radius,
+				Density = this.Density,
+				Luminosity = this.Luminosity
+			};
 		}
 
 		public bool Equals(IParticle other) { return !(other is null) && this.ID == other.ID; }

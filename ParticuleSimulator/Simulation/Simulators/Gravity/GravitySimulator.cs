@@ -42,15 +42,15 @@ namespace ParticleSimulator.Simulation.Gravity {
 						netForce = new double[Parameters.DIM];//ignore gravity
 						double newMass = this.Mass + other.Mass;
 						double[]
-							newCoordinates = this.LiveCoordinates.Multiply(this.Mass)
-								.Add(other.LiveCoordinates.Multiply(other.Mass))
+							newCoordinates = this.Coordinates.Multiply(this.Mass)
+								.Add(other.Coordinates.Multiply(other.Mass))
 								.Divide(newMass),
 							newVelocity = this.Velocity.Multiply(this.Mass)
 								.Add(other.Velocity.Multiply(other.Mass))
 								.Divide(this.Mass + other.Mass),
 							newNetForce = this.NetForce.Add(other.NetForce);
 						//remove smaller particle
-						larger.LiveCoordinates = newCoordinates;
+						larger.Coordinates = newCoordinates;
 						larger.Velocity = newVelocity;
 						larger.Mass = newMass;
 						larger.NetForce = newNetForce;

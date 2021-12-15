@@ -35,17 +35,11 @@ namespace ParticleSimulator.Simulation.Boids {
 			for (int i = 0; i < this.EnabledParticles.Length; i++) {
 				this.EnabledParticles[i].ApplyTimeStep(
 					this.EnabledParticles[i].Acceleration
-					//	.Add(this.EnabledParticles[i].CollisionAcceleration)
+						.Add(this.EnabledParticles[i].CollisionAcceleration)
 					,Parameters.TIME_SCALE);
 				this.EnabledParticles[i].Acceleration = new double[Parameters.DIM];
-				//this.EnabledParticles[i].CollisionAcceleration = new double[Parameters.DIM];
+				this.EnabledParticles[i].CollisionAcceleration = new double[Parameters.DIM];
 			}
-		}
-
-		public override ConsoleColor ChooseGroupColor(IEnumerable<Boid> others) {
-			return others.Any(p => p.IsPredator)
-				? Parameters.BOIDS_PREDATOR_COLOR
-				: base.ChooseGroupColor(others.AsEnumerable());
 		}
 	}
 }

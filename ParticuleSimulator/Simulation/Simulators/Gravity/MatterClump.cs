@@ -102,7 +102,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 				double[] avgMomentum = this.Momentum.Divide(memberParticles.Count);
 
 				this.Mass = avgMass;
-				double valenceRadius = 3d * this.Radius;
+				double valenceRadius = 4d * this.Radius;
 				int valenceNum = 0, valenceSize = 0, valenceCapacity = 1;
 				double[] direction;
 				foreach (MatterClump shrapnel in memberParticles) {
@@ -116,13 +116,13 @@ namespace ParticleSimulator.Simulation.Gravity {
 					shrapnel.LiveCoordinates = centerOfMass.Add(direction.Multiply(valenceNum * valenceRadius));
 					shrapnel.Velocity = valenceNum == 0 && valenceCapacity == 1
 						? new double[Parameters.DIM]
-						: direction.Multiply(velocity * Math.Pow(valenceNum, 1.1d));
+						: direction.Multiply(velocity * Math.Pow(valenceNum, 1.33d));
 					shrapnel.Momentum = shrapnel.Momentum.Add(avgMomentum);
 					shrapnel.Enabled = true;
 
 					if (++valenceSize >= valenceCapacity) {
 						if (valenceNum++ == 0)
-							valenceCapacity = 8;
+							valenceCapacity = 1 << (2 + Parameters.DIM);
 						else valenceCapacity <<= 1;
 						valenceSize = 0;
 					}

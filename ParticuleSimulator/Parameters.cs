@@ -14,7 +14,7 @@ namespace ParticleSimulator {
 		public const int PARTICLES_GROUP_MAX = 32;
 		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 1d;//0 for max size
 
-		public const double WORLD_SCALE = 2d;
+		public const double WORLD_SCALE = 3d;
 		public const double TIME_SCALE = 1d;
 		public const int DIM = 2;
 		
@@ -48,13 +48,12 @@ namespace ParticleSimulator {
 		public const bool PERF_STATS_ENABLE = true;
 		public const bool PERF_GRAPH_ENABLE = true;
 		
-		public const bool ENABLE_ASYNCHRONOUS = true;
-		public const int PRECALCULATION_LIMIT = 1;
-		public const int SIMULATION_PARALLELISM = 16;
-		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times per render
-		public const int TREE_REFRESH_REUSE_ALLOWANCE = 1;
-		public const bool SYNC_SIMULATION = true;
-		public const bool SYNC_TREE_REFRESH = false;
+		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
+		public const int SIMULATION_PARALLELISM = 16;//number of simulation threads available for processing trea leaves
+		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
+		public const int TREE_REFRESH_REUSE_ALLOWANCE = 1;//how many simulation cycles can occur on stale data
+		public const bool SYNC_SIMULATION = true;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
+		public const bool SYNC_TREE_REFRESH = false;//synchronizes tree refresh to not start until simulation refreshes (with reuse limit still)
 
 		#region Gravity
 		public const double GRAVITY_INITIAL_SEPARATION = 0.1d;
@@ -67,14 +66,14 @@ namespace ParticleSimulator {
 		public const double ELECTROSTATIC_MIN_CHARGE = 0d;
 		public const double ELECTROSTATIC_MAX_CHARGE = 0d;
 
-		public const double GRAVITY_MIN_STARTING_MASS = 1E-1;
-		public const double GRAVITY_MAX_STARTING_MASS = 1E1;
-		public const double GRAVITY_MASS_BIAS = 8d;
+		public const double GRAVITY_MIN_STARTING_MASS = 1E-2;
+		public const double GRAVITY_MAX_STARTING_MASS = 2E1;
+		public const double GRAVITY_MASS_BIAS = 10d;
 
 		public const double GRAVITY_CRITICAL_MASS = 1024d;
 		public const double GRAVITY_EXPLOSION_MIN_SPEED = 0d;
-		public const double GRAVITY_EXPLOSION_MAX_SPEED = 0.0002d;
-		public const double GRAVITY_EXPLOSION_SPEED_LOW_BIAS = 4d;//set to zero for always max
+		public const double GRAVITY_EXPLOSION_MAX_SPEED = 0.00025d;
+		public const double GRAVITY_EXPLOSION_SPEED_LOW_BIAS = 2d;//set to zero for always max
 
 		public const double GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-2;
 		public const double GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0d;
@@ -111,7 +110,6 @@ namespace ParticleSimulator {
 		
 		public const double BOIDS_PREDATOR_CHANCE		= 0d;
 		public const double BOIDS_PREDATOR_CHANCE_BIAS	= 1d;
-		public const ConsoleColor BOIDS_PREDATOR_COLOR	= ConsoleColor.White;
 
 		public const bool BOIDS_REPULSION_ENABLE				= true;
 		public const double BOIDS_BOID_REPULSION_DIST			= 0.05d;

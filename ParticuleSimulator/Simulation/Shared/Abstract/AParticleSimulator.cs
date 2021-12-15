@@ -12,8 +12,8 @@ namespace ParticleSimulator.Simulation {
 		public IParticleGroup[] ParticleGroups { get; }
 
 		public ITree RebuildTree();
-		public ConsoleColor ChooseGroupColor(IParticle[] particles);
-		public IParticle[] RefreshSimulation(object[] parameters);
+		public ConsoleColor ChooseGroupColor(IEnumerable<ParticleData> particles);
+		public ParticleData[] RefreshSimulation(object[] parameters);
 	}
 
 	public abstract class AParticleSimulator<TParticle> : IParticleSimulator
@@ -44,21 +44,19 @@ namespace ParticleSimulator.Simulation {
 		protected virtual bool DoCombine(double distance, TParticle smaller, TParticle larger) { return false; }
 		protected virtual double[] ComputeCollisionAcceleration(double distance, double[] toOther, TParticle smaller, TParticle larger) { return new double[Parameters.DIM]; }
 
-		public TParticle[] RefreshSimulation(QuadTree<TParticle> tree) {
+		public ParticleData[] RefreshSimulation(object[] parameters) {
 			if (this.EnabledParticles.Length == 0)
 				Program.CancelAction(null, null);
 
-			this.Refresh(tree);
+			this.Refresh((QuadTree<TParticle>)parameters[0]);
 
 			this.HandleCollisions(this.EnabledParticles, false);//outside of node
 
 			this.HandleBounds();
 			
 			this.EnabledParticles = Program.AllParticles.Where(p => p.Enabled).Cast<TParticle>().ToArray();
-
-			return this.EnabledParticles;
+			return this.EnabledParticles.Where(p => p.Visible).Select(p => p.CloneData()).ToArray();
 		}
-		IParticle[] IParticleSimulator.RefreshSimulation(object[] parameters) { return this.RefreshSimulation((QuadTree<TParticle>)parameters[0]); }
 
 		protected abstract void Refresh(QuadTree<TParticle> tree);
 		protected abstract ATree<TParticle> NewTree(double[] leftCorner, double[] rightCorner);
@@ -135,8 +133,8 @@ namespace ParticleSimulator.Simulation {
 				particle = particles[i];
 				particle._coordinates = (double[])particle.LiveCoordinates.Clone();
 				for (int d = 0; d < Parameters.DIM; d++) {
-					leftCorner[d] = leftCorner[d] < particle.Coordinates[d] ? leftCorner[d] : particle.Coordinates[d];
-					rightCorner[d] = rightCorner[d] > particle.Coordinates[d] ? rightCorner[d] : particle.Coordinates[d];
+					leftCorner[d] = leftCorner[d] < particle.LiveCoordinates[d] ? leftCorner[d] : particle.LiveCoordinates[d];
+					rightCorner[d] = rightCorner[d] > particle.LiveCoordinates[d] ? rightCorner[d] : particle.LiveCoordinates[d];
 				}
 			}
 			rightCorner = rightCorner.Select(x => x += Parameters.WORLD_EPSILON).ToArray();
@@ -149,13 +147,12 @@ namespace ParticleSimulator.Simulation {
 			return result;
 		}
 
-		public virtual ConsoleColor ChooseGroupColor(IEnumerable<TParticle> particles) {
+		public virtual ConsoleColor ChooseGroupColor(IEnumerable<ParticleData> particles) {
 			int dominantGroupID;
 			if (Parameters.DIM > 2)
-				dominantGroupID = particles.MinBy(p => Renderer.GetDepthScalar(p.LiveCoordinates)).GroupID;
+				dominantGroupID = particles.MinBy(p => Renderer.GetDepthScalar(p.Coordinates)).GroupID;
 			else dominantGroupID  = particles.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
 			return Parameters.COLOR_ARRAY[dominantGroupID % Parameters.COLOR_ARRAY.Length];
 		}
-		public ConsoleColor ChooseGroupColor(IParticle[] particles) { return this.ChooseGroupColor(particles.Cast<TParticle>()); }
 	}
 }

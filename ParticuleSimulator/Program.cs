@@ -57,9 +57,9 @@ namespace ParticleSimulator {
 
 		private static RunManager BuildRunManager() {
 			Resource_Tree = new SynchronizedDataBuffer("Tree", 0);
-			Resource_Locations = new SynchronizedDataBuffer("Locations", Parameters.ENABLE_ASYNCHRONOUS ? Parameters.PRECALCULATION_LIMIT : 0);
-			Resource_Resamplings = new SynchronizedDataBuffer("Resampling", Parameters.ENABLE_ASYNCHRONOUS ? Parameters.PRECALCULATION_LIMIT : 0);
-			Resource_Rasterization = new SynchronizedDataBuffer("Rasterization", Parameters.ENABLE_ASYNCHRONOUS ? Parameters.PRECALCULATION_LIMIT : 0);
+			Resource_Locations = new SynchronizedDataBuffer("Locations", Parameters.PRECALCULATION_LIMIT);
+			Resource_Resamplings = new SynchronizedDataBuffer("Resampling", Parameters.PRECALCULATION_LIMIT);
+			Resource_Rasterization = new SynchronizedDataBuffer("Rasterization", Parameters.PRECALCULATION_LIMIT);
 			
 			StepEval_Draw = new(new() {
 				Name = "Drawing",
