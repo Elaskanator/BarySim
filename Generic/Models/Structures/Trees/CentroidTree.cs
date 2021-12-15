@@ -15,6 +15,7 @@ namespace Generic.Models {
 		}
 
 		public readonly double[] Size;
+		public override int MaxDepth => 30;
 
 		protected override QuadTree<TElement> GetContainingChild(TElement element) {
 			int idx = 0, b = 1;

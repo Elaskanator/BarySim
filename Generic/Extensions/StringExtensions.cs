@@ -7,39 +7,42 @@ namespace Generic.Extensions {
 		public static readonly char[] Base16Chars = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 		public static string ToStringBetter(this double value, int minAccuracy = 2, bool stripZeros = true, int? maxLength = 6) {
-			string result, exponent = "";
+			string result, exponentStr = "";
 			if (value == 0) {
 				if (stripZeros || minAccuracy < 2)
 					result = "0";
 				else result = value.ToString("0." + new string('0', minAccuracy - 1));
 			} else {
 				double mag = value.BaseExponent();
-				int magnitude = (int)Math.Floor(mag);
-				int remainingDecimals = minAccuracy;
-				if (magnitude > minAccuracy + 2) {
-					exponent = "E" + magnitude;
+				int magnitude = (int)Math.Floor(mag),
+					remainingDecimals = maxLength.HasValue && maxLength.Value - 2 < minAccuracy
+						? maxLength.Value - 2
+						: minAccuracy,
+					currentLength = 1;
+				if (magnitude > minAccuracy + 2 || Math.Abs(magnitude) + (magnitude < 0 ? 1 : 0) + 1 > maxLength) {
+					stripZeros = false;
+					exponentStr = "E" + magnitude;
+					currentLength += exponentStr.Length;
 					value /= Math.Pow(10, magnitude);
-					mag = value.BaseExponent();
-					magnitude = (int)Math.Floor(mag);
-				} else remainingDecimals -= magnitude;
-				remainingDecimals -= magnitude < 0 ? 2 : 1;
-					
-				if (remainingDecimals > 0) {
+					magnitude = 0;
+				};
+				remainingDecimals -= 1 + magnitude + (magnitude < 0 ? 1 : 0);
+
+				if (remainingDecimals > 0 && currentLength < maxLength - 1) {
+					value = Math.Round(value, remainingDecimals);
 					result = value.ToString("0." + new string('0', remainingDecimals));
 					if (stripZeros) {
 						int nonzeroRight = result.Reverse().TakeWhile(c => c == '0').Count();
 						if (nonzeroRight == remainingDecimals && (int)value > 0)
 							result = result.Substring(0, result.Length - nonzeroRight - 1);
 					}
-				} else result = ((int)value).ToString();
-
-				result = result + exponent;
+				} else result = ((int)Math.Round(value, 0)).ToString();
 			}
 			if (maxLength.HasValue)
 				result = value < 1d
 					? new string(result.Take(maxLength.Value).ToArray())
 					: new string(result.Reverse().Take(maxLength.Value).Reverse().ToArray());
-			return result;
+			return result + exponentStr;
 		}
 
 		public static string ToNumericString(this string noun, int number) {

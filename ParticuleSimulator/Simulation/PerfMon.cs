@@ -158,10 +158,10 @@ namespace ParticleSimulator.Simulation {
 					frameTime = _frameTimingMs.Current,
 					fpsTime = _fpsTimingMs.Current;
 				string
-					label_min = _currentMin < 1000 ? _currentMin.ToStringBetter(2) + "ms" : (_currentMin / 1000).ToStringBetter(2) + "s",
-					label_max = _currentMax < 1000 ? _currentMax.ToStringBetter(2) + "ms" : (_currentMax / 1000).ToStringBetter(2) + "s",
-					label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(2) + "ms" : (frameTime / 1000).ToStringBetter(2) + "s",
-					label_FpsTime = fpsTime < 1000 ? fpsTime.ToStringBetter(2) + "ms" : (fpsTime / 1000).ToStringBetter(2) + "s";
+					label_min = _currentMin < 1000 ? _currentMin.ToStringBetter(2, false) + "ms" : (_currentMin / 1000).ToStringBetter(2, false) + "s",
+					label_max = _currentMax < 1000 ? _currentMax.ToStringBetter(2, false) + "ms" : (_currentMax / 1000).ToStringBetter(2, false) + "s",
+					label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(2, false): (frameTime / 1000).ToStringBetter(2, false),
+					label_FpsTime = fpsTime < 1000 ? fpsTime.ToStringBetter(2, false) : (fpsTime / 1000).ToStringBetter(2, false);
 
 				for (int i = 0; i < label_max.Length; i++)
 					result[i] = new ConsoleExtensions.CharInfo(label_max[i], ConsoleColor.Gray);

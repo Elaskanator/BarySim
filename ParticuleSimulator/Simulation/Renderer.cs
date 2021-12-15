@@ -98,7 +98,7 @@ namespace ParticleSimulator.Simulation {
 							(isDiscrete && cIdx == 0 ? "=" : "≤")
 							+ (isDiscrete
 								? ((int)Scaling.Values[cIdx]).ToString()
-								: Scaling.Values[cIdx].ToStringBetter(2));
+								: Scaling.Values[cIdx].ToStringBetter(2, true, 5));
 
 					for (int i = 0; i < rowStringData.Length; i++)
 						buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);
@@ -128,10 +128,17 @@ namespace ParticleSimulator.Simulation {
 						pixelChar,
 						distinct,
 						Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity
-							? distinct.Max(p => p.Luminosity)
+							? new double[] {
+								topStuff.Length > 0
+									? topStuff.OrderBy(p => GetDepthScalar(p.LiveCoordinates)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
+									: 0d,
+								bottomStuff.Length > 0
+									? bottomStuff.OrderBy(p => GetDepthScalar(p.LiveCoordinates)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
+									: 0d
+							}.Max()
 							: Parameters.COLOR_METHOD == ParticleColoringMethod.Density
 								? distinct.Sum(p => p.Density)
-							: distinct.Length);
+								: distinct.Length);
 			}
 			return results;
 		}

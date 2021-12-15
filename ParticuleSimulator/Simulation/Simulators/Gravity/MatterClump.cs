@@ -17,29 +17,32 @@ namespace ParticleSimulator.Simulation.Gravity {
 		private double _mass = 0d;
 		public override double Mass {
 			get => this._mass;
-			set { this._mass = value;
-				this._density = Parameters.GRAVITY_COMPRESSION_BIAS > 0d
-					? 1d
-					: 1d;
-				this._radius = Math.Pow(value, 1d / Parameters.DIM) / Parameters.GRAVITY_RADIAL_DENSITY / this._density;
+			set {
+				this._mass = value;
+				this._radius = Math.Pow(value, 1d / Parameters.DIM) / Parameters.GRAVITY_RADIAL_DENSITY;
+				this._density = Math.Pow(this._radius, 1d / Parameters.DIM);
+				this._radius /= this._density;
 				this._luminosity = Math.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5d); }}
 		public override double[] CollisionAcceleration {
 			get => this.CollisionImpulse.Divide(this.Mass);
 			set { this.CollisionImpulse = value.Multiply(this.Mass); } }
 
 		public override bool Absorb(double distance, double[] toOther, MatterClump other) {
-			double totalMass = this.Mass + other.Mass;
 			double[] baryCenter =
 				this.LiveCoordinates.Multiply(this.Mass)
 				.Add(other.LiveCoordinates.Multiply(other.Mass))
-				.Divide(totalMass);
+				.Divide(this.Mass + other.Mass);
 			
-			double distError =
+			double distanceError =
 				(other.LiveCoordinates.Distance(baryCenter) / (this.Radius + other.Radius))
 				//* (other.Momentum.Distance(this.Momentum) / (this.Momentum.Magnitude() + other.Momentum.Magnitude()))
 				;
-			if (distError <= Parameters.GRAVITY_COMBINE_OVERLAP_CUTOFF_BARYON_ERROR) {
-				this.Mass = totalMass;
+			if (distance <= this.Radius - other.Radius || distance <= other.Radius - this.Radius
+			|| distanceError <= Parameters.GRAVITY_COMBINE_OVERLAP_CUTOFF_BARYON_ERROR) {
+				//this._density =
+				//	((this._density * this._mass) + (other._density * other._mass))
+				//	/ (this.Mass + other.Mass);
+				this.Mass += other.Mass;
 				this.Charge += other.Charge;
 				this.LiveCoordinates = baryCenter;
 				this.Momentum = this.Momentum.Add(other.Momentum);
@@ -47,6 +50,10 @@ namespace ParticleSimulator.Simulation.Gravity {
 				this.FarfieldImpulse = this.FarfieldImpulse.Add(other.FarfieldImpulse);
 				this.CollisionImpulse = this.CollisionImpulse.Add(other.CollisionImpulse);
 
+				other.Momentum = new double[Parameters.DIM];
+				other.NearfieldImpulse = new double[Parameters.DIM];
+				other.FarfieldImpulse = new double[Parameters.DIM];
+				other.CollisionImpulse = new double[Parameters.DIM];
 				other.Enabled = false;
 				return true;
 			}
@@ -80,6 +87,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 
 				double totalMass = this.Mass;
 				double totalCharge = this.Charge;
+				double density = this.Density;
 				double excessMass = totalMass - Parameters.GRAVITY_CRITICAL_MASS;
 				double intensityFraction = excessMass / Parameters.GRAVITY_CRITICAL_MASS;
 				double velocity;
@@ -94,8 +102,8 @@ namespace ParticleSimulator.Simulation.Gravity {
 				double[] avgMomentum = this.Momentum.Divide(memberParticles.Count);
 
 				this.Mass = avgMass;
-				double valenceRadius = 4d * this.Radius;
-				int valenceNum = 0, valenceSize = 0, valenceCapacity = 1, valenceScaling = 1 << (Parameters.DIM - 1);
+				double valenceRadius = 3d * this.Radius;
+				int valenceNum = 0, valenceSize = 0, valenceCapacity = 1;
 				double[] direction;
 				foreach (MatterClump shrapnel in memberParticles) {
 					shrapnel.MergedParticles.Clear();
@@ -103,6 +111,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 					direction = HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random);
 
 					shrapnel.Mass = avgMass;
+					//shrapnel._density = density;
 					shrapnel.Charge = avgCharge;
 					shrapnel.LiveCoordinates = centerOfMass.Add(direction.Multiply(valenceNum * valenceRadius));
 					shrapnel.Velocity = valenceNum == 0 && valenceCapacity == 1
@@ -112,8 +121,9 @@ namespace ParticleSimulator.Simulation.Gravity {
 					shrapnel.Enabled = true;
 
 					if (++valenceSize >= valenceCapacity) {
-						valenceNum++;
-						valenceCapacity *= valenceScaling;
+						if (valenceNum++ == 0)
+							valenceCapacity = 8;
+						else valenceCapacity <<= 1;
 						valenceSize = 0;
 					}
 				}
