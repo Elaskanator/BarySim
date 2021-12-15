@@ -44,21 +44,6 @@ namespace ParticleSimulator.Simulation {
 					? Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => (double)i).ToArray()
 					: null));
 		}
-		
-		public static void TitleUpdate(object[] parameters = null) {
-			int visibleParticles = Program.Simulator.EnabledParticles.Count(p => p.Enabled);
-
-			Console.Title = string.Format("{0} Simulator - {1}{2}{3} - {4}D",
-				Parameters.SimType,
-				Program.AllParticles.Length == Program.Simulator.EnabledParticles.Length
-					? ""
-					: Program.Simulator.EnabledParticles.Length.ToString() + "/",
-				Program.AllParticles.Length.Pluralize("particle"),
-				visibleParticles == Program.Simulator.EnabledParticles.Length
-					? ""
-					: " (" + visibleParticles.ToString() + " visible)",
-				Parameters.DIM);
-		}
 
 		private static DateTime? _lastUpdateUtc = null;
 		public static void FlushScreenBuffer(object[] parameters) {
@@ -121,47 +106,6 @@ namespace ParticleSimulator.Simulation {
 			}
 		}
 
-		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
-			Tuple<char, IParticle[], double>[] sampling = (Tuple<char, IParticle[], double>[])parameters[0];
-
-			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
-			if (!(sampling is null)) {
-				for (int i = 0; i < sampling.Length; i++)
-					frameBuffer[i] = sampling[i] is null ? default :
-						new ConsoleExtensions.CharInfo(
-							sampling[i].Item1,
-							ChooseColor(sampling[i]));
-
-				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth || Parameters.DIM > 2))
-					DrawLegend(frameBuffer);
-			}
-
-			return frameBuffer;
-		}
-
-		public static ConsoleColor ChooseColor(Tuple<char, IParticle[], double> particleData) {
-			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Count
-			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Density
-			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity)
-				return Parameters.COLOR_ARRAY[Scaling.Values.Drop(1).TakeWhile(ds => ds < particleData.Item3).Count()];
-			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group)
-				return Program.Simulator.ChooseGroupColor(particleData.Item2);
-			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth)
-				if (Parameters.DIM > 2) {
-					int numColors = Parameters.COLOR_ARRAY.Length;
-					double depth = 1d - particleData.Item2.Min(p => GetDepthScalar(p.LiveCoordinates));
-					int rank = Scaling.Values.Take(numColors - 1).TakeWhile(a => a < depth).Count();
-					return Parameters.COLOR_ARRAY[rank];
-				} else return Parameters.COLOR_ARRAY[^1];
-			else throw new InvalidEnumArgumentException(nameof(Parameters.COLOR_METHOD));
-		}
-
-		public static double GetDepthScalar(double[] v) {
-			if (Parameters.DIM > 2)
-				return 1d - (v.Skip(2).ToArray().Magnitude() / Parameters.DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT);
-			else return 1d;
-		}
-
 		public static Tuple<char, IParticle[], double>[] Resample(object[] parameters) {
 			IParticle[] particleData = (IParticle[])parameters[0];
 			Tuple<char, IParticle[], double>[] results = new Tuple<char, IParticle[], double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
@@ -193,10 +137,7 @@ namespace ParticleSimulator.Simulation {
 		}
 		private static IEnumerable<IGrouping<int, Tuple<int, int, IParticle>>> DiscreteParticleBin(IParticle[] particles) { 
 			return particles
-				.Where(p =>
-					p.Enabled
-					&& p.LiveCoordinates[0] + p.Radius >= 0d && p.LiveCoordinates[0] - p.Radius < Parameters.DOMAIN_SIZE[0]
-					&& (Parameters.DIM < 2 || p.LiveCoordinates[1] > -p.Radius && p.LiveCoordinates[1] < p.Radius + Parameters.DOMAIN_SIZE[1]))
+				.Where(p => p.Enabled && p.Visible)
 				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < 2*Parameters.WINDOW_HEIGHT))
 				.GroupBy(pd => pd.Item1 + (Parameters.WINDOW_WIDTH * (pd.Item2 / 2)));
 		}
@@ -247,5 +188,46 @@ namespace ParticleSimulator.Simulation {
 									if (p.Radius * pixelScalar >= dist)
 										yield return new(roundedX, roundedY, p);
 		}}}}}}}
+
+		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
+			Tuple<char, IParticle[], double>[] sampling = (Tuple<char, IParticle[], double>[])parameters[0];
+
+			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			if (!(sampling is null)) {
+				for (int i = 0; i < sampling.Length; i++)
+					frameBuffer[i] = sampling[i] is null ? default :
+						new ConsoleExtensions.CharInfo(
+							sampling[i].Item1,
+							ChooseColor(sampling[i]));
+
+				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth || Parameters.DIM > 2))
+					DrawLegend(frameBuffer);
+			}
+
+			return frameBuffer;
+		}
+
+		public static ConsoleColor ChooseColor(Tuple<char, IParticle[], double> particleData) {
+			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Count
+			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Density
+			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity)
+				return Parameters.COLOR_ARRAY[Scaling.Values.Drop(1).TakeWhile(ds => ds < particleData.Item3).Count()];
+			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group)
+				return Program.Simulator.ChooseGroupColor(particleData.Item2);
+			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth)
+				if (Parameters.DIM > 2) {
+					int numColors = Parameters.COLOR_ARRAY.Length;
+					double depth = 1d - particleData.Item2.Min(p => GetDepthScalar(p.LiveCoordinates));
+					int rank = Scaling.Values.Take(numColors - 1).TakeWhile(a => a < depth).Count();
+					return Parameters.COLOR_ARRAY[rank];
+				} else return Parameters.COLOR_ARRAY[^1];
+			else throw new InvalidEnumArgumentException(nameof(Parameters.COLOR_METHOD));
+		}
+
+		public static double GetDepthScalar(double[] v) {
+			if (Parameters.DIM > 2)
+				return 1d - (v.Skip(2).ToArray().Magnitude() / Parameters.DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT);
+			else return 1d;
+		}
 	}
 }

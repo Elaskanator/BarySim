@@ -47,9 +47,10 @@ namespace ParticleSimulator {
 					throw new InvalidEnumArgumentException(nameof(Parameters.SimType), (int)Parameters.SimType, typeof(SimulationType));
 			}
 			AllParticles = Simulator.ParticleGroups.SelectMany(g => g.MemberParticles).ToArray();
-			Renderer.TitleUpdate();
+			PerfMon.TitleUpdate();
 
 			Manager = BuildRunManager();
+			PerfMon.Init();
 			//ConsoleExtensions.WaitForEnter("Press enter to start");
 			Manager.Start();
 		}
@@ -162,7 +163,7 @@ namespace ParticleSimulator {
 				Calculator = Renderer.Rasterize,
 				//Evaluator = null,
 				//Synchronizer = null,
-				Callback = Parameters.PERF_ENABLE ? PerfMon.AfterRasterize : null,
+				Callback = PerfMon.AfterRasterize,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
 				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
@@ -187,7 +188,7 @@ namespace ParticleSimulator {
 				Name = "Console Window Monitor",
 				//Initializer = null,
 				//Calculator = null,
-				Evaluator = Renderer.TitleUpdate,
+				Evaluator = PerfMon.TitleUpdate,
 				Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.CONSOLE_TITLE_INTERVAL_MS)),
 				//Callback = null,
 				//DataAssimilationTicksAverager = null,

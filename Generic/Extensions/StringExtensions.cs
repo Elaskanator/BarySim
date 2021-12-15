@@ -15,22 +15,20 @@ namespace Generic.Extensions {
 			} else {
 				double mag = value.BaseExponent();
 				int magnitude = (int)Math.Floor(mag);
-				if (magnitude > minAccuracy + 2 || magnitude + (value < 0 ? 1 : 0) > maxLength - 1) {
+				int remainingDecimals = minAccuracy;
+				if (magnitude > minAccuracy + 2) {
 					exponent = "E" + magnitude;
 					value /= Math.Pow(10, magnitude);
 					mag = value.BaseExponent();
 					magnitude = (int)Math.Floor(mag);
-					maxLength -= 1 + (magnitude < 0 ? 1 : 0);
-				}
-
-				int remainingLen;
-				remainingLen = minAccuracy - magnitude;
+				} else remainingDecimals -= magnitude;
+				remainingDecimals -= magnitude < 0 ? 2 : 1;
 					
-				if (remainingLen > 0) {
-					result = value.ToString("0." + new string('0', remainingLen));
+				if (remainingDecimals > 0) {
+					result = value.ToString("0." + new string('0', remainingDecimals));
 					if (stripZeros) {
 						int nonzeroRight = result.Reverse().TakeWhile(c => c == '0').Count();
-						if (nonzeroRight == remainingLen && (int)value > 0)
+						if (nonzeroRight == remainingDecimals && (int)value > 0)
 							result = result.Substring(0, result.Length - nonzeroRight - 1);
 					}
 				} else result = ((int)value).ToString();

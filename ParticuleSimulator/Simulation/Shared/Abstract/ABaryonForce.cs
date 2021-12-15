@@ -1,8 +1,8 @@
 ﻿using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public abstract class AForce<TParticle>
-	where TParticle : AClassicalParticle<TParticle> {
+	public abstract class ABaryonForce<TParticle>
+	where TParticle : ABaryonParticle<TParticle> {
 		public abstract double ForceConstant { get; }
 		public abstract bool IsAttractionForce { get; }
 

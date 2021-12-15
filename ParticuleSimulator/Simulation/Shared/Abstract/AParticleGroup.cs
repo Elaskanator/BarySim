@@ -54,7 +54,6 @@ namespace ParticleSimulator.Simulation {
 		public abstract double StartSpeedMax_Particle_Angular { get; }
 		public abstract double StartSpeedMax_Particle_Range { get; }
 
-
 		protected abstract TParticle NewParticle(double[] position, double[] velocity);
 
 		protected virtual double[] NewParticlePosition(double[] center, double radius) {

@@ -63,11 +63,12 @@ namespace ParticleSimulator.Simulation {
 		protected abstract void Refresh(QuadTree<TParticle> tree);
 		protected abstract ATree<TParticle> NewTree(double[] leftCorner, double[] rightCorner);
 
-		protected void HandleCollisions(TParticle[] particles, bool intraNode) {
+		protected double HandleCollisions(TParticle[] particles, bool intraNode) {
+			double largestDelta = 0d;
 			if (this.EnableCollisions) {
-				double distance;
-				double[] toOther, collisionAcceleration;
-				TParticle self, other, smaller, larger;
+				double distance, collisionAcceleration;
+				double[] toOther;
+				TParticle self, other;
 				HashSet<TParticle> evaluatedCollisions = new();
 				Queue<TParticle> pendingCollisions;
 
@@ -77,26 +78,23 @@ namespace ParticleSimulator.Simulation {
 						pendingCollisions = intraNode
 							? new(self.NodeCollisions.Where(p => p.Enabled).Cast<TParticle>())
 							: new(self.NeighborNodeCollisions.Where(p => p.Enabled).Cast<TParticle>());
-						while (pendingCollisions.TryDequeue(out other) && !evaluatedCollisions.Contains(other)) {
-							evaluatedCollisions.Add(other);
 
+						while (pendingCollisions.TryDequeue(out other) && evaluatedCollisions.Add(other)) {
 							toOther = other.LiveCoordinates.Subtract(self.LiveCoordinates);
 							distance = toOther.Magnitude();
-							if (distance < self.Radius + other.Radius) {
-								smaller = self.Radius < other.Radius ? self : other;
-								larger = self.Radius < other.Radius ? other : self;
-								if (this.DoCombine(distance, smaller, larger)) {
-									if (intraNode)
-										foreach (TParticle tail in other.NodeCollisions.Where(tail => tail.Enabled && !evaluatedCollisions.Contains(tail)))
-											pendingCollisions.Enqueue(tail);
-									else foreach (TParticle tail in other.NeighborNodeCollisions.Where(tail => tail.Enabled && !evaluatedCollisions.Contains(tail)))
-											pendingCollisions.Enqueue(tail);
 
-									self.CombineWith(other);
+							if (distance <= self.Radius + other.Radius) {
+								if (self.Absorb(distance, toOther, other)) {
+									self.MergedParticles.Add(other);
+
+									if (intraNode)
+										foreach (TParticle tail in other.NodeCollisions.Where(tail => tail.Enabled))
+											pendingCollisions.Enqueue(tail);
+									else foreach (TParticle tail in other.NeighborNodeCollisions.Where(tail => tail.Enabled))
+											pendingCollisions.Enqueue(tail);
 								} else {
-									collisionAcceleration = this.ComputeCollisionAcceleration(distance, toOther, smaller, larger);
-									self.CollisionAcceleration = self.CollisionAcceleration.Add(collisionAcceleration);
-									other.CollisionAcceleration = other.CollisionAcceleration.Subtract(collisionAcceleration);
+									collisionAcceleration = self.ComputeCollision(distance, toOther, other);
+									largestDelta = largestDelta > collisionAcceleration ? largestDelta : collisionAcceleration;
 								}
 							}
 						}
@@ -107,6 +105,7 @@ namespace ParticleSimulator.Simulation {
 					}
 				}
 			}
+			return largestDelta;
 		}
 
 		private void HandleBounds() {

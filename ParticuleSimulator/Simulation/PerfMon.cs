@@ -6,7 +6,7 @@ using ParticleSimulator.Threading;
 
 namespace ParticleSimulator.Simulation {
 	internal static class PerfMon {
-		public static readonly int GraphWidth;
+		public static int GraphWidth;
 
 		private static SampleSMA _frameTimingMs = new SampleSMA(Parameters.PERF_SMA_ALPHA);
 		private static SampleSMA _fpsTimingMs = new SampleSMA(Parameters.PERF_SMA_ALPHA);
@@ -18,11 +18,11 @@ namespace ParticleSimulator.Simulation {
 		private static StatsInfo[] _columnFpsStatsMs;
 		private static ConsoleExtensions.CharInfo[][] _graphColumns;
 		private static DateTime _lastGraphRenderFrameUtc = DateTime.UtcNow;
+		private static Tuple<string, double, ConsoleColor, ConsoleColor>[] _statsHeaderValues;
+
 		private static readonly object _columnStatsLock = new();
 
-		private static readonly Tuple<string, double, ConsoleColor, ConsoleColor>[] _statsHeaderValues;
-
-		static PerfMon() {
+		public static void Init() {
 			_statsHeaderValues = new Tuple<string, double, ConsoleColor, ConsoleColor>[
 				1 + (Parameters.PERF_STATS_ENABLE
 					? 1 + Program.Manager.Evaluators.Count()
@@ -41,6 +41,19 @@ namespace ParticleSimulator.Simulation {
 			_columnFrameTimeStatsMs = new StatsInfo[GraphWidth];
 			_columnFpsStatsMs = new StatsInfo[GraphWidth];
 			_graphColumns = new ConsoleExtensions.CharInfo[GraphWidth][];
+		}
+		
+		public static void TitleUpdate(object[] parameters = null) {
+			Console.Title = string.Format("{0} Simulator {1}D - {2}/{3}/{4}{5}",
+				Parameters.SimType,
+				Parameters.DIM,
+				Program.Simulator.EnabledParticles.Count(p => p.Visible),
+				Program.Simulator.EnabledParticles.Length,
+				Program.AllParticles.Length.Pluralize("Particle"),
+				_fpsTimingMs.NumUpdates > 0
+					? string.Format(" ({0} fps)", (1000d / _fpsTimingMs.Current).ToStringBetter(2, false))
+					: ""
+			);
 		}
 
 		public static void AfterRasterize(StepEvaluator result) {

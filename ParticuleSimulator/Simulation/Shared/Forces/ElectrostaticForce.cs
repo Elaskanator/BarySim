@@ -1,6 +1,6 @@
 ﻿namespace ParticleSimulator.Simulation {
-	public class ElectrostaticForce<TParticle> : AForce<TParticle>
-	where TParticle : AClassicalParticle<TParticle> {
+	public class ElectrostaticForce<TParticle> : ABaryonForce<TParticle>
+	where TParticle : ABaryonParticle<TParticle> {
 		public override double ForceConstant => Parameters.ELECTROSTATIC_CONSTANT;
 		public override bool IsAttractionForce => false;
 

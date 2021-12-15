@@ -10,6 +10,7 @@ namespace ParticleSimulator.Simulation {
 		public int ID { get; }
 		public int GroupID { get; }
 		public bool Enabled { get; set; }
+		public bool Visible { get; }
 
 		public double[] LiveCoordinates { get; set; }
 		public double[] Velocity { get; set; }
@@ -32,8 +33,12 @@ namespace ParticleSimulator.Simulation {
 
 		private readonly int _id = ++_globalID;
 		public int ID => this._id;
-		public bool Enabled { get; set; }
 		public int GroupID { get; private set; }
+		public bool Enabled { get; set; }
+		public bool Visible =>
+			this.LiveCoordinates[0] + this.Radius >= 0d && this.LiveCoordinates[0] - this.Radius < Parameters.DOMAIN_SIZE[0]
+			&& (Parameters.DIM < 2 || this.LiveCoordinates[1] > -this.Radius && this.LiveCoordinates[1] < this.Radius + Parameters.DOMAIN_SIZE[1]);
+
 		public virtual double Radius => 0d;
 		public virtual double Density => 1d;
 		public virtual double Luminosity => 1d;
@@ -55,21 +60,20 @@ namespace ParticleSimulator.Simulation {
 		public bool IsVisible => this.LiveCoordinates.All((x, d) => x + this.Radius >= 0d && x - this.Radius < Parameters.DOMAIN_SIZE[d]);
 		public virtual int? InteractionLimit => null;
 
-		protected virtual IEnumerable<TSelf> Filter(IEnumerable<TSelf> others) { return others; }
-
 		public void ApplyTimeStep(double[] acceleration, double timeStep) {
-			this.Velocity = this.Velocity.Add(acceleration.Add(this.CollisionAcceleration).Multiply(timeStep));
+			this.Velocity = this.Velocity.Add(
+				acceleration
+				.Add(this.CollisionAcceleration)
+				.Multiply(timeStep));
 			this.LiveCoordinates = this.LiveCoordinates.Add(this.Velocity.Multiply(timeStep));
 			this.AfterUpdate();
 		}
+		
+		protected virtual IEnumerable<TSelf> Filter(IEnumerable<TSelf> others) { return others; }
 		protected virtual void AfterUpdate() { }
-
-		public void CombineWith(TSelf other) {
-			other.Enabled = false;
-			this.Incorporate(other);
-			this.MergedParticles.Add(other);
-		}
-		protected virtual void Incorporate(TSelf other) { throw new NotSupportedException(); }
+		public virtual bool DoCombine(double distance, double[] toOther, TSelf other) { return false; }
+		public virtual double ComputeCollision(double distance, double[] toOther, TSelf other) { return 0d; }
+		public virtual bool Absorb(double distance, double[] toOther, TSelf other) { return false; }
 
 		public void WrapPosition() {
 			for (int i = 0; i < this.DIM; i++)

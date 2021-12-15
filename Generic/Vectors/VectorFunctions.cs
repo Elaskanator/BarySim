@@ -37,7 +37,7 @@ namespace Generic.Vectors {
 			double magnitude = Magnitude(v);
 			return magnitude == len
 				? v
-				: v.Multiply(magnitude / len);
+				: v.Multiply(len / magnitude);
 		}
 		public static VectorDouble Normalize(this VectorDouble v, double len = 1d) { return (VectorDouble)Normalize(v.Coordinates, len); }
 

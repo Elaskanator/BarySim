@@ -1,6 +1,6 @@
 ﻿namespace ParticleSimulator.Simulation {
-	public class GravitationalForce<TParticle> : AForce<TParticle>
-	where TParticle : AClassicalParticle<TParticle> {
+	public class GravitationalForce<TParticle> : ABaryonForce<TParticle>
+	where TParticle : ABaryonParticle<TParticle> {
 		public override double ForceConstant => Parameters.GRAVITATIONAL_CONSTANT;
 		public override bool IsAttractionForce => true;
 

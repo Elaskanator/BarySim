@@ -51,7 +51,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 			} else {
 				double angle = Math.Atan2(position[1] - center[1], position[0] - center[0]);
 				angle += 2 * Math.PI
-					* (0.25d
+					* (0.25d//90 degree rotation
 						+ (Math.Pow(Program.Random.NextDouble(), Parameters.GRAVITY_ALIGNMENT_SKEW_POW)
 							* Parameters.GRAVITY_ALIGNMENT_SKEW_RANGE_PCT / 100d));
 

@@ -2,7 +2,7 @@
 
 namespace ParticleSimulator.Simulation {
 	public class FarFieldQuadTree<TParticle> : CentroidTree<TParticle>
-	where TParticle : AClassicalParticle<TParticle> {
+	where TParticle : ABaryonParticle<TParticle> {
 		public FarFieldQuadTree(double[] corner1, double[] corner2, QuadTree<TParticle> parent = null)
 		: base(corner1, corner2, parent) {
 			this.BaryCenter_Position = new();

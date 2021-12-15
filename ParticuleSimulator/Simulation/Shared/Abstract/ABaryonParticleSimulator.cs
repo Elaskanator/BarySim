@@ -7,12 +7,12 @@ using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public abstract class ABaryonParticleSimulator<TParticle> : AParticleSimulator<TParticle>
-	where TParticle : AClassicalParticle<TParticle> {
-		public ABaryonParticleSimulator(params AForce<TParticle>[] forces) {
+	where TParticle : ABaryonParticle<TParticle> {
+		public ABaryonParticleSimulator(params ABaryonForce<TParticle>[] forces) {
 			this.Forces = forces;
 		}
 
-		public readonly AForce<TParticle>[] Forces;
+		public readonly ABaryonForce<TParticle>[] Forces;
 
 		protected override void Refresh(QuadTree<TParticle> tree) {//modified Barnes-Hut Algorithm
 			Parallel.ForEach(
@@ -51,30 +51,35 @@ namespace ParticleSimulator.Simulation {
 
 			double remainingTimeStep = 1d,
 				timeStep,
+				delta,
 				largestDelta;
 			int subdivisionPow;
 			bool anyLeft = true;
-			while (anyLeft && remainingTimeStep > 0) {
+			while (anyLeft && remainingTimeStep > Parameters.WORLD_EPSILON) {
 				anyLeft = false;
 
 				largestDelta = this.ComputeImpulses(particles, leaf, nearfieldLeaves) * remainingTimeStep * Parameters.TIME_SCALE;
+				delta = this.HandleCollisions(particles, true);//inside of node only
+				largestDelta = largestDelta > delta ? largestDelta : delta;
+
 				timeStep = remainingTimeStep;
 				subdivisionPow = 0;
-				while (subdivisionPow < Parameters.ADAPTIVE_TIME_MAX_DIVISIONS && largestDelta > Parameters.ADAPTIVE_TIME_GRANULARITY) {
+				while (subdivisionPow < Parameters.ADAPTIVE_TIME_MAX_DIVISIONS && timeStep > 2d*Parameters.WORLD_EPSILON && largestDelta > Parameters.ADAPTIVE_TIME_GRANULARITY) {
 					subdivisionPow++;
 					largestDelta /= 2d;
 					timeStep /= 2d;
 				}
 
-				this.HandleCollisions(particles, true);//inside of node only
 				for (int i = 0; i < particles.Length; i++)
 					if ((anyLeft |= particles[i].Enabled)) {
 						particles[i].FarfieldImpulse = baryonFarImpulseAsym.Multiply(particles[i].Mass);
 						particles[i].ApplyTimeStep(
-							particles[i].NearfieldImpulse.Divide(particles[i].Mass).Clamp(Parameters.PARTICLE_MAX_ACCELERATION)
-								.Add(particles[i].FarfieldImpulse.Divide(particles[i].Mass)),
+							particles[i].NearfieldImpulse
+								.Add(particles[i].FarfieldImpulse)
+								.Divide(particles[i].Mass)
+								.Clamp(timeStep * Parameters.TIME_SCALE * Parameters.PARTICLE_MAX_ACCELERATION),
 							timeStep * Parameters.TIME_SCALE);
-						particles[i].CollisionAcceleration = new double[Parameters.DIM];
+						particles[i].CollisionImpulse = new double[Parameters.DIM];
 					}
 
 				remainingTimeStep -= timeStep;
@@ -130,15 +135,6 @@ namespace ParticleSimulator.Simulation {
 										particles[selfIdx].NeighborNodeCollisions.Enqueue(other);
 								}
 								particles[selfIdx].NearfieldImpulse = particles[selfIdx].NearfieldImpulse.Add(totalImpulse);
-
-								accelerationDelta = totalImpulse.Magnitude()
-									/ (particles[selfIdx].Mass < other.Mass ? particles[selfIdx].Mass : other.Mass);
-								largestDelta = accelerationDelta > largestDelta ? accelerationDelta : largestDelta;
-						
-								if (distance > Parameters.WORLD_EPSILON) {
-									velocityDelta = particles[selfIdx].Velocity.Subtract(other.Velocity).Magnitude() / distance;
-									largestDelta = velocityDelta > largestDelta ? velocityDelta : largestDelta;
-								}
 							}
 						}
 					}

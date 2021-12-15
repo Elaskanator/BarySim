@@ -68,7 +68,6 @@ namespace ParticleSimulator.Simulation {
 			ConsoleColor.Red,
 			ConsoleColor.DarkYellow,
 			ConsoleColor.Yellow,
-			ConsoleColor.Gray,
 			ConsoleColor.White,
 			ConsoleColor.Cyan,
 			ConsoleColor.DarkCyan,
