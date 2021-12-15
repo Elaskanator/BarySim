@@ -13,15 +13,17 @@ namespace ParticleSimulator.Simulation {
 			collision = distance < p1.Radius + p2.Radius;
 			return distance > Parameters.WORLD_EPSILON
 				? this.ComputeImpulse(toOther, distance, this.GetInteractedPhysicalParameter(p1), this.GetInteractedPhysicalParameter(p2))
-				:  new double[Parameters.DIM];
+				: new double[Parameters.DIM];
 		}
-		public double[] ComputeImpulse(FarFieldQuadTree<TParticle> p1, FarFieldQuadTree<TParticle> p2) {
+		public double[] ComputeAsymmetricImpulse(FarFieldQuadTree<TParticle> p1, FarFieldQuadTree<TParticle> p2) {
 			BaryonCenter c1 = this.GetInteractedPhysicalParameter(p1),
 				c2 = this.GetInteractedPhysicalParameter(p2);
-			if (c1.TotalWeight > 0d && c2.TotalWeight > 0d) {
+			if (c2.TotalWeight > Parameters.WORLD_EPSILON) {
 				double[] toOther = c2.Coordinates.Subtract(c1.Coordinates);
 				double distance = toOther.Magnitude();
-				return this.ComputeImpulse(toOther, distance, c1.TotalWeight, c2.TotalWeight);
+				return distance > Parameters.WORLD_EPSILON
+					? this.ComputeImpulse(toOther, distance, 1d, c2.TotalWeight)
+					: new double[Parameters.DIM];
 			} else return new double[Parameters.DIM];
 		}
 		

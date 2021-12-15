@@ -22,7 +22,7 @@ namespace ParticleSimulator {
 		public const double ADAPTIVE_TIME_GRANULARITY = 0.1d;//subdivide time steps as necessary for very close interactions
 		public const int ADAPTIVE_TIME_MAX_DIVISIONS = 8;
 		public const int FARFIELD_NEIGHBORHOOD_FILTER_DEPTH = 2;
-		public const double FARFIELD_THRESHOLD_DIST = 0.2d;
+		public const double FARFIELD_THRESHOLD_DIST = 0.1d;
 		
 		public const double WORLD_DEATH_BOUND_CNT = 1E3;
 		public const bool WORLD_WRAPPING = false;
@@ -62,7 +62,7 @@ namespace ParticleSimulator {
 		public const double GRAVITATIONAL_CONSTANT = 1E-10;
 		public const double ELECTROSTATIC_CONSTANT = 1E-9;
 		public const double MASS_LUMINOSITY_SCALAR = 1E-1;
-		public const double GRAVITY_RADIAL_DENSITY = 1E2;
+		public const double GRAVITY_RADIAL_DENSITY = 2.5E2;
 		public const double GRAVITY_COMPRESSION_BIAS = 1d;//set to zero for always max
 
 		public const double ELECTROSTATIC_MIN_CHARGE = 0d;
@@ -77,9 +77,9 @@ namespace ParticleSimulator {
 		public const double GRAVITY_EXPLOSION_MAX_SPEED = 1E-2d;
 		public const double GRAVITY_EXPLOSION_SPEED_LOW_BIAS = 2d;//set to zero for always max
 
-		public const double GRAVITY_STARTING_SPEED_MAX_GROUP = 0.6E-2;
+		public const double GRAVITY_STARTING_SPEED_MAX_GROUP = 0.5E-2;
 		public const double GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0d;
-		public const double GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 0E-2;
+		public const double GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 1.2E-2;
 		public const double GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 0d;
 		public const double GRAVITY_ALIGNMENT_SKEW_POW = 4d;
 		public const double GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0d;

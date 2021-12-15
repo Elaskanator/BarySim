@@ -44,10 +44,10 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		private void AdaptiveTimeStepIntegration(TParticle[] particles, ATree<TParticle> leaf, ATree<TParticle>[] nearfieldLeaves, ATree<TParticle>[] farfieldNodes) {
-			double[] baryonFarImpulse = farfieldNodes.Aggregate(new double[Parameters.DIM], (totalImpuse, other) =>
+			double[] baryonFarImpulseAsym = farfieldNodes.Aggregate(new double[Parameters.DIM], (totalImpuse, other) =>
 				totalImpuse.Add(
 					this.Forces.Aggregate(new double[Parameters.DIM], (impulse, force) =>
-						impulse.Add(force.ComputeImpulse((FarFieldQuadTree<TParticle>)leaf, (FarFieldQuadTree<TParticle>)other)))));
+						impulse.Add(force.ComputeAsymmetricImpulse((FarFieldQuadTree<TParticle>)leaf, (FarFieldQuadTree<TParticle>)other)))));
 
 			double remainingTimeStep = 1d,
 				timeStep,
@@ -57,7 +57,7 @@ namespace ParticleSimulator.Simulation {
 			while (anyLeft && remainingTimeStep > 0) {
 				anyLeft = false;
 
-				largestDelta = this.ComputeImpulses(particles, leaf, nearfieldLeaves, baryonFarImpulse) * remainingTimeStep * Parameters.TIME_SCALE;
+				largestDelta = this.ComputeImpulses(particles, leaf, nearfieldLeaves) * remainingTimeStep * Parameters.TIME_SCALE;
 				timeStep = remainingTimeStep;
 				subdivisionPow = 0;
 				while (subdivisionPow < Parameters.ADAPTIVE_TIME_MAX_DIVISIONS && largestDelta > Parameters.ADAPTIVE_TIME_GRANULARITY) {
@@ -69,6 +69,7 @@ namespace ParticleSimulator.Simulation {
 				this.HandleCollisions(particles, true);//inside of node only
 				for (int i = 0; i < particles.Length; i++)
 					if ((anyLeft |= particles[i].Enabled)) {
+						particles[i].FarfieldImpulse = baryonFarImpulseAsym.Multiply(particles[i].Mass);
 						particles[i].ApplyTimeStep(
 							particles[i].NearfieldImpulse.Divide(particles[i].Mass).Clamp(Parameters.PARTICLE_MAX_ACCELERATION)
 								.Add(particles[i].FarfieldImpulse.Divide(particles[i].Mass)),
@@ -80,7 +81,7 @@ namespace ParticleSimulator.Simulation {
 			}
 		}
 
-		private double ComputeImpulses(TParticle[] particles, ATree<TParticle> leaf, ATree<TParticle>[] nearfieldLeaves, double[] farFieldImpulse) {
+		private double ComputeImpulses(TParticle[] particles, ATree<TParticle> leaf, ATree<TParticle>[] nearfieldLeaves) {
 			double accelerationDelta, velocityDelta, distance,
 				largestDelta = 0d;
 			double[] toOther, impulse, totalImpulse;
@@ -88,7 +89,6 @@ namespace ParticleSimulator.Simulation {
 			for (int selfIdx = 0; selfIdx < particles.Length; selfIdx++) {
 				if (particles[selfIdx].Enabled) {
 					particles[selfIdx].NearfieldImpulse = new double[Parameters.DIM];
-					particles[selfIdx].FarfieldImpulse = farFieldImpulse;
 
 					for (int otherIdx = selfIdx + 1; otherIdx < particles.Length; otherIdx++) {//symmetric interaction (handshake optimization)
 						if (particles[otherIdx].Enabled) {
