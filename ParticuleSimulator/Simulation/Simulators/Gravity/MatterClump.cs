@@ -1,23 +1,72 @@
 ﻿using System;
+using System.Collections.Generic;
+using Generic.Extensions;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
-	public class MatterClump : AClassicalParticle {
+	public class MatterClump : AClassicalParticle<MatterClump> {
+		public MatterClump(int groupID, double[] position, double[] velocity, double mass, double charge = 0d)
+		: base(groupID, position, velocity, mass, charge) { }
+
+		private double _density = 1d;
+		public override double Density => this._density;
 		private double _radius = 0d;
 		public override double Radius => this._radius;
-
+		private double _luminosity = 0d;
+		public override double Luminosity => this._luminosity;
 		private double _mass = 0d;
 		public override double Mass {
 			get => this._mass;
 			set { this._mass = value;
-				this._radius = RadiusOfMass(value); }}
+				this._density = Parameters.GRAVITY_COMPRESSION_BIAS > 0d
+					? 1d / (1d - (1d / (1d + (1d / Math.Log(1d + value, 1d + Parameters.GRAVITY_COMPRESSION_BIAS)))))
+					: 1d;
+				this._radius = Math.Pow(value, 1d / Parameters.DIM) / Parameters.GRAVITY_RADIAL_DENSITY / this._density;
+				this._luminosity = Math.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5d); }}
+		
 
-		public MatterClump(int groupID, double[] position, double[] velocity, double mass, double charge = 0d)
-		: base(groupID, position, velocity, mass, charge) { }
+		protected override void AfterUpdate() {
+			if (this.Mass >= Parameters.GRAVITY_CRITICAL_MASS) {
+				HashSet<MatterClump> memberParticles = this.DistinctRecursiveChildren(p => p.MergedParticles);
+				this.MergedParticles.Clear();
 
-		public static double RadiusOfMass(double mass) {
-			return Math.Cbrt(mass) / Parameters.GRAVITY_DENSITY;
+				double totalMass = this.Mass;
+				double excessMass = totalMass - Parameters.GRAVITY_CRITICAL_MASS;
+				double intensityFraction = excessMass / Parameters.GRAVITY_CRITICAL_MASS;
+				double velocity;
+				if (Parameters.GRAVITY_EXPLOSION_SPEED_LOW_BIAS > 0)
+					velocity = Parameters.GRAVITY_EXPLOSION_MIN_SPEED
+						+ (Parameters.GRAVITY_EXPLOSION_MAX_SPEED - Parameters.GRAVITY_EXPLOSION_MIN_SPEED)
+							* (1d - (1d / (1d + (1d / Math.Log(1d + intensityFraction, 1d + Parameters.GRAVITY_EXPLOSION_SPEED_LOW_BIAS + 1)))));
+				else velocity = Parameters.GRAVITY_EXPLOSION_MAX_SPEED;
+				double[] centerOfMass = (double[])this.LiveCoordinates.Clone();
+				double avgMass = totalMass / memberParticles.Count;
+				double[] avgMomentum = this.Momentum.Divide(memberParticles.Count);
+
+				this.Mass = avgMass;
+				double valenceRadius = this.Radius;
+				int valenceNum = 0, valenceSize = 0, valenceCapacity = 1, valenceScaling = 1 << Parameters.DIM;
+				double[] direction;
+				foreach (MatterClump shrapnel in memberParticles) {
+					direction = HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random);
+
+					shrapnel.Mass = avgMass;
+					shrapnel.LiveCoordinates = centerOfMass.Add(direction.Multiply(valenceNum * valenceRadius));
+					shrapnel.Velocity = valenceNum == 0 && valenceCapacity == 1
+						? new double[Parameters.DIM]
+						: direction.Multiply(velocity);
+					shrapnel.Momentum = shrapnel.Momentum.Add(avgMomentum);
+					shrapnel.Enabled = true;
+
+					if (++valenceSize >= valenceCapacity) {
+						valenceNum++;
+						valenceCapacity *= valenceScaling;
+						valenceSize = 0;
+					}
+				}
+			}
 		}
+
 		/*
 		public double[] ComputeInteractionForce(Matter other) {
 			double[] netForce = new double[Parameters.DIM];

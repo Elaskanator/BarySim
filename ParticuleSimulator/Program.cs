@@ -15,7 +15,7 @@ namespace ParticleSimulator {
 		public static readonly Random Random = new();
 		public static IParticleSimulator Simulator { get; private set; }
 		public static RunManager Manager { get; private set; }
-		public static int NumStartingParticles { get; private set; }
+		public static IParticle[] AllParticles { get; private set; }
 
 		public static SynchronizedDataBuffer Resource_Tree, Resource_Locations, Resource_Resamplings, Resource_Rasterization;
 		public static StepEvaluator StepEval_TreeMaintain, StepEval_Simulate, StepEval_Resample, StepEval_Autoscale, StepEval_Rasterize, StepEval_Draw, StepEval_ConsoleWindow;
@@ -46,7 +46,7 @@ namespace ParticleSimulator {
 				default:
 					throw new InvalidEnumArgumentException(nameof(Parameters.SimType), (int)Parameters.SimType, typeof(SimulationType));
 			}
-			NumStartingParticles = Simulator.ParticleGroups.Sum(g => g.NumParticles);
+			AllParticles = Simulator.ParticleGroups.SelectMany(g => g.MemberParticles).ToArray();
 			Renderer.TitleUpdate();
 
 			Manager = BuildRunManager();
@@ -210,12 +210,16 @@ namespace ParticleSimulator {
 						//ReadTimeout = null
 			}}});
 
-			if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Density && Parameters.COLOR_ARRAY.Length > 1)
+			if (!Parameters.COLOR_USE_FIXED_BANDS
+			&& Parameters.COLOR_ARRAY.Length > 1
+			&& (Parameters.COLOR_METHOD == ParticleColoringMethod.Count
+				|| Parameters.COLOR_METHOD == ParticleColoringMethod.Density
+				|| Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity))
 				StepEval_Autoscale = new(new() {
 					Name = "Autoscaler",
 					//Initializer = null,
 					//Calculator = null,
-					Evaluator = Simulator.Scaling.Update,
+					Evaluator = Renderer.Scaling.Update,
 					Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS)),
 					//Callback = null,
 					//DataAssimilationTicksAverager = null,

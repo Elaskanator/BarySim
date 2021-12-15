@@ -1,101 +1,41 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using Generic.Extensions;
-using Generic.Vectors;
+﻿using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public abstract class AClassicalParticle : VectorDouble, IEquatable<AClassicalParticle>, IEqualityComparer<AClassicalParticle> {
-		private static int _globalID = 0;
+	public abstract class AClassicalParticle<TSelf> : AParticle<TSelf>
+	where TSelf : AClassicalParticle<TSelf> {
 		public AClassicalParticle(int groupID, double[] position, double[] velocity, double mass = 1d, double charge = 0d)
-		: base(position) {
+		: base(groupID, position, velocity) {
 			this.Momentum = new double[Parameters.DIM];
 			this.NearfieldImpulse = new double[Parameters.DIM];
 			this.FarfieldImpulse = new double[Parameters.DIM];
-			this.CollisionImpulse = new double[Parameters.DIM];
-			this.GroupID = groupID;
 			this.Mass = mass;
 			this.Charge = charge;
-			this.Velocity = velocity;
 		}
 
-		private int _id = ++_globalID;
-		public int ID => this._id;
-		public bool IsAlive = true;
-		public readonly int GroupID;
-		public virtual double Radius => 0d;
+		public virtual double Charge { get; set; }
 		public virtual double Mass { get; set; }
-		public double Charge { get; set; }
 
-		internal double[] _coordinates;
-		public override double[] Coordinates {
-			get => this._coordinates;
-			set {
-				this._coordinates = value;
-				this.LiveCoordinates = (double[])value.Clone(); }}
-		public double[] LiveCoordinates { get; set; }
-		public double[] Velocity {
-			get => this.Momentum.Divide(this.Mass);
-			set { this.Momentum = value.Multiply(this.Mass); }}
 		public double[] Momentum { get; set; }
+
 		public double[] NearfieldImpulse { get; set; }
 		public double[] FarfieldImpulse { get; set; }
-		public double[] CollisionImpulse { get; set; }
 
-		public readonly ConcurrentQueue<AClassicalParticle> NeighborNodeCollisions = new();
-		public readonly Queue<AClassicalParticle> NodeCollisions = new();
+		public override double[] Velocity {
+			get => this.Momentum.Divide(this.Mass);
+			set { this.Momentum = value.Multiply(this.Mass); }}
 
-		public bool IsVisible => this.LiveCoordinates.All((x, d) => x + this.Radius >= 0d && x - this.Radius < Parameters.DOMAIN_SIZE[d]);
-		public virtual int? InteractionLimit => null;
-
-		protected virtual IEnumerable<AClassicalParticle> Filter(IEnumerable<AClassicalParticle> others) { return others; }
-
-		public void ApplyTimeStep(double timeStep) {
-			this.Momentum = this.Momentum.Add(
-				this.NearfieldImpulse.Clamp(Parameters.PARTICLE_MAX_ACCELERATION * this.Mass)
-				.Add(this.CollisionImpulse)
-				.Add(this.FarfieldImpulse)
-				.Multiply(timeStep));
-			this.AfterUpdate();
-			this.LiveCoordinates = this.LiveCoordinates.Add(this.Velocity.Multiply(timeStep));
-		}
-
-		protected virtual void AfterUpdate() { }
-
-		public void WrapPosition() {
-			for (int i = 0; i < this.DIM; i++)
-				if (this.LiveCoordinates[i] < 0d)
-					this.LiveCoordinates[i] = (this.LiveCoordinates[i] % Parameters.DOMAIN_SIZE[i]) + Parameters.DOMAIN_SIZE[i];//don't want symmetric modulus
-				else if (this.LiveCoordinates[i] >= Parameters.DOMAIN_SIZE[i])
-					this.LiveCoordinates[i] %= Parameters.DOMAIN_SIZE[i];
-		}
-		public void BoundPosition() {
-			for (int i = 0; i < this.DIM; i++)
-				if (this.LiveCoordinates[i] < 0d)
-					this.LiveCoordinates[i] = 0d;
-				else if (this.LiveCoordinates[i] >= Parameters.DOMAIN_SIZE[i])
-					this.LiveCoordinates[i] = Parameters.DOMAIN_SIZE[i] - Parameters.WORLD_EPSILON;
-		}
-		public void BounceVelocity(double weight) {
-			double dist;
-			for (int d = 0; d < Parameters.DIM; d++) {
-				dist = this.LiveCoordinates[d] - Parameters.DOMAIN_CENTER[d];
-				if (dist < -Parameters.DOMAIN_MAX_RADIUS)
-					this.Velocity[d] += weight * Math.Pow(Parameters.DOMAIN_MAX_RADIUS - dist, 0.5d);
-				else if (dist > Parameters.DOMAIN_MAX_RADIUS)
-					this.Velocity[d] -= weight * Math.Pow(dist - Parameters.DOMAIN_MAX_RADIUS, 0.5d);
-			}
-		}
-
-		public bool Equals(AClassicalParticle other) { return !(other is null) && this.ID == other.ID; }
-		public override bool Equals(object other) { return !(other is null) && (other is AClassicalParticle) && this.ID == (other as AClassicalParticle).ID; }
-		public bool Equals(AClassicalParticle x, AClassicalParticle y) { return x.ID == y.ID; }
-		public int GetHashCode(AClassicalParticle obj) { return obj.ID.GetHashCode(); }
-		public override int GetHashCode() { return this.ID.GetHashCode(); }
-		public override string ToString() {
-			return string.Format("{0}[ID {1}]<{2}>", nameof(AClassicalParticle), this.ID,
-				string.Join(",", this.LiveCoordinates.Select(i => i.ToString("G5"))));
+		protected override void Incorporate(TSelf other) {
+			double totalMass = this.Mass + other.Mass;
+			this.LiveCoordinates =
+				this.LiveCoordinates.Multiply(this.Mass)
+				.Add(other.LiveCoordinates.Multiply(other.Mass))
+				.Divide(totalMass);
+			this.Mass = totalMass;
+			this.Charge += other.Charge;
+			this.Momentum = this.Momentum.Add(other.Momentum);
+			this.NearfieldImpulse = this.NearfieldImpulse.Add(other.NearfieldImpulse);
+			this.FarfieldImpulse = this.FarfieldImpulse.Add(other.FarfieldImpulse);
+			this.CollisionAcceleration = this.CollisionAcceleration.Add(other.CollisionAcceleration);
 		}
 	}
 }

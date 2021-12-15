@@ -26,7 +26,7 @@ namespace Generic.Models {
 				this.NumMembers);
 		}
 
-		public virtual int Capacity => 5;
+		public virtual int Capacity => 1;
 		//dividing by 2 enough times WILL reach the sig figs limit of System.Double and cause zero-sized subtrees (and that's before reaching the stack frame depth limit due to recursion)
 		public virtual int MaxDepth => 40;
 		

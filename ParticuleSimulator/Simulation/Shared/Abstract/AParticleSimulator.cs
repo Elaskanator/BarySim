@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Generic.Extensions;
@@ -9,252 +8,130 @@ using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public interface IParticleSimulator {
-		public AClassicalParticle[] AliveParticles { get; }
-		public AParticleGroup[] ParticleGroups { get; }
-		public Scaling Scaling { get; }
-		public AForce[] Forces { get; }
+		public IParticle[] EnabledParticles { get; }
+		public IParticleGroup[] ParticleGroups { get; }
 
 		public ITree RebuildTree();
-		public ConsoleColor ChooseColor(Tuple<char, AClassicalParticle[], double> others);
-		public AClassicalParticle[] RefreshSimulation(object[] parameters);
+		public ConsoleColor ChooseGroupColor(IParticle[] particles);
+		public IParticle[] RefreshSimulation(object[] parameters);
 	}
 
-	public abstract class AParticleSimulator : IParticleSimulator {
-		public AParticleSimulator(params AForce[] forces) {
-			this.Forces = forces;
-
-			this.Scaling = new();
+	public abstract class AParticleSimulator<TParticle> : IParticleSimulator
+	where TParticle : AParticle<TParticle> {
+		public AParticleSimulator() {
 			this.ParticleGroups = Enumerable.Range(0, Parameters.PARTICLES_GROUP_COUNT)
 				.Select(i => this.NewParticleGroup())
 				.ToArray();
-			this.AliveParticles = this.ParticleGroups.SelectMany(g => g.Particles).ToArray();
+			this.EnabledParticles = this.ParticleGroups.SelectMany(g => g.MemberParticles).Where(p => p.Enabled).ToArray();
+
 			this.HandleBounds();
 		}
+		
+		public double[] NearfieldImpulse { get; set; }
+		public double[] FarfieldImpulse { get; set; }
+		public double[] CollisionImpulse { get; set; }
 
-		public AClassicalParticle[] AliveParticles { get; private set; }
-		public AParticleGroup[] ParticleGroups { get; private set; }
-		public AForce[] Forces { get; private set; }
-		public Scaling Scaling { get; private set; }
+		public TParticle[] EnabledParticles { get; private set; }
+		IParticle[] IParticleSimulator.EnabledParticles => this.EnabledParticles;
+		public AParticleGroup<TParticle>[] ParticleGroups { get; private set; }
+		IParticleGroup[] IParticleSimulator.ParticleGroups => this.ParticleGroups;
 
+		public virtual bool EnableCollisions => false;
 		public virtual double WorldBounceWeight => 0d;
-		public virtual int InteractionLimit => int.MaxValue;
 
-		protected abstract AParticleGroup NewParticleGroup();
+		protected abstract AParticleGroup<TParticle> NewParticleGroup();
 
-		protected virtual bool DoCombine(double distance, AClassicalParticle smaller, AClassicalParticle larger) { return false; }
-		protected virtual double[] ComputeCollisionImpulse(double distance, double[] toOther, AClassicalParticle smaller, AClassicalParticle larger) { return new double[Parameters.DIM]; }
+		protected virtual bool DoCombine(double distance, TParticle smaller, TParticle larger) { return false; }
+		protected virtual double[] ComputeCollisionAcceleration(double distance, double[] toOther, TParticle smaller, TParticle larger) { return new double[Parameters.DIM]; }
 
-		public AClassicalParticle[] RefreshSimulation(object[] parameters) {
-			if (this.AliveParticles.Length == 0)
+		public TParticle[] RefreshSimulation(QuadTree<TParticle> tree) {
+			if (this.EnabledParticles.Length == 0)
 				Program.CancelAction(null, null);
 
-			for (int i = 0; i < this.AliveParticles.Length; i++) {
-				this.AliveParticles[i].CollisionImpulse = new double[Parameters.DIM];
-			}
+			this.Refresh(tree);
 
-			this.Refresh((FarFieldQuadTree)parameters[0]);
-
-			this.HandleCollisions(this.AliveParticles, false);//outside of node
+			this.HandleCollisions(this.EnabledParticles, false);//outside of node
 
 			this.HandleBounds();
+			
+			this.EnabledParticles = Program.AllParticles.Where(p => p.Enabled).Cast<TParticle>().ToArray();
 
-			this.AliveParticles = this.AliveParticles.Where(p => p.IsAlive).ToArray();
-
-			return this.AliveParticles;
+			return this.EnabledParticles;
 		}
+		IParticle[] IParticleSimulator.RefreshSimulation(object[] parameters) { return this.RefreshSimulation((QuadTree<TParticle>)parameters[0]); }
 
-		private void Refresh(FarFieldQuadTree tree) {//modified Barnes-Hut Algorithm
-			Parallel.ForEach(
-				tree.Leaves.Where(n => n.NumMembers > 0),
-				Parameters.MulithreadedOptions,
-				leaf => {
-					//recursively discover near and far nodes based on distance
-					List<ATree<AClassicalParticle>> nearNodes = new(), farNodes = new();
-					foreach (ATree<AClassicalParticle> n in leaf.GetNeighborhoodNodes(Parameters.FARFIELD_NEIGHBORHOOD_FILTER_DEPTH))
-						if (((FarFieldQuadTree)n).BaryCenter_Position.Coordinates.Distance(((FarFieldQuadTree)leaf).BaryCenter_Position.Coordinates) <= Parameters.FARFIELD_THRESHOLD_DIST)
-							nearNodes.Add(n);
-						else farNodes.Add(n);
+		protected abstract void Refresh(QuadTree<TParticle> tree);
+		protected abstract ATree<TParticle> NewTree(double[] leftCorner, double[] rightCorner);
 
-					//further refine to leaves
-					Tuple<ATree<AClassicalParticle>[], ATree<AClassicalParticle>[]> temp, splitInteractionNodes = new(Array.Empty<ATree<AClassicalParticle>>(), Array.Empty<ATree<AClassicalParticle>>());
-					for (int i = 0; i < nearNodes.Count; i++) {
-						temp = nearNodes[i].RecursiveFilter(n => ((FarFieldQuadTree)n).BaryCenter_Position.Coordinates.Distance(((FarFieldQuadTree)leaf).BaryCenter_Position.Coordinates) <= Parameters.FARFIELD_THRESHOLD_DIST);
-						splitInteractionNodes = new(
-							splitInteractionNodes.Item1.Concat(temp.Item1).ToArray(),
-							splitInteractionNodes.Item2.Concat(temp.Item2).ToArray());
-					}
+		protected void HandleCollisions(TParticle[] particles, bool intraNode) {
+			if (this.EnableCollisions) {
+				double distance;
+				double[] toOther, collisionAcceleration;
+				TParticle self, other, smaller, larger;
+				HashSet<TParticle> evaluatedCollisions = new();
+				Queue<TParticle> pendingCollisions;
 
-					this.AdaptiveTimeStepIntegration(
-						leaf.NodeElements.ToArray(),
-						leaf,
-						splitInteractionNodes.Item1,
-						splitInteractionNodes.Item2.Concat(farNodes).ToArray());
-				});
-		}
+				for (int i = 0; i < particles.Length; i++) {
+					self = particles[i];
+					if (self.Enabled) {
+						pendingCollisions = intraNode
+							? new(self.NodeCollisions.Where(p => p.Enabled).Cast<TParticle>())
+							: new(self.NeighborNodeCollisions.Where(p => p.Enabled).Cast<TParticle>());
+						while (pendingCollisions.TryDequeue(out other) && !evaluatedCollisions.Contains(other)) {
+							evaluatedCollisions.Add(other);
 
-		private void AdaptiveTimeStepIntegration(AClassicalParticle[] particles, ATree<AClassicalParticle> leaf, ATree<AClassicalParticle>[] nearfieldLeaves, ATree<AClassicalParticle>[] farfieldNodes) {
-			double[] baryonFarImpulse = farfieldNodes.Aggregate(new double[Parameters.DIM], (totalImpuse, other) =>
-				totalImpuse.Add(
-					this.Forces.Aggregate(new double[Parameters.DIM], (impulse, force) =>
-						impulse.Add(force.ComputeImpulse((FarFieldQuadTree)leaf, (FarFieldQuadTree)other)))));
-
-			double remainingTimeStep = 1d,
-				timeStep,
-				largestDelta;
-			int subdivisionPow;
-			bool anyLeft = true;
-			while (anyLeft && remainingTimeStep > 0) {
-				anyLeft = false;
-
-				largestDelta = this.ComputeImpulses(particles, leaf, nearfieldLeaves, baryonFarImpulse) * remainingTimeStep * Parameters.TIME_SCALE;
-				timeStep = remainingTimeStep;
-				subdivisionPow = 0;
-				while (subdivisionPow < Parameters.ADAPTIVE_TIME_MAX_DIVISIONS && largestDelta > Parameters.ADAPTIVE_TIME_GRANULARITY) {
-					subdivisionPow++;
-					largestDelta /= 2d;
-					timeStep /= 2d;
-				}
-
-				this.HandleCollisions(particles, true);//inside of node only
-				for (int i = 0; i < particles.Length; i++)
-					if ((anyLeft |= particles[i].IsAlive))
-						particles[i].ApplyTimeStep(timeStep * Parameters.TIME_SCALE);
-
-				remainingTimeStep -= timeStep;
-			}
-		}
-
-		private double ComputeImpulses(AClassicalParticle[] particles, ATree<AClassicalParticle> leaf, ATree<AClassicalParticle>[] nearfieldLeaves, double[] farFieldImpulse) {
-			double accelerationDelta, velocityDelta, distance,
-				largestDelta = 0d;
-			double[] toOther, impulse, totalImpulse;
-			bool collision;
-			for (int selfIdx = 0; selfIdx < particles.Length; selfIdx++) {
-				if (particles[selfIdx].IsAlive) {
-					particles[selfIdx].NearfieldImpulse = new double[Parameters.DIM];
-					particles[selfIdx].FarfieldImpulse = farFieldImpulse;
-
-					for (int otherIdx = selfIdx + 1; otherIdx < particles.Length; otherIdx++) {//symmetric interaction (handshake optimization)
-						if (particles[otherIdx].IsAlive) {
-							totalImpulse = new double[Parameters.DIM];
-							toOther = particles[otherIdx].LiveCoordinates.Subtract(particles[selfIdx].LiveCoordinates);
+							toOther = other.LiveCoordinates.Subtract(self.LiveCoordinates);
 							distance = toOther.Magnitude();
+							if (distance < self.Radius + other.Radius) {
+								smaller = self.Radius < other.Radius ? self : other;
+								larger = self.Radius < other.Radius ? other : self;
+								if (this.DoCombine(distance, smaller, larger)) {
+									if (intraNode)
+										foreach (TParticle tail in other.NodeCollisions.Where(tail => tail.Enabled && !evaluatedCollisions.Contains(tail)))
+											pendingCollisions.Enqueue(tail);
+									else foreach (TParticle tail in other.NeighborNodeCollisions.Where(tail => tail.Enabled && !evaluatedCollisions.Contains(tail)))
+											pendingCollisions.Enqueue(tail);
 
-							for (int fIdx = 0; fIdx < this.Forces.Length; fIdx++) {
-								impulse = this.Forces[fIdx].ComputeImpulse(distance, toOther, particles[selfIdx], particles[otherIdx], out collision);
-								totalImpulse = totalImpulse.Add(impulse);
-								if (collision)
-									particles[selfIdx].NodeCollisions.Enqueue(particles[otherIdx]);
-							}
-							particles[selfIdx].NearfieldImpulse = particles[selfIdx].NearfieldImpulse.Add(totalImpulse);
-							particles[otherIdx].NearfieldImpulse = particles[otherIdx].NearfieldImpulse.Subtract(totalImpulse);
-
-							accelerationDelta = totalImpulse.Magnitude()
-								/ (particles[selfIdx].Mass < particles[otherIdx].Mass ? particles[selfIdx].Mass : particles[otherIdx].Mass);
-							largestDelta = accelerationDelta > largestDelta ? accelerationDelta : largestDelta;
-					
-							if (distance > Parameters.WORLD_EPSILON) {
-								velocityDelta = particles[selfIdx].Velocity.Subtract(particles[otherIdx].Velocity).Magnitude() / distance;
-								largestDelta = velocityDelta > largestDelta ? velocityDelta : largestDelta;
-							}
-						}
-					}
-
-					for (int b = 0; b < nearfieldLeaves.Length; b++) {//asymmetric interaction
-						foreach (AClassicalParticle other in nearfieldLeaves[b].NodeElements) {
-							if (other.IsAlive) {
-								totalImpulse = new double[Parameters.DIM];
-								toOther = other.LiveCoordinates.Subtract(particles[selfIdx].LiveCoordinates);
-								distance = toOther.Magnitude();
-
-								for (int fIdx = 0; fIdx < this.Forces.Length; fIdx++) {
-									impulse = this.Forces[fIdx].ComputeImpulse(distance, toOther, particles[selfIdx], other, out collision);
-									totalImpulse = totalImpulse.Add(impulse);
-									if (collision)
-										particles[selfIdx].NeighborNodeCollisions.Enqueue(other);
-								}
-								particles[selfIdx].NearfieldImpulse = particles[selfIdx].NearfieldImpulse.Add(totalImpulse);
-
-								accelerationDelta = totalImpulse.Magnitude()
-									/ (particles[selfIdx].Mass < other.Mass ? particles[selfIdx].Mass : other.Mass);
-								largestDelta = accelerationDelta > largestDelta ? accelerationDelta : largestDelta;
-						
-								if (distance > Parameters.WORLD_EPSILON) {
-									velocityDelta = particles[selfIdx].Velocity.Subtract(other.Velocity).Magnitude() / distance;
-									largestDelta = velocityDelta > largestDelta ? velocityDelta : largestDelta;
+									self.CombineWith(other);
+								} else {
+									collisionAcceleration = this.ComputeCollisionAcceleration(distance, toOther, smaller, larger);
+									self.CollisionAcceleration = self.CollisionAcceleration.Add(collisionAcceleration);
+									other.CollisionAcceleration = other.CollisionAcceleration.Subtract(collisionAcceleration);
 								}
 							}
 						}
+
+						if (intraNode)
+							self.NodeCollisions.Clear();
+						else self.NeighborNodeCollisions.Clear();
 					}
 				}
 			}
-			return largestDelta;
 		}
 
-		private void HandleCollisions(AClassicalParticle[] particles, bool intraNode) {
-			double distance;
-			double[] toOther, collisionImpulse;
-			AClassicalParticle self, other, smaller, larger;
-			HashSet<AClassicalParticle> evaluatedCollisions = new();
-			Queue<AClassicalParticle> pendingCollisions;
+		private void HandleBounds() {
+			Parallel.ForEach(
+				this.EnabledParticles.Where(p => p.Enabled),
+				Parameters.MulithreadedOptions,
+				p => {
+					if (Parameters.WORLD_WRAPPING)
+						p.WrapPosition();
+					else if (Parameters.WORLD_BOUNDING)
+						p.BoundPosition();
+					else if (p.LiveCoordinates.Any((c, d) => c < -Parameters.WORLD_DEATH_BOUND_CNT*Parameters.DOMAIN_SIZE[d] || c > Parameters.DOMAIN_SIZE[d] *(1d + Parameters.WORLD_DEATH_BOUND_CNT)))
+						p.Enabled = false;
 
-			for (int i = 0; i < particles.Length; i++) {
-				self = particles[i];
-				if (self.IsAlive) {
-					pendingCollisions = intraNode
-						? new(self.NodeCollisions.Where(p => p.IsAlive))
-						: new(self.NeighborNodeCollisions.Where(p => p.IsAlive));
-					while (pendingCollisions.TryDequeue(out other) && !evaluatedCollisions.Contains(other)) {
-						evaluatedCollisions.Add(other);
-
-						toOther = other.LiveCoordinates.Subtract(self.LiveCoordinates);
-						distance = toOther.Magnitude();
-						if (distance < self.Radius + other.Radius) {
-							smaller = self.Radius < other.Radius ? self : other;
-							larger = self.Radius < other.Radius ? other : self;
-							if (this.DoCombine(distance, smaller, larger)) {
-								if (intraNode)
-									foreach (AClassicalParticle tail in other.NodeCollisions.Where(tail => tail.IsAlive && !evaluatedCollisions.Contains(tail)))
-										pendingCollisions.Enqueue(tail);
-								else foreach (AClassicalParticle tail in other.NeighborNodeCollisions.Where(tail => tail.IsAlive && !evaluatedCollisions.Contains(tail)))
-										pendingCollisions.Enqueue(tail);
-
-								this.CombineParticles(self, other);
-							} else {
-								collisionImpulse = this.ComputeCollisionImpulse(distance, toOther, smaller, larger);
-								self.CollisionImpulse = self.CollisionImpulse.Add(collisionImpulse);
-								other.CollisionImpulse = other.CollisionImpulse.Subtract(collisionImpulse);
-							}
-						}
-					}
-
-					if (intraNode)
-						self.NodeCollisions.Clear();
-					else self.NeighborNodeCollisions.Clear();
-				}
-			}
-		}
-		private void CombineParticles(AClassicalParticle self, AClassicalParticle other) {
-			double totalMass = self.Mass + other.Mass;
-			self.LiveCoordinates =
-				self.LiveCoordinates.Multiply(self.Mass)
-				.Add(other.LiveCoordinates.Multiply(other.Mass))
-				.Divide(totalMass);
-			self.Mass = totalMass;
-			self.Charge += other.Charge;
-			self.Momentum = self.Momentum.Add(other.Momentum);
-			self.NearfieldImpulse = self.NearfieldImpulse.Add(other.NearfieldImpulse);
-			self.FarfieldImpulse = self.FarfieldImpulse.Add(other.FarfieldImpulse);
-			self.CollisionImpulse = self.CollisionImpulse.Add(other.CollisionImpulse);
-			other.IsAlive = false;
+					if (this.WorldBounceWeight > 0d)
+						p.BounceVelocity(this.WorldBounceWeight);
+			});
 		}
 
 		public ITree RebuildTree() {
 			double[]
 				leftCorner = Enumerable.Repeat(double.PositiveInfinity, Parameters.DIM).ToArray(),
 				rightCorner = Enumerable.Repeat(double.NegativeInfinity, Parameters.DIM).ToArray();
-			AClassicalParticle[] particles = (AClassicalParticle[])this.AliveParticles.Clone();
-			AClassicalParticle particle;
+			TParticle[] particles = (TParticle[])this.EnabledParticles.Clone();
+			TParticle particle;
 			for (int i = 0; i < particles.Length; i++) {
 				particle = particles[i];
 				particle._coordinates = (double[])particle.LiveCoordinates.Clone();
@@ -268,62 +145,18 @@ namespace ParticleSimulator.Simulation {
 			double maxSize = leftCorner.Zip(rightCorner, (l, r) => r - l).Max();
 			rightCorner = leftCorner.Select(l => l + maxSize).ToArray();
 
-			QuadTree<AClassicalParticle> result = this.Forces.Length > 0
-				? new FarFieldQuadTree(leftCorner, rightCorner)
-				: new NearFieldQuadTree(leftCorner, rightCorner);
+			ATree<TParticle> result = this.NewTree(leftCorner, rightCorner);
 			result.AddRange(particles);
 			return result;
 		}
 
-		public ConsoleColor ChooseColor(Tuple<char, AClassicalParticle[], double> particleData) {
-			int rank;
-			switch (Parameters.COLOR_SCHEME) {
-				case ParticleColoringMethod.Density:
-					rank = this.Scaling.Values.Drop(1).TakeWhile(ds => ds < particleData.Item3).Count();
-					return Parameters.COLOR_ARRAY[rank];
-				case ParticleColoringMethod.Group:
-					return this.ChooseGroupColor(particleData.Item2);
-				case ParticleColoringMethod.Depth:
-					if (Parameters.DIM > 2) {
-						int numColors = Parameters.COLOR_ARRAY.Length;
-						double depth = 1d - particleData.Item2.Min(p => GetDepthScalar(p.LiveCoordinates));
-						rank = this.Scaling.Values.Take(numColors - 1).TakeWhile(a => a < depth).Count();
-						return Parameters.COLOR_ARRAY[rank];
-					} else return Parameters.COLOR_ARRAY[^1];
-				default:
-					throw new InvalidEnumArgumentException(nameof(Parameters.COLOR_SCHEME));
-			}
-		}
-
-		public double GetDepthScalar(double[] v) {
-			if (Parameters.DIM > 2)
-				return 1d - (v.Skip(2).ToArray().Magnitude() / Parameters.DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT);
-			else return 1d;
-		}
-
-		public virtual ConsoleColor ChooseGroupColor(AClassicalParticle[] particles) {
+		public virtual ConsoleColor ChooseGroupColor(IEnumerable<TParticle> particles) {
 			int dominantGroupID;
 			if (Parameters.DIM > 2)
-				dominantGroupID = particles.MinBy(p => this.GetDepthScalar(p.LiveCoordinates)).GroupID;
+				dominantGroupID = particles.MinBy(p => Renderer.GetDepthScalar(p.LiveCoordinates)).GroupID;
 			else dominantGroupID  = particles.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
 			return Parameters.COLOR_ARRAY[dominantGroupID % Parameters.COLOR_ARRAY.Length];
 		}
-
-		private void HandleBounds() {
-			Parallel.ForEach(
-				this.AliveParticles.Where(p => p.IsAlive),
-				Parameters.MulithreadedOptions,
-				p => {
-					if (Parameters.WORLD_WRAPPING)
-						p.WrapPosition();
-					else if (Parameters.WORLD_BOUNDING)
-						p.BoundPosition();
-					else if (p.LiveCoordinates.Any((c, d) => c < -Parameters.WORLD_DEATH_BOUND_CNT*Parameters.DOMAIN_SIZE[d] || c > Parameters.DOMAIN_SIZE[d] *(1d + Parameters.WORLD_DEATH_BOUND_CNT)))
-						p.IsAlive = false;
-
-					if (this.WorldBounceWeight > 0d)
-						p.BounceVelocity(this.WorldBounceWeight);
-			});
-		}
+		public ConsoleColor ChooseGroupColor(IParticle[] particles) { return this.ChooseGroupColor(particles.Cast<TParticle>()); }
 	}
 }

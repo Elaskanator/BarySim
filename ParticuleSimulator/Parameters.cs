@@ -9,20 +9,20 @@ namespace ParticleSimulator {
 	public static class Parameters {
 		public const SimulationType SimType = SimulationType.Gravity;
 
-		public const int PARTICLES_GROUP_COUNT = 128;
+		public const int PARTICLES_GROUP_COUNT = 32;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 32;
-		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 0d;
+		public const double PARTICLES_GROUP_SIZE_SKEW_POWER = 0d;//0 for max size
 
-		public const double WORLD_SCALE = 0.5d;
+		public const double WORLD_SCALE = 1d;
 		public const double TIME_SCALE = 1d;
 		public const int DIM = 2;
 		
-		public const double PARTICLE_MAX_ACCELERATION = 0.001d;
-		public const double ADAPTIVE_TIME_GRANULARITY = 0.5d;//subdivide time steps as necessary for very close interactions
+		public const double PARTICLE_MAX_ACCELERATION = 0.002d;
+		public const double ADAPTIVE_TIME_GRANULARITY = 0.1d;//subdivide time steps as necessary for very close interactions
 		public const int ADAPTIVE_TIME_MAX_DIVISIONS = 8;
 		public const int FARFIELD_NEIGHBORHOOD_FILTER_DEPTH = 2;
-		public const double FARFIELD_THRESHOLD_DIST = 0.1d;
+		public const double FARFIELD_THRESHOLD_DIST = 0.2d;
 		
 		public const double WORLD_DEATH_BOUND_CNT = 1E3;
 		public const bool WORLD_WRAPPING = false;
@@ -30,11 +30,14 @@ namespace ParticleSimulator {
 		public const double WORLD_PADDING_PCT = 10d;
 		public const double WORLD_EPSILON = 1E-8;
 		
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Luminosity;
+		public const bool COLOR_USE_FIXED_BANDS = true;
+		public static readonly double[] COLOR_FIXED_BANDS = null;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
 		public const bool LEGEND_ENABLE = true;
-		public const ParticleColoringMethod COLOR_SCHEME = ParticleColoringMethod.Density;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Grayscale;
-		public const bool DENSITY_AUTOSCALE_PERCENTILE = true;//only applies to Density coloring
-		public const double DENSITY_AUTOSCALE_CUTOFF_PCT = 0d;
+		public const bool AUTOSCALE_PERCENTILE = true;
+		public const double AUTOSCALE_CUTOFF_PCT = 0d;
+		public const double AUTOSCALE_MIN_STEP = 1d;
 		
 		public const double TARGET_FPS = -1;
 		public const double MAX_FPS = 30;
@@ -56,31 +59,39 @@ namespace ParticleSimulator {
 		#region Gravity
 		public const double GRAVITY_INITIAL_SEPARATION = 0.01d;
 
-		public const double GRAVITATIONAL_CONSTANT = 0.8E-10;
-		public const double GRAVITY_MIN_MASS = 1E0;
-		public const double GRAVITY_MAX_MASS = 1E0;
-		public const double GRAVITY_MASS_BIAS = 3d;
-		public const double GRAVITY_DENSITY = 1E3;
+		public const double GRAVITATIONAL_CONSTANT = 1E-10;
+		public const double ELECTROSTATIC_CONSTANT = 1E-9;
+		public const double MASS_LUMINOSITY_SCALAR = 1E-1;
+		public const double GRAVITY_RADIAL_DENSITY = 1E2;
+		public const double GRAVITY_COMPRESSION_BIAS = 1d;//set to zero for always max
 
-		public const double ELECTROSTATIC_CONSTANT = 1E-10;
 		public const double ELECTROSTATIC_MIN_CHARGE = 0d;
 		public const double ELECTROSTATIC_MAX_CHARGE = 0d;
 
-		public const double GRAVITY_STARTING_SPEED_MAX_GROUP = 0.5E-2;
+		public const double GRAVITY_MIN_STARTING_MASS = 1E-1;
+		public const double GRAVITY_MAX_STARTING_MASS = 1E1;
+		public const double GRAVITY_MASS_BIAS = 3d;
+
+		public const double GRAVITY_CRITICAL_MASS = 1024d;
+		public const double GRAVITY_EXPLOSION_MIN_SPEED = 1E-1d;
+		public const double GRAVITY_EXPLOSION_MAX_SPEED = 1E-2d;
+		public const double GRAVITY_EXPLOSION_SPEED_LOW_BIAS = 2d;//set to zero for always max
+
+		public const double GRAVITY_STARTING_SPEED_MAX_GROUP = 0.6E-2;
 		public const double GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0d;
-		public const double GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 1E-2;
+		public const double GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 0E-2;
 		public const double GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 0d;
 		public const double GRAVITY_ALIGNMENT_SKEW_POW = 4d;
 		public const double GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0d;
 
-		public const double GRAVITY_COLLISION_DRAG_STRENGTH = 0d;//1 means instant stop
 		public const bool GRAVITY_COLLISION_COMBINE = true;
-		public const double GRAVITY_COMBINE_OVERLAP_CUTOFF = 0.99d;//0 means merely touching
+		public const double GRAVITY_COMBINE_OVERLAP_CUTOFF = 0.5d;//0 means merely touching
+		public const double GRAVITY_COLLISION_DRAG_STRENGTH = 0d;//1 means instant stop (UNIMPLEMENTED)
 		
-		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 1;
+		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 8;
 		#endregion Gravity
 
-		#region Boids;
+		#region Boids
 		public const double BOIDS_INITIAL_SEPARATION	= 0.015;
 		public const double BOIDS_WORLD_BOUNCE_WEIGHT	= 0.00001d;
 
@@ -147,7 +158,7 @@ namespace ParticleSimulator {
 		public const int GRAPH_HEIGHT = 8;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
-		public const double PERF_GRAPH_PERCENTILE_CUTOFF = 10d;
+		public const double PERF_GRAPH_PERCENTILE_CUTOFF = 5d;
 		
 		public static readonly double WORLD_ASPECT_RATIO = WINDOW_WIDTH / (2d * WINDOW_HEIGHT);
 		public static readonly double[] DOMAIN_SIZE = Enumerable.Repeat(1d, DIM - 1).Prepend(WORLD_ASPECT_RATIO).ToArray().Multiply(WORLD_SCALE);

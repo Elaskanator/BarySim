@@ -1,11 +1,14 @@
 ﻿using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Boids {
-	public class Boid : AClassicalParticle {
+	public class Boid : AParticle<Boid> {
 		public Boid(int groupID, double[] position, double[] velocity, double corruption)
 		: base(groupID, position, velocity) {
 			this.IsPredator = Program.Random.NextDouble() * Parameters.BOIDS_PREDATOR_CHANCE < corruption;
+			this.Acceleration = new double[Parameters.DIM];
 		}
+
+		public double[] Acceleration { get; set; }
 
 		public bool IsPredator { get; private set; }
 
@@ -24,7 +27,7 @@ namespace ParticleSimulator.Simulation.Boids {
 		public double CohesionWeight => this.IsPredator ? Parameters.BOIDS_PREDATOR_COHESION_W : Parameters.BOIDS_BOID_COHESION_W;
 		public double AlignmentWeight => this.IsPredator ? Parameters.BOIDS_PREDATOR_ALIGNMENT_W : Parameters.BOIDS_BOID_ALIGNMENT_W;
 
-		public double[] ComputeInteractionForce(Boid[] others) {
+		public double[] ComputeAcceleration(Boid[] others) {
 			VectorIncrementalAverage centerAvg = new(), directionAvg = new();
 			double[] awayVector, repulsion = new double[Parameters.DIM];
 			double dist, repulsionDist, repulsionWeight, cohesionDist;

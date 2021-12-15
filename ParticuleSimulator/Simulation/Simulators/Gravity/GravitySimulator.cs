@@ -1,20 +1,24 @@
-﻿using Generic.Vectors;
+﻿using Generic.Models;
+using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
-	public class GravitySimulator : AParticleSimulator {
+	public class GravitySimulator : ABaryonParticleSimulator<MatterClump> {
 		public GravitySimulator()
-		: base(new GravitationalForce(), new ElectrostaticForce()) { }
+		: base(new GravitationalForce<MatterClump>(), new ElectrostaticForce<MatterClump>()) { }
 
-		protected override AParticleGroup NewParticleGroup() { return new Galaxy(); }
+		public override bool EnableCollisions => true;
 
-		protected override bool DoCombine(double distance, AClassicalParticle smaller, AClassicalParticle larger) {
+		protected override AParticleGroup<MatterClump> NewParticleGroup() { return new Galaxy(); }
+		protected override ATree<MatterClump> NewTree(double[] leftCorner, double[] rightCorner) { return new FarFieldQuadTree<MatterClump>(leftCorner, rightCorner); }
+
+		protected override bool DoCombine(double distance, MatterClump smaller, MatterClump larger) {
 			return Parameters.GRAVITY_COLLISION_COMBINE
 				&& (distance <= Parameters.WORLD_EPSILON
 					|| distance <= larger.Radius + smaller.Radius * (1d - Parameters.GRAVITY_COMBINE_OVERLAP_CUTOFF));
 		}
 
 		//TODO
-		protected override double[] ComputeCollisionImpulse(double distance, double[] toOther, AClassicalParticle smaller, AClassicalParticle larger) {
+		protected override double[] ComputeCollisionAcceleration(double distance, double[] toOther, MatterClump smaller, MatterClump larger) {
 			if (Parameters.GRAVITY_COLLISION_DRAG_STRENGTH > 0d) {
 				return new double[Parameters.DIM];
 				//double overlapRange = this.Radius + other.Radius - larger.Radius;

@@ -1,20 +1,21 @@
 ﻿using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public abstract class AForce {
+	public abstract class AForce<TParticle>
+	where TParticle : AClassicalParticle<TParticle> {
 		public abstract double ForceConstant { get; }
 		public abstract bool IsAttractionForce { get; }
 
-		public abstract double GetInteractedPhysicalParameter(AClassicalParticle particle);
-		public abstract BaryonCenter GetInteractedPhysicalParameter(FarFieldQuadTree baryonTree);
+		public abstract double GetInteractedPhysicalParameter(TParticle particle);
+		public abstract BaryonCenter GetInteractedPhysicalParameter(FarFieldQuadTree<TParticle> baryonTree);
 
-		public double[] ComputeImpulse(double distance, double[] toOther, AClassicalParticle p1, AClassicalParticle p2, out bool collision) {
+		public double[] ComputeImpulse(double distance, double[] toOther, TParticle p1, TParticle p2, out bool collision) {
 			collision = distance < p1.Radius + p2.Radius;
 			return distance > Parameters.WORLD_EPSILON
 				? this.ComputeImpulse(toOther, distance, this.GetInteractedPhysicalParameter(p1), this.GetInteractedPhysicalParameter(p2))
 				:  new double[Parameters.DIM];
 		}
-		public double[] ComputeImpulse(FarFieldQuadTree p1, FarFieldQuadTree p2) {
+		public double[] ComputeImpulse(FarFieldQuadTree<TParticle> p1, FarFieldQuadTree<TParticle> p2) {
 			BaryonCenter c1 = this.GetInteractedPhysicalParameter(p1),
 				c2 = this.GetInteractedPhysicalParameter(p2);
 			if (c1.TotalWeight > 0d && c2.TotalWeight > 0d) {

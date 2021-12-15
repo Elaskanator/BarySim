@@ -95,6 +95,21 @@ namespace Generic.Extensions {
 			return source.Except(source.Distinct()).Distinct();
 		}
 
+		public static HashSet<T> DistinctRecursiveChildren<T>(this T source, Func<T, IEnumerable<T>> projection, bool includeRoot = true) {
+			HashSet<T> result = new();
+			if (includeRoot) result.Add(source);
+
+			Queue<T> tail = new();
+			tail.Enqueue(source);
+
+			T parent;
+			while (tail.TryDequeue(out parent))
+				foreach (T child in projection(parent))
+					if (result.Add(child))
+						tail.Enqueue(child);
+			return result;
+		}
+
 		public static IEnumerable<T> Order<T>(this IEnumerable<T> source)
 		where T : IComparable<T> {
 			return source.OrderBy(x => x);

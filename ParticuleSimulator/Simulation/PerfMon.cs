@@ -33,7 +33,7 @@ namespace ParticleSimulator.Simulation {
 					? Parameters.GRAPH_WIDTH > 0
 						? Parameters.GRAPH_WIDTH
 						: 3 + Parameters.NUMBER_SPACING
-							+ (1 + Program.Manager.Evaluators.Count())
+							+ (2 + Program.Manager.Evaluators.Count())
 								* (1 + Parameters.NUMBER_SPACING)
 					: Parameters.PERF_GRAPH_DEFAULT_WIDTH;
 			GraphWidth = Console.WindowWidth > width ? width : Console.WindowWidth;
@@ -315,7 +315,7 @@ namespace ParticleSimulator.Simulation {
 			
 			Console.Write("Evaluated ");
 
-			int particleCount = Program.Simulator.AliveParticles.Length;
+			int particleCount = Program.Simulator.EnabledParticles.Length;
 			Console.Write(particleCount);
 
 			Console.ForegroundColor = ConsoleColor.White;

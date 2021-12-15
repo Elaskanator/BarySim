@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public static class Renderer {
+		public static Autoscaler Scaling { get; private set; }
+
 		public static readonly int RenderWidthOffset = 0;
 		public static readonly int RenderHeightOffset = 0;
 		public static readonly int RenderWidth;
@@ -35,18 +38,23 @@ namespace ParticleSimulator.Simulation {
 				RenderHeight = 1;
 				RenderHeightOffset = MaxY / 4;
 			}
+
+			Scaling = new(Parameters.COLOR_FIXED_BANDS
+				?? (Parameters.COLOR_USE_FIXED_BANDS
+					? Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => (double)i).ToArray()
+					: null));
 		}
 		
 		public static void TitleUpdate(object[] parameters = null) {
-			int visibleParticles = Program.Simulator.AliveParticles.Count(p => p.IsVisible);
+			int visibleParticles = Program.Simulator.EnabledParticles.Count(p => p.Enabled);
 
 			Console.Title = string.Format("{0} Simulator - {1}{2}{3} - {4}D",
 				Parameters.SimType,
-				Program.NumStartingParticles == Program.Simulator.AliveParticles.Length
+				Program.AllParticles.Length == Program.Simulator.EnabledParticles.Length
 					? ""
-					: Program.Simulator.AliveParticles.Length.ToString() + "/",
-				Program.NumStartingParticles.Pluralize("particle"),
-				visibleParticles == Program.Simulator.AliveParticles.Length
+					: Program.Simulator.EnabledParticles.Length.ToString() + "/",
+				Program.AllParticles.Length.Pluralize("particle"),
+				visibleParticles == Program.Simulator.EnabledParticles.Length
 					? ""
 					: " (" + visibleParticles.ToString() + " visible)",
 				Parameters.DIM);
@@ -76,11 +84,11 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public static void DrawLegend(ConsoleExtensions.CharInfo[] buffer) {
-			int numColors = Program.Simulator.Scaling.Values.Length;
+			int numColors = Scaling.Values.Length;
 			if (numColors > 0) {
 				bool isDiscrete = Parameters.DIM < 3 && Parameters.SimType == SimulationType.Boid;
-				string header = Parameters.COLOR_SCHEME.ToString();
-				if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group) {
+				string header = Parameters.COLOR_METHOD.ToString();
+				if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group) {
 					if (Parameters.PARTICLES_GROUP_COUNT > numColors)
 						header += " (mod " + numColors + ")";
 					if (Parameters.PARTICLES_GROUP_COUNT < Parameters.COLOR_ARRAY.Length)
@@ -99,13 +107,13 @@ namespace ParticleSimulator.Simulation {
 						Parameters.CHAR_BOTH,
 						Parameters.COLOR_ARRAY[cIdx]);
 
-					if (Parameters.COLOR_SCHEME == ParticleColoringMethod.Group)
+					if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group)
 						rowStringData = "=" + cIdx.ToString();
 					else rowStringData =
 							(isDiscrete && cIdx == 0 ? "=" : "≤")
 							+ (isDiscrete
-								? ((int)Program.Simulator.Scaling.Values[cIdx]).ToString()
-								: Program.Simulator.Scaling.Values[cIdx].ToStringBetter(2));
+								? ((int)Scaling.Values[cIdx]).ToString()
+								: Scaling.Values[cIdx].ToStringBetter(2));
 
 					for (int i = 0; i < rowStringData.Length; i++)
 						buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);
@@ -114,7 +122,7 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
-			Tuple<char, AClassicalParticle[], double>[] sampling = (Tuple<char, AClassicalParticle[], double>[])parameters[0];
+			Tuple<char, IParticle[], double>[] sampling = (Tuple<char, IParticle[], double>[])parameters[0];
 
 			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 			if (!(sampling is null)) {
@@ -122,22 +130,45 @@ namespace ParticleSimulator.Simulation {
 					frameBuffer[i] = sampling[i] is null ? default :
 						new ConsoleExtensions.CharInfo(
 							sampling[i].Item1,
-							Program.Simulator.ChooseColor(sampling[i]));
+							ChooseColor(sampling[i]));
 
-				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_SCHEME != ParticleColoringMethod.Depth || Parameters.DIM > 2))
+				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth || Parameters.DIM > 2))
 					DrawLegend(frameBuffer);
 			}
 
 			return frameBuffer;
 		}
 
-		public static Tuple<char, AClassicalParticle[], double>[] Resample(object[] parameters) {
-			AClassicalParticle[] particleData = (AClassicalParticle[])parameters[0];
-			Tuple<char, AClassicalParticle[], double>[] results = new Tuple<char, AClassicalParticle[], double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+		public static ConsoleColor ChooseColor(Tuple<char, IParticle[], double> particleData) {
+			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Count
+			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Density
+			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity)
+				return Parameters.COLOR_ARRAY[Scaling.Values.Drop(1).TakeWhile(ds => ds < particleData.Item3).Count()];
+			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group)
+				return Program.Simulator.ChooseGroupColor(particleData.Item2);
+			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth)
+				if (Parameters.DIM > 2) {
+					int numColors = Parameters.COLOR_ARRAY.Length;
+					double depth = 1d - particleData.Item2.Min(p => GetDepthScalar(p.LiveCoordinates));
+					int rank = Scaling.Values.Take(numColors - 1).TakeWhile(a => a < depth).Count();
+					return Parameters.COLOR_ARRAY[rank];
+				} else return Parameters.COLOR_ARRAY[^1];
+			else throw new InvalidEnumArgumentException(nameof(Parameters.COLOR_METHOD));
+		}
+
+		public static double GetDepthScalar(double[] v) {
+			if (Parameters.DIM > 2)
+				return 1d - (v.Skip(2).ToArray().Magnitude() / Parameters.DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT);
+			else return 1d;
+		}
+
+		public static Tuple<char, IParticle[], double>[] Resample(object[] parameters) {
+			IParticle[] particleData = (IParticle[])parameters[0];
+			Tuple<char, IParticle[], double>[] results = new Tuple<char, IParticle[], double>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 
 			char pixelChar;
-			AClassicalParticle[] topStuff, bottomStuff, distinct;
-			foreach (IGrouping<int, Tuple<int, int, AClassicalParticle>> bin in DiscreteParticleBin(particleData)) {
+			IParticle[] topStuff, bottomStuff, distinct;
+			foreach (IGrouping<int, Tuple<int, int, IParticle>> bin in DiscreteParticleBin(particleData)) {
 				topStuff = bin.Where(t => t.Item2 % 2 == 0).Select(t => t.Item3).ToArray();
 				bottomStuff = bin.Where(t => t.Item2 % 2 == 1).Select(t => t.Item3).ToArray();
 				distinct = bin.Select(b => b.Item3).Distinct().ToArray();
@@ -149,23 +180,27 @@ namespace ParticleSimulator.Simulation {
 				else pixelChar = Parameters.CHAR_LOW;
 
 				results[bin.Key] =
-					new Tuple<char, AClassicalParticle[], double>(
+					new Tuple<char, IParticle[], double>(
 						pixelChar,
 						distinct,
-						distinct.Length);
+						Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity
+							? distinct.Max(p => p.Luminosity)
+							: Parameters.COLOR_METHOD == ParticleColoringMethod.Density
+								? distinct.Sum(p => p.Density)
+							: distinct.Length);
 			}
 			return results;
 		}
-		private static IEnumerable<IGrouping<int, Tuple<int, int, AClassicalParticle>>> DiscreteParticleBin(AClassicalParticle[] particles) { 
+		private static IEnumerable<IGrouping<int, Tuple<int, int, IParticle>>> DiscreteParticleBin(IParticle[] particles) { 
 			return particles
 				.Where(p =>
-					p.IsAlive
+					p.Enabled
 					&& p.LiveCoordinates[0] + p.Radius >= 0d && p.LiveCoordinates[0] - p.Radius < Parameters.DOMAIN_SIZE[0]
 					&& (Parameters.DIM < 2 || p.LiveCoordinates[1] > -p.Radius && p.LiveCoordinates[1] < p.Radius + Parameters.DOMAIN_SIZE[1]))
 				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < 2*Parameters.WINDOW_HEIGHT))
 				.GroupBy(pd => pd.Item1 + (Parameters.WINDOW_WIDTH * (pd.Item2 / 2)));
 		}
-		private static IEnumerable<Tuple<int, int, AClassicalParticle>> SpreadSample(AClassicalParticle p) {
+		private static IEnumerable<Tuple<int, int, IParticle>> SpreadSample(IParticle p) {
 			double
 				pixelScalar = RenderWidth / Parameters.DOMAIN_SIZE[0],
 				scaledX = RenderWidthOffset + p.LiveCoordinates[0] * pixelScalar,

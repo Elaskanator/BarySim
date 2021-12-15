@@ -3,8 +3,10 @@
 namespace ParticleSimulator.Simulation {
 	public enum ParticleColoringMethod {
 		Group,
+		Count,
 		Density,
-		Depth
+		Luminosity,
+		Depth,
 	}
 
 	public static class ColoringScales {
@@ -38,6 +40,11 @@ namespace ParticleSimulator.Simulation {
 			ConsoleColor.Yellow,
 			ConsoleColor.White
 		};
+		public static readonly ConsoleColor[] Grayscale = new ConsoleColor[] {
+			ConsoleColor.DarkGray,
+			ConsoleColor.Gray,
+			ConsoleColor.White,
+		};
 		public static readonly ConsoleColor[] Radar = new ConsoleColor[] {
 			ConsoleColor.DarkGray,
 			ConsoleColor.Cyan,
@@ -53,10 +60,20 @@ namespace ParticleSimulator.Simulation {
 			ConsoleColor.Gray,
 			ConsoleColor.White,
 		};
-		public static readonly ConsoleColor[] Grayscale = new ConsoleColor[] {
+		public static readonly ConsoleColor[] StarColors = new ConsoleColor[] {
 			ConsoleColor.DarkGray,
+			ConsoleColor.DarkMagenta,
+			ConsoleColor.Magenta,
+			ConsoleColor.DarkRed,
+			ConsoleColor.Red,
+			ConsoleColor.DarkYellow,
+			ConsoleColor.Yellow,
 			ConsoleColor.Gray,
 			ConsoleColor.White,
+			ConsoleColor.Cyan,
+			ConsoleColor.DarkCyan,
+			ConsoleColor.Blue,
+			ConsoleColor.DarkBlue,
 		};
 	}
 }

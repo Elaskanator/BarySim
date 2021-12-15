@@ -4,7 +4,7 @@ using System.Linq;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
-	public class Galaxy : AParticleGroup {
+	public class Galaxy : AParticleGroup<MatterClump> {
 		public override double InitialSeparationRadius => Parameters.GRAVITY_INITIAL_SEPARATION;
 		public override double StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
 		public override double StartSpeedMax_Group_Rand => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND;
@@ -15,9 +15,9 @@ namespace ParticleSimulator.Simulation.Gravity {
 			return new MatterClump(this.ID,
 				position,
 				velocity,
-				Parameters.GRAVITY_MIN_MASS
+				Parameters.GRAVITY_MIN_STARTING_MASS
 					+ (Math.Pow(Program.Random.NextDouble(), Parameters.GRAVITY_MASS_BIAS)
-						* (Parameters.GRAVITY_MAX_MASS - Parameters.GRAVITY_MIN_MASS)),
+						* (Parameters.GRAVITY_MAX_STARTING_MASS - Parameters.GRAVITY_MIN_STARTING_MASS)),
 				Parameters.ELECTROSTATIC_MIN_CHARGE
 					+ (Program.Random.NextDouble()
 						* (Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE)));
