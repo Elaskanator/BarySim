@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
-using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public class Autoscaler {
@@ -28,10 +27,9 @@ namespace ParticleSimulator.Simulation {
 		public float[] Values { get; private set; }
 
 		public void Update(object[] parameters) {
-			Tuple<char, AParticle[], float>[] sampling = ((Tuple<char, AParticle[], float>[])parameters[0]).Without(t => t is null).ToArray();
+			Tuple<char, ParticleData[], float>[] sampling = ((Tuple<char, ParticleData[], float>[])parameters[0]).Without(t => t is null).ToArray();
 			float[] densities;
 			densities = sampling.Select(t => t.Item3).ToArray();
-			//densities = Program.Simulator.AllParticles.Where(p => p.IsActive).Select(p => p.Mass).ToArray();
 
 			if (densities.Length > 0) {
 				StatsInfo stats = new(densities.Select(x => (double)x));

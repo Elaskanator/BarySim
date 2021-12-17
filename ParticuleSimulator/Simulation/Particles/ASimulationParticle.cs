@@ -11,8 +11,8 @@ namespace ParticleSimulator.Simulation {
 		public float Luminosity { get; }
 	}
 
-	public abstract class ASimulationParticle<TSelf> : AParticle, ISimulationParticle, IEquatable<TSelf>, IEqualityComparer<TSelf>
-	where TSelf : ASimulationParticle<TSelf> {
+	public abstract class ASimulationParticle<TSelf> : AParticle<TSelf>, ISimulationParticle, IEquatable<TSelf>, IEqualityComparer<TSelf>
+	where TSelf : ASimulationParticle<TSelf>, IEquatable<TSelf>, IEqualityComparer<TSelf> {
 		public ASimulationParticle(int groupID, Vector<float> position, Vector<float> velocity)
 		: base(position) {
 			this.GroupID = groupID;
@@ -49,11 +49,5 @@ namespace ParticleSimulator.Simulation {
 		protected virtual IEnumerable<TSelf> Filter(IEnumerable<TSelf> others) { return others; }
 		protected virtual IEnumerable<TSelf> AfterUpdate() { return new TSelf[] { (TSelf)this }; }
 		public virtual bool CollideCombine(float distance, Vector<float> toOther, TSelf other, ref float strength) { return false; }
-
-		public bool Equals(TSelf other) { return !(other is null) && this.ID == other.ID; }
-		public override bool Equals(object other) { return !(other is null) && (other is ASimulationParticle<TSelf>) && this.ID == (other as ASimulationParticle<TSelf>).ID; }
-		public bool Equals(TSelf x, TSelf y) { return x.ID == y.ID; }
-		public int GetHashCode(TSelf obj) { return obj.ID.GetHashCode(); }
-		public override int GetHashCode() { return this.ID.GetHashCode(); }
 	}
 }

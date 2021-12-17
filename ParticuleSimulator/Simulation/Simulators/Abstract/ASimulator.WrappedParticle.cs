@@ -66,13 +66,12 @@ namespace ParticleSimulator.Simulation {
 
 			public void UpdateParentNode() {
 				TTree node = this.Node;
-				while (!node.DoesContainCoordinates(this.Particle.Position))
+				while (!node.DoesContain(this.Particle))
 					if (node.IsRoot) {
 						this.Node = node.AddUp(this.Particle);
 						return;
-					}
-					else node = node.Parent;
-				this.Node = node.GetContainingLeaf(this.Particle.Position);
+					} else node = node.Parent;
+				this.Node = node.GetContainingLeaf(this.Particle);
 			}
 		}
 	}

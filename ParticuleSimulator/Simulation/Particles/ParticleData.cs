@@ -1,8 +1,10 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Collections.Generic;
+using System.Numerics;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public struct ParticleData : ISimulationParticle {
+	public struct ParticleData : ISimulationParticle, IEquatable<ParticleData>, IEqualityComparer<ParticleData> {
 		public int ID { get; private set; }
 		public int GroupID { get; private set; }
 		public Vector<float> Position { get; private set; }
@@ -26,14 +28,10 @@ namespace ParticleSimulator.Simulation {
 			this.IsVisible = visible;
 		}
 
-		public bool Equals(IParticle other) {
-			return this.ID == other.ID;
-		}
-		public bool Equals(IParticle x, IParticle y) {
-			return x.ID == y.ID;
-		}
-		public int GetHashCode(IParticle obj) {
-			return obj.ID.GetHashCode();
-		}
+		public bool Equals(ParticleData other) { return this.ID == other.ID; }
+		public override bool Equals(object other) { return (other is IParticle) && this.ID == (other as IParticle).ID; }
+		public bool Equals(ParticleData x, ParticleData y) { return x.ID == y.ID; }
+		public int GetHashCode(ParticleData obj) { return obj.ID.GetHashCode(); }
+		public override int GetHashCode() { return this.ID.GetHashCode(); }
 	}
 }

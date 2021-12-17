@@ -68,9 +68,9 @@ namespace ParticleSimulator.Simulation {
 				if (frameIdx == 0) {
 					_currentColumnFpsDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
 					_currentColumnFrameTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
-					_graphColumns = _graphColumns.ShiftRight(false);
-					_columnFpsStatsMs = _columnFpsStatsMs.ShiftRight(false);
-					_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.ShiftRight(false);
+					_graphColumns = _graphColumns.RotateRight();
+					_columnFpsStatsMs = _columnFpsStatsMs.RotateRight();
+					_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.RotateRight();
 				}
 				double currentFrameTimeMs = (
 					new double[] {

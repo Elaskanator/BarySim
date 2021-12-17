@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Numerics;
 using Generic.Extensions;
-using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public static class Renderer {
@@ -124,51 +123,70 @@ namespace ParticleSimulator.Simulation {
 			Tuple<char, ParticleData[], float>[] results = new Tuple<char, ParticleData[], float>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
 
 			char pixelChar;
-			ParticleData[] topStuff, bottomStuff, distinct;
-			foreach (IGrouping<int, Tuple<int, int, ParticleData>> bin in DiscreteParticleBin(particleData)) {
-				topStuff = bin.Where(t => t.Item2 % 2 == 0).Select(t => t.Item3).ToArray();
-				bottomStuff = bin.Where(t => t.Item2 % 2 == 1).Select(t => t.Item3).ToArray();
-				distinct = bin.Select(b => b.Item3).Distinct().ToArray();
+			Queue<ParticleData> topStuff = new(), bottomStuff = new();
+			HashSet<ParticleData> distinct = new();
+			Queue<Tuple<ParticleData, int>>[] bins = DiscreteParticleBin(particleData);
+			for (int i = 0; i < bins.Length; i++) {
+				if (!(bins[i] is null)) {
+					foreach (Tuple<ParticleData, int> t in bins[i]) {
+						distinct.Add(t.Item1);
+						if (t.Item2 % 2 == 0)
+							topStuff.Enqueue(t.Item1);
+						else bottomStuff.Enqueue(t.Item1);
+					}
 
-				if (topStuff.Length > 0 && bottomStuff.Length > 0)
-					pixelChar = Parameters.CHAR_BOTH;
-				else if (topStuff.Length > 0)
-					pixelChar = Parameters.CHAR_TOP;
-				else pixelChar = Parameters.CHAR_LOW;
+					if (topStuff.Count > 0 && bottomStuff.Count > 0)
+						pixelChar = Parameters.CHAR_BOTH;
+					else if (topStuff.Count > 0)
+						pixelChar = Parameters.CHAR_TOP;
+					else pixelChar = Parameters.CHAR_LOW;
 
-				results[bin.Key] =
-					new Tuple<char, ParticleData[], float>(
-						pixelChar,
-						distinct,
-						Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity
-							? new float[] {
-								topStuff.Length > 0
-									? topStuff.OrderBy(p => GetDepthScalar(p.Position)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
-									: 0f,
-								bottomStuff.Length > 0
-									? bottomStuff.OrderBy(p => GetDepthScalar(p.Position)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
-									: 0f
-							}.Max()
-							: Parameters.COLOR_METHOD == ParticleColoringMethod.Density
-								? distinct.Sum(p => p.Density)
-								: distinct.Length);
+					results[i] =
+						new Tuple<char, ParticleData[], float>(
+							pixelChar,
+							distinct.ToArray(),
+							Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity
+								? Parameters.DIM > 2
+									? new float[] {
+										topStuff.Count > 0
+											? topStuff.OrderBy(p => GetDepthScalar(p.Position)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
+											: 0f,
+										bottomStuff.Count > 0
+											? bottomStuff.OrderBy(p => GetDepthScalar(p.Position)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
+											: 0f
+									}.Max()
+									: distinct.Max(p => p.Luminosity)
+								: Parameters.COLOR_METHOD == ParticleColoringMethod.Density
+									? distinct.Sum(p => p.Density)
+									: distinct.Count);
+
+					topStuff.Clear();
+					bottomStuff.Clear();
+					distinct.Clear();
+				}
+			}
+
+			return results;
+		}
+		private static Queue<Tuple<ParticleData, int>>[] DiscreteParticleBin(ParticleData[] particles) { 
+			Queue<Tuple<ParticleData, int>>[] results = new Queue<Tuple<ParticleData, int>>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			int idx;
+			foreach (Tuple<ParticleData, int, int> t in particles.SelectMany(p => SpreadSample(p))) {
+				idx = t.Item2 + Parameters.WINDOW_WIDTH * (t.Item3 >> 1);
+				results[idx] ??= new Queue<Tuple<ParticleData, int>>();
+				results[idx].Enqueue(new Tuple<ParticleData, int>(t.Item1, t.Item3));
 			}
 			return results;
 		}
-		private static IEnumerable<IGrouping<int, Tuple<int, int, ParticleData>>> DiscreteParticleBin(ParticleData[] particles) { 
-			return particles
-				.SelectMany(p => SpreadSample(p).Where(p => p.Item1 >= 0 && p.Item1 < Parameters.WINDOW_WIDTH && p.Item2 >= 0 && p.Item2 < 2*Parameters.WINDOW_HEIGHT))
-				.GroupBy(pd => pd.Item1 + (Parameters.WINDOW_WIDTH * (pd.Item2 / 2)));
-		}
-		private static IEnumerable<Tuple<int, int, ParticleData>> SpreadSample(ParticleData p) {
+		private static IEnumerable<Tuple<ParticleData, int, int>> SpreadSample(ParticleData p) {
 			float
 				pixelScalar = RenderWidth / Parameters.DOMAIN_SIZE[0],
 				scaledX = RenderWidthOffset + p.Position[0] * pixelScalar,
 				scaledY = RenderHeightOffset + (Parameters.DIM < 2 ? 0f : p.Position[1] * pixelScalar);
 
-			if (p.Radius <= Parameters.WORLD_EPSILON)
-				yield return new((int)scaledX, (int)scaledY, p);
-			else {
+			if (p.Radius <= Parameters.WORLD_EPSILON) {
+				yield return new(p, (int)scaledX, (int)scaledY);
+			} else {
 				float
 					radiusX = p.Radius * pixelScalar,
 					minX = scaledX - radiusX,
@@ -197,7 +215,7 @@ namespace ParticleSimulator.Simulation {
 								if (Parameters.DIM == 1) {
 									dist = MathF.Abs(testX - p.Position[0]);
 									if (dist <= p.Radius)
-										yield return new(roundedX, roundedY, p);
+										yield return new(p, roundedX, roundedY);
 								} else {
 									testY = roundedY == (int)scaledY//particle in current bin
 										? p.Position[1] * pixelScalar//use exact value
@@ -207,7 +225,7 @@ namespace ParticleSimulator.Simulation {
 										.Select((tx, d) => pixelScalar * p.Position[d] - tx)
 										.Sum(dx => dx * dx));
 									if (p.Radius * pixelScalar >= dist)
-										yield return new(roundedX, roundedY, p);
+										yield return new(p, roundedX, roundedY);
 		}}}}}}}
 
 		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {

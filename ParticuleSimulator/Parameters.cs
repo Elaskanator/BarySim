@@ -11,10 +11,10 @@ namespace ParticleSimulator {
 		public const SimulationType SIM_TYPE = SimulationType.Gravity;
 
 		public const float PARTICLE_MAX_ACCELERATION = 0.0025f;
-		public const int PARTICLES_GROUP_COUNT = 100;
+		public const int PARTICLES_GROUP_COUNT = 128;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 10;
-		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 1f;//0 for max size
+		public const int PARTICLES_GROUP_MAX = 16;
+		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float WORLD_SCALE = 2f;
 		public const float TIME_SCALE = 1f;
