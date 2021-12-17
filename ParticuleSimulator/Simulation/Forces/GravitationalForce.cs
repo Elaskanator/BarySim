@@ -1,14 +1,14 @@
 ﻿namespace ParticleSimulator.Simulation {
 	public class GravitationalForce<TParticle> : ABaryonForce<TParticle>
 	where TParticle : ABaryonParticle<TParticle> {
-		public override double ForceConstant => Parameters.GRAVITATIONAL_CONSTANT;
+		public override float ForceConstant => Parameters.GRAVITATIONAL_CONSTANT;
 		public override bool IsAttractionForce => true;
 
-		public override double GetInteractedPhysicalParameter(TParticle particle) {
+		public override float GetInteractedPhysicalParameter(TParticle particle) {
 			return particle.Mass;
 		}
 
-		public override BaryonCenter GetInteractedPhysicalParameter(FarFieldQuadTree<TParticle> baryonTree) {
+		public override BaryonCenter GetInteractedPhysicalParameter(MagicTree<TParticle> baryonTree) {
 			return baryonTree.BaryCenter_Mass;
 		}
 	}

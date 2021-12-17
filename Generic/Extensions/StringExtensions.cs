@@ -44,6 +44,9 @@ namespace Generic.Extensions {
 					: new string(result.Reverse().Take(maxLength.Value).Reverse().ToArray());
 			return result + exponentStr;
 		}
+		public static string ToStringBetter(this float value, int minAccuracy = 2, bool stripZeros = true, int? maxLength = 6) {
+			return ((double)value).ToStringBetter(minAccuracy, stripZeros, maxLength);
+		}
 
 		public static string ToNumericString(this string noun, int number) {
 			return string.Format("{0} {1}", number, noun.Pluralize(number));

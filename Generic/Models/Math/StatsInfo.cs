@@ -20,7 +20,7 @@ namespace Generic.Models {
 
 		public double GetPercentileValue(double pct, bool enableInterpolation = true) {
 			double idx = (this.Data_asc.Length - 1) * pct / 100d;
-			if (enableInterpolation && idx % 1d > 0) {
+			if (enableInterpolation && idx % 1d > 0d) {
 				return this.Data_asc[(int)idx]
 					+ (idx % 1d) * (this.Data_asc[(int)idx + 1] - this.Data_asc[(int)idx]);
 			} else return this.Data_asc[(int)idx];

@@ -1,66 +1,69 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
 	public class Galaxy : AParticleGroup<MatterClump> {
-		public override double InitialSeparationRadius => Parameters.GRAVITY_INITIAL_SEPARATION;
-		public override double StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
-		public override double StartSpeedMax_Group_Rand => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND;
-		public override double StartSpeedMax_Particle_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP;
-		public override double StartSpeedMax_Particle_Range => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
+		public override float InitialSeparationRadius => Parameters.GRAVITY_INITIAL_SEPARATION;
+		public override float StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
+		public override float StartSpeedMax_Group_Rand => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND;
+		public override float StartSpeedMax_Particle_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP;
+		public override float StartSpeedMax_Particle_Range => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
 
-		protected override MatterClump NewParticle(double[] position, double[] velocity) {
+		protected override MatterClump NewParticle(Vector<float> position, Vector<float> velocity) {
 			return new MatterClump(this.ID,
 				position,
 				velocity,
 				Parameters.GRAVITY_MIN_STARTING_MASS
-					+ (Math.Pow(Program.Random.NextDouble(), Parameters.GRAVITY_MASS_BIAS)
+					+ (MathF.Pow((float)Program.Random.NextDouble(), Parameters.GRAVITY_MASS_BIAS)
 						* (Parameters.GRAVITY_MAX_STARTING_MASS - Parameters.GRAVITY_MIN_STARTING_MASS)),
 				Parameters.ELECTROSTATIC_MIN_CHARGE
-					+ (Program.Random.NextDouble()
+					+ ((float)Program.Random.NextDouble()
 						* (Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE)));
 		}
 
-		protected override double[] NewParticlePosition(double[] center, double radius) {
-			double[] result = base
-				.NewParticlePosition(new double[Parameters.DIM].Take(2).ToArray(), radius)
-				.Concat(new double[2])
-				.Take(Parameters.DIM)
-				.ToArray()
-				.Add(center);
+		//protected override Vector<float> NewParticlePosition(Vector<float> center, float radius) {
+		//	Vector<float> result = base.NewParticlePosition(new float[Parameters.DIM].Take(2).ToArray(), radius)
+		//		.Concat(new float[2])
+		//		.Take(Parameters.DIM)
+		//		.ToArray()
+		//		.Add(center);
 
-			if (Parameters.DIM > 2) {
-				double height =
-					this.NumParticles
-					* this.InitialSeparationRadius
-					* Math.Pow(Program.Random.NextDouble(), 2d)
-					/ Math.Pow(2d, Parameters.DIM - 1d);
+		//	if (Parameters.DIM > 2) {
+		//		float height =
+		//			this.NumParticles
+		//			* this.InitialSeparationRadius
+		//			* MathF.Pow((float)Program.Random.NextDouble(), 2f)
+		//			/ MathF.Pow(2f, Parameters.DIM - 1f);
 				
-				result = result.Add(
-					new double[2].Concat(
-						HyperspaceFunctions.RandomCoordinate_Spherical(height, Parameters.DIM - 2, Program.Random)).ToArray());
-			}
+		//		result = result.Add(
+		//			new float[2].Concat(
+		//				HyperspaceFunctions.RandomCoordinate_Spherical(height, Parameters.DIM - 2, Program.Random).Select(x => (float)x))
+		//			.ToArray());
+		//	}
 
-			return result;
-		}
-		protected override double[] NewInitialDirection(double[] center, double[] position) {
+		//	return result;
+		//}
+		protected override Vector<float> NewInitialDirection(Vector<float> center, Vector<float> position) {
 			if (Parameters.DIM == 1) {
-				return new double[Parameters.DIM];
+				return Vector<float>.Zero;
 			} else {
-				double angle = Math.Atan2(position[1] - center[1], position[0] - center[0]);
-				angle += 2 * Math.PI
-					* (0.25d//90 degree rotation
-						+ (Math.Pow(Program.Random.NextDouble(), Parameters.GRAVITY_ALIGNMENT_SKEW_POW)
-							* Parameters.GRAVITY_ALIGNMENT_SKEW_RANGE_PCT / 100d));
+				float angle = MathF.Atan2(position[1] - center[1], position[0] - center[0]);
+				angle += 2f * MathF.PI
+					* (0.25f//90 degree rotation
+						+ (MathF.Pow((float)Program.Random.NextDouble(), Parameters.GRAVITY_ALIGNMENT_SKEW_POW)
+							* Parameters.GRAVITY_ALIGNMENT_SKEW_RANGE_PCT / 100f));
 
-				IEnumerable<double> rotation = new double[] {
-					Math.Cos(angle),
-					Math.Sin(angle)};
+				IEnumerable<float> rotation = new float[] {
+					MathF.Cos(angle),
+					MathF.Sin(angle) };
 				if (Parameters.DIM > 2)
-					rotation = rotation.Concat(Enumerable.Repeat(0d, Parameters.DIM - 2));
-				return rotation.ToArray().Multiply(Math.Log(1d + center.Distance(position), Parameters.GRAVITY_INITIAL_SEPARATION));
+					rotation = rotation.Concat(Enumerable.Repeat(0f, Parameters.DIM - 2));
+				else rotation = rotation.Take(Parameters.DIM);
+
+				return VectorFunctions.New(rotation);
 			}
 		}
 	}

@@ -44,16 +44,22 @@ namespace ParticleSimulator.Simulation {
 		}
 		
 		public static void TitleUpdate(object[] parameters = null) {
-			Console.Title = string.Format("{0} Simulator {1}D - {2}/{3}/{4}{5}",
-				Parameters.SimType,
-				Parameters.DIM,
-				Program.Simulator.EnabledParticles.Count(p => p.Visible),
-				Program.Simulator.EnabledParticles.Length,
-				Program.AllParticles.Length.Pluralize("Particle"),
-				_fpsTimingMs.NumUpdates > 0
-					? string.Format(" ({0} fps)", (1000d / _fpsTimingMs.Current).ToStringBetter(2, false))
-					: ""
-			);
+			string result = string.Format("{0} Simulator {1}D - ",
+				Parameters.SIM_TYPE,
+				Parameters.DIM);
+
+			if (Program.Resource_Locations is null || Program.Resource_Locations.Current is null) {
+				result += Program.Simulator.Particles.Count().Pluralize("Particle");
+			} else {
+				ParticleData[] activeParticles = (ParticleData[])Program.Resource_Locations.Current;
+				result += string.Format("{0}/{1}",
+					activeParticles.Length.Pluralize("Particle"),
+					activeParticles.Count(p => p.IsVisible));
+				if (_fpsTimingMs.NumUpdates > 0)
+					result += string.Format("({0} fps)", (1000d / _fpsTimingMs.Current).ToStringBetter(2, false));
+			}
+
+			Console.Title = result;
 		}
 
 		public static void AfterRasterize(StepEvaluator result) {
@@ -204,7 +210,7 @@ namespace ParticleSimulator.Simulation {
 				min = min <= frameTimeStats.Concat(iterationTimeStats).Min(s => s.GetPercentileValue(50d)) ? min : frameTimeStats.Concat(iterationTimeStats).Min(s => s.GetPercentileValue(50d));
 				max = max >= frameTimeStats.Concat(iterationTimeStats).Max(s => s.GetPercentileValue(50d)) ? max : frameTimeStats.Concat(iterationTimeStats).Max(s => s.GetPercentileValue(50d));
 
-				min = min >= 1d ? min : 0d;
+				min = min >= 1d ? min : 0f;
 				max = max >= min ? max : min + 1d;
 
 				if (Math.Abs(min - _currentMin) / _currentMin > 0.05d)
@@ -271,7 +277,7 @@ namespace ParticleSimulator.Simulation {
 				y100Scaled = yFps100Scaled >= yTime100Scaled ? yFps100Scaled : yTime100Scaled;
 				
 			ConsoleColor color; char chr;
-			for (int yIdx = y000Scaled >= 0d ? (int)y000Scaled : 0; yIdx < (y100Scaled <= Parameters.GRAPH_HEIGHT ? y100Scaled : (double)Parameters.GRAPH_HEIGHT); yIdx++) {
+			for (int yIdx = y000Scaled >= 0f ? (int)y000Scaled : 0; yIdx < (y100Scaled <= Parameters.GRAPH_HEIGHT ? y100Scaled : (double)Parameters.GRAPH_HEIGHT); yIdx++) {
 				if (yIdx == (int)y000Scaled) {//bottom pixel
 					if (y000Scaled % 1d >= 0.5d)//top half
 						chr = Parameters.CHAR_TOP;
@@ -326,18 +332,11 @@ namespace ParticleSimulator.Simulation {
 			Console.BackgroundColor = ConsoleColor.Black;
 			Console.WriteLine("---END--- Duration {0}s", Program.Manager.EndTimeUtc.Subtract(Program.Manager.StartTimeUtc).TotalSeconds.ToStringBetter(2));
 			
-			Console.Write("Evaluated ");
-
-			int particleCount = Program.Simulator.EnabledParticles.Length;
-			Console.Write(particleCount);
-
-			Console.ForegroundColor = ConsoleColor.White;
-			Console.Write(" {0} for {1} averaging ",
-				"particle".Pluralize(particleCount),
-				Program.StepEval_Rasterize.NumCompleted.Pluralize("rasters")
-					+ (Parameters.SIMULATION_SKIPS < 2
-						? ""
-						: " and " + Program.StepEval_Simulate.NumCompleted.Pluralize("simulation steps")));
+			Console.Write("Evaluated {0}{1}",
+				Program.StepEval_Simulate.NumCompleted.Pluralize("time"),
+				Parameters.SIMULATION_SKIPS > 0
+					? " and " + Program.StepEval_Rasterize.NumCompleted.Pluralize("rasters")
+					: "");
 
 			double fps = (double)Program.StepEval_Resample.NumCompleted / totalDuration.TotalSeconds;
 			Console.ForegroundColor = ChooseFpsColor(fps);
@@ -345,7 +344,7 @@ namespace ParticleSimulator.Simulation {
 			Console.ForegroundColor = ConsoleColor.White;
 			Console.Write(" FPS");
 
-			if (Parameters.TARGET_FPS > 0d) {
+			if (Parameters.TARGET_FPS > 0f) {
 				double expectedFramesRendered = Parameters.TARGET_FPS * (double)totalDuration.TotalSeconds;
 				double fpsRatio = (double)Program.StepEval_Rasterize.NumCompleted / ((int)(1 + expectedFramesRendered));
 
@@ -365,11 +364,11 @@ namespace ParticleSimulator.Simulation {
 			return ConsoleColor.White;
 		}
 		private static ConsoleColor ChooseFpsColor(double fps) {
-			double ratioToDesired = fps / (Parameters.TARGET_FPS > 0d ? Parameters.TARGET_FPS : Parameters.TARGET_FPS_DEFAULT);
+			double ratioToDesired = fps / (Parameters.TARGET_FPS > 0f ? Parameters.TARGET_FPS : Parameters.TARGET_FPS_DEFAULT);
 			return ChooseColor(ratioToDesired);
 		}
 		private static ConsoleColor ChooseFrameIntervalColor(double timeMs) {
-			double ratioToDesired = 1000d / (Parameters.TARGET_FPS > 0d ? Parameters.TARGET_FPS : Parameters.TARGET_FPS_DEFAULT) / timeMs;
+			double ratioToDesired = 1000d / (Parameters.TARGET_FPS > 0f ? Parameters.TARGET_FPS : Parameters.TARGET_FPS_DEFAULT) / timeMs;
 			return ChooseColor(ratioToDesired);
 		}
 	}

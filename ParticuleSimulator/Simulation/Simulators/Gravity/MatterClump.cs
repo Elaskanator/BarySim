@@ -1,40 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
-using Generic.Extensions;
+using System.Linq;
+using System.Numerics;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
 	public class MatterClump : ABaryonParticle<MatterClump> {
-		public MatterClump(int groupID, double[] position, double[] velocity, double mass, double charge = 0d)
+		public MatterClump(int groupID, Vector<float> position, Vector<float> velocity, float mass, float charge = 0f)
 		: base(groupID, position, velocity, mass, charge) { }
 
-		private double _density = 1d;
-		public override double Density => this._density;
-		private double _radius = 0d;
-		public override double Radius => this._radius;
-		private double _luminosity = 0d;
-		public override double Luminosity => this._luminosity;
-		private double _mass = 0d;
-		public override double Mass {
+		private float _density = 1f;
+		public override float Density => this._density;
+		private float _radius = 0f;
+		public override float Radius => this._radius;
+		private float _luminosity = 0f;
+		public override float Luminosity => this._luminosity;
+		private float _mass = 0f;
+		public override float Mass {
 			get => this._mass;
 			set {
 				this._mass = value;
-				this._radius = Math.Pow(value, 1d / Parameters.DIM) / Parameters.GRAVITY_RADIAL_DENSITY;
-				this._density = Math.Pow(this._radius, 1d / Parameters.DIM);
+				this._radius = MathF.Pow(value, 1f / Parameters.DIM) / Parameters.GRAVITY_RADIAL_DENSITY;
+				this._density = MathF.Sqrt(this._radius);
 				this._radius /= this._density;
-				this._luminosity = Math.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5d); }}
-		public override double[] CollisionAcceleration {
-			get => this.CollisionImpulse.Divide(this.Mass);
-			set { this.CollisionImpulse = value.Multiply(this.Mass); } }
+				this._luminosity = MathF.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5f); }}
+		public override Vector<float> CollisionAcceleration {
+			get => this.CollisionImpulse * (1f / this.Mass);
+			set { this.CollisionImpulse = value * this.Mass; } }
 
-		public override bool Absorb(double distance, double[] toOther, MatterClump other) {
-			double[] baryCenter =
-				this.LiveCoordinates.Multiply(this.Mass)
-				.Add(other.LiveCoordinates.Multiply(other.Mass))
-				.Divide(this.Mass + other.Mass);
+		public override bool Absorb(float distance, Vector<float> toOther, MatterClump other) {
+			Vector<float> baryCenter =
+				(this.Mass * this.Position
+				+ other.Mass * other.Position)
+				* (1f / (this.Mass + other.Mass));
 			
-			double distanceError =
-				(other.LiveCoordinates.Distance(baryCenter) / (this.Radius + other.Radius))
+			float distanceError =
+				(other.Position.Distance(baryCenter, Parameters.DIM) / (this.Radius + other.Radius))
 				//* (other.Momentum.Distance(this.Momentum) / (this.Momentum.Magnitude() + other.Momentum.Magnitude()))
 				;
 			if (distance <= this.Radius - other.Radius || distance <= other.Radius - this.Radius
@@ -44,31 +45,31 @@ namespace ParticleSimulator.Simulation.Gravity {
 				//	/ (this.Mass + other.Mass);
 				this.Mass += other.Mass;
 				this.Charge += other.Charge;
-				this.LiveCoordinates = baryCenter;
-				this.Momentum = this.Momentum.Add(other.Momentum);
-				this.NearfieldImpulse = this.NearfieldImpulse.Add(other.NearfieldImpulse);
-				this.FarfieldImpulse = this.FarfieldImpulse.Add(other.FarfieldImpulse);
-				this.CollisionImpulse = this.CollisionImpulse.Add(other.CollisionImpulse);
+				this.Position = baryCenter;
+				this.Momentum = this.Momentum + other.Momentum;
+				this.NearfieldImpulse = this.NearfieldImpulse + other.NearfieldImpulse;
+				this.FarfieldImpulse = this.FarfieldImpulse + other.FarfieldImpulse;
+				this.CollisionImpulse = this.CollisionImpulse + other.CollisionImpulse;
 
-				other.Momentum = new double[Parameters.DIM];
-				other.NearfieldImpulse = new double[Parameters.DIM];
-				other.FarfieldImpulse = new double[Parameters.DIM];
-				other.CollisionImpulse = new double[Parameters.DIM];
-				other.Enabled = false;
+				other.Momentum = Vector<float>.Zero;
+				other.NearfieldImpulse = Vector<float>.Zero;
+				other.FarfieldImpulse = Vector<float>.Zero;
+				other.CollisionImpulse = Vector<float>.Zero;
+				other.IsEnabled = false;
 				return true;
 			}
 
 			return false;
 		}
 		
-		public override double ComputeCollision(double distance, double[] toOther, MatterClump other) {
-			//if (Parameters.GRAVITY_COLLISION_DRAG_STRENGTH > 0d && distance > Parameters.WORLD_EPSILON) {
+		public override float ComputeCollision(float distance, Vector<float> toOther, MatterClump other) {
+			//if (Parameters.GRAVITY_COLLISION_DRAG_STRENGTH > 0f && distance > Parameters.WORLD_EPSILON) {
 			//	throw new NotImplementedException();
-			//	double[] velocityDelta = other.Velocity.Subtract(this.Velocity);
+			//	Vector<float> velocityDelta = other.Velocity.Subtract(this.Velocity);
 			//	double velocityDeltaSize = velocityDelta.Magnitude();
 			//	if (velocityDeltaSize > Parameters.WORLD_EPSILON) {
 			//		double alignedImpulse = velocityDelta.Divide(velocityDeltaSize).DotProduct(toOther.Divide(distance));
-			//		double[] impulse =
+			//		Vector<float> impulse =
 			//			toOther.Normalize()
 			//				.Multiply(this.Momentum.Magnitude() * alignedImpulse * Parameters.GRAVITY_COLLISION_DRAG_STRENGTH);
 			//		if (distance <= this.Radius + other.Radius) {
@@ -78,56 +79,25 @@ namespace ParticleSimulator.Simulation.Gravity {
 			//		return impulse.Magnitude() / (this.Mass < other.Mass ? this.Mass : other.Mass) / distance;
 			//	}
 			//}
-			return 0d;
+			return 0f;
 		}
 
-		protected override void AfterUpdate() {
+		protected override IEnumerable<MatterClump> AfterUpdate() {
 			if (this.Mass >= Parameters.GRAVITY_CRITICAL_MASS) {//supernova!
-				HashSet<MatterClump> memberParticles = this.DistinctRecursiveChildren(p => p.MergedParticles);
+				this.IsEnabled = false;
 
-				double totalMass = this.Mass;
-				double totalCharge = this.Charge;
-				double density = this.Density;
-				double excessMass = totalMass - Parameters.GRAVITY_CRITICAL_MASS;
-				double intensityFraction = excessMass / Parameters.GRAVITY_CRITICAL_MASS;
-				double velocity;
-				if (Parameters.GRAVITY_EXPLOSION_SPEED_LOW_BIAS > 0)
-					velocity = Parameters.GRAVITY_EXPLOSION_MIN_SPEED
-						+ (Parameters.GRAVITY_EXPLOSION_MAX_SPEED - Parameters.GRAVITY_EXPLOSION_MIN_SPEED)
-							* (1d - (1d / (1d + (1d / Math.Log(1d + intensityFraction, 1d + Parameters.GRAVITY_EXPLOSION_SPEED_LOW_BIAS + 1)))));//don't ask...
-				else velocity = Parameters.GRAVITY_EXPLOSION_MAX_SPEED;
-				double[] centerOfMass = (double[])this.LiveCoordinates.Clone();
-				double avgMass = totalMass / memberParticles.Count;
-				double avgCharge = totalCharge / memberParticles.Count;
-				double[] avgMomentum = this.Momentum.Divide(memberParticles.Count);
-
-				this.Mass = avgMass;
-				double valenceRadius = 4d * this.Radius;
-				int valenceNum = 0, valenceSize = 0, valenceCapacity = 1;
-				double[] direction;
-				foreach (MatterClump shrapnel in memberParticles) {
-					shrapnel.MergedParticles.Clear();
-					shrapnel.NodeCollisions.Clear();
-					direction = HyperspaceFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random);
-
-					shrapnel.Mass = avgMass;
-					//shrapnel._density = density;
-					shrapnel.Charge = avgCharge;
-					shrapnel.LiveCoordinates = centerOfMass.Add(direction.Multiply(valenceNum * valenceRadius));
-					shrapnel.Velocity = valenceNum == 0 && valenceCapacity == 1
-						? new double[Parameters.DIM]
-						: direction.Multiply(velocity * Math.Pow(valenceNum, 1.33d));
-					shrapnel.Momentum = shrapnel.Momentum.Add(avgMomentum);
-					shrapnel.Enabled = true;
-
-					if (++valenceSize >= valenceCapacity) {
-						if (valenceNum++ == 0)
-							valenceCapacity = 1 << (2 + Parameters.DIM);
-						else valenceCapacity <<= 1;
-						valenceSize = 0;
-					}
+				float radiusRange = this.Radius * (1 << (1 + Parameters.DIM));
+				float avgMass = this.Mass / Parameters.GRAVITY_EJECTA_NUM_PARTICLES;
+				float avgCharge = this.Charge / Parameters.GRAVITY_EJECTA_NUM_PARTICLES;
+				for (int i = 0; i < Parameters.GRAVITY_EJECTA_NUM_PARTICLES; i++) {
+					yield return new MatterClump(
+						this.GroupID,
+						this.Position + VectorFunctions.New(VectorFunctions.RandomCoordinate_Spherical(radiusRange, Parameters.DIM, Program.Random).Select(x => (float)x)),
+						VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x * Parameters.GRAVITY_EJECTA_SPEED)),
+						avgMass,
+						avgCharge);
 				}
-			}
+			} else yield return this;
 		}
 	}
 }

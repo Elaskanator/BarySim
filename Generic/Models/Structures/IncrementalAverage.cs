@@ -1,48 +1,48 @@
 ﻿using System.Collections.Generic;
 
 namespace Generic.Models {
-	public abstract class AIncrementalAverage<T> {
-		protected T _current = default;
-		public virtual T Current { get { return this._current; } }
+	public abstract class AIncrementalAverage<TAvg>
+	where TAvg : struct {
+		protected TAvg _current = default;
+		public virtual TAvg Current { get { return this._current; } }
 		public virtual int NumUpdates { get; private set; }
-		public T LastUpdate { get; private set; }
+		public TAvg LastUpdate { get; private set; }
 
 		protected virtual double UpdateStrength { get { return 1d / this.NumUpdates; } }
 
 		public AIncrementalAverage() { }
 
-		public void Update(T value, double? weighting = null) {
+		public void Update(TAvg value, double? weighting = null) {
 			this.LastUpdate = value;
 			this.ApplyUpdate(value, weighting);
 			this.NumUpdates++;
 		}
 
-		protected virtual void ApplyUpdate(T value, double? weighting) {
-			if (this.NumUpdates == 0) {
-				this._current = value;
-			} else {
-				double
-					alpha = (weighting ?? this.UpdateStrength) >= 1d / this.NumUpdates ? (weighting ?? this.UpdateStrength) : 1d / this.NumUpdates,
-					beta = 1 - alpha;
-				this._current = this.Add(this.Multiply(value, alpha), this.Multiply(this.Current, beta));
-			}
-		}
-		protected abstract T Multiply(T a, double b);
-		protected abstract T Add(T a, T b);
+		protected abstract void ApplyUpdate(TAvg value, double? weighting);
 
 		public virtual void Reset() {
 			this._current = this.LastUpdate = default;
 			this.NumUpdates = 0;
 		}
 
-		public override string ToString() { return string.Format("{0}[{1}]", nameof(AIncrementalAverage<T>), this.Current); }
+		public override string ToString() { return string.Format("{0}[{1}]", nameof(AIncrementalAverage<TAvg>), this.Current); }
 	}
 
 	public class IncrementalAverage : AIncrementalAverage<double> {
 		public IncrementalAverage() : base() { }
 
-		protected override double Multiply(double a, double b) { return a * b; }
-		protected override double Add(double a, double b) { return a + b; }
+		protected override void ApplyUpdate(double value, double? weighting) {
+			if (this.NumUpdates == 0) {
+				this._current = value;
+			} else {
+				double
+					alpha = weighting is null
+						? 1d
+						: (weighting ?? this.UpdateStrength) >= 1d / this.NumUpdates ? (weighting ?? this.UpdateStrength) : 1d / this.NumUpdates,
+					beta = 1d - alpha;
+				this._current = alpha * value + this._current * beta;
+			}
+		}
 	}
 
 	public class TrackingIncrementalAverage : IncrementalAverage {

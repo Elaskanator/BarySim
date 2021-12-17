@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 using ParticleSimulator.Simulation;
@@ -15,16 +14,15 @@ namespace ParticleSimulator {
 		public static readonly Random Random = new();
 		public static IParticleSimulator Simulator { get; private set; }
 		public static RunManager Manager { get; private set; }
-		public static IParticle[] AllParticles { get; private set; }
 
-		public static SynchronizedDataBuffer Resource_Tree, Resource_Locations, Resource_Resamplings, Resource_Rasterization;
-		public static StepEvaluator StepEval_TreeMaintain, StepEval_Simulate, StepEval_Resample, StepEval_Autoscale, StepEval_Rasterize, StepEval_Draw, StepEval_ConsoleWindow;
+		public static SynchronizedDataBuffer Resource_Locations, Resource_Resamplings, Resource_Rasterization;
+		public static StepEvaluator StepEval_Simulate, StepEval_Resample, StepEval_Autoscale, StepEval_Rasterize, StepEval_Draw, StepEval_ConsoleWindow;
 
 		public static void Main(string[] args) {
 			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);//ctrl+c and alt+f4 etc
 			
-			Console.Title = string.Format("{0} Simulator ({1}D)",
-				Parameters.SimType,
+			Console.Title = string.Format("{0} Simulator ({1}D) - Initializing",
+				Parameters.SIM_TYPE,
 				Parameters.DIM);
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
@@ -36,17 +34,17 @@ namespace ParticleSimulator {
 			ConsoleExtensions.DisableResizing();//note this doesn't work to disable OS window snapping
 			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
-			switch (Parameters.SimType) {
+			switch (Parameters.SIM_TYPE) {
 				case SimulationType.Boid:
-					Simulator = new Simulation.Boids.BoidSimulator();
+					throw new NotImplementedException();
+					//Simulator = new Simulation.Boids.BoidSimulator();
 					break;
 				case SimulationType.Gravity:
 					Simulator = new Simulation.Gravity.GravitySimulator();
 					break;
 				default:
-					throw new InvalidEnumArgumentException(nameof(Parameters.SimType), (int)Parameters.SimType, typeof(SimulationType));
+					throw new InvalidEnumArgumentException(nameof(Parameters.SIM_TYPE), (int)Parameters.SIM_TYPE, typeof(SimulationType));
 			}
-			AllParticles = Simulator.ParticleGroups.SelectMany(g => g.MemberParticles).ToArray();
 			PerfMon.TitleUpdate();
 
 			Manager = BuildRunManager();
@@ -56,7 +54,6 @@ namespace ParticleSimulator {
 		}
 
 		private static RunManager BuildRunManager() {
-			Resource_Tree = new SynchronizedDataBuffer("Tree", 0);
 			Resource_Locations = new SynchronizedDataBuffer("Locations", Parameters.PRECALCULATION_LIMIT);
 			Resource_Resamplings = new SynchronizedDataBuffer("Resampling", Parameters.PRECALCULATION_LIMIT);
 			Resource_Rasterization = new SynchronizedDataBuffer("Rasterization", Parameters.PRECALCULATION_LIMIT);
@@ -66,7 +63,7 @@ namespace ParticleSimulator {
 				//Initializer = null,
 				//Calculator = null,
 				Evaluator = Renderer.FlushScreenBuffer,
-				Synchronizer = Parameters.TARGET_FPS > 0d || Parameters.MAX_FPS > 0d ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
+				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
 				//Callback = null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
@@ -90,8 +87,8 @@ namespace ParticleSimulator {
 
 			StepEval_Simulate = new(new() {
 				Name = "Simulating",
-				//Initializer = null,
-				Calculator = Simulator.RefreshSimulation,
+				Initializer = Simulator.RefreshSimulation,
+				//Calculator = null,
 				//Evaluator = null,
 				//Synchronizer = null,
 				//Callback = null,
@@ -103,33 +100,7 @@ namespace ParticleSimulator {
 				OutputResource = Resource_Locations,
 				IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
 				OutputSkips = Parameters.SIMULATION_SKIPS,
-				InputResourceUses = new Prerequisite[] {
-					new() {
-						Resource = Resource_Tree,
-						DoConsume = true,
-						//OnChange = false,
-						DoHold = Parameters.SYNC_TREE_REFRESH,
-						//AllowDirtyRead = false,
-						ReuseAmount = Parameters.SYNC_TREE_REFRESH ? Parameters.TREE_REFRESH_REUSE_ALLOWANCE : 0,
-						ReuseTolerance = Parameters.SYNC_TREE_REFRESH ? 0 : Parameters.TREE_REFRESH_REUSE_ALLOWANCE,
-						//ReadTimeout = null
-			}}});
-			StepEval_TreeMaintain = new(new() {
-				Name = "Tree Managing",
-				Initializer = Simulator.RebuildTree,
-				//Calculator = null,
-				//Evaluator = null,
-				//Synchronizer = null,
-				//Callback = null,
-				//DataAssimilationTicksAverager = null,
-				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				//DataLoadingTimeout = null,
-				OutputResource = Resource_Tree,
-				//IsOutputOverwrite = false,
-				//OutputSkips = 0,
-				//InputResourceUses = null
+				//InputResourceUses = null,
 			});
 			StepEval_Resample = new(new() {
 				Name = "Density Sampling",
@@ -201,7 +172,7 @@ namespace ParticleSimulator {
 				//OutputSkips = 0,
 				InputResourceUses = new Prerequisite[] {
 					new() {
-						Resource = Resource_Tree,
+						Resource = Resource_Locations,
 						//DoConsume = false,
 						OnChange = true,
 						//DoHold = false,
@@ -246,7 +217,6 @@ namespace ParticleSimulator {
 			return new RunManager(
 				new[] {
 					StepEval_Simulate,
-					StepEval_TreeMaintain,
 					StepEval_Resample,
 					StepEval_Rasterize,
 					StepEval_ConsoleWindow,

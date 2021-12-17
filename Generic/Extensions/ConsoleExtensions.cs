@@ -229,11 +229,11 @@ namespace Generic.Extensions {
 
 			public CharInfo(char character, ConsoleColor? foreground = null, ConsoleColor? background = null) {
 				this.Char = new CharUnion() { UnicodeChar = character };
-				this.Attributes = (ushort)((int)(foreground ?? 0) | (((int)(background ?? 0)) << 4));
+				this.Attributes = (ushort)((int)(foreground ?? 0) | (((ushort)(background ?? 0)) << 4));
 			}
 			public CharInfo(byte character, ConsoleColor? foreground = null, ConsoleColor? background = null) {
 				this.Char = new CharUnion() { AsciiChar = character };
-				this.Attributes = (ushort) ((int)(foreground ?? 0) | (((int)(background ?? 0))<<4));
+				this.Attributes = (ushort) ((int)(foreground ?? 0) | (((ushort)(background ?? 0)) << 4));
 			}
 		}
 		

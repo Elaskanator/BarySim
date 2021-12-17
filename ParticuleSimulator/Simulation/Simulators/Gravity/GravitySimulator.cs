@@ -1,4 +1,6 @@
-﻿using Generic.Models;
+﻿using System;
+using System.Numerics;
+using Generic.Models;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
@@ -9,15 +11,15 @@ namespace ParticleSimulator.Simulation.Gravity {
 		public override bool EnableCollisions => true;
 
 		protected override AParticleGroup<MatterClump> NewParticleGroup() { return new Galaxy(); }
-		protected override ATree<MatterClump> NewTree(double[] leftCorner, double[] rightCorner) { return new FarFieldQuadTree<MatterClump>(leftCorner, rightCorner); }
+		protected override MagicTree<MatterClump> NewTree(Vector<float> leftCorner, Vector<float> rightCorner) { return new MagicTree<MatterClump>(Parameters.DIM, leftCorner, rightCorner); }
 
-		protected override bool DoCombine(double distance, MatterClump smaller, MatterClump larger) {
+		protected override bool DoCombine(float distance, MatterClump smaller, MatterClump larger) {
 			return Parameters.GRAVITY_COLLISION_COMBINE
 				&& (distance <= Parameters.WORLD_EPSILON
-					|| distance <= smaller.LiveCoordinates.Distance(
-						smaller.LiveCoordinates.Multiply(smaller.Mass)
-						.Add(larger.LiveCoordinates.Multiply(larger.Mass))
-						.Divide(smaller.Mass + larger.Mass)));
+					|| distance <= smaller.Position.Distance(
+						(smaller.Mass*smaller.Position + larger.Mass*larger.Position)
+							* (1f/(smaller.Mass + larger.Mass)),
+						Parameters.DIM));
 		}
 
 		/*
@@ -61,7 +63,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 						netForce = netForce.Normalize(
 							Parameters.GRAVITY_MAX_ACCEL * Parameters.TIME_SCALE
 							* distance * distance * this.Mass);
-				} else if (Parameters.GRAVITY_COLLISION_DRAG_STRENGTH > 0d && distance < this.Radius + other.Radius) {//overlap - drag
+				} else if (Parameters.GRAVITY_COLLISION_DRAG_STRENGTH > 0f && distance < this.Radius + other.Radius) {//overlap - drag
 					if (excessiveForce)
 						netForce = netForce.Normalize(
 							Parameters.GRAVITY_MAX_ACCEL * Parameters.TIME_SCALE
