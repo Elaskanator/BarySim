@@ -53,10 +53,10 @@ namespace ParticleSimulator.Simulation {
 			} else {
 				ParticleData[] activeParticles = (ParticleData[])Program.Resource_Locations.Current;
 				result += string.Format("{0}/{1}",
-					activeParticles.Length.Pluralize("Particle"),
-					activeParticles.Count(p => p.IsVisible));
+					activeParticles.Length,
+					activeParticles.Count(p => p.IsVisible).Pluralize("Particle"));
 				if (_fpsTimingMs.NumUpdates > 0)
-					result += string.Format("({0} fps)", (1000d / _fpsTimingMs.Current).ToStringBetter(2, false));
+					result += string.Format(" ({0} fps)", (1000d / _fpsTimingMs.Current).ToStringBetter(2, false));
 			}
 
 			Console.Title = result;

@@ -9,11 +9,8 @@ namespace Generic.Models {
 	where TElement : AParticle
 	where TSelf : AQuadTree<TElement, TSelf> {
 		public AQuadTree(int dim, Vector<float> corner1, Vector<float> corner2, TSelf parent = null) 
-		: base(dim, corner1, corner2, parent) {
-			this.Center = (corner1 + corner2) * (1f / 2f);
+		: base(dim, corner1, corner2, parent) { }
 			//this.MinEdgeLength = this.Size.Min();
-		}
-		public readonly Vector<float> Center;
 		//public readonly T MinEdgeLength;
 
 		public TSelf AddUp(TElement element) {
@@ -28,8 +25,8 @@ namespace Generic.Models {
 				for (int d = 0; d < this.Dim; d++)
 					additionalSize[d] = this.Size[d] *  (1f / sizeFraction[d] - 1f);
 
-				directionMask = this.GetChildIndex(element.Position);//nodes MUST be in ascending order
-				antidirectionMask = this.InvertQuadrantMask(directionMask);
+				directionMask = this.GetQuadrantIdx(element.Position);//nodes MUST be in ascending order
+				antidirectionMask = this.InvertQuadrantIdx(directionMask);
 
 				node.Depth++;
 				parent = this.NewNode(
@@ -59,7 +56,7 @@ namespace Generic.Models {
 			return node.Add(element);
 		}
 
-		protected override uint GetChildIndex(Vector<float> coordinates) {
+		protected override uint GetQuadrantIdx(Vector<float> coordinates) {//MUST preserve node order (do not override further)
 			return Enumerable
 				.Range(0, (int)this.Dim)
 				.Aggregate(0u, (agg, d) =>
@@ -67,7 +64,7 @@ namespace Generic.Models {
 						? agg | (1u << d)
 						: agg);
 		}
-		protected uint InvertQuadrantMask(uint quadrantMask) {
+		protected uint InvertQuadrantIdx(uint quadrantMask) {
 			return ~(quadrantMask << (32 - this.Dim)) >> (32 - this.Dim);//complement of only the least significant bits
 		}
 		
@@ -88,10 +85,7 @@ namespace Generic.Models {
 						VectorFunctions.New(isLeft.Select((l, i) => l ? center[i] : this.CornerRight[i])));
 				});
 		}
-		protected override IEnumerable<Tuple<Vector<float>, Vector<float>>> FormNewNodeCorners() {
-			return this.FormNewNodeCorners(this.ChooseSizeFraction());
-		}
-		
+		protected override IEnumerable<Tuple<Vector<float>, Vector<float>>> FormNewNodeCorners() { return this.FormNewNodeCorners(this.ChooseSizeFraction()); }
 		protected virtual Vector<float> ChooseSizeFraction() {
 			return VectorFunctions.New(Enumerable.Repeat(0.5f, this.Dim));
 		}

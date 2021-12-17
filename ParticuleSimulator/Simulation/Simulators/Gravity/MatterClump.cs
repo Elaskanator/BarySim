@@ -28,14 +28,14 @@ namespace ParticleSimulator.Simulation.Gravity {
 			get => this.CollisionImpulse * (1f / this.Mass);
 			set { this.CollisionImpulse = value * this.Mass; } }
 
-		public override bool Absorb(float distance, Vector<float> toOther, MatterClump other) {
+		public override bool CollideCombine(float distance, Vector<float> toOther, MatterClump other, ref float strength) {
 			Vector<float> baryCenter =
 				(this.Mass * this.Position
 				+ other.Mass * other.Position)
 				* (1f / (this.Mass + other.Mass));
 			
 			float distanceError =
-				(other.Position.Distance(baryCenter, Parameters.DIM) / (this.Radius + other.Radius))
+				(other.Position.Distance(baryCenter) / (this.Radius + other.Radius))
 				//* (other.Momentum.Distance(this.Momentum) / (this.Momentum.Magnitude() + other.Momentum.Magnitude()))
 				;
 			if (distance <= this.Radius - other.Radius || distance <= other.Radius - this.Radius
@@ -62,25 +62,25 @@ namespace ParticleSimulator.Simulation.Gravity {
 			return false;
 		}
 		
-		public override float ComputeCollision(float distance, Vector<float> toOther, MatterClump other) {
-			//if (Parameters.GRAVITY_COLLISION_DRAG_STRENGTH > 0f && distance > Parameters.WORLD_EPSILON) {
-			//	throw new NotImplementedException();
-			//	Vector<float> velocityDelta = other.Velocity.Subtract(this.Velocity);
-			//	double velocityDeltaSize = velocityDelta.Magnitude();
-			//	if (velocityDeltaSize > Parameters.WORLD_EPSILON) {
-			//		double alignedImpulse = velocityDelta.Divide(velocityDeltaSize).DotProduct(toOther.Divide(distance));
-			//		Vector<float> impulse =
-			//			toOther.Normalize()
-			//				.Multiply(this.Momentum.Magnitude() * alignedImpulse * Parameters.GRAVITY_COLLISION_DRAG_STRENGTH);
-			//		if (distance <= this.Radius + other.Radius) {
-			//			this.CollisionImpulse = this.CollisionImpulse.Add(impulse);
-			//			other.CollisionImpulse = other.CollisionImpulse.Subtract(impulse);
-			//		}
-			//		return impulse.Magnitude() / (this.Mass < other.Mass ? this.Mass : other.Mass) / distance;
-			//	}
-			//}
-			return 0f;
-		}
+		//public override float ComputeCollision(float distance, Vector<float> toOther, MatterClump other) {
+		//	if (Parameters.GRAVITY_COLLISION_DRAG_STRENGTH > 0f && distance > Parameters.WORLD_EPSILON) {
+		//		throw new NotImplementedException();
+		//		Vector<float> velocityDelta = other.Velocity.Subtract(this.Velocity);
+		//		double velocityDeltaSize = velocityDelta.Magnitude();
+		//		if (velocityDeltaSize > Parameters.WORLD_EPSILON) {
+		//			double alignedImpulse = velocityDelta.Divide(velocityDeltaSize).DotProduct(toOther.Divide(distance));
+		//			Vector<float> impulse =
+		//				toOther.Normalize()
+		//					.Multiply(this.Momentum.Magnitude() * alignedImpulse * Parameters.GRAVITY_COLLISION_DRAG_STRENGTH);
+		//			if (distance <= this.Radius + other.Radius) {
+		//				this.CollisionImpulse = this.CollisionImpulse.Add(impulse);
+		//				other.CollisionImpulse = other.CollisionImpulse.Subtract(impulse);
+		//			}
+		//			return impulse.Magnitude() / (this.Mass < other.Mass ? this.Mass : other.Mass) / distance;
+		//		}
+		//	}
+		//	return 0f;
+		//}
 
 		protected override IEnumerable<MatterClump> AfterUpdate() {
 			if (this.Mass >= Parameters.GRAVITY_CRITICAL_MASS) {//supernova!

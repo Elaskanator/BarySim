@@ -69,6 +69,14 @@ namespace ParticleSimulator.Simulation {
 			if (!(buffer is null)) ConsoleExtensions.WriteConsoleOutput(buffer);
 		}
 
+		public static ConsoleColor ChooseGroupColor(IEnumerable<ParticleData> particles) {
+			int dominantGroupID;
+			if (Parameters.DIM > 2)
+				dominantGroupID = particles.MinBy(p => GetDepthScalar(p.Position)).GroupID;
+			else dominantGroupID = particles.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
+			return Parameters.COLOR_ARRAY[dominantGroupID % Parameters.COLOR_ARRAY.Length];
+		}
+
 		public static void DrawLegend(ConsoleExtensions.CharInfo[] buffer) {
 			int numColors = Scaling.Values.Length;
 			if (numColors > 0) {
@@ -226,7 +234,7 @@ namespace ParticleSimulator.Simulation {
 			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity)
 				return Parameters.COLOR_ARRAY[Scaling.Values.Drop(1).TakeWhile(ds => ds < particleData.Item3).Count()];
 			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group)
-				return Program.Simulator.ChooseGroupColor(particleData.Item2);
+				return ChooseGroupColor(particleData.Item2);
 			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth)
 				if (Parameters.DIM > 2) {
 					int numColors = Parameters.COLOR_ARRAY.Length;

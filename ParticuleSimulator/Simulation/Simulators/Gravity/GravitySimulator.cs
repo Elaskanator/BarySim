@@ -1,10 +1,8 @@
-﻿using System;
-using System.Numerics;
-using Generic.Models;
+﻿using System.Numerics;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
-	public class GravitySimulator : ABaryonParticleSimulator<MatterClump> {
+	public class GravitySimulator : ABaryonSimulator<MatterClump> {
 		public GravitySimulator()
 		: base(new GravitationalForce<MatterClump>(), new ElectrostaticForce<MatterClump>()) { }
 
@@ -18,8 +16,7 @@ namespace ParticleSimulator.Simulation.Gravity {
 				&& (distance <= Parameters.WORLD_EPSILON
 					|| distance <= smaller.Position.Distance(
 						(smaller.Mass*smaller.Position + larger.Mass*larger.Position)
-							* (1f/(smaller.Mass + larger.Mass)),
-						Parameters.DIM));
+							* (1f/(smaller.Mass + larger.Mass))));
 		}
 
 		/*

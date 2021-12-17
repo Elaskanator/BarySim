@@ -5,14 +5,14 @@ using System.Numerics;
 using Generic.Extensions;
 
 namespace Generic.Vectors {
-	// Clifford Algebra
+	// TODO - Clifford Algebra
 	// http://eusebeia.dyndns.org/4d/vis/10-rot-1#Clifford_Rotations
 	// https://www.cis.upenn.edu/~cis610/clifford.pdf
 	// https://www.av8n.com/physics/clifford-intro.htm
 	// http://scipp.ucsc.edu/~haber/archives/physics251_11/Clifford_Slides.pdf
 	public static class VectorFunctions {
 		public static readonly int VECT_CAPACITY = Vector<float>.Count;
-		private static readonly float[][] _tails = Enumerable.Range(1, VECT_CAPACITY - 1).Select(l => Enumerable.Repeat(1f, l).ToArray()).ToArray();
+		private static readonly float[][] _tails = Enumerable.Range(1, VECT_CAPACITY).Select(l => Enumerable.Repeat(0f, l).ToArray()).ToArray();
 		
 		public static Vector<float> New(params float[] components) {
 			if (components.Length == VECT_CAPACITY) {
@@ -39,13 +39,16 @@ namespace Generic.Vectors {
 				v.Sum(x => x * x));
 		}
 
-		public static float Distance(this Vector<float> v1, Vector<float> v2, int dim) {
-			return MathF.Sqrt(
-				Enumerable
-					.Range(0, dim)
-					.Select(i => v2[i] - v1[i])
-					.Select(x => x * x)
-					.Sum());
+		public static float Distance(this Vector<float> v1, Vector<float> v2) {
+			Vector<float> temp = Vector.Subtract(v1, v2);
+			return MathF.Sqrt(Vector.Dot(temp, temp));
+
+			//return MathF.Sqrt(
+			//	Enumerable
+			//		.Range(0, dim)
+			//		.Select(i => v2[i] - v1[i])
+			//		.Select(x => x * x)
+			//		.Sum());
 		}
 
 		public static Vector<float> Clamp(this Vector<float> v, float maxMagnitude, int dim) {
@@ -63,11 +66,13 @@ namespace Generic.Vectors {
 				: v.Select(x => x * ratio).ToArray();
 		}
 		public static Vector<float> Normalize(this Vector<float> v, int dim, float length = 1f) {
-			float magnitude = v.Magnitude(dim),
-				ratio = length / magnitude;
-			return magnitude == length
-				? v
-				: New(Enumerable.Range(1, dim).Select(d => v[d] * ratio));
+			return v * (length / MathF.Sqrt(Vector.Dot(v, v)));
+
+			//float magnitude = v.Magnitude(dim),
+			//	ratio = length / magnitude;
+			//return magnitude == length
+			//	? v
+			//	: New(Enumerable.Range(1, dim).Select(d => v[d] * ratio));
 		}
 
 		public static float AngleTo_FullRange(this Vector<float> v1, Vector<float> v2, int dim) {

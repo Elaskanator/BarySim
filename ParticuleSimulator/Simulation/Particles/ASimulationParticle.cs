@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Numerics;
 using Generic.Vectors;
@@ -14,7 +13,8 @@ namespace ParticleSimulator.Simulation {
 
 	public abstract class ASimulationParticle<TSelf> : AParticle, ISimulationParticle, IEquatable<TSelf>, IEqualityComparer<TSelf>
 	where TSelf : ASimulationParticle<TSelf> {
-		public ASimulationParticle(int groupID, Vector<float> position, Vector<float> velocity) {
+		public ASimulationParticle(int groupID, Vector<float> position, Vector<float> velocity)
+		: base(position) {
 			this.GroupID = groupID;
 			this.Velocity = velocity;
 			this.CollisionAcceleration = Vector<float>.Zero;
@@ -32,8 +32,7 @@ namespace ParticleSimulator.Simulation {
 		public virtual Vector<float> Velocity { get; set; }
 		public virtual Vector<float> CollisionAcceleration { get; set; }
 
-		public readonly ConcurrentQueue<TSelf> NeighborNodeCollisions = new();
-		public readonly Queue<TSelf> NodeCollisions = new();
+		public readonly Queue<TSelf> Collisions = new();
 		public readonly HashSet<TSelf> MergedParticles = new();
 
 		public virtual int? InteractionLimit => null;
@@ -49,9 +48,7 @@ namespace ParticleSimulator.Simulation {
 		
 		protected virtual IEnumerable<TSelf> Filter(IEnumerable<TSelf> others) { return others; }
 		protected virtual IEnumerable<TSelf> AfterUpdate() { return new TSelf[] { (TSelf)this }; }
-		public virtual bool DoCombine(float distance, Vector<float> toOther, TSelf other) { return false; }
-		public virtual float ComputeCollision(float distance, Vector<float> toOther, TSelf other) { return 0f; }
-		public virtual bool Absorb(float distance, Vector<float> toOther, TSelf other) { return false; }
+		public virtual bool CollideCombine(float distance, Vector<float> toOther, TSelf other, ref float strength) { return false; }
 
 		public bool Equals(TSelf other) { return !(other is null) && this.ID == other.ID; }
 		public override bool Equals(object other) { return !(other is null) && (other is ASimulationParticle<TSelf>) && this.ID == (other as ASimulationParticle<TSelf>).ID; }

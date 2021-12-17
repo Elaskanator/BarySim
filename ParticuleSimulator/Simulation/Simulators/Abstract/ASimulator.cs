@@ -10,14 +10,13 @@ namespace ParticleSimulator.Simulation {
 	public interface IParticleSimulator {
 		public IEnumerable<ISimulationParticle> Particles { get; }
 
-		public ConsoleColor ChooseGroupColor(IEnumerable<ParticleData> particles);
 		public ParticleData[] RefreshSimulation();
 	}
 
-	public abstract class AParticleSimulator<TParticle, TTree> : IParticleSimulator
+	public abstract partial class ASimulator<TParticle, TTree> : IParticleSimulator
 	where TParticle : ABaryonParticle<TParticle>
 	where TTree : AQuadTree<TParticle, TTree> {
-		public AParticleSimulator() {
+		public ASimulator() {
 			this.ParticleGroups = Enumerable
 				.Range(0, Parameters.PARTICLES_GROUP_COUNT)
 				.Select(i => this.NewParticleGroup())
@@ -37,11 +36,8 @@ namespace ParticleSimulator.Simulation {
 		public IEnumerable<ISimulationParticle> Particles => this.WrappedParticles.Select(wp => wp.Particle);
 		public AParticleGroup<TParticle>[] ParticleGroups { get; private set; }
 		public readonly TTree Tree;
-		
-		public Vector<float> NearfieldImpulse { get; set; }
-		public Vector<float> FarfieldImpulse { get; set; }
-		public Vector<float> CollisionImpulse { get; set; }
 
+		public abstract bool EnableFarfield { get; }
 		public virtual bool EnableCollisions => false;
 		public virtual float WorldBounceWeight => 0f;
 
@@ -54,61 +50,48 @@ namespace ParticleSimulator.Simulation {
 		public ParticleData[] RefreshSimulation() {//modified Barnes-Hut Algorithm
 			if (this.WrappedParticles.Length == 0)
 				Program.CancelAction(null, null);
-			//throw new NotImplementedException();
+
+			this.Refresh();
+
 			this.WrappedParticles = this.HandleBounds(this.WrappedParticles).ToArray();
 			return this.WrappedParticles.Select(wp => new ParticleData(wp.Particle)).ToArray();
 		}
 
-		protected float HandleCollisions(IEnumerable<TParticle> particles, bool intraNode) {
+		private void Refresh() {
+
+		}
+
+		protected float HandleCollisions(IEnumerable<TParticle> particles) {
 			float largestDelta = 0f;
 			if (this.EnableCollisions) {
 				TParticle other;
 				Vector<float> toOther;
-				float distance, collisionAcceleration;
-				Queue<TParticle> pendingCollisions;
-				HashSet<TParticle> evaluatedCollisions = new();
+				float distance, strength;
 
+				Queue<TParticle> pending;
+				HashSet<TParticle> eavluated = new();
 				foreach (TParticle self in particles) {
-					if (self.IsEnabled) {
-						pendingCollisions = intraNode
-							? new(self.NodeCollisions.Where(p => p.IsEnabled).Cast<TParticle>())
-							: new(self.NeighborNodeCollisions.Where(p => p.IsEnabled).Cast<TParticle>());
+					if (self.IsEnabled && eavluated.Add(self)) {
+						pending = new(self.Collisions.Where(p => p.IsEnabled).Cast<TParticle>());
+						self.Collisions.Clear();
 
-						while (pendingCollisions.TryDequeue(out other) && evaluatedCollisions.Add(other)) {
+						while (pending.TryDequeue(out other) && eavluated.Add(other)) {
 							toOther = other.Position - self.Position;
 							distance = toOther.Magnitude(Parameters.DIM);
 
 							if (distance <= self.Radius + other.Radius) {
-								if (self.Absorb(distance, toOther, other)) {
+								strength = 0f;
+								if (self.CollideCombine(distance, toOther, other, ref strength)) {
 									self.MergedParticles.Add(other);
-
-									if (intraNode)
-										foreach (TParticle tail in other.NodeCollisions.Where(tail => tail.IsEnabled))
-											pendingCollisions.Enqueue(tail);
-									else foreach (TParticle tail in other.NeighborNodeCollisions.Where(tail => tail.IsEnabled))
-											pendingCollisions.Enqueue(tail);
-								} else {
-									collisionAcceleration = self.ComputeCollision(distance, toOther, other);
-									largestDelta = largestDelta > collisionAcceleration ? largestDelta : collisionAcceleration;
-								}
+									foreach (TParticle tail in other.Collisions.Where(tail => tail.IsEnabled))
+										pending.Enqueue(tail);
+								} else largestDelta = largestDelta > strength ? largestDelta : strength;
 							}
 						}
-
-						if (intraNode)
-							self.NodeCollisions.Clear();
-						else self.NeighborNodeCollisions.Clear();
 					}
 				}
 			}
 			return largestDelta;
-		}
-
-		public virtual ConsoleColor ChooseGroupColor(IEnumerable<ParticleData> particles) {
-			int dominantGroupID;
-			if (Parameters.DIM > 2)
-				dominantGroupID = particles.MinBy(p => Renderer.GetDepthScalar(p.Position)).GroupID;
-			else dominantGroupID = particles.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
-			return Parameters.COLOR_ARRAY[dominantGroupID % Parameters.COLOR_ARRAY.Length];
 		}
 		
 		private IEnumerable<WrappedParticle> HandleBounds(IEnumerable<WrappedParticle> particles) {
@@ -150,77 +133,6 @@ namespace ParticleSimulator.Simulation {
 			TTree result = this.NewTree(VectorFunctions.New(leftCorner), VectorFunctions.New(rightCorner));
 			result.AddRange(particles);
 			return result;
-		}
-
-		public sealed class WrappedParticle {
-			public readonly TParticle Particle;
-			public TTree Node { get; private set; }
-			public bool IsEnabled = true;
-			public WrappedParticle(TParticle instance, TTree node) {
-				this.Particle = instance;
-				this.Node = node;
-			}
-
-			public bool WrapPosition() {
-				bool result = false;
-				float[] coords = new float[Parameters.DIM];
-				for (int d = 0; d < Parameters.DIM; d++)
-					if (this.Particle.Position[d] < 0f) {
-						coords[d] = (this.Particle.Position[d] % Parameters.DOMAIN_SIZE[d]) + Parameters.DOMAIN_SIZE[d];//don't want symmetric modulus
-						result = true;
-					} else if (this.Particle.Position[d] >= Parameters.DOMAIN_SIZE[d]) {
-						coords[d] = this.Particle.Position[d] % Parameters.DOMAIN_SIZE[d];
-						result = true;
-					} else coords[d] = this.Particle.Position[d];
-
-				if (result)
-					this.Particle.Position = VectorFunctions.New(coords);
-				return result;
-			}
-			public bool BoundPosition() {
-				bool result = false;
-				float[] coords = new float[Parameters.DIM];
-				for (int d = 0; d < Parameters.DIM; d++) 
-					if (this.Particle.Position[d] < 0f) {
-						coords[d] = 0f;
-						result = true;
-					} else if (this.Particle.Position[d] >= Parameters.DOMAIN_SIZE[d]) {
-						coords[d] = Parameters.DOMAIN_SIZE[d] - Parameters.WORLD_EPSILON;
-						result = true;
-					}
-				
-				if (result)
-					this.Particle.Position = VectorFunctions.New(coords);
-				return result;
-			}
-			public void BounceVelocity(float weight) {
-				float dist;
-				bool result = false;
-				float[] coords = new float[Parameters.DIM];
-				for (int d = 0; d < Parameters.DIM; d++) {
-					dist = this.Particle.Position[d] - Parameters.DOMAIN_CENTER[d];
-					if (dist < -Parameters.DOMAIN_MAX_RADIUS) {
-						coords[d] = this.Particle.Velocity[d] + weight * MathF.Pow(Parameters.DOMAIN_MAX_RADIUS - dist, 0.5f);
-						result = true;
-					} else if (dist > Parameters.DOMAIN_MAX_RADIUS){
-						coords[d] = this.Particle.Velocity[d] - weight * MathF.Pow(dist - Parameters.DOMAIN_MAX_RADIUS, 0.5f);
-						result = true;
-					}
-				}
-				if (result)
-					this.Particle.Velocity = VectorFunctions.New(coords);
-			}
-
-			public void UpdateParentNode() {
-				TTree node = this.Node;
-				while (!node.DoesContainCoordinates(this.Particle.Position))
-					if (node.IsRoot) {
-						this.Node = node.AddUp(this.Particle);
-						return;
-					}
-					else node = node.Parent;
-				this.Node = node.GetContainingLeaf(this.Particle.Position);
-			}
 		}
 	}
 

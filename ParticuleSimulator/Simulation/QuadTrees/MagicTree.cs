@@ -22,14 +22,14 @@ namespace ParticleSimulator.Simulation {
 			this.BaryCenter_Charge.Update(element.Position, element.Charge);
 		}
 
-		public override int Capacity => Parameters.GRAVITY_QUADTREE_NODE_CAPACITY;
+		public override int NodeCapacity => Parameters.GRAVITY_QUADTREE_NODE_CAPACITY;
 		public readonly BaryonCenter BaryCenter_Position;
 		public readonly BaryonCenter BaryCenter_Mass;
 		public readonly BaryonCenter BaryCenter_Charge;
 
-		//only supports up to dimension 8 (size of a byte)
-		public IEnumerable<IEnumerable<MagicTree<TElement>>> Magic() {
-			yield break;
+		public void Magic() {
+			//Queue<MagicTree<TElement>> q = new();
+
 		}
 	}
 }

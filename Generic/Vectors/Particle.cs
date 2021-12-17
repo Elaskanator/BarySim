@@ -7,6 +7,10 @@ namespace Generic.Vectors {
 		public Vector<float> Position { get; }
 	}
 	public abstract class AParticle : IParticle {
+		public AParticle(Vector<float> position) {
+			this.Position = position;
+		}
+
 		private static int _globalID = 0;
 		private readonly int _id = ++_globalID;
 		public int ID => this._id;

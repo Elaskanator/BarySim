@@ -19,11 +19,26 @@ namespace ParticleSimulator {
 		public static StepEvaluator StepEval_Simulate, StepEval_Resample, StepEval_Autoscale, StepEval_Rasterize, StepEval_Draw, StepEval_ConsoleWindow;
 
 		public static void Main(string[] args) {
-			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);//ctrl+c and alt+f4 etc
-			
 			Console.Title = string.Format("{0} Simulator ({1}D) - Initializing",
 				Parameters.SIM_TYPE,
 				Parameters.DIM);
+
+			if (Generic.Vectors.VectorFunctions.VECT_CAPACITY < Parameters.DIM) {
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine("Vector dimensionality greater than maximum support of {0}", Generic.Vectors.VectorFunctions.VECT_CAPACITY);
+				ConsoleExtensions.WaitForEnter("Press enter to exit");
+				Environment.Exit(0);
+			}
+
+			if (!System.Numerics.Vector.IsHardwareAccelerated) {
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine("Hardware vector acceleration is disabled");
+				Console.ResetColor();
+				ConsoleExtensions.WaitForEnter();
+			}
+
+			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);//ctrl+c and alt+f4 etc
+
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
 			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
@@ -233,7 +248,7 @@ namespace ParticleSimulator {
 			Manager.Stop();
 			PerfMon.WriteEnd();
 
-			ConsoleExtensions.WaitForEnter("Press enter to end");
+			ConsoleExtensions.WaitForEnter("Press enter to exit");
 			//Manager.Dispose();
 			Environment.Exit(0);
 		}

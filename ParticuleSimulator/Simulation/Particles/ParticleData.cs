@@ -21,7 +21,7 @@ namespace ParticleSimulator.Simulation {
 			this.Position = Renderer.RotateCoordinates(particle.Position);
 			bool visible = true;
 			for (int d = 0; d < Parameters.DIM && visible; d++)
-				if (particle.Position[d] + particle.Radius >= 0f && particle.Position[d] - particle.Radius < Parameters.DOMAIN_SIZE[d])
+				if (particle.Position[d] + particle.Radius < 0f || particle.Position[d] - particle.Radius >= Parameters.DOMAIN_SIZE[d])
 					visible = false;
 			this.IsVisible = visible;
 		}

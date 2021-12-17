@@ -38,7 +38,8 @@ namespace Generic.Models {
 		public bool IsRoot { get { return this.Depth == 0; } }
 		public virtual bool IsLeaf { get { return this.Children.None(); } }
 		public int ElementCount { get; protected set; }
-		
+
+		#region Accessors
 		public abstract IEnumerable<TElement> NodeElements { get; }
 		IEnumerable ITree.NodeElements => this.NodeElements;
 
@@ -88,8 +89,17 @@ namespace Generic.Models {
 					yield return child;
 		} }
 		IEnumerable<ITree> ITree.LeavesNonempty => this.LeavesNonempty;
+		#endregion Accessors
+		
+		protected abstract TSelf AddInternal(TElement element);
+		protected virtual void Incorporate(TElement element) { }
 
-		public abstract TSelf Add(TElement element);
+		public TSelf Add(TElement element) {
+			this.Incorporate(element);
+			TSelf result = this.AddInternal(element);
+			this.ElementCount++;
+			return result;
+		}
 		ITree ITree.Add(object element) { return this.Add((TElement)element); }
 
 		public void AddRange(IEnumerable<TElement> elements) {

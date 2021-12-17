@@ -5,12 +5,13 @@ using Generic.Models;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public abstract class ABaryonParticleSimulator<TParticle> : AParticleSimulator<TParticle, MagicTree<TParticle>>
+	public abstract class ABaryonSimulator<TParticle> : ASimulator<TParticle, MagicTree<TParticle>>
 	where TParticle : ABaryonParticle<TParticle> {
-		public ABaryonParticleSimulator(params ABaryonForce<TParticle>[] forces) {
+		public ABaryonSimulator(params ABaryonForce<TParticle>[] forces) {
 			this.Forces = forces;
 		}
 
+		public override bool EnableFarfield => true;
 		public readonly ABaryonForce<TParticle>[] Forces;
 
 		//protected override IEnumerable<TParticle> Refresh(ATree<TParticle> leaf) {

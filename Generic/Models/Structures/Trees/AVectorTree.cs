@@ -15,11 +15,15 @@ namespace Generic.Models {
 			this.CornerRight = corner2;
 
 			this.Size = corner2 - corner1;
+			this.Center = (corner1 + corner2) * (1f / 2f);
+			this.HasRemainingResolution = false;
+			
+			Vector<int> zeros = Vector.Equals(VectorFunctions.New(0f, 0.3f, 0f, -2f), Vector<float>.Zero);
+			this.HasRemainingResolution = dim == VectorFunctions.VECT_CAPACITY - Vector.Dot(zeros, zeros);
 
-			this._members = new TElement[this.Capacity];
+			this._members = new TElement[this.NodeCapacity];
 		}
 		protected abstract TSelf NewNode(Vector<float> cornerA, Vector<float> cornerB, TSelf parent = null);
-
 		public override string ToString() {
 			return string.Format("Node[<{0}> thru <{1}>][{2} members]",
 				string.Join(", ", this.CornerLeft),
@@ -27,19 +31,22 @@ namespace Generic.Models {
 				this.ElementCount);
 		}
 
-		public virtual int Capacity => 1;
+		public readonly int Dim;
+		public readonly bool HasRemainingResolution;
+
+		public virtual int NodeCapacity => 1;
 		//dividing by 2 enough times WILL reach the sig figs limit of System.Double and cause zero-sized subtrees (and that's before reaching the stack frame depth limit due to recursion)
 		public virtual int MaxDepth => 40;
 		
-		public readonly int Dim;
 		public readonly Vector<float> CornerLeft;
 		public readonly Vector<float> CornerRight;
 		public readonly Vector<float> Size;
+		public readonly Vector<float> Center;
 		
 		public override IEnumerable<TSelf> Children { get { return this._children; } }
 		public override bool IsLeaf { get { return this._children is null; } }
 		public override IEnumerable<TElement> NodeElements { get {
-			if (this.ElementCount <= this.Capacity)
+			if (this.ElementCount <= this.NodeCapacity)
 				return this._members.Take(this.ElementCount);
 			else if (this.Depth < this.MaxDepth)
 				return Enumerable.Empty<TElement>();
@@ -51,22 +58,18 @@ namespace Generic.Models {
 		private List<TElement> _leftovers = null;
 
 		protected abstract IEnumerable<Tuple<Vector<float>, Vector<float>>> FormNewNodeCorners();
-		protected virtual void Incorporate(TElement element) { }
 		protected virtual void ArrangeChildren() { }
 
-		public override TSelf Add(TElement element) {
-			this.Incorporate(element);
-
+		protected override TSelf AddInternal(TElement element) {
 			TSelf leaf;
 			if (this.IsLeaf)
 				leaf = this.AddElementToNode(element);
-			else leaf = this._children[this.GetChildIndex(element.Position)].Add(element);
+			else leaf = this._children[this.GetQuadrantIdx(element.Position)].Add(element);
 
-			this.ElementCount++;
 			return leaf;
 		}
 
-		protected virtual uint GetChildIndex(Vector<float> coordinates) {
+		protected virtual uint GetQuadrantIdx(Vector<float> coordinates) {
 			for (int i = 0; i < this._children.Length; i++)
 				if (this._children[i].DoesContainCoordinates(coordinates))
 					return (uint)i;
@@ -75,6 +78,7 @@ namespace Generic.Models {
 
 
 		public bool DoesContainCoordinates(Vector<float> coordinates) {
+			//lukjg
 			for (int d = 0; d < this.Dim; d++)
 				if (coordinates[d] < this.CornerLeft[d] || coordinates[d] >= this.CornerRight[d])
 					return false;
@@ -84,26 +88,26 @@ namespace Generic.Models {
 		public TSelf GetContainingLeaf(Vector<float> coordinates) {
 			TSelf node = (TSelf)this;
 			while (!node.IsLeaf)
-				node = this._children[this.GetChildIndex(coordinates)];
+				node = this._children[this.GetQuadrantIdx(coordinates)];
 			return node;
 		}
 
 		protected TSelf AddElementToNode(TElement element) {
-			if (this.ElementCount < this.Capacity) {
+			if (this.ElementCount < this.NodeCapacity) {
 				this._members[this.ElementCount] = element;
 				return (TSelf) this;
-			} else if (this.Depth < this.MaxDepth) {
-				if (this.ElementCount == this.Capacity) {//one-time quadrant formation
+			} else if (this.HasRemainingResolution && this.Depth < this.MaxDepth) {
+				if (this.ElementCount == this.NodeCapacity) {//one-time quadrant formation
 					this._children = this
 						.FormNewNodeCorners()
 						.Select(c => this.NewNode(c.Item1, c.Item2, (TSelf)this))
 						.ToArray();
 					this.ArrangeChildren();
-					foreach (TElement member in this._members)
-						this._children[this.GetChildIndex(member.Position)].Add(member);
+					for (int i = 0; i < this.NodeCapacity; i++)
+						this._children[this.GetQuadrantIdx(this._members[i].Position)].Add(this._members[i]);
 					this._members = null;
 				}
-				return this._children[this.GetChildIndex(element.Position)].AddElementToNode(element);
+				return this._children[this.GetQuadrantIdx(element.Position)].AddElementToNode(element);
 			} else {
 				(this._leftovers ??= new List<TElement>()).Add(element);
 				return (TSelf) this;

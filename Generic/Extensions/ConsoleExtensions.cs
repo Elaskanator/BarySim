@@ -9,10 +9,16 @@ using System.Runtime.InteropServices;
 
 namespace Generic.Extensions {
 	public static class ConsoleExtensions {
-        public static void WaitForEnter(string message) {
+        public static void WaitForEnter(string message, ConsoleColor foreground, ConsoleColor background) {
 			bool oldVisibility = Console.CursorVisible;
-
+			ConsoleColor oldForeground = Console.ForegroundColor,
+				oldbackground = Console.BackgroundColor;
+			
+            Console.ForegroundColor = foreground;
+            Console.BackgroundColor = background;
             Console.Write(message);
+            Console.ForegroundColor = oldForeground;
+            Console.BackgroundColor = oldbackground;
 			Console.CursorVisible = true;
 
             ConsoleKeyInfo keyInfo = Console.ReadKey(true);
@@ -21,6 +27,8 @@ namespace Generic.Extensions {
 
 			Console.CursorVisible = oldVisibility;
         }
+        public static void WaitForEnter(string message, ConsoleColor foreground) { WaitForEnter(message, foreground, Console.BackgroundColor); }
+        public static void WaitForEnter(string message = "Press enter to continue") { WaitForEnter(message, Console.ForegroundColor, Console.BackgroundColor); }
 
 		public static void ClearLine(int line) {
 			Console.SetCursorPosition(0, line);
