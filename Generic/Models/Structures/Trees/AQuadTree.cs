@@ -6,12 +6,10 @@ using Generic.Vectors;
 
 namespace Generic.Models {
 	public abstract class AQuadTree<TElement, TSelf> : AVectorTree<TElement, TSelf>
-	where TElement : AParticle
+	where TElement : AParticle<TElement>, IEquatable<TElement>, IEqualityComparer<TElement>
 	where TSelf : AQuadTree<TElement, TSelf> {
 		public AQuadTree(int dim, Vector<float> corner1, Vector<float> corner2, TSelf parent = null) 
 		: base(dim, corner1, corner2, parent) { }
-			//this.MinEdgeLength = this.Size.Min();
-		//public readonly T MinEdgeLength;
 
 		public TSelf AddUp(TElement element) {
 			TSelf node = (TSelf)this, parent;
@@ -19,14 +17,14 @@ namespace Generic.Models {
 			uint directionMask, antidirectionMask;
 			Vector<float> sizeFraction;
 			float[] additionalSize;
-			while (!node.DoesContainCoordinates(element.Position)) {
+			while (!node.DoesContain(element)) {
 				sizeFraction = this.ChooseSizeFraction();
 				additionalSize = new float[this.Dim];
 				for (int d = 0; d < this.Dim; d++)
 					additionalSize[d] = this.Size[d] *  (1f / sizeFraction[d] - 1f);
 
-				directionMask = this.GetQuadrantIdx(element.Position);//nodes MUST be in ascending order
-				antidirectionMask = this.InvertQuadrantIdx(directionMask);
+				directionMask = this.ChooseNodeIdx(element);//the direction to build into
+				antidirectionMask = this.InvertQuadrantIdx(directionMask);//where the current node is
 
 				node.Depth++;
 				parent = this.NewNode(
@@ -43,9 +41,9 @@ namespace Generic.Models {
 
 				newNodes = new TSelf[1u << this.Dim];
 				int i = 0;
-				foreach (Tuple<Vector<float>, Vector<float>> nodeCorners in parent.FormNewNodeCorners()) {
+				foreach (Tuple<Vector<float>, Vector<float>> nodeCorners in parent.FormNewNodeCorners(sizeFraction)) {
 					newNodes[i] = i == antidirectionMask
-						? node
+						? node//the current layer
 						: this.NewNode(nodeCorners.Item1, nodeCorners.Item2, parent);
 					i++;
 				}
@@ -56,36 +54,39 @@ namespace Generic.Models {
 			return node.Add(element);
 		}
 
-		protected override uint GetQuadrantIdx(Vector<float> coordinates) {//MUST preserve node order (do not override further)
-			return Enumerable
-				.Range(0, (int)this.Dim)
+		protected override uint ChooseNodeIdx(TElement element) {//MUST preserve node order (do not override further)
+			uint result = Enumerable
+				.Range(0, this.Dim)
 				.Aggregate(0u, (agg, d) =>
-					coordinates[d].CompareTo(this.Center[d]) >= 0
+					element.Position[d].CompareTo(this.Center[d]) >= 0
 						? agg | (1u << d)
 						: agg);
+			return result;
 		}
 		protected uint InvertQuadrantIdx(uint quadrantMask) {
 			return ~(quadrantMask << (32 - this.Dim)) >> (32 - this.Dim);//complement of only the least significant bits
 		}
+
+		protected override IEnumerable<TSelf> FormNodes() {
+			return this.FormNewNodeCorners(this.ChooseSizeFraction())
+				.Select(c => this.NewNode(c.Item1, c.Item2, (TSelf)this));
+		}
 		
 		protected IEnumerable<Tuple<Vector<float>, Vector<float>>> FormNewNodeCorners(Vector<float> sizeFraction) {
-			float[] center = Enumerable.Range(0, this.Dim)
-				.Select(d => this.CornerLeft[d] + sizeFraction[d] * this.Size[d])
-				.ToArray();
+			Vector<float> center = this.CornerLeft + this.Size * sizeFraction;
 			return Enumerable
 				.Range(0, 1 << this.Dim)//the 2^dimension "quadrants" of the Euclidean hyperplane
 				.Select(q => (uint)q)
 				.Select(q => {
 					bool[] isLeft = Enumerable
 						.Range(0, this.Dim)
-						.Select(d => (q & (1u << d)) > 0u)
+						.Select(d => (q & (1u << d)) == 0u)
 						.ToArray();
 					return new Tuple<Vector<float>, Vector<float>>(
 						VectorFunctions.New(isLeft.Select((l, i) => l ? this.CornerLeft[i] : center[i])),
 						VectorFunctions.New(isLeft.Select((l, i) => l ? center[i] : this.CornerRight[i])));
 				});
 		}
-		protected override IEnumerable<Tuple<Vector<float>, Vector<float>>> FormNewNodeCorners() { return this.FormNewNodeCorners(this.ChooseSizeFraction()); }
 		protected virtual Vector<float> ChooseSizeFraction() {
 			return VectorFunctions.New(Enumerable.Repeat(0.5f, this.Dim));
 		}

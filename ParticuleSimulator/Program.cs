@@ -12,7 +12,7 @@ namespace ParticleSimulator {
 	//SEEALSO https://www.youtube.com/watch?v=TrrbshL_0-s
 	public class Program {
 		public static readonly Random Random = new();
-		public static IParticleSimulator Simulator { get; private set; }
+		public static ISimulator Simulator { get; private set; }
 		public static RunManager Manager { get; private set; }
 
 		public static SynchronizedDataBuffer Resource_Locations, Resource_Resamplings, Resource_Rasterization;
@@ -74,7 +74,7 @@ namespace ParticleSimulator {
 			Resource_Rasterization = new SynchronizedDataBuffer("Rasterization", Parameters.PRECALCULATION_LIMIT);
 			
 			StepEval_Draw = new(new() {
-				Name = "Drawing",
+				Name = "O",
 				//Initializer = null,
 				//Calculator = null,
 				Evaluator = Renderer.FlushScreenBuffer,

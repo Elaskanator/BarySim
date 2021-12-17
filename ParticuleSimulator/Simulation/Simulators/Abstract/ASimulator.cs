@@ -7,13 +7,13 @@ using Generic.Models;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public interface IParticleSimulator {
+	public interface ISimulator {
 		public IEnumerable<ISimulationParticle> Particles { get; }
 
 		public ParticleData[] RefreshSimulation();
 	}
 
-	public abstract partial class ASimulator<TParticle, TTree> : IParticleSimulator
+	public abstract partial class ASimulator<TParticle, TTree> : ISimulator
 	where TParticle : ABaryonParticle<TParticle>
 	where TTree : AQuadTree<TParticle, TTree> {
 		public ASimulator() {
@@ -27,7 +27,7 @@ namespace ParticleSimulator.Simulation {
 
 			this.WrappedParticles = this.HandleBounds(
 				this.Tree.LeavesNonempty
-					.SelectMany(leaf => leaf.NodeElements.Select(p =>
+					.SelectMany(leaf => leaf.AllElements.Select(p =>
 						new WrappedParticle(p, leaf))))
 				.ToArray();
 		}
