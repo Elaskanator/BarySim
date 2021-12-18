@@ -28,11 +28,13 @@ namespace Generic.Vectors {
 			return New(components.ToArray());
 		}
 
-		public static float Magnitude(this Vector<float> v, int dim) {
-			return MathF.Sqrt(
-				Enumerable.Range(0, dim)
-					.Select(d => v[d] * v[d])
-					.Sum());
+		public static float Magnitude(this Vector<float> v) {
+			Vector<float> squares = Vector.Multiply(v, v);
+			return MathF.Sqrt(Vector.Dot(squares, Vector<float>.One));
+			//return MathF.Sqrt(
+			//	Enumerable.Range(0, dim)
+			//		.Select(d => v[d] * v[d])
+			//		.Sum());
 		}
 		public static float Magnitude(this float[] v) {
 			return MathF.Sqrt(
@@ -51,8 +53,8 @@ namespace Generic.Vectors {
 			//		.Sum());
 		}
 
-		public static Vector<float> Clamp(this Vector<float> v, float maxMagnitude, int dim) {
-			float magnitude = v.Magnitude(dim);
+		public static Vector<float> Clamp(this Vector<float> v, float maxMagnitude) {
+			float magnitude = v.Magnitude();
 			return magnitude > maxMagnitude
 				? v * (maxMagnitude / magnitude)
 				: v;
@@ -65,8 +67,8 @@ namespace Generic.Vectors {
 				? v
 				: v.Select(x => x * ratio).ToArray();
 		}
-		public static Vector<float> Normalize(this Vector<float> v, int dim, float length = 1f) {
-			return v * (length / MathF.Sqrt(Vector.Dot(v, v)));
+		public static Vector<float> Normalize(this Vector<float> v, float length = 1f) {
+			return v * (length / MathF.Sqrt(Vector.Dot(Vector.Multiply(v, v), Vector<float>.One)));
 
 			//float magnitude = v.Magnitude(dim),
 			//	ratio = length / magnitude;
@@ -84,7 +86,7 @@ namespace Generic.Vectors {
 				case 2:
 					return MathF.Atan2(v1[1] - v2[1], v1[0] - v2[0]);
 				default:
-					float angle = MathF.Acos(Vector.Dot(v1, v2) / v1.Magnitude(dim) / v2.Magnitude(dim));
+					float angle = MathF.Acos(Vector.Dot(v1, v2) / v1.Magnitude() / v2.Magnitude());
 					float[][] sqMatrixCols = new float[][] { Enumerable.Range(0, dim).Select(d => v1[d]).ToArray(), Enumerable.Range(0, dim).Select(d => v2[d]).ToArray() }
 						.Concat(Enumerable
 							.Range(0, dim - 2)

@@ -40,7 +40,7 @@ namespace ParticleSimulator.Simulation {
 		public IEnumerable<TSelf> ApplyTimeStep(Vector<float> acceleration, float timeStep) {
 			this.Velocity += 
 				(acceleration + this.CollisionAcceleration)
-				.Clamp(timeStep * Parameters.TIME_SCALE * Parameters.PARTICLE_MAX_ACCELERATION, Parameters.DIM)
+				.Clamp(timeStep * Parameters.TIME_SCALE * Parameters.PARTICLE_MAX_ACCELERATION)
 				* (timeStep * Parameters.TIME_SCALE);
 			this.Position += this.Velocity * timeStep;
 			return this.AfterUpdate();

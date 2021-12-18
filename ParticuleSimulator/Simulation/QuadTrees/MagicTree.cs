@@ -27,9 +27,8 @@ namespace ParticleSimulator.Simulation {
 		public readonly BaryonCenter BaryCenter_Mass;
 		public readonly BaryonCenter BaryCenter_Charge;
 
-		public void Magic() {
-			//Queue<MagicTree<TElement>> q = new();
-
+		protected override ILeafNode<TElement> NewLeafContainer() {
+			return new LeafNode<TElement>(this.NodeCapacity);
 		}
 	}
 }

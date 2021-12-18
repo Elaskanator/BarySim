@@ -51,7 +51,7 @@ namespace ParticleSimulator.Simulation {
 			if (Program.Resource_Locations is null || Program.Resource_Locations.Current is null) {
 				result += Program.Simulator.Particles.Count().Pluralize("Particle");
 			} else {
-				ParticleData[] activeParticles = (ParticleData[])Program.Resource_Locations.Current;
+				ParticleData[] activeParticles = (ParticleData[])((ParticleData[])Program.Resource_Locations.Current).Clone();
 				result += string.Format("{0}/{1}",
 					activeParticles.Length,
 					activeParticles.Count(p => p.IsVisible).Pluralize("Particle"));

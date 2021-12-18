@@ -14,7 +14,7 @@ namespace ParticleSimulator.Simulation {
 	}
 
 	public abstract partial class ASimulator<TParticle, TTree> : ISimulator
-	where TParticle : ABaryonParticle<TParticle>
+	where TParticle : ASimulationParticle<TParticle>
 	where TTree : AQuadTree<TParticle, TTree> {
 		public ASimulator() {
 			this.ParticleGroups = Enumerable
@@ -26,7 +26,7 @@ namespace ParticleSimulator.Simulation {
 				this.ParticleGroups.SelectMany(g => g.MemberParticles));
 
 			this.WrappedParticles = this.HandleBounds(
-				this.Tree.LeavesNonempty
+				this.Tree.LeafNodesNonEmpty
 					.SelectMany(leaf => leaf.AllElements.Select(p =>
 						new WrappedParticle(p, leaf))))
 				.ToArray();
@@ -35,7 +35,7 @@ namespace ParticleSimulator.Simulation {
 		protected WrappedParticle[] WrappedParticles { get; private set; }
 		public IEnumerable<ISimulationParticle> Particles => this.WrappedParticles.Select(wp => wp.Particle);
 		public AParticleGroup<TParticle>[] ParticleGroups { get; private set; }
-		public readonly TTree Tree;
+		public TTree Tree { get; private set; }
 
 		public abstract bool EnableFarfield { get; }
 		public virtual bool EnableCollisions => false;
@@ -54,6 +54,8 @@ namespace ParticleSimulator.Simulation {
 			this.Refresh();
 
 			this.WrappedParticles = this.HandleBounds(this.WrappedParticles).ToArray();
+			this.Tree = this.Tree.Prune();
+
 			return this.WrappedParticles.Select(wp => new ParticleData(wp.Particle)).ToArray();
 		}
 
@@ -62,7 +64,7 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		protected float HandleCollisions(IEnumerable<TParticle> particles) {
-			float largestDelta = 0f;
+			float largestDelta = 0f;//used for adative time steps
 			if (this.EnableCollisions) {
 				TParticle other;
 				Vector<float> toOther;
@@ -77,7 +79,7 @@ namespace ParticleSimulator.Simulation {
 
 						while (pending.TryDequeue(out other) && eavluated.Add(other)) {
 							toOther = other.Position - self.Position;
-							distance = toOther.Magnitude(Parameters.DIM);
+							distance = toOther.Magnitude();
 
 							if (distance <= self.Radius + other.Radius) {
 								strength = 0f;
@@ -106,6 +108,8 @@ namespace ParticleSimulator.Simulation {
 						wrappedParticle.Particle.IsEnabled = false;
 
 				if (wrappedParticle.Particle.IsEnabled) {
+					wrappedParticle.UpdateParentNode();
+
 					if (this.WorldBounceWeight > 0f)
 						wrappedParticle.BounceVelocity(this.WorldBounceWeight);
 

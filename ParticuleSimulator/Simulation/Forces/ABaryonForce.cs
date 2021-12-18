@@ -21,7 +21,7 @@ namespace ParticleSimulator.Simulation {
 				c2 = this.GetInteractedPhysicalParameter(p2);
 			if (c2.TotalWeight > Parameters.WORLD_EPSILON) {
 				Vector<float> toOther = c2.Center.Current - c1.Center.Current;
-				float distance = toOther.Magnitude(Parameters.DIM);
+				float distance = toOther.Magnitude();
 				return distance > Parameters.WORLD_EPSILON
 					? this.ComputeImpulse(toOther, distance, 1f, c2.TotalWeight)
 					: Vector<float>.Zero;

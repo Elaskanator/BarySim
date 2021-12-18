@@ -6,10 +6,12 @@ using Generic.Vectors;
 
 namespace Generic.Models {
 	public abstract class AQuadTree<TElement, TSelf> : AVectorTree<TElement, TSelf>
-	where TElement : AParticle<TElement>, IEquatable<TElement>, IEqualityComparer<TElement>
+	where TElement : AParticle<TElement>
 	where TSelf : AQuadTree<TElement, TSelf> {
 		public AQuadTree(int dim, Vector<float> corner1, Vector<float> corner2, TSelf parent = null) 
 		: base(dim, corner1, corner2, parent) { }
+
+		protected abstract TSelf NewNode(Vector<float> cornerA, Vector<float> cornerB, TSelf parent = null);
 
 		public TSelf AddUp(TElement element) {
 			TSelf node = (TSelf)this, parent;

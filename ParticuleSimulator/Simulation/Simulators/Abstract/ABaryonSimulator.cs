@@ -6,7 +6,7 @@ using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public abstract class ABaryonSimulator<TParticle> : ASimulator<TParticle, MagicTree<TParticle>>
-	where TParticle : ABaryonParticle<TParticle> {
+	where TParticle : ABaryonParticle<TParticle>, IEquatable<TParticle>, IEqualityComparer<TParticle> {
 		public ABaryonSimulator(params ABaryonForce<TParticle>[] forces) {
 			this.Forces = forces;
 		}

@@ -58,7 +58,7 @@ namespace ParticleSimulator.Simulation.Boids {
 				}
 
 				awayVector = this.Position - other.Position;
-				dist = awayVector.Magnitude(Parameters.DIM);
+				dist = awayVector.Magnitude();
 
 				if ((this.Vision < 0f || this.Vision <= dist))
 					if (dist < Parameters.WORLD_EPSILON || this.FoV < 0f || this.FoV >= this.Position.AngleTo_FullRange(other.Position, Parameters.DIM))
@@ -71,16 +71,16 @@ namespace ParticleSimulator.Simulation.Boids {
 						
 			return (Parameters.BOIDS_REPULSION_ENABLE ? repulsion : Vector<float>.Zero)
 				+ (Parameters.BOIDS_COHERE_ENABLE && centerAvg.NumUpdates > 0
-					? (centerAvg.Current - this.Position).Normalize(Parameters.DIM, this.CohesionWeight)
+					? (centerAvg.Current - this.Position).Normalize(this.CohesionWeight)
 					: Vector<float>.Zero)
-				+ (Parameters.BOIDS_ALIGN_ENABLE && directionAvg.NumUpdates > 0 && directionAvg.Current.Magnitude(Parameters.DIM) > Parameters.WORLD_EPSILON
+				+ (Parameters.BOIDS_ALIGN_ENABLE && directionAvg.NumUpdates > 0 && directionAvg.Current.Magnitude() > Parameters.WORLD_EPSILON
 					? (directionAvg.Current - this.Velocity) * this.AlignmentWeight
 					: Vector<float>.Zero);
 		}
 
 		protected override IEnumerable<Boid> AfterUpdate() {
 			float speed;
-			if ((speed = this.Velocity.Magnitude(Parameters.DIM)) <= Parameters.WORLD_EPSILON)
+			if ((speed = this.Velocity.Magnitude()) <= Parameters.WORLD_EPSILON)
 				this.Velocity = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x * Parameters.BOIDS_BOID_MAX_SPEED * (float)Program.Random.NextDouble()));
 
 			this.Velocity = this.MinSpeed >= 0f && speed < this.MinSpeed

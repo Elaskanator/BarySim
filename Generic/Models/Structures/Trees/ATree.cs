@@ -6,33 +6,80 @@ using Generic.Extensions;
 
 namespace Generic.Models {
 	public interface ITree : IEnumerable {
-		public bool IsRoot { get; }
-		public bool IsLeaf { get; }
-		public int Count { get; }
+		bool IsRoot { get; }
+		bool IsLeaf { get; }
+		int Count { get; }
 
-		public IEnumerable AllElements { get; }
-		public IEnumerable<ITree> Children { get; }
+		IEnumerable AllElements { get; }
+		IEnumerable AllNodes { get; }
+		IEnumerable Children { get; }
 
-		public IEnumerable<ITree> AllNodes { get; }
-		public IEnumerable<ITree> Leaves { get; }
-		public IEnumerable<ITree> LeavesNonempty { get; }
+		ITree Parent { get; }
 
-		public IEnumerable<ITree> NestedChildren { get; }
-		public IEnumerable<ITree> SiblingNodes { get; }
+		IEnumerable LeafNodes { get; }
+		IEnumerable LeafNodesNonEmpty { get; }
 
-		public ITree Add(object element);
-		public void AddRange(IEnumerable<object> elements);
+		IEnumerable NestedChildren { get; }
+		IEnumerable SiblingNodes { get; }
 
-		public void Remove(object element);
+		ITree Add(object element);
+		void AddRange(IEnumerable elements);
+
+		ITree GetContainingLeaf(object element);
+		ITree GetContainingLeafUnchecked(object element);
+
+		IEnumerator IEnumerable.GetEnumerator() { return this.AllElements.GetEnumerator(); }
 	}
 
-	public abstract partial class ATree<TElement, TSelf> : ITree, IEnumerable<TElement>
-	where TElement : IEquatable<TElement>, IEqualityComparer<TElement>
+	public interface ITree<TElement, TSelf> : ITree, IEnumerable<TElement>
+	where TSelf : ITree<TElement, TSelf> {
+		new IEnumerable<TElement> AllElements { get; }
+		IEnumerable ITree.AllElements => this.AllElements;
+
+		new IEnumerable<TSelf> AllNodes { get; }
+		IEnumerable ITree.AllNodes => this.AllNodes;
+
+		new IEnumerable<TSelf> Children { get; }
+		IEnumerable ITree.Children => this.Children;
+
+		new TSelf Parent { get; }
+		ITree ITree.Parent => this.Parent;
+
+		new IEnumerable<TSelf> LeafNodes { get; }
+		IEnumerable ITree.LeafNodes => this.LeafNodes;
+		new IEnumerable<TSelf> LeafNodesNonEmpty { get; }
+		IEnumerable ITree.LeafNodesNonEmpty => this.LeafNodesNonEmpty;
+
+		new IEnumerable<TSelf> NestedChildren { get; }
+		IEnumerable ITree.NestedChildren => this.NestedChildren;
+		new IEnumerable<TSelf> SiblingNodes { get; }
+		IEnumerable ITree.SiblingNodes => this.SiblingNodes;
+
+		TSelf Add(TElement element);
+		ITree ITree.Add(object element) => this.Add((TElement)element);
+		void AddRange(IEnumerable<TElement> elements) { foreach (TElement e in elements) this.Add(e); }
+		void ITree.AddRange(IEnumerable elements) => this.AddRange(elements.Cast<TElement>());
+
+		TSelf GetContainingLeaf(TElement element);
+		ITree ITree.GetContainingLeaf(object element) => this.GetContainingLeaf((TElement)element);
+		TSelf GetContainingLeafUnchecked(TElement element);
+		ITree ITree.GetContainingLeafUnchecked(object element) => this.GetContainingLeafUnchecked((TElement)element);
+
+		IEnumerator<TElement> IEnumerable<TElement>.GetEnumerator() => this.AllElements.GetEnumerator();
+	}
+
+	public interface IMutableTree<TElement, TSelf> : ITree<TElement, TSelf>
+	where TSelf : IMutableTree<TElement, TSelf> {
+		bool TryRemove(TElement element);
+
+		TSelf Prune();
+	}
+
+	public abstract partial class ATree<TElement, TSelf> : ITree<TElement, TSelf>, IMutableTree<TElement, TSelf>
 	where TSelf : ATree<TElement, TSelf> {
 		public ATree(TSelf parent = null) {
 			this.Parent = parent;
 			this.Depth = parent is null ? 0 : parent.Depth + 1;
-			this._leafNode = new(this.NodeCapacity);
 		}
 		public override string ToString() { return string.Format("{0}[Depth {1}]", nameof(TSelf), this.Depth); }
 
@@ -41,9 +88,11 @@ namespace Generic.Models {
 		//TODO - make everything tail-recursive
 		public virtual int MaxDepth => 40;
 
-		public int Count { get; private set; }
+		public int Count { get; protected set; }
 		public int Depth { get; protected set; }
 		public TSelf Parent { get; protected set; }
+		protected ILeafNode<TElement> LeafContainer;
+		protected abstract ILeafNode<TElement> NewLeafContainer();
 
 		public bool IsRoot { get { return this.Depth == 0; } }
 		public bool IsLeaf { get { return this._children is null; } }
@@ -51,48 +100,41 @@ namespace Generic.Models {
 		#region Accessors
 		public IEnumerable<TElement> AllElements { get {
 			if (this.Count > 0) 
-				if (this.IsLeaf) foreach (TElement e in this._leafNode.Elements)
+				if (this.IsLeaf) foreach (TElement e in this.LeafContainer.Elements)
 					yield return e;
 				else foreach (TElement e in this.Children.SelectMany(c => c.AllElements))
 					yield return e; }}
-		IEnumerable ITree.AllElements => this.AllElements;
 
-		public IEnumerable<ITree> AllNodes { get {
+		public IEnumerable<TSelf> AllNodes { get {
 			if (this.IsLeaf) yield return (TSelf)this;
 			else foreach (TSelf child in this.Children.SelectMany(c => c.AllNodes))
 				yield return child; }}
-		IEnumerable<ITree> ITree.AllNodes => this.AllNodes;
 		
 		protected TSelf[] _children = null;
 		public IEnumerable<TSelf> Children { get { return this._children; } }
-		IEnumerable<ITree> ITree.Children => this.Children;
 
 		public IEnumerable<TSelf> NestedChildren { get {
 			foreach (TSelf node in this.Children) {
 				yield return node;
 				foreach (TSelf subnode in node.NestedChildren)
 					yield return subnode; }}}
-		IEnumerable<ITree> ITree.NestedChildren { get { return this.NestedChildren; } }
 
-		public IEnumerable<TSelf> Siblings { get {
+		public IEnumerable<TSelf> SiblingNodes { get {
 			if (this.IsRoot) return Enumerable.Empty<TSelf>();
 			else return this.Parent.Children.Without(n => ReferenceEquals(this, n)); }}
-		IEnumerable<ITree> ITree.SiblingNodes => this.Siblings;
 
-		public IEnumerable<ITree> Leaves { get {
+		public IEnumerable<TSelf> LeafNodes { get {
 			if (this.IsLeaf) yield return (TSelf)this;
-			else foreach (TSelf child in this.Children.SelectMany(c => c.Leaves))
+			else foreach (TSelf child in this.Children.SelectMany(c => c.LeafNodes))
 				yield return child; }}
-		IEnumerable<ITree> ITree.Leaves => this.Leaves;
 		
-		public IEnumerable<TSelf> LeavesNonempty { get {
+		public IEnumerable<TSelf> LeafNodesNonEmpty { get {
 			if (this.Count > 0)
 				if (this.IsLeaf) yield return (TSelf)this;
-				else foreach (TSelf child in this.Children.SelectMany(c => c.LeavesNonempty))
+				else foreach (TSelf child in this.Children.SelectMany(c => c.LeafNodesNonEmpty))
 					yield return child; }}
-		IEnumerable<ITree> ITree.LeavesNonempty => this.LeavesNonempty;
 		#endregion Accessors
-		
+
 		public abstract bool DoesContain(TElement element);
 
 		protected abstract uint ChooseNodeIdx(TElement element);
@@ -100,14 +142,11 @@ namespace Generic.Models {
 		protected virtual TSelf[] ArrangeChildren(IEnumerable<TSelf> nodes) { return nodes.ToArray(); }
 		protected virtual void Incorporate(TElement element) { }
 
-		#region Add/Remove
-		private LeafNode _leafNode;
-
+		#region Add
 		public TSelf Add(TElement element) {
 			this.Incorporate(element);
 			return this.AddInternal(element);
 		}
-		ITree ITree.Add(object element) { return this.Add((TElement)element); }
 		private TSelf AddInternal(TElement element) {
 			TSelf node = (TSelf)this;
 			while (!node.IsLeaf) {
@@ -119,14 +158,15 @@ namespace Generic.Models {
 		private TSelf AddElementToNode(TElement element) {
 			this.Count++;
 			if (this.Count <= this.NodeCapacity || this.ResolutionLimitReached || this.Depth >= this.MaxDepth) {
-				this._leafNode.Add(element);
+				(this.LeafContainer ??= this.NewLeafContainer()).Add(element);
 				return (TSelf)this;
 			} else {//add another layer
 				this._children = this.ArrangeChildren(this.FormNodes());
-				for (int i = 0; i < this.NodeCapacity; i++)
-					this._children[this.ChooseNodeIdx(this._leafNode._members[i])]
-						.AddElementToNode(this._leafNode._members[i]);
-				this._leafNode = null;
+				TElement[] myMembers = this.LeafContainer.Elements.ToArray();
+				for (int i = 0; i < myMembers.Length; i++)
+					this._children[this.ChooseNodeIdx(myMembers[i])]
+						.AddElementToNode(myMembers[i]);
+				this.LeafContainer = null;
 				return this
 					._children[this.ChooseNodeIdx(element)]
 					.AddElementToNode(element);
@@ -137,31 +177,49 @@ namespace Generic.Models {
 			foreach (TElement e in elements)
 				this.Add(e);
 		}
-		void ITree.AddRange(IEnumerable<object> elements) { this.AddRange(elements.Cast<TElement>()); }
+		#endregion Add
 
-		public void Remove(TElement element) {
-			this._leafNode.Remove(element);
-			if (this.Count == 0 && !this.IsRoot)
-				this.Parent.SignalRemoval(true);
-		}
-		public void Remove(object element) { this.Remove((TElement)element); }
-		private bool SignalRemoval(bool lowerEmptied) {
-			this.Count--;
-			if (lowerEmptied && this.Count == 0) {
-				this._children = null;
-				if (this.IsRoot || !this.Parent.SignalRemoval(true))
-					this._leafNode = new(this.NodeCapacity);
-				return true;
-			} else if (!this.IsRoot)
-				this.Parent.SignalRemoval(false);
+		#region Remove
+		public bool TryRemove(TElement element) {
+			if (this.Count > 0) {
+				TSelf node = this.GetContainingLeafUnchecked(element);
+				if (node.LeafContainer.TryRemove(element)) {
+					node.SignalRemoval();
+					return true;
+				}
+			}
 			return false;
 		}
-		#endregion Add/Remove
-
-		public TSelf GetContainingLeaf(TElement coordinates) {
+		protected void SignalRemoval() {
+			if (--this.Count == 0) {
+				this._children = null;
+				this.LeafContainer = null;
+			}
+			if (!this.IsRoot) this.Parent.SignalRemoval();
+		}
+		
+		public TSelf Prune() {
+			TSelf node = (TSelf)this;
+			TSelf[] nonEmptyChildren;
+			while (!(node.Children is null)) {
+				nonEmptyChildren = node.Children.Where(c => c.Count > 0).Take(2).ToArray();
+				if (nonEmptyChildren.Length == 1)
+					node = nonEmptyChildren[0];
+				else break;
+			}
+			return node;
+		}
+		#endregion Remove
+		
+		public TSelf GetContainingLeaf(TElement element) {
+			TSelf node = this.GetContainingLeafUnchecked(element);
+			if (node.DoesContain(element)) return node;
+			else throw new KeyNotFoundException();
+		}
+		public TSelf GetContainingLeafUnchecked(TElement element) {
 			TSelf node = (TSelf)this;
 			while (!node.IsLeaf)
-				node = this._children[this.ChooseNodeIdx(coordinates)];
+				node = this._children[this.ChooseNodeIdx(element)];
 			return node;
 		}
 
@@ -173,7 +231,7 @@ namespace Generic.Models {
 					yield return member;
 		}
 		private IEnumerable<TSelf> SeekUpward() {
-			foreach (TSelf node in this.Siblings.SelectMany(q => q.AllNodes).Where(n => n.Count > 0))
+			foreach (TSelf node in this.SiblingNodes.SelectMany(q => q.AllNodes).Where(n => n.Count > 0))
 				yield return node;
 			if (!this.Parent.IsRoot)
 				foreach (TSelf node in this.Parent.SeekUpward())
@@ -185,7 +243,7 @@ namespace Generic.Models {
 		}
 		private IEnumerable<TSelf> GetNeighborhoodNodes_up(int? limit, TSelf start) {
 			if (!this.IsRoot) {
-				foreach (TSelf node in this.Siblings.SelectMany(s => s.GetNeighborhoodNodes_down(limit, start)))
+				foreach (TSelf node in this.SiblingNodes.SelectMany(s => s.GetNeighborhoodNodes_down(limit, start)))
 					yield return node;
 				foreach (TSelf node in this.Parent.GetNeighborhoodNodes_up(limit - 1, start))
 					yield return node;
@@ -224,8 +282,5 @@ namespace Generic.Models {
 					newJunk.Item2.Concat(tests.Without(test => test.Item1).Select(test => test.Item2)).ToArray());
 			}
 		}
-
-		public IEnumerator<TElement> GetEnumerator() { return this.AllElements.GetEnumerator(); }
-		IEnumerator IEnumerable.GetEnumerator() { return this.AllElements.GetEnumerator(); }
 	}
 }

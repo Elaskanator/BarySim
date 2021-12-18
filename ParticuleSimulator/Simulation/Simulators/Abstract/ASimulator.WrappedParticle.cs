@@ -3,7 +3,8 @@ using Generic.Models;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public abstract partial class ASimulator<TParticle, TTree> where TParticle : ABaryonParticle<TParticle>
+	public abstract partial class ASimulator<TParticle, TTree>
+	where TParticle : ASimulationParticle<TParticle>
 	where TTree : AQuadTree<TParticle, TTree> {
 		public sealed class WrappedParticle {
 			public readonly TParticle Particle;
@@ -71,7 +72,7 @@ namespace ParticleSimulator.Simulation {
 						this.Node = node.AddUp(this.Particle);
 						return;
 					} else node = node.Parent;
-				this.Node = node.GetContainingLeaf(this.Particle);
+				this.Node = node.GetContainingLeafUnchecked(this.Particle);
 			}
 		}
 	}
