@@ -8,9 +8,7 @@ using ParticleSimulator.Simulation;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited
 	public static class Parameters {
-		public const SimulationType SIM_TYPE = SimulationType.Gravity;
-
-		public const int PARTICLES_GROUP_COUNT = 32;
+		public const int PARTICLES_GROUP_COUNT = 128;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 32;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
@@ -49,9 +47,7 @@ namespace ParticleSimulator {
 		
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
-		public const bool SYNC_SIMULATION = true;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
-		//public const bool SIMULATION_PARALLEL_ENABLE = true;
-		//public const int SIMULATION_PARALLELISM = 16;//number of simulation threads available for processing trea leaves
+		public const bool SYNC_SIMULATION = false;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
 
 		#region Gravity
 		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 5f;
@@ -86,53 +82,6 @@ namespace ParticleSimulator {
 		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 4;
 		#endregion Gravity
 
-		#region Boids
-		public const float BOIDS_INITIAL_SEPARATION	= 0.015f;
-		public const float BOIDS_WORLD_BOUNCE_WEIGHT= 0.00001f;
-
-		public const float BOIDS_BOID_VISION			= -1;
-		public const float BOIDS_PREDATOR_VISION		= -1;
-		public const float BOIDS_BOID_FOV_RADIANS		= -1;
-		public const float BOIDS_PREDATOR_FOV_RADIANS	= -1;
-
-		public const float BOIDS_BOID_MIN_SPEED		= 0.0005f;
-		public const float BOIDS_PREDATOR_MIN_SPEED	= 0f;
-		public const float BOIDS_BOID_MAX_SPEED		= 0.002f;
-		public const float BOIDS_PREDATOR_MAX_SPEED	= 0.01f;
-
-		public const float BOIDS_STARTING_SPEED_MAX_GROUP = 0f;
-		public const float BOIDS_STARTING_SPEED_MAX_GROUP_RAND = 5E-3f;
-		public const float BOIDS_STARTING_SPEED_MAX_INTRAGROUP = 0f;
-		public const float BOIDS_STARTING_SPEED_MAX_INTRAGROUP_RAND = 2E-3f;
-		
-		public const float BOIDS_PREDATOR_CHANCE		= 0f;
-		public const float BOIDS_PREDATOR_CHANCE_BIAS	= 1f;
-
-		public const bool BOIDS_REPULSION_ENABLE				= true;
-		public const float BOIDS_BOID_REPULSION_DIST			= 0.05f;
-		public const float BOIDS_BOID_GROUP_REPULSION_DIST		= 0.05f;
-		public const float BOIDS_BOID_REPULSION_W				= 0.001f;
-		public const float BOIDS_BOID_FLEE_REPULSION_W			= 0.005f;
-		public const float BOIDS_BOID_GROUP_REPULSION_W			= 0.0015f;
-		public const float BOIDS_PREDATOR_REPULSION_DIST		= 0.01f;
-		public const float BOIDS_PREDATOR_GROUP_REPULSION_DIST	= 0.4f;
-		public const float BOIDS_PREDATOR_REPULSION_W			= 0.0003f;
-		public const float BOIDS_PREDATOR_GROUP_REPULSION_W		= 0.001f;
-
-		public const bool BOIDS_COHERE_ENABLE			= true;
-		public const float BOIDS_BOID_COHESION_W		= 0.0001f;
-		public const float BOIDS_BOID_COHESION_DIST		= 0.1f;
-		public const float BOIDS_PREDATOR_COHESION_W	= 0.0006f;
-		public const float BOIDS_PREDATOR_COHESION_DIST	= 0.1f;
-
-		public const bool BOIDS_ALIGN_ENABLE			= true;
-		public const float BOIDS_BOID_ALIGNMENT_W		= 0.01f;
-		public const float BOIDS_PREDATOR_ALIGNMENT_W	= 0.00002f;
-
-		public const int BOIDS_QUADTREE_NODE_CAPACITY		= 5;
-		public const int BOIDS_DESIRED_INTERACTION_NEIGHBORS= 8;
-		#endregion Boids
-
 		#region Aux
 		public const char CHAR_LOW  = '\u2584';//▄
 		public const char CHAR_BOTH = '\u2588';//█
@@ -149,7 +98,7 @@ namespace ParticleSimulator {
 		public const float PERF_SMA_ALPHA = 0.1f;
 
 		public const int GRAPH_WIDTH = -1;
-		public const int GRAPH_HEIGHT = 10;//at least 2
+		public const int GRAPH_HEIGHT = 20;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
 		public const float PERF_GRAPH_PERCENTILE_CUTOFF = 10f;

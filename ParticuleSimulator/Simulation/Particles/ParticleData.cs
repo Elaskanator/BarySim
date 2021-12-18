@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
-using Generic.Vectors;
+﻿using System.Numerics;
 
 namespace ParticleSimulator.Simulation {
-	public struct ParticleData : ISimulationParticle, IEquatable<ParticleData>, IEqualityComparer<ParticleData> {
+	public struct ParticleData : IBaryonParticle {
 		public int ID { get; private set; }
 		public int GroupID { get; private set; }
 		public Vector<float> Position { get; private set; }
@@ -13,7 +10,7 @@ namespace ParticleSimulator.Simulation {
 		public float Luminosity { get; private set; }
 		public bool IsVisible { get; private set; }
 
-		public ParticleData(ISimulationParticle particle) {
+		public ParticleData(IBaryonParticle particle) {
 			this.ID = particle.ID;
 			this.GroupID = particle.GroupID;
 			this.Radius = particle.Radius;
@@ -27,11 +24,5 @@ namespace ParticleSimulator.Simulation {
 					visible = false;
 			this.IsVisible = visible;
 		}
-
-		public bool Equals(ParticleData other) { return this.ID == other.ID; }
-		public override bool Equals(object other) { return (other is IParticle) && this.ID == (other as IParticle).ID; }
-		public bool Equals(ParticleData x, ParticleData y) { return x.ID == y.ID; }
-		public int GetHashCode(ParticleData obj) { return obj.ID.GetHashCode(); }
-		public override int GetHashCode() { return this.ID.GetHashCode(); }
 	}
 }

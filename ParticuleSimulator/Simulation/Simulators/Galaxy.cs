@@ -4,7 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Generic.Vectors;
 
-namespace ParticleSimulator.Simulation.Gravity {
+namespace ParticleSimulator.Simulation {
 	public class Galaxy : AParticleGroup<MatterClump> {
 		public override float StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
 		public override float StartSpeedMax_Group_Rand => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND;
@@ -17,15 +17,17 @@ namespace ParticleSimulator.Simulation.Gravity {
 			/ Parameters.GRAVITY_RADIAL_DENSITY;
 
 		protected override MatterClump NewParticle(Vector<float> position, Vector<float> velocity) {
-			return new MatterClump(this.ID,
-				position,
-				velocity,
-				Parameters.GRAVITY_MIN_STARTING_MASS
+			return new MatterClump() {
+				GroupID = this.ID,
+				Position = position,
+				Velocity = velocity,
+				Mass = Parameters.GRAVITY_MIN_STARTING_MASS
 					+ (MathF.Pow((float)Program.Random.NextDouble(), Parameters.GRAVITY_MASS_BIAS)
 						* (Parameters.GRAVITY_MAX_STARTING_MASS - Parameters.GRAVITY_MIN_STARTING_MASS)),
-				Parameters.ELECTROSTATIC_MIN_CHARGE
+				Charge = Parameters.ELECTROSTATIC_MIN_CHARGE
 					+ ((float)Program.Random.NextDouble()
-						* (Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE)));
+						* (Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE))
+			};
 		}
 
 		//protected override Vector<float> NewParticlePosition(Vector<float> center, float radius) {

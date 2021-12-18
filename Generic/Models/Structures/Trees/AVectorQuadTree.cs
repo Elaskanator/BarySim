@@ -6,7 +6,7 @@ using Generic.Vectors;
 
 namespace Generic.Models {
 	public abstract class AVectorQuadTree<TElement, TSelf> : ATree<TElement, TSelf>, IMutableTree<TElement, TSelf>
-	where TElement : AParticle<TElement>
+	where TElement : IParticle
 	where TSelf : AVectorQuadTree<TElement, TSelf> {
 		public AVectorQuadTree(int dim, Vector<float> corner1, Vector<float> corner2, TSelf parent = null) 
 		: base(parent) {//caller needs to ensure all values in x1 are smaller than x2 (the corners of a cubic volume)

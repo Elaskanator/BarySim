@@ -36,9 +36,7 @@ namespace Generic.Models {
 				this._current = value;
 			} else {
 				double
-					alpha = weighting is null
-						? 1d
-						: (weighting ?? this.UpdateStrength) >= 1d / this.NumUpdates ? (weighting ?? this.UpdateStrength) : 1d / this.NumUpdates,
+					alpha = weighting ?? this.UpdateStrength,
 					beta = 1d - alpha;
 				this._current = alpha * value + this._current * beta;
 			}
@@ -71,6 +69,19 @@ namespace Generic.Models {
 
 		public SampleSMA(double weighting) {
 			this.Alpha = weighting;
+		}
+
+		protected override void ApplyUpdate(double value, double? weighting) {
+			if (this.NumUpdates == 0) {
+				this._current = value;
+			} else {
+				double
+					alpha = this.UpdateStrength >= 1d / this.NumUpdates
+						? this.UpdateStrength
+						: 1d / this.NumUpdates,
+					beta = 1d - alpha;
+				this._current = alpha * value + this._current * beta;
+			}
 		}
 	}
 

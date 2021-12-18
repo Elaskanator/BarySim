@@ -1,35 +1,21 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 
 namespace Generic.Models {
-	public interface ILeafNode : IEnumerable {
+	public interface ILeafNode<TElement> {
 		int MaxCapacity { get; }
 		int Count { get; }
-		IEnumerable Elements { get; }
+
+		IEnumerable<TElement> Elements { get; }
 
 		void Add(object element);
 		bool TryRemove(object element);
-		//bool TryRemoveAll(IEnumerable elements);
-
-		IEnumerator IEnumerable.GetEnumerator() { return this.Elements.GetEnumerator(); }
-	}
-
-	public interface ILeafNode<TElement> : ILeafNode, IEnumerable<TElement> {
-		new IEnumerable<TElement> Elements { get; }
-		IEnumerable ILeafNode.Elements => this.Elements;
-
 		//bool TryRemoveAll(IEnumerable<TElement> elements);
-		//bool ILeafNode.TryRemoveAll(IEnumerable elements) => this.TryRemoveAll(elements.Cast<TElement>());
-
-		IEnumerator<TElement> IEnumerable<TElement>.GetEnumerator() => this.Elements.GetEnumerator();
 	}
 
-	public class LeafNode<TElement> : ILeafNode<TElement>
-	where TElement : IEquatable<TElement>, IEqualityComparer<TElement> {
-		public LeafNode(int maxCapacity = 1) {
+	public class HashedLeafNode<TElement> : ILeafNode<TElement> {
+		public HashedLeafNode(int maxCapacity = 1) {
 			this.MaxCapacity = maxCapacity;
 			this._members = new TElement[maxCapacity];
 			this.Elements = Enumerable.Empty<TElement>();

@@ -235,6 +235,9 @@ namespace Generic.Extensions {
 			[FieldOffset(0)] public CharUnion Char;
 			[FieldOffset(2)] public ushort Attributes;
 
+			public ConsoleColor ForegroundColor => (ConsoleColor)(this.Attributes & 0x00FF);
+			public ConsoleColor BackgroundColor => (ConsoleColor)(this.Attributes & 0xFF00);
+
 			public CharInfo(char character, ConsoleColor? foreground = null, ConsoleColor? background = null) {
 				this.Char = new CharUnion() { UnicodeChar = character };
 				this.Attributes = (ushort)((int)(foreground ?? 0) | (((ushort)(background ?? 0)) << 4));

@@ -13,10 +13,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Simulation\Simulators\Boids\ExecutionManager.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Generic\Generic.csproj" />
   </ItemGroup>
 

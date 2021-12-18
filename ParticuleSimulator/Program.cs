@@ -12,16 +12,14 @@ namespace ParticleSimulator {
 	//SEEALSO https://www.youtube.com/watch?v=TrrbshL_0-s
 	public class Program {
 		public static readonly Random Random = new();
-		public static ISimulator Simulator { get; private set; }
+		public static BaryonSimulator Simulator { get; private set; }
 		public static RunManager Manager { get; private set; }
-
+		
 		public static SynchronizedDataBuffer Resource_Locations, Resource_Resamplings, Resource_Rasterization;
 		public static StepEvaluator StepEval_Simulate, StepEval_Resample, StepEval_Autoscale, StepEval_Rasterize, StepEval_Draw, StepEval_ConsoleWindow;
 
 		public static void Main(string[] args) {
-			Console.Title = string.Format("{0} Simulator ({1}D) - Initializing",
-				Parameters.SIM_TYPE,
-				Parameters.DIM);
+			Console.Title = string.Format("Barnes-Hut Simulator ({0}D) - Initializing", Parameters.DIM);
 
 			if (Generic.Vectors.VectorFunctions.VECT_CAPACITY < Parameters.DIM) {
 				Console.ForegroundColor = ConsoleColor.Red;
@@ -49,17 +47,7 @@ namespace ParticleSimulator {
 			ConsoleExtensions.DisableResizing();//note this doesn't work to disable OS window snapping
 			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
-			switch (Parameters.SIM_TYPE) {
-				case SimulationType.Boid:
-					throw new NotImplementedException();
-					//Simulator = new Simulation.Boids.BoidSimulator();
-					break;
-				case SimulationType.Gravity:
-					Simulator = new Simulation.Gravity.GravitySimulator();
-					break;
-				default:
-					throw new InvalidEnumArgumentException(nameof(Parameters.SIM_TYPE), (int)Parameters.SIM_TYPE, typeof(SimulationType));
-			}
+			Simulator = new BaryonSimulator();
 			PerfMon.TitleUpdate();
 
 			Manager = BuildRunManager();
@@ -79,7 +67,7 @@ namespace ParticleSimulator {
 				//Calculator = null,
 				Evaluator = Renderer.FlushScreenBuffer,
 				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
-				//Callback = null,
+				Callback = PerfMon.AfterRender,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
 				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
@@ -102,12 +90,12 @@ namespace ParticleSimulator {
 
 			StepEval_Simulate = new(new() {
 				Name = "Simulating",
-				Initializer = Simulator.RefreshSimulation,
-				//Calculator = null,
+				//Initializer = null,
+				Calculator = Simulator.RefreshSimulation,
 				//Evaluator = null,
 				//Synchronizer = null,
 				//Callback = null,
-				DataAssimilationTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
 				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA_Tracking(Parameters.PERF_SMA_ALPHA) : null,
 				//IterationTicksAverager = null,
@@ -115,7 +103,7 @@ namespace ParticleSimulator {
 				OutputResource = Resource_Locations,
 				IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
 				OutputSkips = Parameters.SIMULATION_SKIPS,
-				//InputResourceUses = null,
+				//InputResourceUses = null
 			});
 			StepEval_Resample = new(new() {
 				Name = "Density Sampling",
@@ -149,7 +137,7 @@ namespace ParticleSimulator {
 				Calculator = Renderer.Rasterize,
 				//Evaluator = null,
 				//Synchronizer = null,
-				Callback = PerfMon.AfterRasterize,
+				//Callback = null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
 				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,

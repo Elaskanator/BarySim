@@ -7,11 +7,11 @@ using Generic.Vectors;
 namespace ParticleSimulator.Simulation {
 	public interface IParticleGroup : IEquatable<IParticleGroup>, IEqualityComparer<IParticleGroup> {
 		int ID { get; }
-		ISimulationParticle[] InitialParticles { get; }
+		IBaryonParticle[] InitialParticles { get; }
 	}
 
 	public abstract class AParticleGroup<TParticle> : IParticleGroup
-	where TParticle : ASimulationParticle<TParticle> {
+	where TParticle : BaryonParticle {
 		public AParticleGroup() {
 			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_SKEW_POWER) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
 
@@ -51,7 +51,7 @@ namespace ParticleSimulator.Simulation {
 		public abstract float ComputeInitialSeparationRadius(IEnumerable<TParticle> particles);
 
 		public TParticle[] InitialParticles { get; private set; }
-		ISimulationParticle[] IParticleGroup.InitialParticles => this.InitialParticles;
+		IBaryonParticle[] IParticleGroup.InitialParticles => this.InitialParticles;
 
 		public abstract float StartSpeedMax_Group_Angular { get; }
 		public abstract float StartSpeedMax_Group_Rand { get; }

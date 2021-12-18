@@ -27,12 +27,12 @@ namespace Generic.Models {
 		public bool IsLeaf { get { return this._children is null; } }
 
 		#region Accessors
-		public IEnumerable<TElement> AllElements { get {
-			if (this.Count > 0) 
-				if (this.IsLeaf) foreach (TElement e in this.LeafContainer.Elements)
-					yield return e;
-				else foreach (TElement e in this.Children.SelectMany(c => c.AllElements))
-					yield return e; }}
+		public IEnumerable<TElement> AllElements =>
+			this.Count > 0
+				? this.IsLeaf
+					? this.LeafContainer.Elements
+					: this.Children.SelectMany(c => c.AllElements)
+				: Enumerable.Empty<TElement>();
 
 		public IEnumerable<TSelf> AllNodes { get {
 			if (this.IsLeaf) yield return (TSelf)this;
