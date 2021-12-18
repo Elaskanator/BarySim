@@ -6,11 +6,15 @@ using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
 	public class Galaxy : AParticleGroup<MatterClump> {
-		public override float InitialSeparationRadius => Parameters.GRAVITY_INITIAL_SEPARATION;
 		public override float StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
 		public override float StartSpeedMax_Group_Rand => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND;
 		public override float StartSpeedMax_Particle_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP;
 		public override float StartSpeedMax_Particle_Range => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
+
+		public override float ComputeInitialSeparationRadius(IEnumerable<MatterClump> particles) =>
+			Parameters.GRAVITY_INITIAL_SEPARATION_SCALER
+			* MathF.Pow(particles.Sum(p => p.Mass), 1f / Parameters.DIM)
+			/ Parameters.GRAVITY_RADIAL_DENSITY;
 
 		protected override MatterClump NewParticle(Vector<float> position, Vector<float> velocity) {
 			return new MatterClump(this.ID,

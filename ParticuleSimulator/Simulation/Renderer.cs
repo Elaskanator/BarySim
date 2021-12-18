@@ -9,34 +9,41 @@ namespace ParticleSimulator.Simulation {
 	public static class Renderer {
 		public static Autoscaler Scaling { get; private set; }
 
-		public static readonly int RenderWidthOffset = 0;
-		public static readonly int RenderHeightOffset = 0;
+		public static readonly int NumPixels;
+		public static readonly int NumXSamples;
+		public static readonly int NumYSamples;
 		public static readonly int RenderWidth;
 		public static readonly int RenderHeight;
-		public static readonly int MaxX;
-		public static readonly int MaxY;
+		public static readonly int RenderWidthOffset = 0;
+		public static readonly int RenderHeightOffset = 0;
+
+		private static DateTime _lastUpdateUtc;
+		private static ConsoleExtensions.CharInfo[] _lastFrame;
 
 		static Renderer() {
-			MaxX = Parameters.WINDOW_WIDTH;
-			MaxY = Parameters.WINDOW_HEIGHT * 2;
+			NumPixels = Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT;
+			NumXSamples = Parameters.WINDOW_WIDTH;
+			NumYSamples = Parameters.WINDOW_HEIGHT * 2;
+			_lastUpdateUtc = DateTime.UtcNow;
+			_lastFrame = new ConsoleExtensions.CharInfo[NumPixels];
 
 			if (Parameters.DIM > 1) {
 				float aspectRatio = Parameters.DOMAIN_SIZE[0] / Parameters.DOMAIN_SIZE[1];
-				float consoleAspectRatio = (float)MaxX / (float)MaxY;
+				float consoleAspectRatio = (float)NumXSamples / (float)NumYSamples;
 				if (aspectRatio > consoleAspectRatio) {//wide
-					RenderWidth = MaxX;
-					RenderHeight = (int)(MaxX * Parameters.DOMAIN_SIZE[1] / Parameters.DOMAIN_SIZE[0]);
+					RenderWidth = NumXSamples;
+					RenderHeight = (int)(NumXSamples * Parameters.DOMAIN_SIZE[1] / Parameters.DOMAIN_SIZE[0]);
 					if (RenderHeight < 1) RenderHeight = 1;
-					RenderHeightOffset = (MaxY - RenderHeight) / 4;
+					RenderHeightOffset = (NumYSamples - RenderHeight) / 4;
 				} else {//tall
-					RenderWidth = (int)(MaxY * Parameters.DOMAIN_SIZE[0] / Parameters.DOMAIN_SIZE[1]);
-					RenderHeight = MaxY;
-					RenderWidthOffset = (MaxX - RenderWidth) / 2;
+					RenderWidth = (int)(NumYSamples * Parameters.DOMAIN_SIZE[0] / Parameters.DOMAIN_SIZE[1]);
+					RenderHeight = NumYSamples;
+					RenderWidthOffset = (NumXSamples - RenderWidth) / 2;
 				}
 			} else {
-				RenderWidth = MaxX;
+				RenderWidth = NumXSamples;
 				RenderHeight = 1;
-				RenderHeightOffset = MaxY / 4;
+				RenderHeightOffset = NumYSamples / 4;
 			}
 
 			Scaling = new(Parameters.COLOR_FIXED_BANDS
@@ -45,34 +52,50 @@ namespace ParticleSimulator.Simulation {
 					: null));
 		}
 
-		private static DateTime? _lastUpdateUtc = null;
 		public static void FlushScreenBuffer(object[] parameters) {
-			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])parameters[0]
-				?? new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])parameters[0] ?? _lastFrame;
+			_lastFrame = buffer;
 
-			int xOffset = Parameters.PERF_ENABLE ? 6 : 0,
-				yOffset = Parameters.PERF_ENABLE ? 1 : 0;
-
-			if (Program.StepEval_Draw.IsPunctual ?? false) _lastUpdateUtc = DateTime.UtcNow;
-			TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(_lastUpdateUtc ?? Program.Manager.StartTimeUtc);
-			bool isSlow = timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS;
-			if (isSlow) {
-				string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s").PadRight(6);
-				for (int i = 0; i < message.Length; i++)
-					buffer[i + xOffset + Parameters.WINDOW_WIDTH*yOffset] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
-			}
+			bool isSlow = Watchdog(buffer);
 
 			if (Parameters.PERF_ENABLE)
 				PerfMon.DrawStatsOverlay(buffer, isSlow);
 
-			if (!(buffer is null)) ConsoleExtensions.WriteConsoleOutput(buffer);
+			ConsoleExtensions.WriteConsoleOutput(buffer);
 		}
 
+		private static bool Watchdog(ConsoleExtensions.CharInfo[] buffer) {
+			int xOffset = Parameters.PERF_ENABLE ? 6 : 0,
+				yOffset = Parameters.PERF_ENABLE ? 1 : 0;
+
+			if (Program.StepEval_Draw.IsPunctual ?? false) _lastUpdateUtc = DateTime.UtcNow;
+			TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(_lastUpdateUtc);
+			bool isSlow = timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS;
+
+			if (isSlow) {
+				string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s") + " ";
+				for (int i = 0; i < message.Length; i++)
+					buffer[i + xOffset + Parameters.WINDOW_WIDTH*yOffset] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
+			}
+
+			return isSlow;
+		}
+
+		//private static ConsoleExtensions.CharInfo[] ComputeDeltas(ConsoleExtensions.CharInfo[] data) {
+		//	ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[NumPixels];
+		//	if (!(data is null)) for (int i = 0; i < NumPixels; i++) {
+		//		result[i] = ConsoleExtensions.CharInfo.Equals(_lastFrame[i], data[i])
+		//			? data[i]
+		//			: data[i];
+		//		_lastFrame[i] = data[i];
+		//	}
+		//	return result;
+		//}
+
 		public static ConsoleColor ChooseGroupColor(IEnumerable<ParticleData> particles) {
-			int dominantGroupID;
-			if (Parameters.DIM > 2)
-				dominantGroupID = particles.MinBy(p => GetDepthScalar(p.Position)).GroupID;
-			else dominantGroupID = particles.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
+			int dominantGroupID = Parameters.DIM > 2
+				? particles.MinBy(p => GetDepthScalar(p.Position)).GroupID
+				: particles.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
 			return Parameters.COLOR_ARRAY[dominantGroupID % Parameters.COLOR_ARRAY.Length];
 		}
 
@@ -100,10 +123,9 @@ namespace ParticleSimulator.Simulation {
 						Parameters.CHAR_BOTH,
 						Parameters.COLOR_ARRAY[cIdx]);
 
-					if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group)
-						rowStringData = "=" + cIdx.ToString();
-					else rowStringData =
-							(isDiscrete && cIdx == 0 ? "=" : "≤")
+					rowStringData = Parameters.COLOR_METHOD == ParticleColoringMethod.Group
+						? "=" + cIdx.ToString()
+						: (isDiscrete && cIdx == 0 ? "=" : "≤")
 							+ (isDiscrete
 								? ((int)Scaling.Values[cIdx]).ToString()
 								: Scaling.Values[cIdx].ToStringBetter(2, true, 5));
@@ -119,13 +141,12 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		public static Tuple<char, ParticleData[], float>[] Resample(object[] parameters) {
-			ParticleData[] particleData = (ParticleData[])parameters[0];
-			Tuple<char, ParticleData[], float>[] results = new Tuple<char, ParticleData[], float>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			Tuple<char, ParticleData[], float>[] results = new Tuple<char, ParticleData[], float>[NumPixels];
 
 			char pixelChar;
 			Queue<ParticleData> topStuff = new(), bottomStuff = new();
 			HashSet<ParticleData> distinct = new();
-			Queue<Tuple<ParticleData, int>>[] bins = DiscreteParticleBin(particleData);
+			Queue<Tuple<ParticleData, int>>[] bins = DiscreteParticleBin((ParticleData[])parameters[0]);
 			for (int i = 0; i < bins.Length; i++) {
 				if (!(bins[i] is null)) {
 					foreach (Tuple<ParticleData, int> t in bins[i]) {
@@ -169,9 +190,9 @@ namespace ParticleSimulator.Simulation {
 			return results;
 		}
 		private static Queue<Tuple<ParticleData, int>>[] DiscreteParticleBin(ParticleData[] particles) { 
-			Queue<Tuple<ParticleData, int>>[] results = new Queue<Tuple<ParticleData, int>>[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			Queue<Tuple<ParticleData, int>>[] results = new Queue<Tuple<ParticleData, int>>[NumPixels];
 			int idx;
-			foreach (Tuple<ParticleData, int, int> t in particles.SelectMany(p => SpreadSample(p))) {
+			foreach (Tuple<ParticleData, int, int> t in particles.Where(p => p.IsVisible).SelectMany(p => SpreadSample(p))) {
 				idx = t.Item2 + Parameters.WINDOW_WIDTH * (t.Item3 >> 1);
 				results[idx] ??= new Queue<Tuple<ParticleData, int>>();
 				results[idx].Enqueue(new Tuple<ParticleData, int>(t.Item1, t.Item3));
@@ -231,19 +252,19 @@ namespace ParticleSimulator.Simulation {
 		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
 			Tuple<char, ParticleData[], float>[] sampling = (Tuple<char, ParticleData[], float>[])parameters[0];
 
-			ConsoleExtensions.CharInfo[] frameBuffer = new ConsoleExtensions.CharInfo[Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT];
+			ConsoleExtensions.CharInfo[] results = new ConsoleExtensions.CharInfo[NumPixels];
 			if (!(sampling is null)) {
 				for (int i = 0; i < sampling.Length; i++)
-					frameBuffer[i] = sampling[i] is null ? default :
+					results[i] = sampling[i] is null ? default :
 						new ConsoleExtensions.CharInfo(
 							sampling[i].Item1,
 							ChooseColor(sampling[i]));
 
 				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth || Parameters.DIM > 2))
-					DrawLegend(frameBuffer);
+					DrawLegend(results);
 			}
 
-			return frameBuffer;
+			return results;
 		}
 
 		public static ConsoleColor ChooseColor(Tuple<char, ParticleData[], float> particleData) {

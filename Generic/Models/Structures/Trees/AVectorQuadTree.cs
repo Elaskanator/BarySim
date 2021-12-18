@@ -5,15 +5,76 @@ using System.Numerics;
 using Generic.Vectors;
 
 namespace Generic.Models {
-	public abstract class AQuadTree<TElement, TSelf> : AVectorTree<TElement, TSelf>
+	public abstract class AVectorQuadTree<TElement, TSelf> : ATree<TElement, TSelf>, IMutableTree<TElement, TSelf>
 	where TElement : AParticle<TElement>
-	where TSelf : AQuadTree<TElement, TSelf> {
-		public AQuadTree(int dim, Vector<float> corner1, Vector<float> corner2, TSelf parent = null) 
-		: base(dim, corner1, corner2, parent) { }
+	where TSelf : AVectorQuadTree<TElement, TSelf> {
+		public AVectorQuadTree(int dim, Vector<float> corner1, Vector<float> corner2, TSelf parent = null) 
+		: base(parent) {//caller needs to ensure all values in x1 are smaller than x2 (the corners of a cubic volume)
+			this.Dim = dim;
+			this.CornerLeft = corner1;
+			this.CornerRight = corner2;
 
-		protected abstract TSelf NewNode(Vector<float> cornerA, Vector<float> cornerB, TSelf parent = null);
+			this.Size = corner2 - corner1;
+			this.Center = (corner1 + corner2) * (1f / 2f);
+			
+			Vector<int> zeros = Vector.Equals(VectorFunctions.New(0f, 0.3f, 0f, -2f), Vector<float>.Zero);
+			this._resolutionLimitReached = dim > VectorFunctions.VECT_CAPACITY - Vector.Dot(zeros, zeros);
+		}
+		public AVectorQuadTree(int dim, bool makeSquare, IEnumerable<TElement> elements) {
+			float[]
+				leftCorner = Enumerable.Repeat(float.PositiveInfinity, dim).ToArray(),
+				rightCorner = Enumerable.Repeat(float.NegativeInfinity, dim).ToArray();
+			foreach (TElement element in elements)
+				for (int d = 0; d < dim; d++) {
+					leftCorner[d] = leftCorner[d] < element.Position[d] ? leftCorner[d] : element.Position[d];
+					rightCorner[d] = rightCorner[d] > element.Position[d] ? rightCorner[d] : element.Position[d];
+				}
+			if (makeSquare) {
+				float maxSize = leftCorner.Zip(rightCorner, (l, r) => r - l).Max();
+				rightCorner = leftCorner.Select(l => l + maxSize).ToArray();
+			}
 
-		public TSelf AddUp(TElement element) {
+			this.Dim = dim;
+			this.CornerLeft = VectorFunctions.New(leftCorner);
+			this.CornerRight = VectorFunctions.New(rightCorner.Select(c => c * (1f + 1E-5f)));
+
+			this.Size = this.CornerRight - this.CornerLeft;
+			this.Center = (this.CornerLeft + this.CornerRight) * (1f / 2f);
+			
+			Vector<int> zeros = Vector.Equals(VectorFunctions.New(0f, 0.3f, 0f, -2f), Vector<float>.Zero);
+			this._resolutionLimitReached = dim > VectorFunctions.VECT_CAPACITY - Vector.Dot(zeros, zeros);
+
+			this.AddUpOrDown(elements);
+		}
+		public AVectorQuadTree(int dim, IEnumerable<TElement> elements) : this(dim, true, elements) { }
+		protected abstract TSelf NewInstance(Vector<float> leftCorner, Vector<float> rightCorner, TSelf parent = null);
+		public override string ToString() {
+			return string.Format("Node[<{0}> thru <{1}>][{2} members]",
+				string.Join(", ", this.CornerLeft),
+				string.Join(", ", this.CornerRight),
+				this.Count);
+		}
+
+		public readonly int Dim;
+		private readonly bool _resolutionLimitReached;
+		public override bool ResolutionLimitReached => this._resolutionLimitReached;
+		
+		public Vector<float> CornerLeft { get; private set; }
+		public Vector<float> CornerRight { get; private set; }
+		public Vector<float> Size { get; private set; }
+		public Vector<float> Center { get; private set; }
+
+		public override bool DoesContain(TElement element) {
+			//Vector<int> a = Vector.LessThan(element.Position, this.Center);
+			//Vector<int> b = Vector.GreaterThanOrEqual(element.Position, this.Center);
+
+			for (int d = 0; d < this.Dim; d++)//left-handed range [a, b)
+				if (element.Position[d] < this.CornerLeft[d] || element.Position[d] >= this.CornerRight[d])
+					return false;
+			return true;
+		}
+
+		public TSelf AddUpOrDown(TElement element) {
 			TSelf node = (TSelf)this, parent;
 			TSelf[] newNodes;
 			uint directionMask, antidirectionMask;
@@ -29,7 +90,7 @@ namespace Generic.Models {
 				antidirectionMask = this.InvertQuadrantIdx(directionMask);//where the current node is
 
 				node.Depth++;
-				parent = this.NewNode(
+				parent = this.NewInstance(
 					VectorFunctions.New(
 						Enumerable.Range(0, this.Dim)
 							.Select(d => (directionMask & (1u << d)) > 0
@@ -46,14 +107,19 @@ namespace Generic.Models {
 				foreach (Tuple<Vector<float>, Vector<float>> nodeCorners in parent.FormNewNodeCorners(sizeFraction)) {
 					newNodes[i] = i == antidirectionMask
 						? node//the current layer
-						: this.NewNode(nodeCorners.Item1, nodeCorners.Item2, parent);
+						: this.NewInstance(nodeCorners.Item1, nodeCorners.Item2, parent);
 					i++;
 				}
 				parent._children = newNodes;
 				node = newNodes[directionMask];
 			}
 
-			return node.Add(element);
+			node.Add(element);
+			return node;
+		}
+		public void AddUpOrDown(IEnumerable<TElement> elements) {
+			foreach (TElement element in elements)
+				this.AddUpOrDown(element);
 		}
 
 		protected override uint ChooseNodeIdx(TElement element) {//MUST preserve node order (do not override further)
@@ -71,7 +137,7 @@ namespace Generic.Models {
 
 		protected override IEnumerable<TSelf> FormNodes() {
 			return this.FormNewNodeCorners(this.ChooseSizeFraction())
-				.Select(c => this.NewNode(c.Item1, c.Item2, (TSelf)this));
+				.Select(c => this.NewInstance(c.Item1, c.Item2, (TSelf)this));
 		}
 		
 		protected IEnumerable<Tuple<Vector<float>, Vector<float>>> FormNewNodeCorners(Vector<float> sizeFraction) {

@@ -12,6 +12,7 @@ namespace Generic.Models {
 
 		void Add(object element);
 		bool TryRemove(object element);
+		//bool TryRemoveAll(IEnumerable elements);
 
 		IEnumerator IEnumerable.GetEnumerator() { return this.Elements.GetEnumerator(); }
 	}
@@ -20,7 +21,10 @@ namespace Generic.Models {
 		new IEnumerable<TElement> Elements { get; }
 		IEnumerable ILeafNode.Elements => this.Elements;
 
-		IEnumerator<TElement> IEnumerable<TElement>.GetEnumerator() { return this.Elements.GetEnumerator(); }
+		//bool TryRemoveAll(IEnumerable<TElement> elements);
+		//bool ILeafNode.TryRemoveAll(IEnumerable elements) => this.TryRemoveAll(elements.Cast<TElement>());
+
+		IEnumerator<TElement> IEnumerable<TElement>.GetEnumerator() => this.Elements.GetEnumerator();
 	}
 
 	public class LeafNode<TElement> : ILeafNode<TElement>
@@ -66,13 +70,20 @@ namespace Generic.Models {
 					this._members = this._members.RemoveShift(i);
 					this.Count--;
 				}
-			} else {
-				found = this._leftovers.Remove(element);
-				if (found) this.Count--;
-			}
+			} else if ((found = this._leftovers.Remove(element))) this.Count--;
 
 			return found;
 		}
 		public bool TryRemove(object element) { return this.TryRemove((TElement)element); }
+
+		//public bool TryRemoveAll(IEnumerable<TElement> elements) {
+		//	if (this.Count == 0) return true;
+		//	else this._leftovers ??= new();
+				
+		//	foreach (TElement element in elements)
+		//		if (this._leftovers.Remove(element))
+		//			this.Count--;
+		//	return this.Count == 0;
+		//}
 	}
 }

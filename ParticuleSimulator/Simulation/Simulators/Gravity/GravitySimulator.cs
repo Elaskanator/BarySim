@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Collections.Generic;
+using System.Numerics;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Gravity {
@@ -8,16 +9,16 @@ namespace ParticleSimulator.Simulation.Gravity {
 
 		public override bool EnableCollisions => true;
 
-		protected override AParticleGroup<MatterClump> NewParticleGroup() { return new Galaxy(); }
-		protected override MagicTree<MatterClump> NewTree(Vector<float> leftCorner, Vector<float> rightCorner) { return new MagicTree<MatterClump>(Parameters.DIM, leftCorner, rightCorner); }
+		protected override AParticleGroup<MatterClump> NewParticleGroup() => new Galaxy();
+		protected override MagicTree<MatterClump> NewTree(IEnumerable<MatterClump> particles) =>
+			new MagicTree<MatterClump>(Parameters.DIM, particles);
 
-		protected override bool DoCombine(float distance, MatterClump smaller, MatterClump larger) {
-			return Parameters.GRAVITY_COLLISION_COMBINE
-				&& (distance <= Parameters.WORLD_EPSILON
-					|| distance <= smaller.Position.Distance(
-						(smaller.Mass*smaller.Position + larger.Mass*larger.Position)
-							* (1f/(smaller.Mass + larger.Mass))));
-		}
+		protected override bool DoCombine(float distance, MatterClump smaller, MatterClump larger) =>
+			Parameters.GRAVITY_COLLISION_COMBINE
+			&& (distance <= Parameters.WORLD_EPSILON
+				|| distance <= smaller.Position.Distance(
+					(smaller.Mass*smaller.Position + larger.Mass*larger.Position)
+						* (1f/(smaller.Mass + larger.Mass))));
 
 		/*
 		TODO drag

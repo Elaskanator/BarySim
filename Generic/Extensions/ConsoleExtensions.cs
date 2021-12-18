@@ -231,7 +231,7 @@ namespace Generic.Extensions {
 		}
 
 		[StructLayout(LayoutKind.Explicit, CharSet=CharSet.Unicode)]
-		public struct CharInfo {
+		public struct CharInfo{
 			[FieldOffset(0)] public CharUnion Char;
 			[FieldOffset(2)] public ushort Attributes;
 
@@ -242,6 +242,12 @@ namespace Generic.Extensions {
 			public CharInfo(byte character, ConsoleColor? foreground = null, ConsoleColor? background = null) {
 				this.Char = new CharUnion() { AsciiChar = character };
 				this.Attributes = (ushort) ((int)(foreground ?? 0) | (((ushort)(background ?? 0)) << 4));
+			}
+
+			public static bool Equals(CharInfo first, CharInfo second) {
+				return first.Char.UnicodeChar == second.Char.UnicodeChar
+					&& first.Char.AsciiChar == second.Char.AsciiChar
+					&& first.Attributes == second.Attributes;
 			}
 		}
 		

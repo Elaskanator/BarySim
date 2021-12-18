@@ -10,23 +10,23 @@ namespace ParticleSimulator {
 	public static class Parameters {
 		public const SimulationType SIM_TYPE = SimulationType.Gravity;
 
-		public const float PARTICLE_MAX_ACCELERATION = 0.0025f;
-		public const int PARTICLES_GROUP_COUNT = 128;
+		public const int PARTICLES_GROUP_COUNT = 32;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 16;
+		public const int PARTICLES_GROUP_MAX = 32;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
-		public const float WORLD_SCALE = 2f;
+		public const float WORLD_SCALE = 1f;
 		public const float TIME_SCALE = 1f;
 		public const int DIM = 2;
 		
 		public const float ADAPTIVE_TIME_GRANULARITY = 0.01f;//subdivide time steps as necessary for very close interactions
 		public const float ADAPTIVE_TIME_CRITERION = 0.01f;//a weighted value based on range and velocity to other particles in the nearfield group
+		public const float PARTICLE_MAX_ACCELERATION = 0.0025f;
 		
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNDING = false;
-		public const float WORLD_EPSILON = 1E-8f;
-		public const float WORLD_DEATH_BOUND_CNT = 1E3f;
+		public const float WORLD_EPSILON = 1E-4f;
+		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
 		
 		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Luminosity;
@@ -39,7 +39,7 @@ namespace ParticleSimulator {
 		public const float AUTOSCALE_MIN_STEP = 1f;
 		
 		public const float TARGET_FPS = -1;
-		public const float MAX_FPS = 30f;
+		public const float MAX_FPS = 30;
 		public static readonly int WINDOW_WIDTH = Console.LargestWindowWidth;
 		public static readonly int WINDOW_HEIGHT = Console.LargestWindowHeight;//using top and bottom halves of each character to get float the verticle resolution
 
@@ -47,27 +47,25 @@ namespace ParticleSimulator {
 		public const bool PERF_STATS_ENABLE = true;
 		public const bool PERF_GRAPH_ENABLE = true;
 		
-		public const bool SIMULATION_PARALLEL_ENABLE = true;
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
-		//public const int SIMULATION_PARALLELISM = 16;//number of simulation threads available for processing trea leaves
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
-		public const int TREE_REFRESH_REUSE_ALLOWANCE = 1;//how many simulation cycles can occur on stale data
 		public const bool SYNC_SIMULATION = true;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
-		public const bool SYNC_TREE_REFRESH = false;//synchronizes tree refresh to not start until simulation refreshes (with reuse limit still)
+		//public const bool SIMULATION_PARALLEL_ENABLE = true;
+		//public const int SIMULATION_PARALLELISM = 16;//number of simulation threads available for processing trea leaves
 
 		#region Gravity
-		public const float GRAVITY_INITIAL_SEPARATION = 0.1f;
+		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 5f;
 
 		public const float GRAVITATIONAL_CONSTANT = 6E-10f;
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;
 		public const float MASS_LUMINOSITY_SCALAR = 1E-1f;
-		public const float GRAVITY_RADIAL_DENSITY = 1E4f;
+		public const float GRAVITY_RADIAL_DENSITY = 500f;
 
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 1E1f;
-		public const float GRAVITY_MAX_STARTING_MASS = 1E2f;
+		public const float GRAVITY_MIN_STARTING_MASS = 1E0f;
+		public const float GRAVITY_MAX_STARTING_MASS = 1E0f;
 		public const float GRAVITY_MASS_BIAS = 16f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;

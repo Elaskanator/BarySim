@@ -6,8 +6,8 @@ using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public interface IParticleGroup : IEquatable<IParticleGroup>, IEqualityComparer<IParticleGroup> {
-		public int ID { get; }
-		public ISimulationParticle[] MemberParticles { get; }
+		int ID { get; }
+		ISimulationParticle[] InitialParticles { get; }
 	}
 
 	public abstract class AParticleGroup<TParticle> : IParticleGroup
@@ -22,20 +22,22 @@ namespace ParticleSimulator.Simulation {
 				.Select(d => (float)(
 					Parameters.DOMAIN_SIZE[d] * (Program.Random.NextDouble() * (100d - Parameters.WORLD_PADDING_PCT) + 0.5d * Parameters.WORLD_PADDING_PCT) / 100d)));
 
-			this.InitialVelocity = (this.StartSpeedMax_Group_Angular * this.NewInitialDirection(Parameters.DOMAIN_CENTER, this.SpawnCenter))
-				+ VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x * this.StartSpeedMax_Group_Rand));
+			this.InitialVelocity = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x * this.StartSpeedMax_Group_Rand))
+				+ (this.StartSpeedMax_Group_Angular * this.NewInitialDirection(Parameters.DOMAIN_CENTER, this.SpawnCenter));
 
-			double particleVolume = VectorFunctions.HypersphereVolume(this.InitialSeparationRadius, Parameters.DIM);
-			float radius = this.NumParticles > 1 ? (float)VectorFunctions.HypersphereRadius(particleVolume * this.NumParticles, Parameters.DIM) : 0f;
-			this.MemberParticles = Enumerable
-				.Range(0, this.NumParticles)
-				.Select(i => this.NewParticlePosition(this.SpawnCenter, radius))
-				.Select(p => this.NewParticle(
-					p,
-					this.InitialVelocity
-						+ this.StartSpeedMax_Particle_Angular * this.NewInitialDirection(this.SpawnCenter, p)
-						+ VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x * this.StartSpeedMax_Particle_Range))))
+			this.InitialParticles = Enumerable
+				.Repeat(this.SpawnCenter, this.NumParticles)
+				.Select(position => this.NewParticle(
+					position,
+					this.InitialVelocity))
 				.ToArray();
+
+			float radius = this.ComputeInitialSeparationRadius(this.InitialParticles);
+			for (int i = 0; i < this.NumParticles; i++) {
+				this.InitialParticles[i].Position += this.NewParticleOffset(radius);
+				this.InitialParticles[i].Velocity += VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x * this.StartSpeedMax_Particle_Range))
+					+ this.StartSpeedMax_Particle_Angular * this.NewInitialDirection(this.SpawnCenter, this.InitialParticles[i].Position);
+			}
 		}
 
 		private static int _globalID = 0;
@@ -46,10 +48,10 @@ namespace ParticleSimulator.Simulation {
 		public readonly Vector<float> SpawnCenter;
 		public readonly Vector<float> InitialVelocity;
 
-		public abstract float InitialSeparationRadius { get; }
+		public abstract float ComputeInitialSeparationRadius(IEnumerable<TParticle> particles);
 
-		public TParticle[] MemberParticles { get; private set; }
-		ISimulationParticle[] IParticleGroup.MemberParticles => this.MemberParticles;
+		public TParticle[] InitialParticles { get; private set; }
+		ISimulationParticle[] IParticleGroup.InitialParticles => this.InitialParticles;
 
 		public abstract float StartSpeedMax_Group_Angular { get; }
 		public abstract float StartSpeedMax_Group_Rand { get; }
@@ -58,8 +60,8 @@ namespace ParticleSimulator.Simulation {
 
 		protected abstract TParticle NewParticle(Vector<float> position, Vector<float> velocity);
 
-		protected virtual Vector<float> NewParticlePosition(Vector<float> center, float radius) {
-			return center + VectorFunctions.New(VectorFunctions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Random).Select(x => (float)x));
+		protected virtual Vector<float> NewParticleOffset(float radius) {
+			return VectorFunctions.New(VectorFunctions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Random).Select(x => (float)x));
 		}
 
 		protected virtual Vector<float> NewInitialDirection(Vector<float> center, Vector<float> position) {
