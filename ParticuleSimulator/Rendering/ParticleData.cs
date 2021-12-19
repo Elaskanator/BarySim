@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace ParticleSimulator.Simulation {
+namespace ParticleSimulator.Rendering {
 	public struct ParticleData : IBaryonParticle {
 		public int ID { get; private set; }
 		public int GroupID { get; private set; }

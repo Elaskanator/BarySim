@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using Generic.Vectors;
+using Generic.Models;
 
-namespace Generic.Models {
+namespace Generic.Vectors {
 	public abstract class AVectorQuadTree<TElement, TSelf> : ATree<TElement, TSelf>, IMutableTree<TElement, TSelf>
 	where TElement : IParticle
 	where TSelf : AVectorQuadTree<TElement, TSelf> {

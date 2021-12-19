@@ -5,6 +5,7 @@ using System.Numerics;
 using Generic.Extensions;
 using Generic.Models;
 using Generic.Vectors;
+using ParticleSimulator.Rendering;
 
 namespace ParticleSimulator.Simulation {
 	public class BaryonSimulator {
@@ -16,6 +17,7 @@ namespace ParticleSimulator.Simulation {
 
 			this.ParticleTree = new BarnesHutTree<BaryonParticle>(Parameters.DIM, 
 				this.ParticleGroups.SelectMany(g => g.InitialParticles));
+			this._livingParticles = new(this.ParticleTree.Count);
 		}
 
 		public BarnesHutTree<BaryonParticle> ParticleTree { get; private set; }
@@ -28,8 +30,14 @@ namespace ParticleSimulator.Simulation {
 		protected virtual bool DoCombine(float distance, BaryonParticle smaller, BaryonParticle larger) { return false; }
 		protected virtual Vector<float> ComputeCollisionAcceleration(float distance, Vector<float> toOther, BaryonParticle smaller, BaryonParticle larger) { return Vector<float>.Zero; }
 
+		private Queue<BaryonParticle> _livingParticles;
 		public IEnumerable<ParticleData> RefreshSimulation(object[] parameters) {//modified Barnes-Hut Algorithm
-			return this.ParticleTree.AllElements.Select(p => new ParticleData(p)).ToArray();
+			_livingParticles.Clear();
+			foreach (BaryonParticle particle in this.ParticleTree.AllElements) {
+				_livingParticles.Enqueue(particle);
+				particle.ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
+			}
+			return _livingParticles.Select(p => new ParticleData(p)).ToArray();
 		}
 
 		//private float HandleCollisions(IEnumerable<ABaryonParticle> particles) {

@@ -3,17 +3,6 @@ using System.Linq;
 using Generic.Extensions;
 
 namespace Generic.Models {
-	public interface ILeafNode<TElement> {
-		int MaxCapacity { get; }
-		int Count { get; }
-
-		IEnumerable<TElement> Elements { get; }
-
-		void Add(object element);
-		bool TryRemove(object element);
-		//bool TryRemoveAll(IEnumerable<TElement> elements);
-	}
-
 	public class HashedLeafNode<TElement> : ILeafNode<TElement> {
 		public HashedLeafNode(int maxCapacity = 1) {
 			this.MaxCapacity = maxCapacity;

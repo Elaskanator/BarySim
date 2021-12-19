@@ -4,8 +4,9 @@ using System.ComponentModel;
 using System.Linq;
 using System.Numerics;
 using Generic.Extensions;
+using ParticleSimulator.Simulation;
 
-namespace ParticleSimulator.Simulation {
+namespace ParticleSimulator.Rendering {
 	public static class Renderer {
 		public static Autoscaler Scaling { get; private set; }
 

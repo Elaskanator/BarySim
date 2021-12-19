@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
+using ParticleSimulator.Simulation;
 
-namespace ParticleSimulator.Simulation {
+namespace ParticleSimulator.Rendering {
 	public class Autoscaler {
 		public Autoscaler(float[] fixedBands = null) {
 			if (fixedBands is null) {

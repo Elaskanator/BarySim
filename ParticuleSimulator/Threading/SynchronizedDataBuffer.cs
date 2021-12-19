@@ -62,8 +62,8 @@ namespace ParticleSimulator.Threading {
 		public bool DoTrackLatency {
 			get { return this._trackLatency; }
 			set { this._trackLatency = value; this._timerEnqueue.Reset(); this._timerDequeue.Reset(); } }
-		public SampleSMA EnqueueTimings_Ticks { get; private set; }
-		public SampleSMA DequeueTimings_Ticks { get; private set; }
+		public SimpleExponentialMovingAverage EnqueueTimings_Ticks { get; private set; }
+		public SimpleExponentialMovingAverage DequeueTimings_Ticks { get; private set; }
 		private Stopwatch _timerEnqueue = new(), _timerDequeue = new();
 
 		// MUST lock and enforce size constraints before invoking either Pop or Add

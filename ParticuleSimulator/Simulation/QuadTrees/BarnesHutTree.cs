@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
 using Generic.Models;
+using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public class BarnesHutTree<TElement> : AVectorQuadTree<TElement, BarnesHutTree<TElement>>

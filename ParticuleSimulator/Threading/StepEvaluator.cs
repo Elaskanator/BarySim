@@ -5,11 +5,19 @@ using Generic.Extensions;
 
 namespace ParticleSimulator.Threading {
 	public class StepEvaluator : IDisposable {
+		public StepEvaluator(EvaluationStep step) {
+			this.Step = step;
+			if (step.InputResourceUses is null)
+				this._ingestBuffer = Array.Empty<object>();
+			else this._ingestBuffer = new object[step.InputResourceUses.Length];
+		}
+		public override string ToString() => string.Format("{0}[{1}]", nameof(StepEvaluator), this.Step.Name);
+
 		private static int _globalId = 0;
 		public readonly int Id = ++_globalId;
 		public readonly EvaluationStep Step;
 
-		public bool IsActive { get; internal set; }
+		public bool IsActive { get; private set; }
 
 		public int NumCompleted { get; private set; }
 		public DateTime? IterationStartUtc { get; private set; }
@@ -23,16 +31,6 @@ namespace ParticleSimulator.Threading {
 		private Thread[] _threads;
 		private EventWaitHandle[] _handles;
 		private object[] _ingestBuffer;
-
-		public StepEvaluator(EvaluationStep step) {
-			this.Step = step;
-			if (step.InputResourceUses is null)
-				this._ingestBuffer = Array.Empty<object>();
-			else this._ingestBuffer = new object[step.InputResourceUses.Length];
-		}
-		public override string ToString() {
-			return string.Format("{0}[{1}]", nameof(StepEvaluator), this.Step.Name);
-		}
 		
 		public void Start() {
 			this.IsActive = true;

@@ -2,7 +2,7 @@
 using System.Numerics;
 using Generic.Vectors;
 
-namespace ParticleSimulator.Simulation {
+namespace ParticleSimulator {
 	public interface IBaryonParticle : IParticle {
 		int ID { get; }
 		int GroupID { get; }

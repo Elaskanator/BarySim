@@ -3,14 +3,14 @@ using System.Linq;
 using System.Numerics;
 using Generic.Extensions;
 using Generic.Vectors;
-using ParticleSimulator.Simulation;
+using ParticleSimulator.Rendering;
 
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited
 	public static class Parameters {
-		public const int PARTICLES_GROUP_COUNT = 128;
+		public const int PARTICLES_GROUP_COUNT = 1024;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 32;
+		public const int PARTICLES_GROUP_MAX = 1;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float WORLD_SCALE = 1f;
@@ -70,7 +70,7 @@ namespace ParticleSimulator {
 
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-2f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 4E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 1E-5f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 0f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
@@ -93,12 +93,16 @@ namespace ParticleSimulator {
 		public const int AUTOSCALE_INTERVAL_MS = 1000;
 		public const int PERF_GRAPH_REFRESH_MS = 250;
 
+		
+		public const int TICKS_PER_MS = 10000;
+		public const int TICKS_PER_S = 10000000;
+
 		public const int NUMBER_ACCURACY = 2;
 		public const int NUMBER_SPACING = 5;
-		public const float PERF_SMA_ALPHA = 0.1f;
+		public const float PERF_SMA_ALPHA = 0.05f;
 
 		public const int GRAPH_WIDTH = -1;
-		public const int GRAPH_HEIGHT = 20;//at least 2
+		public const int GRAPH_HEIGHT = 8;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
 		public const float PERF_GRAPH_PERCENTILE_CUTOFF = 10f;

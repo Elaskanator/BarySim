@@ -1,7 +1,7 @@
 ﻿using System;
-using System.ComponentModel;
 using Generic.Extensions;
 using Generic.Models;
+using ParticleSimulator.Rendering;
 using ParticleSimulator.Simulation;
 using ParticleSimulator.Threading;
 
@@ -69,9 +69,9 @@ namespace ParticleSimulator {
 				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
 				Callback = PerfMon.AfterRender,
 				//DataAssimilationTicksAverager = null,
-				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				SynchronizationTicksAverager = new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA),
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
+				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
 				//OutputResource = null,
 				//IsOutputOverwrite = false,
@@ -97,7 +97,7 @@ namespace ParticleSimulator {
 				//Callback = null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA_Tracking(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
 				//IterationTicksAverager = null,
 				//DataLoadingTimeout = null,
 				OutputResource = Resource_Locations,
@@ -114,8 +114,8 @@ namespace ParticleSimulator {
 				//Callback = null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
+				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
 				//DataLoadingTimeout = null,
 				OutputResource = Resource_Resamplings,
 				//IsOutputOverwrite = false,
@@ -140,8 +140,8 @@ namespace ParticleSimulator {
 				//Callback = null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
+				IterationTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
 				//DataLoadingTimeout = null,
 				OutputResource = Resource_Rasterization,
 				//IsOutputOverwrite = false,
@@ -167,7 +167,7 @@ namespace ParticleSimulator {
 				//Callback = null,
 				//DataAssimilationTicksAverager = null,
 				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
 				//IterationTicksAverager = null,
 				//DataLoadingTimeout = null,
 				//OutputResource = null,
@@ -199,7 +199,7 @@ namespace ParticleSimulator {
 					//Callback = null,
 					//DataAssimilationTicksAverager = null,
 					//SynchronizationTicksAverager = null,
-					ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SampleSMA(Parameters.PERF_SMA_ALPHA) : null,
+					ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
 					//IterationTicksAverager = null,
 					//DataLoadingTimeout = null,
 					//OutputResource = null,
