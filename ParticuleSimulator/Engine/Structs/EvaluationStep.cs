@@ -1,7 +1,7 @@
 ﻿using System;
 using Generic.Models;
 
-namespace ParticleSimulator.Threading {
+namespace ParticleSimulator.Engine {
 	public struct EvaluationStep {
 		public string Name;
 
@@ -10,17 +10,12 @@ namespace ParticleSimulator.Threading {
 		public Func<object[], object> Calculator;
 
 		public SynchronizedDataBuffer OutputResource;
-		public Action<StepEvaluator> Callback;//contains result data
+		public Action<AHandler> Callback;//contains result data
 		public bool IsOutputOverwrite;
 		public int OutputSkips;
 
 		public Prerequisite[] InputResourceUses;
 		public TimeSpan? DataLoadingTimeout;
 		public TimeSynchronizer Synchronizer;
-
-		public AIncrementalAverage<double> DataAssimilationTicksAverager;
-		public AIncrementalAverage<double> SynchronizationTicksAverager;
-		public AIncrementalAverage<double> ExclusiveTicksAverager;
-		public AIncrementalAverage<double> IterationTicksAverager;
 	}
 }

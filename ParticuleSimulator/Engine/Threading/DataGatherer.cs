@@ -1,0 +1,104 @@
+﻿using System;
+using System.Threading;
+using Generic.Models;
+
+namespace ParticleSimulator.Engine {
+	public class DataGatherer : AHandler {
+		public DataGatherer(Prerequisite config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal)
+		: base (readySignal, doneSignal) {
+			this.Config = config;
+			this._refreshSignal = refreshSignal;
+		}
+
+		public object MyValue => this._myValue;
+		public Prerequisite Config { get; private set; }
+		public int Skips { get; private set; }
+		public int Reuses { get; private set; }
+		
+		public override string Name => this.Config.Resource.Name;
+		public override TimeSpan? SignalTimeout => null;
+		public override TimeSynchronizer Synchronizer => null;
+
+		private readonly EventWaitHandle _refreshSignal;
+			
+		private object _myValue;
+
+		protected override void Process() {
+			bool allowAccess = true, allowReuse = false, ready;
+			if (this.IterationCount > 0) {
+				allowReuse = true;
+				if (this.Config.ReuseAmount < 0) {
+					allowAccess = false;
+					this.Reuses++;
+				} else if (this.Reuses < this.Config.ReuseAmount) {
+					allowAccess = false;
+					this.Reuses++;
+				} else if (this.Config.ReuseTolerance >= 0 && this.Skips >= this.Config.ReuseTolerance)
+					allowReuse = false;
+			}
+
+			if (allowReuse) {
+				this.Skips++;
+				if (allowAccess) {
+					ready = true;
+					if (!(this._refreshSignal is null))
+						ready = this._refreshSignal.WaitOne(TimeSpan.Zero);
+
+					if (ready) {
+						if (this.Config.DoConsume) {
+							if (this.Config.Resource.TryDequeue(ref this._myValue, TimeSpan.Zero)) {
+								this.Skips = 0;
+								this.Reuses = 0;
+							} else if (this.Config.AllowDirtyRead) {
+								this._myValue = this.Config.Resource.Current;
+							}
+						} else if (this.Config.AllowDirtyRead) {
+							this._myValue = this.Config.Resource.Current;
+						}
+					}
+				}
+			} else if (allowAccess) {
+				if (!(this._refreshSignal is null)) {
+					this._refreshSignal.WaitOne();
+					if (!this.IsActive) return;
+				}
+
+				if (this.Config.DoConsume) {
+					if (this.Config.ReadTimeout.HasValue && this.Config.Resource.TryDequeue(ref this._myValue, this.Config.ReadTimeout.Value)) {
+						if (!this.IsActive) return;
+						this.Skips = 0;
+						this.Reuses = 0;
+					} else if (this.Config.AllowDirtyRead) {
+						this.Skips++;
+						this._myValue = this.Config.Resource.Current;
+					} else {
+						this._myValue = this.Config.Resource.Dequeue();
+						if (!this.IsActive) return;
+						this.Skips = 0;
+						this.Reuses = 0;
+					}
+				} else {
+					if (this.Config.ReadTimeout.HasValue && this.Config.Resource.TryPeek(ref this._myValue, this.Config.ReadTimeout.Value)) {
+						if (!this.IsActive) return;
+						this.Skips = 0;
+						this.Reuses = 0;
+					} else if (this.Config.AllowDirtyRead) {
+						this.Skips++;
+						this._myValue = this.Config.Resource.Current;
+					} else {
+						this._myValue = this.Config.Resource.Peek();
+						if (!this.IsActive) return;
+						this.Skips = 0;
+						this.Reuses = 0;
+					}
+				}
+			}
+		}
+
+		public override void Dispose(bool fromDispose) {
+			if (fromDispose)
+				this._refreshSignal.Dispose();
+			base.Dispose(fromDispose);
+		}
+	}
+}

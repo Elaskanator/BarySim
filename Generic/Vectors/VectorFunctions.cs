@@ -10,10 +10,29 @@ namespace Generic.Vectors {
 	// https://www.cis.upenn.edu/~cis610/clifford.pdf
 	// https://www.av8n.com/physics/clifford-intro.htm
 	// http://scipp.ucsc.edu/~haber/archives/physics251_11/Clifford_Slides.pdf
-	public static class VectorFunctions {
+	public static partial class VectorFunctions {
+		public static readonly Vector<int> PowersOfTwo = new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(i => 1 << i).ToArray());
+		public static readonly Vector<int>[] DimensionFilters = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : 1).ToArray())).ToArray();
+
 		public static readonly int VECT_CAPACITY = Vector<float>.Count;
 		private static readonly float[][] _tails = Enumerable.Range(1, VECT_CAPACITY).Select(l => Enumerable.Repeat(0f, l).ToArray()).ToArray();
 		
+		public static Vector<T> New<T>(params T[] components)
+		where T : struct {
+			if (components.Length == VECT_CAPACITY) {
+				return new Vector<T>(components);
+			} else {
+				T[] padded = new T[VECT_CAPACITY];
+				components.CopyTo(padded, 0);
+				_tails[VECT_CAPACITY - components.Length - 1].CopyTo(padded, components.Length);
+				return new Vector<T>(padded);
+			}
+		}
+		public static Vector<T> New<T>(IEnumerable<T> components)
+		where T : struct {
+			return New(components.ToArray());
+		}
+
 		public static Vector<float> New(params float[] components) {
 			if (components.Length == VECT_CAPACITY) {
 				return new Vector<float>(components);

@@ -13,8 +13,7 @@ namespace ParticleSimulator.Simulation {
 
 		public override float ComputeInitialSeparationRadius(IEnumerable<MatterClump> particles) =>
 			Parameters.GRAVITY_INITIAL_SEPARATION_SCALER
-			* MathF.Pow(particles.Sum(p => p.Mass), 1f / Parameters.DIM)
-			/ Parameters.GRAVITY_RADIAL_DENSITY;
+			* MathF.Pow(particles.Sum(p => p.Mass), 1f / Parameters.DIM);
 
 		protected override MatterClump NewParticle(Vector<float> position, Vector<float> velocity) {
 			return new MatterClump() {

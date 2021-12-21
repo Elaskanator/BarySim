@@ -17,12 +17,13 @@ namespace ParticleSimulator.Simulation {
 			set {
 				this._mass = value;
 				this._density = ComputeDensity(value);
-				this._radius = value / this._density / Parameters.GRAVITY_RADIAL_DENSITY;
+				this._radius = value;
 				this._luminosity = MathF.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5f); }}
 
 		private float _density = 1f / Parameters.GRAVITY_RADIAL_DENSITY;
 		public override float Density => this._density;
-		public static float ComputeDensity(float mass) => 1f + MathF.Pow(mass, (1f / Parameters.DIM) - 0.5f);
+		public static float ComputeDensity(float mass) =>
+			(1f + MathF.Pow(mass, (1f / Parameters.DIM) - 0.5f)) / Parameters.GRAVITY_RADIAL_DENSITY;
 		
 		//public override Vector<float> CollisionAcceleration {
 		//	get => this.CollisionImpulse * (1f / this.Mass);

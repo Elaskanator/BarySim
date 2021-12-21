@@ -148,7 +148,6 @@ namespace Generic.Extensions {
 		#endregion Projections
 
 		#region Aggregations
-
 		public static TSource MinBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection)
 		where TProjected :IComparable<TProjected> {
 			if (source is null) throw new ArgumentNullException("source");
@@ -249,5 +248,23 @@ namespace Generic.Extensions {
 			return source.Aggregate(1d, (acc, x) => acc *= x);
 		}
 		#endregion Aggregations
+		
+		/// <summary>
+		/// Consumes the specified queue (empties it) and returns an array of its contents.
+		/// </summary>
+		public static IEnumerable<T> AsEnumerableDump<T>(this Queue<T> data) {
+			T element;
+			while (data.TryDequeue(out element))
+				yield return element;
+		}
+		/// <summary>
+		/// Consumes the specified queue (empties it) and returns an array of its contents.
+		/// </summary>
+		public static T[] ToArrayDump<T>(this Queue<T> data) {
+			T[] result = new T[data.Count];
+			int idx = 0;
+			while (data.TryDequeue(out result[idx++]));
+			return result;
+		}
 	}
 }

@@ -1,27 +1,30 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
-using Generic.Models;
-using Generic.Vectors;
+using Generic.Models.Trees;
 
 namespace ParticleSimulator.Simulation {
-	public class BarnesHutTree<TElement> : AVectorQuadTree<TElement, BarnesHutTree<TElement>>
-	where TElement : BaryonParticle {
-		public BarnesHutTree(int dim, Vector<float> corner1, Vector<float> corner2, BarnesHutTree<TElement> parent = null)
-		: base(dim, corner1, corner2, parent) { }
-		public BarnesHutTree(int dim, IEnumerable<TElement> elements) : base(dim, elements) { }
-		protected override BarnesHutTree<TElement> NewInstance(Vector<float> cornerA, Vector<float> cornerB, BarnesHutTree<TElement> parent) =>
-			new BarnesHutTree<TElement>(this.Dim, cornerA, cornerB, parent);
-		protected override ILeafNode<TElement> NewLeafContainer() => new HashedLeafNode<TElement>(this.NodeCapacity);
-		
-		protected override void Incorporate(TElement element) {
-			this.BaryCenter_Position.Update(element.Position, 1d);
-			this.BaryCenter_Mass.Update(element.Position, element.Mass);
-			this.BaryCenter_Charge.Update(element.Position, element.Charge);
-		}
+	public class BarnesHutTree<T> : QuadTreeSIMD<T, float>
+	where T : BaryonParticle {
+		public BarnesHutTree(int dim, Vector<float> corner1, Vector<float> corner2, QuadTreeSIMD<T, float> parent = null)
+		: base(dim, corner1, corner2, parent, Parameters.QUADTREE_NODE_CAPACITY) { }
+		public BarnesHutTree(int dim, IEnumerable<T> items) : base(dim, items, Parameters.QUADTREE_NODE_CAPACITY) { }
+		protected override BarnesHutTree<T> NewNode(QuadTreeSIMD<T, float> parent, Vector<float> cornerLeft, Vector<float> cornerRight) =>
+			new BarnesHutTree<T>(this.Dim, cornerLeft, cornerRight, parent);
 
-		public override int NodeCapacity => Parameters.GRAVITY_QUADTREE_NODE_CAPACITY;
 		public readonly BaryonCenter BaryCenter_Position = new();
 		public readonly BaryonCenter BaryCenter_Mass = new();
 		public readonly BaryonCenter BaryCenter_Charge = new();
+
+		protected override void AfterRemove(T item) {
+			this.BaryCenter_Position.Update(item.Position, -1d);
+			this.BaryCenter_Mass.Update(item.Position, -item.Mass);
+			this.BaryCenter_Charge.Update(item.Position, -item.Charge);
+		}
+
+		protected override void Incorporate(T item) {
+			this.BaryCenter_Position.Update(item.Position, 1d);
+			this.BaryCenter_Mass.Update(item.Position, item.Mass);
+			this.BaryCenter_Charge.Update(item.Position, item.Charge);
+		}
 	}
 }

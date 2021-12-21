@@ -22,7 +22,7 @@ namespace Generic.Extensions {
 			Console.CursorVisible = true;
 
             ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-			while(keyInfo.Key != ConsoleKey.Enter)
+			while (keyInfo.Key != ConsoleKey.Enter)
 				keyInfo = Console.ReadKey(true);
 
 			Console.CursorVisible = oldVisibility;

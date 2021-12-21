@@ -1,9 +1,9 @@
 ﻿using System;
 using Generic.Extensions;
 using Generic.Models;
-using ParticleSimulator.Rendering;
+using ParticleSimulator.ConsoleRendering;
 using ParticleSimulator.Simulation;
-using ParticleSimulator.Threading;
+using ParticleSimulator.Engine;
 
 namespace ParticleSimulator {
 	//TODO quadtree neighborhood search is too effectively localized, so particles cluster way too much never seeing farfield
@@ -11,12 +11,13 @@ namespace ParticleSimulator {
 	//TODO world wrap interaction: particles look forward only into adjoining quadrant
 	//SEEALSO https://www.youtube.com/watch?v=TrrbshL_0-s
 	public class Program {
-		public static readonly Random Random = new();
-		public static BaryonSimulator Simulator { get; private set; }
+		public static PerfMon Monitor { get; private set; }
 		public static RunManager Manager { get; private set; }
+		public static BaryonSimulator Simulator { get; private set; }
+		public static readonly Random Random = new();
 		
-		public static SynchronizedDataBuffer Resource_Locations, Resource_Resamplings, Resource_Rasterization;
-		public static StepEvaluator StepEval_Simulate, StepEval_Resample, StepEval_Autoscale, StepEval_Rasterize, StepEval_Draw, StepEval_ConsoleWindow;
+		public static SynchronizedDataBuffer Resource_ParticleData, Resource_Rasterization, Resource_ScalingData;
+		public static ProcessThread StepEval_Simulate, StepEval_Autoscale, StepEval_Rasterize, StepEval_Render, StepEval_Monitor;
 
 		public static void Main(string[] args) {
 			Console.Title = string.Format("Barnes-Hut Simulator ({0}D) - Initializing", Parameters.DIM);
@@ -48,30 +49,26 @@ namespace ParticleSimulator {
 			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
 			Simulator = new BaryonSimulator();
-			PerfMon.TitleUpdate();
+			Monitor = new PerfMon();
+			Monitor.TitleUpdate();
 
 			Manager = BuildRunManager();
-			PerfMon.Init();
 			//ConsoleExtensions.WaitForEnter("Press enter to start");
 			Manager.Start();
 		}
 
 		private static RunManager BuildRunManager() {
-			Resource_Locations = new SynchronizedDataBuffer("Locations", Parameters.PRECALCULATION_LIMIT);
-			Resource_Resamplings = new SynchronizedDataBuffer("Resampling", Parameters.PRECALCULATION_LIMIT);
+			Resource_ParticleData = new SynchronizedDataBuffer("Locations", Parameters.PRECALCULATION_LIMIT);
 			Resource_Rasterization = new SynchronizedDataBuffer("Rasterization", Parameters.PRECALCULATION_LIMIT);
+			Resource_ScalingData = new SynchronizedDataBuffer("ScalingData", 0);
 			
-			StepEval_Draw = new(new() {
-				Name = "O",
+			StepEval_Render = ProcessThread.New(new() {
+				Name = "Draw",
 				//Initializer = null,
 				//Calculator = null,
 				Evaluator = Renderer.FlushScreenBuffer,
 				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
-				Callback = PerfMon.AfterRender,
-				//DataAssimilationTicksAverager = null,
-				SynchronizationTicksAverager = new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA),
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
+				Callback = Monitor.AfterRender,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
 				//OutputResource = null,
 				//IsOutputOverwrite = false,
@@ -88,67 +85,33 @@ namespace ParticleSimulator {
 						//ReadTimeout = null
 			}}});
 
-			StepEval_Simulate = new(new() {
-				Name = "Simulating",
+			StepEval_Simulate = ProcessThread.New(new() {
+				Name = "Simulate",
 				//Initializer = null,
 				Calculator = Simulator.RefreshSimulation,
 				//Evaluator = null,
 				//Synchronizer = null,
 				//Callback = null,
-				//DataAssimilationTicksAverager = null,
-				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
-				//IterationTicksAverager = null,
 				//DataLoadingTimeout = null,
-				OutputResource = Resource_Locations,
+				OutputResource = Resource_ParticleData,
 				IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
 				OutputSkips = Parameters.SIMULATION_SKIPS,
 				//InputResourceUses = null
 			});
-			StepEval_Resample = new(new() {
-				Name = "Density Sampling",
-				//Initializer = null,
-				Calculator = Renderer.Resample,
-				//Evaluator = null,
-				//Synchronizer = null,
-				//Callback = null,
-				//DataAssimilationTicksAverager = null,
-				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = Parameters.PERF_STATS_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
-				//DataLoadingTimeout = null,
-				OutputResource = Resource_Resamplings,
-				//IsOutputOverwrite = false,
-				//OutputSkips = 0,
-				InputResourceUses = new Prerequisite[] {
-					new() {
-						Resource = Resource_Locations,
-						DoConsume = true,
-						//OnChange = false,
-						//DoHold = false,
-						//AllowDirtyRead = false,
-						//ReuseAmount = 0,
-						//ReuseTolerance = 0,
-						//ReadTimeout = null
-			}}});
-			StepEval_Rasterize = new(new() {
+			StepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterizer",
 				//Initializer = null,
 				Calculator = Renderer.Rasterize,
 				//Evaluator = null,
 				//Synchronizer = null,
 				//Callback = null,
-				//DataAssimilationTicksAverager = null,
-				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
-				IterationTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
 				//DataLoadingTimeout = null,
 				OutputResource = Resource_Rasterization,
 				//IsOutputOverwrite = false,
 				//OutputSkips = 0,
 				InputResourceUses = new Prerequisite[] {
 					new() {
-						Resource = Resource_Resamplings,
+						Resource = Resource_ParticleData,
 						DoConsume = true,
 						//OnChange = false,
 						//DoHold = false,
@@ -158,24 +121,20 @@ namespace ParticleSimulator {
 						//ReadTimeout = null
 			}}});
 
-			StepEval_ConsoleWindow = new(new() {
-				Name = "Console Window Monitor",
+			StepEval_Monitor = ProcessThread.New(new() {
+				Name = "Monitor",
 				//Initializer = null,
 				//Calculator = null,
-				Evaluator = PerfMon.TitleUpdate,
+				Evaluator = Monitor.TitleUpdate,
 				Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.CONSOLE_TITLE_INTERVAL_MS)),
 				//Callback = null,
-				//DataAssimilationTicksAverager = null,
-				//SynchronizationTicksAverager = null,
-				ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
-				//IterationTicksAverager = null,
 				//DataLoadingTimeout = null,
 				//OutputResource = null,
 				//IsOutputOverwrite = false,
 				//OutputSkips = 0,
 				InputResourceUses = new Prerequisite[] {
 					new() {
-						Resource = Resource_Locations,
+						Resource = Resource_ParticleData,
 						//DoConsume = false,
 						OnChange = true,
 						//DoHold = false,
@@ -187,27 +146,21 @@ namespace ParticleSimulator {
 
 			if (!Parameters.COLOR_USE_FIXED_BANDS
 			&& Parameters.COLOR_ARRAY.Length > 1
-			&& (Parameters.COLOR_METHOD == ParticleColoringMethod.Count
-				|| Parameters.COLOR_METHOD == ParticleColoringMethod.Density
-				|| Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity))
-				StepEval_Autoscale = new(new() {
-					Name = "Autoscaler",
+			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Depth)
+				StepEval_Autoscale = ProcessThread.New(new() {
+					Name = "Autoscale",
 					//Initializer = null,
 					//Calculator = null,
 					Evaluator = Renderer.Scaling.Update,
 					Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS)),
 					//Callback = null,
-					//DataAssimilationTicksAverager = null,
-					//SynchronizationTicksAverager = null,
-					ExclusiveTicksAverager = Parameters.PERF_ENABLE ? new SmoothingIntervalTimeAverage(Parameters.TICKS_PER_S, Parameters.PERF_SMA_ALPHA) : null,
-					//IterationTicksAverager = null,
 					//DataLoadingTimeout = null,
 					//OutputResource = null,
 					//IsOutputOverwrite = false,
 					//OutputSkips = 0,
 					InputResourceUses = new Prerequisite[] {
 					new() {
-						Resource = Resource_Resamplings,
+						Resource = Resource_ScalingData,
 						//DoConsume = false,
 						OnChange = true,
 						//DoHold = false,
@@ -220,11 +173,10 @@ namespace ParticleSimulator {
 			return new RunManager(
 				new[] {
 					StepEval_Simulate,
-					StepEval_Resample,
 					StepEval_Rasterize,
-					StepEval_ConsoleWindow,
+					StepEval_Monitor,
 					StepEval_Autoscale,
-					StepEval_Draw,
+					StepEval_Render,
 				});
 		}
 
@@ -234,7 +186,7 @@ namespace ParticleSimulator {
 			if (!(args is null)) args.Cancel = true;
 
 			Manager.Stop();
-			PerfMon.WriteEnd();
+			Monitor.WriteEnd();
 
 			ConsoleExtensions.WaitForEnter("Press enter to exit");
 			//Manager.Dispose();

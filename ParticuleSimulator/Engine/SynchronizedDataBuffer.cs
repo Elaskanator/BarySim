@@ -6,7 +6,7 @@ using System.Threading;
 using Generic.Extensions;
 using Generic.Models;
 
-namespace ParticleSimulator.Threading {
+namespace ParticleSimulator.Engine {
 	public class SynchronizedDataBuffer : IDisposable, IEquatable<SynchronizedDataBuffer>, IEqualityComparer<SynchronizedDataBuffer> {
 		private static int _id = 0;
 		public int ID { get; private set; }
@@ -25,6 +25,7 @@ namespace ParticleSimulator.Threading {
 			this.RefreshListeners = new();
 			this._queue = new object[this.BUFFER_SIZE];
 		}
+		~SynchronizedDataBuffer() { this.Dispose(false); }
 		public override string ToString() {
 			return string.Format("{0}[{1}, {2}]",
 				nameof(SynchronizedDataBuffer),
@@ -174,14 +175,17 @@ namespace ParticleSimulator.Threading {
 			if (this.BUFFER_SIZE == 0)
 				this._latch_canReturnFromAdd.WaitOne();
 		}
-
-		public void Dispose() {
-			this._latch_hasAny.Dispose();
-			this._latch_canAdd.Dispose();
-			this._latch_canReturnFromAdd.Dispose();
-			this._latch_canPop.Dispose();
-			foreach (AutoResetEvent e in this.RefreshListeners)
-				e.Dispose();
+		
+		public void Dispose() { this.Dispose(true); GC.SuppressFinalize(this); }
+		private void Dispose(bool fromDispose) {
+			if (fromDispose) {
+				this._latch_hasAny.Dispose();
+				this._latch_canAdd.Dispose();
+				this._latch_canReturnFromAdd.Dispose();
+				this._latch_canPop.Dispose();
+				foreach (AutoResetEvent e in this.RefreshListeners)
+					e.Dispose();
+			}
 		}
 
 		public override bool Equals(object obj) { return !(obj is null) && (obj is SynchronizedDataBuffer) && this.Equals(obj as SynchronizedDataBuffer); }

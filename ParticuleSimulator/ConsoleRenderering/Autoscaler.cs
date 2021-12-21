@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
-using ParticleSimulator.Simulation;
 
-namespace ParticleSimulator.Rendering {
+namespace ParticleSimulator.ConsoleRendering {
 	public class Autoscaler {
 		public Autoscaler(float[] fixedBands = null) {
 			if (fixedBands is null) {
@@ -15,12 +14,6 @@ namespace ParticleSimulator.Rendering {
 							.Range(1, Parameters.COLOR_ARRAY.Length)
 							.Select(x => (float)x / Parameters.COLOR_ARRAY.Length)
 							.ToArray();
-				else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group)
-					this.Values =
-						Enumerable
-							.Range(1, Parameters.COLOR_ARRAY.Length)
-							.Select(x => (float)x)
-							.ToArray();
 				else this.Values = new float[0];
 			} else this.Values = fixedBands.Take(Parameters.COLOR_ARRAY.Length).ToArray();
 		}
@@ -28,12 +21,10 @@ namespace ParticleSimulator.Rendering {
 		public float[] Values { get; private set; }
 
 		public void Update(object[] parameters) {
-			Tuple<char, ParticleData[], float>[] sampling = ((Tuple<char, ParticleData[], float>[])parameters[0]).Without(t => t is null).ToArray();
-			float[] densities;
-			densities = sampling.Select(t => t.Item3).ToArray();
+			float[] scalingValues = ((float[])parameters[0]).Without(t => t == float.NegativeInfinity).ToArray();
 
-			if (densities.Length > 0) {
-				StatsInfo stats = new(densities.Select(x => (double)x));
+			if (scalingValues.Length > 0) {
+				StatsInfo stats = new(scalingValues.Select(x => (double)x));
 				float max = (float)stats.Data_asc[^1];
 				if (Parameters.AUTOSCALE_CUTOFF_PCT > 0f) {
 					stats.FilterData(Parameters.AUTOSCALE_CUTOFF_PCT);

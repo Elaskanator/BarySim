@@ -5,35 +5,31 @@ using System.Numerics;
 using Generic.Extensions;
 using Generic.Models;
 using Generic.Vectors;
-using ParticleSimulator.Rendering;
+using ParticleSimulator.ConsoleRendering;
 
 namespace ParticleSimulator.Simulation {
-	public class BaryonSimulator {
+	public class BaryonSimulator {//modified Barnes-Hut Algorithm
 		public BaryonSimulator() {
-			this.ParticleGroups = Enumerable
+			this.InitialParticleGroups = Enumerable
 				.Range(0, Parameters.PARTICLES_GROUP_COUNT)
 				.Select(i => new Galaxy())
 				.ToArray();
 
 			this.ParticleTree = new BarnesHutTree<BaryonParticle>(Parameters.DIM, 
-				this.ParticleGroups.SelectMany(g => g.InitialParticles));
+				this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
 			this._livingParticles = new(this.ParticleTree.Count);
 		}
 
+		public Galaxy[] InitialParticleGroups { get; private set; }
 		public BarnesHutTree<BaryonParticle> ParticleTree { get; private set; }
-		
-		public Galaxy[] ParticleGroups { get; private set; }
 
 		public virtual bool EnableCollisions => false;
 		public virtual float WorldBounceWeight => 0f;
 
-		protected virtual bool DoCombine(float distance, BaryonParticle smaller, BaryonParticle larger) { return false; }
-		protected virtual Vector<float> ComputeCollisionAcceleration(float distance, Vector<float> toOther, BaryonParticle smaller, BaryonParticle larger) { return Vector<float>.Zero; }
-
 		private Queue<BaryonParticle> _livingParticles;
-		public IEnumerable<ParticleData> RefreshSimulation(object[] parameters) {//modified Barnes-Hut Algorithm
+		public IEnumerable<ParticleData> RefreshSimulation(object[] parameters) {
 			_livingParticles.Clear();
-			foreach (BaryonParticle particle in this.ParticleTree.AllElements) {
+			foreach (BaryonParticle particle in this.ParticleTree) {
 				_livingParticles.Enqueue(particle);
 				particle.ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
 			}
@@ -87,7 +83,7 @@ namespace ParticleSimulator.Simulation {
 	//		this.Particles = this.HandleBounds(
 	//			this.ParticleGroups
 	//				.SelectMany(g => g.MemberParticles))
-	//			.ToArray();;
+	//			.ToArray();
 	//	}
 		
 	//	public Vector<float> NearfieldImpulse { get; set; }

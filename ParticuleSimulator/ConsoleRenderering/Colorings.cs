@@ -1,8 +1,7 @@
 ﻿using System;
 
-namespace ParticleSimulator.Rendering {
+namespace ParticleSimulator.ConsoleRendering {
 	public enum ParticleColoringMethod {
-		Group,
 		Count,
 		Density,
 		Luminosity,

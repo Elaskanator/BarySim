@@ -3,19 +3,19 @@ using System.Linq;
 using System.Numerics;
 using Generic.Extensions;
 using Generic.Vectors;
-using ParticleSimulator.Rendering;
+using ParticleSimulator.ConsoleRendering;
 
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited
 	public static class Parameters {
-		public const int PARTICLES_GROUP_COUNT = 1024;
+		public const int PARTICLES_GROUP_COUNT = 128;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 1;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float WORLD_SCALE = 1f;
 		public const float TIME_SCALE = 1f;
-		public const int DIM = 2;
+		public const int DIM = 3;
 		
 		public const float ADAPTIVE_TIME_GRANULARITY = 0.01f;//subdivide time steps as necessary for very close interactions
 		public const float ADAPTIVE_TIME_CRITERION = 0.01f;//a weighted value based on range and velocity to other particles in the nearfield group
@@ -47,7 +47,7 @@ namespace ParticleSimulator {
 		
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
-		public const bool SYNC_SIMULATION = false;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
+		public const bool SYNC_SIMULATION = true;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
 
 		#region Gravity
 		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 5f;
@@ -79,7 +79,7 @@ namespace ParticleSimulator {
 		public const float GRAVITY_COMBINE_OVERLAP_CUTOFF_BARYON_ERROR = 0.2f;//1 means merely touching
 		//public const float GRAVITY_COLLISION_DRAG_STRENGTH = 0f;//1 means instant stop
 		
-		public const int GRAVITY_QUADTREE_NODE_CAPACITY = 4;
+		public const int QUADTREE_NODE_CAPACITY = 4;
 		#endregion Gravity
 
 		#region Aux
@@ -92,7 +92,6 @@ namespace ParticleSimulator {
 		public const int CONSOLE_TITLE_INTERVAL_MS = 500;
 		public const int AUTOSCALE_INTERVAL_MS = 1000;
 		public const int PERF_GRAPH_REFRESH_MS = 250;
-
 		
 		public const int TICKS_PER_MS = 10000;
 		public const int TICKS_PER_S = 10000000;
@@ -111,7 +110,6 @@ namespace ParticleSimulator {
 		public static readonly Vector<float> DOMAIN_SIZE = VectorFunctions.New(Enumerable.Repeat(WORLD_SCALE, DIM - 1).Prepend(WORLD_SCALE * WORLD_ASPECT_RATIO));
 		public static readonly Vector<float> DOMAIN_CENTER = DOMAIN_SIZE * 0.5f; 
 		public static readonly float DOMAIN_MAX_RADIUS = Enumerable.Range(0, DIM).MinBy(d => DOMAIN_SIZE[d]) / (2f + WORLD_PADDING_PCT/25f);
-		public static readonly float DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT = DIM < 3 ? 0f : MathF.Sqrt(Enumerable.Range(2, DIM - 2).Select(d => DOMAIN_SIZE[d]).Sum(x => x * x));
 		#endregion Aux
 	}
 }

@@ -6,7 +6,7 @@ using System.Numerics;
 using Generic.Extensions;
 using ParticleSimulator.Simulation;
 
-namespace ParticleSimulator.Rendering {
+namespace ParticleSimulator.ConsoleRendering {
 	public static class Renderer {
 		public static Autoscaler Scaling { get; private set; }
 
@@ -25,8 +25,6 @@ namespace ParticleSimulator.Rendering {
 			NumPixels = Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT;
 			NumXSamples = Parameters.WINDOW_WIDTH;
 			NumYSamples = Parameters.WINDOW_HEIGHT * 2;
-			_lastUpdateUtc = DateTime.UtcNow;
-			_lastFrame = new ConsoleExtensions.CharInfo[NumPixels];
 
 			if (Parameters.DIM > 1) {
 				float aspectRatio = Parameters.DOMAIN_SIZE[0] / Parameters.DOMAIN_SIZE[1];
@@ -47,6 +45,9 @@ namespace ParticleSimulator.Rendering {
 				RenderHeightOffset = NumYSamples / 4;
 			}
 
+			_lastUpdateUtc = DateTime.UtcNow;
+			_lastFrame = new ConsoleExtensions.CharInfo[NumPixels];
+
 			Scaling = new(Parameters.COLOR_FIXED_BANDS
 				?? (Parameters.COLOR_USE_FIXED_BANDS
 					? Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => (float)i).ToArray()
@@ -60,7 +61,7 @@ namespace ParticleSimulator.Rendering {
 			bool isSlow = Watchdog(buffer);
 
 			if (Parameters.PERF_ENABLE)
-				PerfMon.DrawStatsOverlay(buffer, isSlow);
+				Program.Monitor.DrawStatsOverlay(buffer, isSlow);
 
 			ConsoleExtensions.WriteConsoleOutput(buffer);
 		}
@@ -69,7 +70,7 @@ namespace ParticleSimulator.Rendering {
 			int xOffset = Parameters.PERF_ENABLE ? 6 : 0,
 				yOffset = Parameters.PERF_ENABLE ? 1 : 0;
 
-			if (Program.StepEval_Draw.IsPunctual ?? false) _lastUpdateUtc = DateTime.UtcNow;
+			if (Program.StepEval_Render.IsPunctual ?? false) _lastUpdateUtc = DateTime.UtcNow;
 			TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(_lastUpdateUtc);
 			bool isSlow = timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS;
 
@@ -86,64 +87,130 @@ namespace ParticleSimulator.Rendering {
 			return coordinates;
 		}
 
-		public static Tuple<char, ParticleData[], float>[] Resample(object[] parameters) {
-			Tuple<char, ParticleData[], float>[] results = new Tuple<char, ParticleData[], float>[NumPixels];
-
-			char pixelChar;
-			Queue<ParticleData> topStuff = new(), bottomStuff = new();
-			HashSet<ParticleData> distinct = new();
-			ParticleData[] distinctArray;
-			Queue<Tuple<ParticleData, int>>[] bins = DiscreteParticleBin((IEnumerable<ParticleData>)parameters[0]);
+		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
+			ConsoleExtensions.CharInfo[] results = new ConsoleExtensions.CharInfo[NumPixels];
+			float[] scalingValues = new float[NumPixels * 2];
+			int topCount, bottomCount;
+			float depth, rank,
+				topRank, topMaxRank, topMinDepth,
+				bottomRank, bottomMaxRank, bottomMinDepth;
+			Queue<Tuple<ParticleData, int, int>>[] bins = DiscreteParticleBin((IEnumerable<ParticleData>)parameters[0]);
+			Tuple<ParticleData, int, int> binnedParticle;
 			for (int i = 0; i < bins.Length; i++) {
 				if (!(bins[i] is null)) {
-					foreach (Tuple<ParticleData, int> t in bins[i]) {
-						distinct.Add(t.Item1);
-						if (t.Item2 % 2 == 0)
-							topStuff.Enqueue(t.Item1);
-						else bottomStuff.Enqueue(t.Item1);
+					depth = rank = topCount = bottomCount = 0;
+					topMinDepth = bottomMinDepth = float.PositiveInfinity;
+					topRank = topMaxRank = bottomRank = bottomMaxRank = float.NegativeInfinity;
+
+					while (bins[i].TryDequeue(out binnedParticle)) {
+						depth = binnedParticle.Item1.Depth;
+						if (binnedParticle.Item3 % 2 == 0) {
+							topCount++;
+							rank = ComputeRank(binnedParticle.Item1, topCount, depth, topMaxRank);
+							if (rank > topMaxRank)
+								topMaxRank = rank;
+							if (depth < topMinDepth) {
+								topRank = rank;
+								topMinDepth = binnedParticle.Item1.Depth;
+							}
+						} else {
+							bottomCount++;
+							rank = ComputeRank(binnedParticle.Item1, bottomCount, depth, bottomMaxRank);
+							if (rank > bottomMaxRank)
+								bottomMaxRank = rank;
+							if (depth < bottomMinDepth) {
+								bottomRank = rank;
+								bottomMinDepth = binnedParticle.Item1.Depth;
+							}
+						}
 					}
-					distinctArray = distinct.ToArray();
-					distinct.Clear();
 
-					if (topStuff.Count > 0 && bottomStuff.Count > 0)
-						pixelChar = Parameters.CHAR_BOTH;
-					else if (topStuff.Count > 0)
-						pixelChar = Parameters.CHAR_TOP;
-					else pixelChar = Parameters.CHAR_LOW;
-
-					results[i] =
-						new Tuple<char, ParticleData[], float>(
-							pixelChar,
-							distinctArray,
-							Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity
-								? Parameters.DIM > 2
-									? new float[] {
-										topStuff.Count > 0
-											? topStuff.OrderBy(p => GetDepthScalar(p.Position)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
-											: 0f,
-										bottomStuff.Count > 0
-											? bottomStuff.OrderBy(p => GetDepthScalar(p.Position)).ThenByDescending(p => p.Luminosity).Select(p => p.Luminosity).FirstOrDefault()
-											: 0f
-									}.Max()
-									: distinctArray.Max(p => p.Luminosity)
-								: Parameters.COLOR_METHOD == ParticleColoringMethod.Density
-									? distinctArray.Sum(p => p.Density)
-									: distinctArray.Length);
-
-					topStuff.Clear();
-					bottomStuff.Clear();
+					scalingValues[2*i] = topRank;
+					scalingValues[2*i + 1] = bottomRank;
+					results[i] = BuildChar(topRank, bottomRank);
 				}
 			}
 
+			if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth || Parameters.DIM > 2))
+				DrawLegend(results);
+			Program.Resource_ScalingData.Overwrite(scalingValues);
+
 			return results;
 		}
-		private static Queue<Tuple<ParticleData, int>>[] DiscreteParticleBin(IEnumerable<ParticleData> particles) { 
-			Queue<Tuple<ParticleData, int>>[] results = new Queue<Tuple<ParticleData, int>>[NumPixels];
+		private static float ComputeRank(ParticleData particle, int count, float depth, float maxRank) {
+			maxRank = maxRank == float.NegativeInfinity ? 0f : maxRank;
+			return
+				Parameters.COLOR_METHOD == ParticleColoringMethod.Count
+				? count
+				: Parameters.COLOR_METHOD == ParticleColoringMethod.Density
+				? maxRank + particle.Density
+				: Parameters.COLOR_METHOD == ParticleColoringMethod.Depth
+				? -depth
+				: Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity
+				? particle.Luminosity
+				: 1f;
+		}
+
+		private static ConsoleColor RankColor(float rank) =>
+			Parameters.COLOR_ARRAY[Scaling.Values.Drop(1).TakeWhile(ds => ds < rank).Count()];
+		private static ConsoleExtensions.CharInfo BuildChar(float topRank, float bottomRank) {
+			switch (((topRank == float.NegativeInfinity ? 0 : 1) << 1) + (bottomRank == float.NegativeInfinity ? 0 : 1)) {
+				case 1://bottom only
+					return new ConsoleExtensions.CharInfo(Parameters.CHAR_TOP, ConsoleColor.Black, RankColor(bottomRank));
+				case 2://top only
+					return new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, ConsoleColor.Black, RankColor(topRank));
+				case 3://both
+					ConsoleColor bottomColor  = RankColor(bottomRank);
+					ConsoleColor topColor = RankColor(topRank);
+					if (topColor == bottomColor)
+						return new ConsoleExtensions.CharInfo(0, 0, topColor);
+					else if (topRank < bottomRank)
+						return new ConsoleExtensions.CharInfo(Parameters.CHAR_TOP, topColor, bottomColor);
+					else return new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, bottomColor, topColor);
+				default:
+					return default;
+			}
+		}
+
+		//private static ConsoleColor ChooseColor(Tuple<char, ParticleData[], float> particleData) {
+		//	if (Parameters.COLOR_METHOD == ParticleColoringMethod.Count
+		//	|| Parameters.COLOR_METHOD == ParticleColoringMethod.Density
+		//	|| Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity)
+		//		return Parameters.COLOR_ARRAY[Scaling.Values.Drop(1).TakeWhile(ds => ds < particleData.Item3).Count()];
+		//	else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group)
+		//		return ChooseGroupColor(particleData.Item2);
+		//	else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth)
+		//		if (Parameters.DIM > 2) {
+		//			int numColors = Parameters.COLOR_ARRAY.Length;
+		//			float depth = 1f - particleData.Item2.Min(p => GetDepthScalar(p.Position));
+		//			int rank = Scaling.Values.Take(numColors - 1).TakeWhile(a => a < depth).Count();
+		//			return Parameters.COLOR_ARRAY[rank];
+		//		} else return Parameters.COLOR_ARRAY[^1];
+		//	else throw new InvalidEnumArgumentException(nameof(Parameters.COLOR_METHOD));
+		//}
+
+		//public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
+		//	Tuple<char, ParticleData[], float>[] sampling = (Tuple<char, ParticleData[], float>[])parameters[0];
+
+		//	ConsoleExtensions.CharInfo[] results = new ConsoleExtensions.CharInfo[NumPixels];
+		//	if (!(sampling is null)) {
+		//		for (int i = 0; i < sampling.Length; i++)
+		//			results[i] = sampling[i] is null ? default :
+		//				new ConsoleExtensions.CharInfo(
+		//					sampling[i].Item1,
+		//					ChooseColor(sampling[i]));
+
+		//	}
+
+		//	return results;
+		//}
+		private static Queue<Tuple<ParticleData, int, int>>[] DiscreteParticleBin(IEnumerable<ParticleData> particles) { 
+			Queue<Tuple<ParticleData, int, int>>[] results = new Queue<Tuple<ParticleData, int, int>>[NumPixels];
 			int idx;
 			foreach (Tuple<ParticleData, int, int> t in particles.Where(p => p.IsVisible).SelectMany(p => SpreadSample(p))) {
 				idx = t.Item2 + Parameters.WINDOW_WIDTH * (t.Item3 >> 1);
-				results[idx] ??= new Queue<Tuple<ParticleData, int>>();
-				results[idx].Enqueue(new Tuple<ParticleData, int>(t.Item1, t.Item3));
+				results[idx] ??= new Queue<Tuple<ParticleData, int, int>>();
+				results[idx].Enqueue(new Tuple<ParticleData, int, int>(t.Item1, t.Item2, t.Item3));
 			}
 			return results;
 		}
@@ -197,35 +264,11 @@ namespace ParticleSimulator.Rendering {
 										yield return new(p, roundedX, roundedY);
 		}}}}}}}
 
-		public static ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {
-			Tuple<char, ParticleData[], float>[] sampling = (Tuple<char, ParticleData[], float>[])parameters[0];
-
-			ConsoleExtensions.CharInfo[] results = new ConsoleExtensions.CharInfo[NumPixels];
-			if (!(sampling is null)) {
-				for (int i = 0; i < sampling.Length; i++)
-					results[i] = sampling[i] is null ? default :
-						new ConsoleExtensions.CharInfo(
-							sampling[i].Item1,
-							ChooseColor(sampling[i]));
-
-				if (Parameters.LEGEND_ENABLE && (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth || Parameters.DIM > 2))
-					DrawLegend(results);
-			}
-
-			return results;
-		}
-
 		public static void DrawLegend(ConsoleExtensions.CharInfo[] buffer) {
 			int numColors = Scaling.Values.Length;
 			if (numColors > 0) {
 				bool isDiscrete = false;//Parameters.DIM < 3 && Parameters.SIM_TYPE == SimulationType.Boid;
 				string header = Parameters.COLOR_METHOD.ToString();
-				if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group) {
-					if (Parameters.PARTICLES_GROUP_COUNT > numColors)
-						header += " (mod " + numColors + ")";
-					if (Parameters.PARTICLES_GROUP_COUNT < Parameters.COLOR_ARRAY.Length)
-						numColors = Parameters.PARTICLES_GROUP_COUNT;
-				}
 
 				int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - numColors - 1);
 				for (int i = 0; i < header.Length; i++)
@@ -239,45 +282,16 @@ namespace ParticleSimulator.Rendering {
 						Parameters.CHAR_BOTH,
 						Parameters.COLOR_ARRAY[cIdx]);
 
-					rowStringData = Parameters.COLOR_METHOD == ParticleColoringMethod.Group
-						? "=" + cIdx.ToString()
-						: (isDiscrete && cIdx == 0 ? "=" : "≤")
-							+ (isDiscrete
-								? ((int)Scaling.Values[cIdx]).ToString()
-								: Scaling.Values[cIdx].ToStringBetter(2, true, 5));
+					rowStringData = 
+						(isDiscrete && cIdx == 0 ? "=" : "≤")
+						+ (isDiscrete
+							? ((int)Scaling.Values[cIdx]).ToString()
+							: Scaling.Values[cIdx].ToStringBetter(2, true, 5));
 
 					for (int i = 0; i < rowStringData.Length; i++)
 						buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);
 				}
 			}
-		}
-
-		private static ConsoleColor ChooseColor(Tuple<char, ParticleData[], float> particleData) {
-			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Count
-			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Density
-			|| Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity)
-				return Parameters.COLOR_ARRAY[Scaling.Values.Drop(1).TakeWhile(ds => ds < particleData.Item3).Count()];
-			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group)
-				return ChooseGroupColor(particleData.Item2);
-			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth)
-				if (Parameters.DIM > 2) {
-					int numColors = Parameters.COLOR_ARRAY.Length;
-					float depth = 1f - particleData.Item2.Min(p => GetDepthScalar(p.Position));
-					int rank = Scaling.Values.Take(numColors - 1).TakeWhile(a => a < depth).Count();
-					return Parameters.COLOR_ARRAY[rank];
-				} else return Parameters.COLOR_ARRAY[^1];
-			else throw new InvalidEnumArgumentException(nameof(Parameters.COLOR_METHOD));
-		}
-		private static ConsoleColor ChooseGroupColor(IEnumerable<ParticleData> particles) {
-			int dominantGroupID = Parameters.DIM > 2
-				? particles.MinBy(p => GetDepthScalar(p.Position)).GroupID
-				: particles.GroupBy(p => p.GroupID).MaxBy(g => g.Count()).Key;
-			return Parameters.COLOR_ARRAY[dominantGroupID % Parameters.COLOR_ARRAY.Length];
-		}
-		private static float GetDepthScalar(Vector<float> v) {
-			if (Parameters.DIM > 2)
-				return 1f - (MathF.Sqrt(Enumerable.Range(2, Parameters.DIM - 2).Select(d => v[d] * v[d]).Sum()) / Parameters.DOMAIN_HIDDEN_DIMENSIONAL_HEIGHT);
-			else return 1f;
 		}
 	}
 }

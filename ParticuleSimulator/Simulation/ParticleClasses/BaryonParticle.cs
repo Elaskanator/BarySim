@@ -1,9 +1,8 @@
-﻿using System.Linq;
-using System.Numerics;
+﻿using System.Numerics;
 using Generic.Vectors;
 
 namespace ParticleSimulator {
-	public interface IBaryonParticle : IParticle {
+	public interface IBaryonParticle : IMultidimensionalFloat {
 		int ID { get; }
 		int GroupID { get; }
 		float Radius { get; }
@@ -12,15 +11,14 @@ namespace ParticleSimulator {
 		
 		bool Equals(object other) => (other is IBaryonParticle data) && this.ID == data.ID;
 		int GetHashCode() => this.ID;
+
+		string ToString() => string.Format("Particle[<{0}> ID {1}]", this.ID, string.Join("", this.Position));
 	}
 
-	public class BaryonParticle : IBaryonParticle{
+	public class BaryonParticle : IBaryonParticle {
 		public BaryonParticle() {
 			this.IsEnabled = true;
 		}
-		public override string ToString() =>
-			string.Format("Particle[<{0}> ID {1}]", this.ID,
-				string.Join(",", Enumerable.Range(0, Parameters.DIM).Select(d => this.Position[d])));
 		
 		private static int _globalID = 0;
 		private readonly int _id = ++_globalID;
