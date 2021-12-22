@@ -3,15 +3,24 @@ using System.Threading;
 using Generic.Models;
 
 namespace ParticleSimulator.Engine {
-	public class DataGatherer : AHandler {
-		public DataGatherer(Prerequisite config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal)
+	public static class DataGatherer {
+		public static IDataGatherer New(IPrerequisite config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal) =>
+			(IDataGatherer)Activator.CreateInstance(
+				typeof(DataGatherer<>).MakeGenericType(config.Resource.DataType),
+				config, readySignal, doneSignal, refreshSignal);
+	}
+
+	public class DataGatherer<T> : ACaclulationHandler, IDataGatherer {
+		public DataGatherer(IPrerequisite<T> config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal)
 		: base (readySignal, doneSignal) {
 			this.Config = config;
 			this._refreshSignal = refreshSignal;
 		}
 
-		public object MyValue => this._myValue;
-		public Prerequisite Config { get; private set; }
+		public T Value => this._myValue;
+		object IDataGatherer.Value => this.Value;
+
+		public IPrerequisite<T> Config { get; private set; }
 		public int Skips { get; private set; }
 		public int Reuses { get; private set; }
 		
@@ -20,8 +29,9 @@ namespace ParticleSimulator.Engine {
 		public override TimeSynchronizer Synchronizer => null;
 
 		private readonly EventWaitHandle _refreshSignal;
-			
-		private object _myValue;
+		private T _myValue;
+
+		public override void Initialize() { }
 
 		protected override void Process() {
 			bool allowAccess = true, allowReuse = false, ready;

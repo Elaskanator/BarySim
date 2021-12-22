@@ -4,20 +4,32 @@ using Generic.Extensions;
 
 namespace ParticleSimulator.Engine {
 	public class RunManager : IRunnable {
-		public RunManager(params ProcessThread[] steps) { this.Evaluators = steps.Without(s => s is null).ToArray(); }
-		public RunManager(params EvaluationStep[] steps)
-		: this(steps.Without(s => Equals(s, default(EvaluationStep))).Select(s => ProcessThread.New(s)).ToArray()) { }
+		private static int _globalId = 0;
+
+		public RunManager(params ACaclulationHandler[] steps) { this.Evaluators = steps.Without(s => s is null).ToArray(); }
+
+		~RunManager() => this.Dispose(false);
 
 		public override string ToString() {
 			return string.Format("{0}<{1}>[{2}]", nameof(RunManager),
 				this.Evaluators.Length.Pluralize("step"),
 				string.Join(", ", this.Evaluators.AsEnumerable()));//string.Join ambiguous without AsEnumerable() (C# you STOOOPID)
 		}
-
+		
+		private readonly int _id = ++_globalId;
+		public int Id => this._id;
+		public string Name => "Run Manager";
 		public bool IsOpen { get; private set; }
 		public DateTime? StartTimeUtc { get; private set; }
 		public DateTime? EndTimeUtc { get; private set; }
-		public ProcessThread[] Evaluators { get; private set; }
+		public ACaclulationHandler[] Evaluators { get; private set; }
+
+		public void Initialize() {
+			if (this.IsOpen)
+				throw new InvalidOperationException("Already open");
+			else for (int i = 0; i < this.Evaluators.Length; i++)
+				this.Evaluators[i].Initialize();
+		}
 
 		public void Start() {
 			if (this.IsOpen) {
@@ -57,6 +69,13 @@ namespace ParticleSimulator.Engine {
 				for (int i = 0; i < this.Evaluators.Length; i++)
 					this.Evaluators[i].Restart();
 			} else throw new InvalidOperationException("Not open");
+		}
+
+		public void Dispose() => this.Dispose(true);
+		public void Dispose(bool fromDispose) {
+			if (fromDispose)
+				for (int i = 0; i < this.Evaluators.Length; i++)
+					this.Evaluators[i].Dispose(fromDispose);
 		}
 	}
 }

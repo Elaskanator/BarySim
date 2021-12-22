@@ -1,21 +1,23 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using Generic.Models;
 
 namespace ParticleSimulator.Engine {
-	public abstract class AHandler : IRunnable, IDisposable {
+	public abstract class ACaclulationHandler : IRunnable {
 		private const int _warn_interval_check_ms = 500;
+		private static int _globalId = 0;
 
-		public AHandler(EventWaitHandle[] signals, EventWaitHandle[] returns) {
+		public ACaclulationHandler(EventWaitHandle[] signals, EventWaitHandle[] returns) {
 			this.ReadySignals = signals ?? Array.Empty<EventWaitHandle>();
 			this.DoneSignals = returns ?? Array.Empty<EventWaitHandle>();
 		}
-		public AHandler(EventWaitHandle readySignal, EventWaitHandle doneSignal) {
+		public ACaclulationHandler(EventWaitHandle readySignal, EventWaitHandle doneSignal) {
 			this.ReadySignals = new EventWaitHandle[] { readySignal };
 			this.DoneSignals = new EventWaitHandle[] { doneSignal };
 		}
 
-		~AHandler() { this.Dispose(false); }
+		~ACaclulationHandler() { this.Dispose(false); }
 
 		public override string ToString() => string.Format("Runner{0}", this.Name is null ? "" : "[" + this.Name + "]");
 
@@ -25,7 +27,7 @@ namespace ParticleSimulator.Engine {
 		public EventWaitHandle[] ReadySignals { get; private set; }
 		public EventWaitHandle[] DoneSignals { get; private set; }
 
-		public SimpleExponentialMovingAverage ExclusiveTimeTicks { get; private set; }
+		public SimpleExponentialMovingTimeAverage ExclusiveTimeTicks { get; private set; }
 
 		public bool IsActive { get; private set; }
 		public int IterationCount { get; private set; }
@@ -38,17 +40,21 @@ namespace ParticleSimulator.Engine {
 		public DateTime? ComputeStartUtc { get; private set; }
 		public bool IsComputing { get; private set; }
 		public TimeSpan? ComputeDuration { get; private set; }
-
+		
+		private readonly int _id = ++_globalId;
+		public int Id => this._id;
 		public virtual string Name => null;
 		public virtual TimeSpan? SignalTimeout => null;
-		public virtual Action<AHandler> Callback => null;
+		public virtual Action<bool> Callback => null;
 		public virtual TimeSynchronizer Synchronizer => null;
 		protected virtual int StopWarnTimeMs => 1000;
 
 		private Thread _thread;
 		private EventWaitHandle _pauseSignal = new ManualResetEvent(true);
+		private Stopwatch _timer = new Stopwatch();
 
 		protected abstract void Process();
+		public abstract void Initialize();
 
 		public void Start() {
 			if (this.IsOpen) {
@@ -64,7 +70,7 @@ namespace ParticleSimulator.Engine {
 				this.IsPunctual = null;
 				this.IsComputing = false;
 				this.ComputeDuration = null;
-				this.ExclusiveTimeTicks = new SimpleExponentialMovingAverage(Parameters.PERF_SMA_ALPHA);
+				this.ExclusiveTimeTicks = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 
 				this.IsOpen = true;
 				this.StartTimeUtc = DateTime.UtcNow;
@@ -114,26 +120,29 @@ namespace ParticleSimulator.Engine {
 		public void Runner() {
 			this.IsActive = true;
 
-			DateTime startUtc, endUtc;
 			while (this.IsOpen) {
 
 				if (this.ReadySignals.Length > 0) {
-					this.IsWaiting = true;
-					startUtc = DateTime.UtcNow;
+					_timer.Reset();
+					_timer.Start();
 
+					this.IsWaiting = true;
 					this.IsPunctual = this.WaitDuration.HasValue
 						? WaitHandle.WaitAll(this.ReadySignals, this.WaitDuration.Value)
 						: WaitHandle.WaitAll(this.ReadySignals);
-
-					endUtc = DateTime.UtcNow;
 					this.IsWaiting = false;
-					this.WaitDuration = endUtc.Subtract(startUtc);
-				}
 
-				startUtc = DateTime.UtcNow;
+					_timer.Stop();
+					this.WaitDuration = _timer.Elapsed;
+				}
+				
+				_timer.Reset();
+				_timer.Start();
+
 				this._pauseSignal.WaitOne();
-				endUtc = DateTime.UtcNow;
-				this.SynchronizeDuration = endUtc.Subtract(startUtc);
+
+				_timer.Stop();
+				this.SynchronizeDuration = _timer.Elapsed;
 
 				if (!(this.Synchronizer is null)) {
 					this.Synchronizer.Synchronize();
@@ -143,22 +152,23 @@ namespace ParticleSimulator.Engine {
 				this.ComputeStartUtc = DateTime.UtcNow;
 						
 				if (this.IsOpen) {
+					_timer.Reset();
+					_timer.Start();
+
 					this.IsComputing = true;
-					startUtc = DateTime.UtcNow;
-
 					this.Process();
-
-					endUtc = DateTime.UtcNow;
 					this.IsComputing = false;
-					this.ComputeDuration = endUtc.Subtract(startUtc);
-					this.ExclusiveTimeTicks.Update(this.ComputeDuration.Value.Ticks);
+
+					_timer.Stop();
+					this.ComputeDuration = _timer.Elapsed;
+					this.ExclusiveTimeTicks.Update(this.ComputeDuration.Value);
 					this.IterationDuration = this.WaitDuration.Value.Add(this.ComputeDuration.Value);
 				
 					for (int i = 0; this.IsOpen && i < this.DoneSignals.Length; i++)
 						this.DoneSignals[i].Set();
 
 					if (this.IsOpen && !(this.Callback is null))
-						this.Callback(this);
+						this.Callback(this.IsPunctual.Value);
 
 					this.IterationCount++;
 					this.PunctualIterationCount += this.IsPunctual.Value ? 1 : 0;
@@ -191,7 +201,7 @@ namespace ParticleSimulator.Engine {
 			Console.BackgroundColor = ConsoleColor.Black;
 
 			bool doWait = true;
-			while (doWait && this._thread.ThreadState == ThreadState.Running) {
+			while (doWait && this._thread.ThreadState == System.Threading.ThreadState.Running) {
 				Console.Write("Shutdown is taking longer than normal ({0}). Press enter to ignore.",
 					DateTime.UtcNow.Subtract(startUtc));
 				Thread.Sleep(_warn_interval_check_ms);

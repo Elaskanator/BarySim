@@ -5,27 +5,27 @@ using Generic.Extensions;
 using Generic.Models;
 
 namespace ParticleSimulator.Engine {
-	public class ProcessThread : AHandler, IDisposable {
-		public ProcessThread(EvaluationStep config, DataGatherer[] dataGatherers, EventWaitHandle[] readySignals, EventWaitHandle[] doneSignals)
+	public class ProcessThread : ACaclulationHandler {
+		public ProcessThread(EvaluationStep config, IDataGatherer[] dataGatherers, EventWaitHandle[] readySignals, EventWaitHandle[] doneSignals)
 		: base(readySignals, doneSignals) {
 			this.Config = config;
-			this.dataGatherers = dataGatherers ?? Array.Empty<DataGatherer>();
+			this._dataGatherers = dataGatherers ?? Array.Empty<IDataGatherer>();
 		}
 
 		public static ProcessThread New(EvaluationStep config) {
-			DataGatherer[] dataReceivers = new DataGatherer[config.InputResourceUses.Length];
+			IDataGatherer[] dataReceivers = new IDataGatherer[config.InputResourceUses.Length];
 			AutoResetEvent[] readySignals = new AutoResetEvent[config.InputResourceUses.Length],
 				doneSignals = new AutoResetEvent[config.InputResourceUses.Length],
 				refreshListeners = new AutoResetEvent[config.InputResourceUses.Length];
 			if (!(config.InputResourceUses is null)) {
-				Prerequisite req;
+				IPrerequisite req;
 				for (int i = 0; i < config.InputResourceUses.Length; i++) {
 					req = config.InputResourceUses[i];
 					readySignals[i] = new AutoResetEvent(true);
 					doneSignals[i] = new AutoResetEvent(req.AllowDirtyRead);
 					if (req.OnChange)
 						refreshListeners[i] = req.Resource.AddRefreshListener();
-					dataReceivers[i] = new DataGatherer(
+					dataReceivers[i] = DataGatherer.New(
 						req,
 						readySignals[i],
 						doneSignals[i],
@@ -34,63 +34,65 @@ namespace ParticleSimulator.Engine {
 			}
 			return new ProcessThread(
 				config,
-				dataReceivers.Without(s => s == null).ToArray(),
-				readySignals.Without(s => s == null).ToArray(),
-				doneSignals.Without(s => s == null).ToArray());
-		}
-
-		protected override void PreStart() {
-			if (!(this.dataGatherers is null))
-				for (int i = 0; i < this.dataGatherers.Length; i++)
-					this.dataGatherers[i].Start();
-		}
-		protected override void PreStop() {
-			if (!(this.dataGatherers is null))
-				for (int i = 0; i < this.dataGatherers.Length; i++)
-					this.dataGatherers[i].Stop();
+				dataReceivers.Without(s => s is null).ToArray(),
+				readySignals.Without(s => s is null).ToArray(),
+				doneSignals.Without(s => s is null).ToArray());
 		}
 
 		public EvaluationStep Config { get; private set; }
 		
-		private static int _globalId = 0;
-		public readonly int Id = ++_globalId;
 		public override string Name => this.Config.Name;
-		public override Action<AHandler> Callback => this.Config.Callback;
+		public override Action<bool> Callback => this.Config.Callback;
 		public override TimeSynchronizer Synchronizer => this.Config.Synchronizer;
 		public override TimeSpan? SignalTimeout => this.Config.DataLoadingTimeout;
 
-		private DataGatherer[] dataGatherers = null;
+		private IDataGatherer[] _dataGatherers = null;
+
+		public override void Initialize() { }
+
+		protected override void PreStart() {
+			if (!(this._dataGatherers is null))
+				for (int i = 0; i < this._dataGatherers.Length; i++)
+					this._dataGatherers[i].Start();
+		}
 
 		protected override void Process() {
-			object[] parameters = this.dataGatherers.Select(x => x.MyValue).ToArray();
+			object[] parameters = this._dataGatherers.Select(x => x.Value).ToArray();
 
-			bool waitHolds = false;
+			//bool waitHolds = false;
 			object result;
 			if (this.Config.OutputResource is null) {
-				this.Config.Evaluator(parameters);
+				this.Config.EvaluatorFn(parameters);
 			} else {
-				result = this.Config.Initializer is null ? this.Config.Calculator(parameters) : this.Config.Initializer();
+				result = this.Config.GeneratorFn is null ? this.Config.CalculatorFn(parameters) : this.Config.GeneratorFn();
 
 				if (this.Config.OutputSkips < 1 || this.IterationCount % (this.Config.OutputSkips + 1) == 0) {
 					if (this.Config.IsOutputOverwrite)
 						this.Config.OutputResource.Overwrite(result);
 					else this.Config.OutputResource.Enqueue(result);
 
-					waitHolds = true;
+					//waitHolds = true;
 				}
 			}
 
 			if (!(this.Config.Callback is null))
-				this.Config.Callback(this);
+				this.Config.Callback(true);
 				
-			if (waitHolds)
-				if (this.Config.OutputResource.ReleaseListeners.Any())
-					WaitHandle.WaitAll(this.Config.OutputResource.ReleaseListeners);
+			//if (waitHolds)
+			//	if (this.Config.OutputResource.RefreshReleaseListeners.Length > 0)
+			//		WaitHandle.WaitAll(this.Config.OutputResource.RefreshReleaseListeners);
 		}
+
+		protected override void PreStop() {
+			if (!(this._dataGatherers is null))
+				for (int i = 0; i < this._dataGatherers.Length; i++)
+					this._dataGatherers[i].Stop();
+		}
+
 		public override void Dispose(bool fromDispose) {
 			if (fromDispose)
-				for (int i = 0; this.IsOpen && i < this.dataGatherers.Length; i++)
-					this.dataGatherers[i].Dispose(fromDispose);
+				for (int i = 0; this.IsOpen && i < this._dataGatherers.Length; i++)
+					this._dataGatherers[i].Dispose(fromDispose);
 			base.Dispose(fromDispose);
 		}
 	}

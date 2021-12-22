@@ -4,6 +4,7 @@ using Generic.Models;
 using ParticleSimulator.ConsoleRendering;
 using ParticleSimulator.Simulation;
 using ParticleSimulator.Engine;
+using System.Collections.Generic;
 
 namespace ParticleSimulator {
 	//TODO quadtree neighborhood search is too effectively localized, so particles cluster way too much never seeing farfield
@@ -16,7 +17,7 @@ namespace ParticleSimulator {
 		public static BaryonSimulator Simulator { get; private set; }
 		public static readonly Random Random = new();
 		
-		public static SynchronizedDataBuffer Resource_ParticleData, Resource_Rasterization, Resource_ScalingData;
+		public static ISynchronousConsumedResource Resource_ParticleData, Resource_Rasterization, Resource_ScalingData;
 		public static ProcessThread StepEval_Simulate, StepEval_Autoscale, StepEval_Rasterize, StepEval_Render, StepEval_Monitor;
 
 		public static void Main(string[] args) {
@@ -58,24 +59,28 @@ namespace ParticleSimulator {
 		}
 
 		private static RunManager BuildRunManager() {
-			Resource_ParticleData = new SynchronizedDataBuffer("Locations", Parameters.PRECALCULATION_LIMIT);
-			Resource_Rasterization = new SynchronizedDataBuffer("Rasterization", Parameters.PRECALCULATION_LIMIT);
-			Resource_ScalingData = new SynchronizedDataBuffer("ScalingData", 0);
+			SynchronousBuffer<IEnumerable<ParticleData>> particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
+			SynchronousBuffer<ConsoleExtensions.CharInfo[]> rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
+			SynchronousBuffer<float[]> scalingResource = new("ScalingData", 0);
+
+			Resource_ParticleData = particleResource;
+			Resource_Rasterization = rasterResource;
+			Resource_ScalingData = scalingResource;
 			
 			StepEval_Render = ProcessThread.New(new() {
 				Name = "Draw",
 				//Initializer = null,
 				//Calculator = null,
-				Evaluator = Renderer.FlushScreenBuffer,
+				EvaluatorFn = Renderer.FlushScreenBuffer,
 				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
 				Callback = Monitor.AfterRender,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
 				//OutputResource = null,
 				//IsOutputOverwrite = false,
 				//OutputSkips = 0,
-				InputResourceUses = new Prerequisite[] {
-					new() {
-						Resource = Resource_Rasterization,
+				InputResourceUses = new IPrerequisite[] {
+					new IPrerequisite<ConsoleExtensions.CharInfo[]>() {
+						Resource = rasterResource,
 						DoConsume = true,
 						//OnChange = false,
 						//DoHold = false,
@@ -88,7 +93,7 @@ namespace ParticleSimulator {
 			StepEval_Simulate = ProcessThread.New(new() {
 				Name = "Simulate",
 				//Initializer = null,
-				Calculator = Simulator.RefreshSimulation,
+				CalculatorFn = Simulator.RefreshSimulation,
 				//Evaluator = null,
 				//Synchronizer = null,
 				//Callback = null,
@@ -101,7 +106,7 @@ namespace ParticleSimulator {
 			StepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterizer",
 				//Initializer = null,
-				Calculator = Renderer.Rasterize,
+				CalculatorFn = Renderer.Rasterize,
 				//Evaluator = null,
 				//Synchronizer = null,
 				//Callback = null,
@@ -109,9 +114,9 @@ namespace ParticleSimulator {
 				OutputResource = Resource_Rasterization,
 				//IsOutputOverwrite = false,
 				//OutputSkips = 0,
-				InputResourceUses = new Prerequisite[] {
-					new() {
-						Resource = Resource_ParticleData,
+				InputResourceUses = new IPrerequisite[] {
+					new IPrerequisite<IEnumerable<ParticleData>>() {
+						Resource = particleResource,
 						DoConsume = true,
 						//OnChange = false,
 						//DoHold = false,
@@ -125,16 +130,16 @@ namespace ParticleSimulator {
 				Name = "Monitor",
 				//Initializer = null,
 				//Calculator = null,
-				Evaluator = Monitor.TitleUpdate,
+				EvaluatorFn = Monitor.TitleUpdate,
 				Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.CONSOLE_TITLE_INTERVAL_MS)),
 				//Callback = null,
 				//DataLoadingTimeout = null,
 				//OutputResource = null,
 				//IsOutputOverwrite = false,
 				//OutputSkips = 0,
-				InputResourceUses = new Prerequisite[] {
-					new() {
-						Resource = Resource_ParticleData,
+				InputResourceUses = new IPrerequisite[] {
+					new IPrerequisite<IEnumerable<ParticleData>>() {
+						Resource = particleResource,
 						//DoConsume = false,
 						OnChange = true,
 						//DoHold = false,
@@ -151,16 +156,16 @@ namespace ParticleSimulator {
 					Name = "Autoscale",
 					//Initializer = null,
 					//Calculator = null,
-					Evaluator = Renderer.Scaling.Update,
+					EvaluatorFn = Renderer.Scaling.Update,
 					Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS)),
 					//Callback = null,
 					//DataLoadingTimeout = null,
 					//OutputResource = null,
 					//IsOutputOverwrite = false,
 					//OutputSkips = 0,
-					InputResourceUses = new Prerequisite[] {
-					new() {
-						Resource = Resource_ScalingData,
+					InputResourceUses = new IPrerequisite[] {
+					new IPrerequisite<float[]>() {
+						Resource = scalingResource,
 						//DoConsume = false,
 						OnChange = true,
 						//DoHold = false,

@@ -21,15 +21,15 @@ namespace ParticleSimulator.ConsoleRendering {
 		private SimpleExponentialMovingAverage _fpsTimingMs = new SimpleExponentialMovingAverage(Parameters.PERF_SMA_ALPHA);
 		private int _framesCompleted = 0;
 
-		public void AfterRender(AHandler result) {
-			if (result.IsPunctual.Value) {
+		public void AfterRender(bool wasPunctual) {
+			if (wasPunctual) {
 				int frameIdx = _framesCompleted++ % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 
-				double currentFpsTimeMs = new double[] {
-					Program.StepEval_Render.Synchronizer.LastSyncDuration.Value.Ticks + Program.StepEval_Render.ExclusiveTimeTicks.LastUpdate,
+				double currentFpsTimeMs = new TimeSpan[] {
+					Program.StepEval_Render.Synchronizer.LastSyncDuration.Value + Program.StepEval_Render.ExclusiveTimeTicks.LastUpdate,
 					Program.StepEval_Simulate.ExclusiveTimeTicks.LastUpdate
-				}.Max() / Parameters.TICKS_PER_MS;
-				double currentFrameTimeMs = Program.StepEval_Simulate.ExclusiveTimeTicks.LastUpdate / Parameters.TICKS_PER_MS;
+				}.Max().TotalMilliseconds;
+				double currentFrameTimeMs = Program.StepEval_Simulate.ExclusiveTimeTicks.LastUpdate.TotalMilliseconds;
 
 				_fpsTimingMs.Update(currentFpsTimeMs);
 				_frameTimingMs.Update(currentFrameTimeMs);
@@ -89,12 +89,12 @@ namespace ParticleSimulator.ConsoleRendering {
 			if (Parameters.PERF_STATS_ENABLE) {
 				string label;
 				for (int i = 0; i < Program.Manager.Evaluators.Length; i++) {
-					label = Program.Manager.Evaluators[i].Config.Name[0].ToString();
+					label = Program.Manager.Evaluators[i].Name[0].ToString();
 					if (isSlow && Program.Manager.Evaluators[i].Id != Program.StepEval_Render.Id && Program.Manager.Evaluators[i].IsComputing) {
 						_statsHeaderValues[i + 2] = new(label, DateTime.UtcNow.Subtract(Program.Manager.Evaluators[i].ComputeStartUtc.Value).TotalMilliseconds, ConsoleColor.White, ConsoleColor.DarkRed);
 					} else if (Program.Manager.Evaluators[i].ExclusiveTimeTicks.NumUpdates > 0) {
-						raw = Program.Manager.Evaluators[i].ExclusiveTimeTicks.Current / Parameters.TICKS_PER_MS;
-						smoothed = Program.Manager.Evaluators[i].ExclusiveTimeTicks.LastUpdate / Parameters.TICKS_PER_MS;
+						raw = Program.Manager.Evaluators[i].ExclusiveTimeTicks.Current.TotalMilliseconds;
+						smoothed = Program.Manager.Evaluators[i].ExclusiveTimeTicks.LastUpdate.TotalMilliseconds;
 						_statsHeaderValues[i + 2] = new(label, smoothed, ChooseFrameIntervalColor(raw), ConsoleColor.Black);
 					} else _statsHeaderValues[i + 2] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 				}

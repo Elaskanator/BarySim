@@ -92,9 +92,6 @@ namespace ParticleSimulator {
 		public const int CONSOLE_TITLE_INTERVAL_MS = 500;
 		public const int AUTOSCALE_INTERVAL_MS = 1000;
 		public const int PERF_GRAPH_REFRESH_MS = 250;
-		
-		public const int TICKS_PER_MS = 10000;
-		public const int TICKS_PER_S = 10000000;
 
 		public const int NUMBER_ACCURACY = 2;
 		public const int NUMBER_SPACING = 5;
