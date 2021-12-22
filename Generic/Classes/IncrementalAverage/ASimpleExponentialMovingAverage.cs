@@ -12,7 +12,7 @@ namespace Generic.Models {
 				: 1d / (this.NumUpdates + 1d);
 
 		public override T ComputeNew(T newValue, double alpha) =>
-			this.Add(this.Scale(this.Current, alpha), this.Scale(this.Current, 1d - alpha));
+			this.Add(this.Scale(newValue, alpha), this.Scale(this.Current, 1d - alpha));
 
 		protected abstract T Add(T first, T second);
 		protected abstract T Scale(T value, double scalar);

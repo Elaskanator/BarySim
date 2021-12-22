@@ -17,5 +17,7 @@ namespace ParticleSimulator.Engine {
 		public IPrerequisite[] InputResourceUses;
 		public TimeSpan? DataLoadingTimeout;
 		public TimeSynchronizer Synchronizer;
+
+		public override string ToString() => string.Format("EvaluationStep[{0}]", this.Name);
 	}
 }

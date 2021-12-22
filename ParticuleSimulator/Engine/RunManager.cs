@@ -6,7 +6,7 @@ namespace ParticleSimulator.Engine {
 	public class RunManager : IRunnable {
 		private static int _globalId = 0;
 
-		public RunManager(params ACaclulationHandler[] steps) { this.Evaluators = steps.Without(s => s is null).ToArray(); }
+		public RunManager(params ACalculationHandler[] steps) { this.Evaluators = steps.Without(s => s is null).ToArray(); }
 
 		~RunManager() => this.Dispose(false);
 
@@ -22,14 +22,7 @@ namespace ParticleSimulator.Engine {
 		public bool IsOpen { get; private set; }
 		public DateTime? StartTimeUtc { get; private set; }
 		public DateTime? EndTimeUtc { get; private set; }
-		public ACaclulationHandler[] Evaluators { get; private set; }
-
-		public void Initialize() {
-			if (this.IsOpen)
-				throw new InvalidOperationException("Already open");
-			else for (int i = 0; i < this.Evaluators.Length; i++)
-				this.Evaluators[i].Initialize();
-		}
+		public ACalculationHandler[] Evaluators { get; private set; }
 
 		public void Start() {
 			if (this.IsOpen) {

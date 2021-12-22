@@ -3,16 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
-using ParticleSimulator.Engine;
 
 namespace ParticleSimulator.ConsoleRendering {
 	public class PerfMon {
-		public PerfMon() {
+		public PerfMon(int numStats) {
 			_statsHeaderValues = new HeaderValue[
 				1 + (Parameters.PERF_STATS_ENABLE
-					? 1 + Program.Manager.Evaluators.Length
+					? 1 + numStats
 					: 0)];
-			this._graph = new PerfGraph();
+			this._graph = new PerfGraph(numStats);
 		}
 		
 		private PerfGraph _graph;
@@ -26,10 +25,10 @@ namespace ParticleSimulator.ConsoleRendering {
 				int frameIdx = _framesCompleted++ % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 
 				double currentFpsTimeMs = new TimeSpan[] {
-					Program.StepEval_Render.Synchronizer.LastSyncDuration.Value + Program.StepEval_Render.ExclusiveTimeTicks.LastUpdate,
-					Program.StepEval_Simulate.ExclusiveTimeTicks.LastUpdate
+					Program.StepEval_Render.SyncTime.LastUpdate + Program.StepEval_Render.ExclusiveTime.LastUpdate,
+					Program.StepEval_Simulate.ExclusiveTime.LastUpdate
 				}.Max().TotalMilliseconds;
-				double currentFrameTimeMs = Program.StepEval_Simulate.ExclusiveTimeTicks.LastUpdate.TotalMilliseconds;
+				double currentFrameTimeMs = Program.StepEval_Simulate.ExclusiveTime.LastUpdate.TotalMilliseconds;
 
 				_fpsTimingMs.Update(currentFpsTimeMs);
 				_frameTimingMs.Update(currentFrameTimeMs);
@@ -40,10 +39,10 @@ namespace ParticleSimulator.ConsoleRendering {
 		public void TitleUpdate(object[] parameters = null) {
 			string result = string.Format("Baryon Simulator {0}D - ", Parameters.DIM);
 
-			if (Program.Resource_ParticleData is null || Program.Resource_ParticleData.Current is null) {
+			if (parameters is null) {
 				result += Program.Simulator.ParticleTree.Count.Pluralize("Particle");
 			} else {
-				IEnumerable<ParticleData> activeParticles = (IEnumerable<ParticleData>)Program.Resource_ParticleData.Current;
+				IEnumerable<ParticleData> activeParticles = (IEnumerable<ParticleData>)parameters[0];
 				result += string.Format("{0}/{1}",
 					activeParticles.Count(),
 					activeParticles.Count(p => p.IsVisible).Pluralize("Particle"));
@@ -91,10 +90,10 @@ namespace ParticleSimulator.ConsoleRendering {
 				for (int i = 0; i < Program.Manager.Evaluators.Length; i++) {
 					label = Program.Manager.Evaluators[i].Name[0].ToString();
 					if (isSlow && Program.Manager.Evaluators[i].Id != Program.StepEval_Render.Id && Program.Manager.Evaluators[i].IsComputing) {
-						_statsHeaderValues[i + 2] = new(label, DateTime.UtcNow.Subtract(Program.Manager.Evaluators[i].ComputeStartUtc.Value).TotalMilliseconds, ConsoleColor.White, ConsoleColor.DarkRed);
-					} else if (Program.Manager.Evaluators[i].ExclusiveTimeTicks.NumUpdates > 0) {
-						raw = Program.Manager.Evaluators[i].ExclusiveTimeTicks.Current.TotalMilliseconds;
-						smoothed = Program.Manager.Evaluators[i].ExclusiveTimeTicks.LastUpdate.TotalMilliseconds;
+						_statsHeaderValues[i + 2] = new(label, DateTime.UtcNow.Subtract(Program.Manager.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds, ConsoleColor.White, ConsoleColor.DarkRed);
+					} else if (Program.Manager.Evaluators[i].ExclusiveTime.NumUpdates > 0) {
+						raw = Program.Manager.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds;
+						smoothed = Program.Manager.Evaluators[i].ExclusiveTime.LastUpdate.TotalMilliseconds;
 						_statsHeaderValues[i + 2] = new(label, smoothed, ChooseFrameIntervalColor(raw), ConsoleColor.Black);
 					} else _statsHeaderValues[i + 2] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 				}
@@ -112,6 +111,8 @@ namespace ParticleSimulator.ConsoleRendering {
 				this.ForegroundColor = fg;
 				this.BackgroundColor = bg;
 			}
+
+			public override string ToString() => string.Format("{0} {1}", this.Label, this.Value);
 		}
 
 		public void WriteEnd() {

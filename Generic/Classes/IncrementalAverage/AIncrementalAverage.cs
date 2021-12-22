@@ -12,7 +12,7 @@ namespace Generic.Models {
 		public int NumUpdates { get; private set; }
 
 		protected double? _weighting;
-		protected virtual double? Weighting => this._weighting;
+		protected virtual double? Weighting => this._weighting ?? 1d / (this.NumUpdates + 1);
 
 		public T Update(T value, double? weighting = null) {
 			this.LastUpdate = value;

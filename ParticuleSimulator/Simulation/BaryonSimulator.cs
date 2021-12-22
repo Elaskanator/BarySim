@@ -5,7 +5,6 @@ using System.Numerics;
 using Generic.Extensions;
 using Generic.Models;
 using Generic.Vectors;
-using ParticleSimulator.ConsoleRendering;
 
 namespace ParticleSimulator.Simulation {
 	public class BaryonSimulator {//modified Barnes-Hut Algorithm
@@ -15,9 +14,8 @@ namespace ParticleSimulator.Simulation {
 				.Select(i => new Galaxy())
 				.ToArray();
 
-			this.ParticleTree = new BarnesHutTree<BaryonParticle>(Parameters.DIM, 
-				this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
-			this._livingParticles = new(this.ParticleTree.Count);
+			this.ParticleTree = (BarnesHutTree<BaryonParticle>)new BarnesHutTree<BaryonParticle>(Parameters.DIM)
+				.AddUpOrDown(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
 		}
 
 		public Galaxy[] InitialParticleGroups { get; private set; }
@@ -26,14 +24,11 @@ namespace ParticleSimulator.Simulation {
 		public virtual bool EnableCollisions => false;
 		public virtual float WorldBounceWeight => 0f;
 
-		private Queue<BaryonParticle> _livingParticles;
-		public IEnumerable<ParticleData> RefreshSimulation(object[] parameters) {
-			_livingParticles.Clear();
+		public IEnumerable<ParticleData> RefreshSimulation() {
 			foreach (BaryonParticle particle in this.ParticleTree) {
-				_livingParticles.Enqueue(particle);
 				particle.ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
+				yield return new ParticleData(particle);
 			}
-			return _livingParticles.Select(p => new ParticleData(p)).ToArray();
 		}
 
 		//private float HandleCollisions(IEnumerable<ABaryonParticle> particles) {

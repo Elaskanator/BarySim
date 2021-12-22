@@ -11,14 +11,11 @@ namespace ParticleSimulator {
 		
 		bool Equals(object other) => (other is IBaryonParticle data) && this.ID == data.ID;
 		int GetHashCode() => this.ID;
-
-		string ToString() => string.Format("Particle[<{0}> ID {1}]", this.ID, string.Join("", this.Position));
 	}
 
 	public class BaryonParticle : IBaryonParticle {
-		public BaryonParticle() {
-			this.IsEnabled = true;
-		}
+		public BaryonParticle() { this.IsEnabled = true; }
+		public override string ToString() => string.Format("Particle[<{0}> ID {1}]", this.ID, string.Join("", this.Position));
 		
 		private static int _globalID = 0;
 		private readonly int _id = ++_globalID;

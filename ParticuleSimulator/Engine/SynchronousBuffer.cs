@@ -24,7 +24,7 @@ namespace ParticleSimulator.Engine {
 
 		~SynchronousBuffer() { this.Dispose(false); }
 
-		public override string ToString() => string.Format("SynchronizedBuffer[{0}, {]", this.Name, this.Count.Pluralize("entry"));
+		public override string ToString() => string.Format("SynchronizedBuffer<{0}>[{1}{2}]", this.Id, this.Name is null ? "" : this.Name + ", ", this.Count.Pluralize("entry"));
 
 		private readonly int _id = ++_globalId;
 		public int Id => this._id;

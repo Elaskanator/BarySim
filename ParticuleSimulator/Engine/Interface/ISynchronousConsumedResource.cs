@@ -22,7 +22,6 @@ namespace ParticleSimulator.Engine {
 		AutoResetEvent AddRefreshListener();
 		//AutoResetEvent[] RefreshListeners { get; }
 
-		string ToString() => string.Format("ConsumedResource<{0}>[{1}]", this.Id, this.Name);
 		bool Equals(object other) => !(other is null) && (other is ISynchronousConsumedResource) && this.Id == (other as ISynchronousConsumedResource).Id;
 		int GetHashCode() => this.Id.GetHashCode();
 

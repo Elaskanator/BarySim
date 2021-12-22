@@ -10,7 +10,7 @@ namespace ParticleSimulator.Engine {
 				config, readySignal, doneSignal, refreshSignal);
 	}
 
-	public class DataGatherer<T> : ACaclulationHandler, IDataGatherer {
+	public class DataGatherer<T> : ACalculationHandler, IDataGatherer {
 		public DataGatherer(IPrerequisite<T> config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal)
 		: base (readySignal, doneSignal) {
 			this.Config = config;
@@ -31,9 +31,7 @@ namespace ParticleSimulator.Engine {
 		private readonly EventWaitHandle _refreshSignal;
 		private T _myValue;
 
-		public override void Initialize() { }
-
-		protected override void Process() {
+		protected override void Process(bool punctual) {
 			bool allowAccess = true, allowReuse = false, ready;
 			if (this.IterationCount > 0) {
 				allowReuse = true;
@@ -53,29 +51,22 @@ namespace ParticleSimulator.Engine {
 					ready = true;
 					if (!(this._refreshSignal is null))
 						ready = this._refreshSignal.WaitOne(TimeSpan.Zero);
-
-					if (ready) {
+					if (ready)
 						if (this.Config.DoConsume) {
 							if (this.Config.Resource.TryDequeue(ref this._myValue, TimeSpan.Zero)) {
 								this.Skips = 0;
 								this.Reuses = 0;
-							} else if (this.Config.AllowDirtyRead) {
+							} else if (this.Config.AllowDirtyRead)
 								this._myValue = this.Config.Resource.Current;
-							}
-						} else if (this.Config.AllowDirtyRead) {
+						} else if (this.Config.AllowDirtyRead)
 							this._myValue = this.Config.Resource.Current;
-						}
-					}
 				}
 			} else if (allowAccess) {
-				if (!(this._refreshSignal is null)) {
+				if (!(this._refreshSignal is null))
 					this._refreshSignal.WaitOne();
-					if (!this.IsActive) return;
-				}
 
 				if (this.Config.DoConsume) {
 					if (this.Config.ReadTimeout.HasValue && this.Config.Resource.TryDequeue(ref this._myValue, this.Config.ReadTimeout.Value)) {
-						if (!this.IsActive) return;
 						this.Skips = 0;
 						this.Reuses = 0;
 					} else if (this.Config.AllowDirtyRead) {
@@ -83,13 +74,11 @@ namespace ParticleSimulator.Engine {
 						this._myValue = this.Config.Resource.Current;
 					} else {
 						this._myValue = this.Config.Resource.Dequeue();
-						if (!this.IsActive) return;
 						this.Skips = 0;
 						this.Reuses = 0;
 					}
 				} else {
 					if (this.Config.ReadTimeout.HasValue && this.Config.Resource.TryPeek(ref this._myValue, this.Config.ReadTimeout.Value)) {
-						if (!this.IsActive) return;
 						this.Skips = 0;
 						this.Reuses = 0;
 					} else if (this.Config.AllowDirtyRead) {
@@ -97,7 +86,6 @@ namespace ParticleSimulator.Engine {
 						this._myValue = this.Config.Resource.Current;
 					} else {
 						this._myValue = this.Config.Resource.Peek();
-						if (!this.IsActive) return;
 						this.Skips = 0;
 						this.Reuses = 0;
 					}

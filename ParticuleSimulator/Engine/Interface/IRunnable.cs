@@ -10,7 +10,6 @@ namespace ParticleSimulator.Engine {
 		DateTime? StartTimeUtc { get; }
 		DateTime? EndTimeUtc { get; }
 
-		void Initialize();
 		void Start();
 		void Pause();
 		void Resume();

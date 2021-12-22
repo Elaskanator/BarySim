@@ -7,14 +7,13 @@ using ParticleSimulator.Engine;
 using System.Collections.Generic;
 
 namespace ParticleSimulator {
-	//TODO quadtree neighborhood search is too effectively localized, so particles cluster way too much never seeing farfield
-	//TODO add handshake optimization (particles with symmetric interactions, to compute only half as many)
 	//TODO world wrap interaction: particles look forward only into adjoining quadrant
 	//SEEALSO https://www.youtube.com/watch?v=TrrbshL_0-s
 	public class Program {
-		public static PerfMon Monitor { get; private set; }
 		public static RunManager Manager { get; private set; }
 		public static BaryonSimulator Simulator { get; private set; }
+		public static ConsoleRenderer Renderer { get; private set; }
+		public static PerfMon Monitor { get; private set; }
 		public static readonly Random Random = new();
 		
 		public static ISynchronousConsumedResource Resource_ParticleData, Resource_Rasterization, Resource_ScalingData;
@@ -50,10 +49,11 @@ namespace ParticleSimulator {
 			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
 			Simulator = new BaryonSimulator();
-			Monitor = new PerfMon();
-			Monitor.TitleUpdate();
+			Renderer = new ConsoleRenderer();
+			Monitor = new PerfMon(Parameters.AUTOSCALER_ENABLE ? 5 : 4);
 
 			Manager = BuildRunManager();
+			Monitor.TitleUpdate();
 			//ConsoleExtensions.WaitForEnter("Press enter to start");
 			Manager.Start();
 		}
@@ -69,111 +69,53 @@ namespace ParticleSimulator {
 			
 			StepEval_Render = ProcessThread.New(new() {
 				Name = "Draw",
-				//Initializer = null,
-				//Calculator = null,
 				EvaluatorFn = Renderer.FlushScreenBuffer,
 				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f ? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS) : null,
 				Callback = Monitor.AfterRender,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
-				//OutputResource = null,
-				//IsOutputOverwrite = false,
-				//OutputSkips = 0,
 				InputResourceUses = new IPrerequisite[] {
 					new IPrerequisite<ConsoleExtensions.CharInfo[]>() {
 						Resource = rasterResource,
 						DoConsume = true,
-						//OnChange = false,
-						//DoHold = false,
-						//AllowDirtyRead = false,
-						//ReuseAmount = 0,
-						//ReuseTolerance = 0,
-						//ReadTimeout = null
 			}}});
 
 			StepEval_Simulate = ProcessThread.New(new() {
 				Name = "Simulate",
-				//Initializer = null,
-				CalculatorFn = Simulator.RefreshSimulation,
-				//Evaluator = null,
-				//Synchronizer = null,
-				//Callback = null,
-				//DataLoadingTimeout = null,
+				GeneratorFn = Simulator.RefreshSimulation,
 				OutputResource = Resource_ParticleData,
 				IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
 				OutputSkips = Parameters.SIMULATION_SKIPS,
-				//InputResourceUses = null
 			});
 			StepEval_Rasterize = ProcessThread.New(new() {
-				Name = "Rasterizer",
-				//Initializer = null,
+				Name = "Rasterize",
 				CalculatorFn = Renderer.Rasterize,
-				//Evaluator = null,
-				//Synchronizer = null,
-				//Callback = null,
-				//DataLoadingTimeout = null,
 				OutputResource = Resource_Rasterization,
-				//IsOutputOverwrite = false,
-				//OutputSkips = 0,
 				InputResourceUses = new IPrerequisite[] {
 					new IPrerequisite<IEnumerable<ParticleData>>() {
 						Resource = particleResource,
 						DoConsume = true,
-						//OnChange = false,
-						//DoHold = false,
-						//AllowDirtyRead = false,
-						//ReuseAmount = 0,
-						//ReuseTolerance = 0,
-						//ReadTimeout = null
 			}}});
 
 			StepEval_Monitor = ProcessThread.New(new() {
 				Name = "Monitor",
-				//Initializer = null,
-				//Calculator = null,
 				EvaluatorFn = Monitor.TitleUpdate,
 				Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.CONSOLE_TITLE_INTERVAL_MS)),
-				//Callback = null,
-				//DataLoadingTimeout = null,
-				//OutputResource = null,
-				//IsOutputOverwrite = false,
-				//OutputSkips = 0,
 				InputResourceUses = new IPrerequisite[] {
 					new IPrerequisite<IEnumerable<ParticleData>>() {
 						Resource = particleResource,
-						//DoConsume = false,
 						OnChange = true,
-						//DoHold = false,
-						//AllowDirtyRead = false,
-						//ReuseAmount = 0,
-						//ReuseTolerance = 0,
-						//ReadTimeout = null
 			}}});
 
-			if (!Parameters.COLOR_USE_FIXED_BANDS
-			&& Parameters.COLOR_ARRAY.Length > 1
-			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Depth)
+			if (Parameters.AUTOSCALER_ENABLE)
 				StepEval_Autoscale = ProcessThread.New(new() {
 					Name = "Autoscale",
-					//Initializer = null,
-					//Calculator = null,
 					EvaluatorFn = Renderer.Scaling.Update,
 					Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS)),
-					//Callback = null,
-					//DataLoadingTimeout = null,
-					//OutputResource = null,
-					//IsOutputOverwrite = false,
-					//OutputSkips = 0,
 					InputResourceUses = new IPrerequisite[] {
 					new IPrerequisite<float[]>() {
 						Resource = scalingResource,
-						//DoConsume = false,
 						OnChange = true,
-						//DoHold = false,
-						//AllowDirtyRead = false,
-						//ReuseAmount = 0,
-						//ReuseTolerance = 0,
-						//ReadTimeout = null
-			}}});
+				}}});
 
 			return new RunManager(
 				new[] {
@@ -192,6 +134,7 @@ namespace ParticleSimulator {
 
 			Manager.Stop();
 			Monitor.WriteEnd();
+			Manager.Dispose();
 
 			ConsoleExtensions.WaitForEnter("Press enter to exit");
 			//Manager.Dispose();

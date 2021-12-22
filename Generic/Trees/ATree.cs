@@ -5,7 +5,7 @@ using System.Linq;
 using Generic.Extensions;
 
 namespace Generic.Models.Trees {
-	public interface ITree<T> : ICollection<T> {
+	public interface ITree<T> : ICollection<T>, IEnumerable<T> {
 		ITree<T> Parent { get; }
 		ICollection<ITree<T>> Children { get; }
 		
@@ -13,34 +13,26 @@ namespace Generic.Models.Trees {
 		bool IsLeaf { get; }
 		bool ICollection<T>.IsReadOnly => false;
 
-		void AddRange(IEnumerable<T> items) { foreach (T item in items) this.Add(item); }
+		void AddRange(IEnumerable<T> items) {
+			foreach (T item in items) this.Add(item); }
 		void ICollection<T>.CopyTo(T[] array, int arrayIndex) {
 			int i = 0; foreach (T item in this) array[i++ + arrayIndex] = item; }
-
-		IEnumerator<T> IEnumerable<T>.GetEnumerator() => this.Children.SelectMany(c => c.AsEnumerable()).GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
-
-		string ToString() => string.Format("{0}Node[{1}]",
-			this.IsRoot ? "Root" : this.IsLeaf ? "Leaf" : "Inner",
-			this.Count.Pluralize("item"));
 	}
 
 	public abstract class ATree<T> : ITree<T> {
-		public ATree(int capacity = 1) {
-			this.Capacity = capacity;
-		}
-		public ATree(ATree<T> parent, int capacity = 1) {
-			this.Parent = parent;
-			this.Capacity = capacity;
-		}
+		public ATree(ATree<T> parent = null) { this.Parent = parent; }
 		~ATree() {
 			this.Parent = null;
 			this.Children = null;
 			this._bin = null;
 		}
+
+		public override string ToString() => string.Format("{0}Node[{1}]",
+			this.IsRoot ? "Root" : this.IsLeaf ? "Leaf" : "Inner",
+			this.Count.Pluralize("item"));
 		
-		public int Capacity { get; protected set; }
-		public int Count { get; private set; }
+		public virtual int Capacity => 1;
+		public int Count { get; protected set; }
 
 		public bool IsRoot => this.Parent is null;
 		public bool IsLeaf => this.Children is null;
@@ -70,16 +62,16 @@ namespace Generic.Models.Trees {
 
 		public void Add(T item) {
 			ATree<T> node = this;
-			node.Count++;
-			node.Incorporate(item);
 			while (!node.IsLeaf) {
-				node = node.Children[this.GetChildIndex(item)];
 				node.Count++;
 				node.Incorporate(item);
+				node = node.Children[node.GetChildIndex(item)];
 			}
+			node.Count++;
+			node.Incorporate(item);
 
 			if (node.Count <= node.Capacity || node.LimitReached)
-				(this._bin ??= this.NewBin()).Add(item);
+				(node._bin ??= node.NewBin()).Add(item);
 			else node.AddLayer(item);
 		}
 
@@ -163,6 +155,21 @@ namespace Generic.Models.Trees {
 			if (encompasses && node.Count > 0)
 				return node._bin.Contains(item);
 			else return false;
+		}
+
+		public IEnumerator<T> GetEnumerator() => this.GetAllElements().GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator() => this.GetAllElements().GetEnumerator();
+		private IEnumerable<T> GetAllElements() {
+			Queue<ATree<T>> remaining = new Queue<ATree<T>>();
+			remaining.Enqueue(this);
+
+			while (remaining.TryDequeue(out ATree<T> node))
+				if (!node.IsLeaf)
+					foreach (ATree<T> subNode in node.Children)
+						remaining.Enqueue(subNode);
+				else if (!(node._bin is null))
+					foreach (T item in node._bin)
+						yield return item;
 		}
 	}
 }

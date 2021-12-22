@@ -24,7 +24,6 @@ namespace Generic.Vectors {
 		int IMultiDimensional<Vector<float>>.BitmaskLessThanOrEqual(Vector<float> other, int? dim = null) => MultidimensionalSIMD.BitmaskLessThanOrEqual(this.Position, other, dim);
 		int IMultiDimensional<Vector<float>>.BitmaskLessThan(Vector<float> other, int? dim = null) => MultidimensionalSIMD.BitmaskLessThan(this.Position, other, dim);
 	}
-
 	public static class MultidimensionalSIMD {
 		public static int BitmaskEqual(Vector<float> first, Vector<float> second, int? dim = null) =>
 			Vector.Dot(

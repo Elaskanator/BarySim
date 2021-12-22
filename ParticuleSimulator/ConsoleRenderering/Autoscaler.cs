@@ -6,16 +6,12 @@ using Generic.Models;
 
 namespace ParticleSimulator.ConsoleRendering {
 	public class Autoscaler {
-		public Autoscaler(float[] fixedBands = null) {
-			if (fixedBands is null) {
-				if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth)
-					this.Values =
-						Enumerable
-							.Range(1, Parameters.COLOR_ARRAY.Length)
-							.Select(x => (float)x / Parameters.COLOR_ARRAY.Length)
-							.ToArray();
-				else this.Values = new float[0];
-			} else this.Values = fixedBands.Take(Parameters.COLOR_ARRAY.Length).ToArray();
+		public Autoscaler() {
+			if (Parameters.COLOR_USE_FIXED_BANDS)
+				this.Values = Parameters.COLOR_FIXED_BANDS ?? new float[0];
+			else if (Parameters.COLOR_METHOD ==  ParticleColoringMethod.Depth)
+				this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => i / (Parameters.COLOR_ARRAY.Length + 1f)).ToArray();
+			else this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => (float)i).ToArray();
 		}
 
 		public float[] Values { get; private set; }

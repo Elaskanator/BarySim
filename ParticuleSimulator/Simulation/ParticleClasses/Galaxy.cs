@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Generic.Extensions;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
@@ -13,19 +14,18 @@ namespace ParticleSimulator.Simulation {
 
 		public override float ComputeInitialSeparationRadius(IEnumerable<MatterClump> particles) =>
 			Parameters.GRAVITY_INITIAL_SEPARATION_SCALER
-			* MathF.Pow(particles.Sum(p => p.Mass), 1f / Parameters.DIM);
+			* MathF.Pow(particles.Sum(p => p.Mass) / Parameters.GRAVITY_RADIAL_DENSITY, 1f / Parameters.DIM);
 
+		static Vector<float> asdf = new Vector<float>(new float[] { 0, 0, 0.02f, 0, 0, 0, 0, 0 });
 		protected override MatterClump NewParticle(Vector<float> position, Vector<float> velocity) {
+			float massRange = Parameters.GRAVITY_MAX_STARTING_MASS - Parameters.GRAVITY_MIN_STARTING_MASS,
+				chargeRange = Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE;
 			return new MatterClump() {
 				GroupID = this.ID,
+				Mass = Parameters.GRAVITY_MIN_STARTING_MASS + massRange * (float)Program.Random.NextDouble(),
+				Charge = Parameters.ELECTROSTATIC_MIN_CHARGE + chargeRange * (float)Program.Random.NextDouble(),
 				Position = position,
-				Velocity = velocity,
-				Mass = Parameters.GRAVITY_MIN_STARTING_MASS
-					+ (MathF.Pow((float)Program.Random.NextDouble(), Parameters.GRAVITY_MASS_BIAS)
-						* (Parameters.GRAVITY_MAX_STARTING_MASS - Parameters.GRAVITY_MIN_STARTING_MASS)),
-				Charge = Parameters.ELECTROSTATIC_MIN_CHARGE
-					+ ((float)Program.Random.NextDouble()
-						* (Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE))
+				Velocity = velocity + asdf*(float)Program.Random.NextDouble(),
 			};
 		}
 

@@ -13,6 +13,8 @@ namespace Generic.Vectors {
 	public static partial class VectorFunctions {
 		public static readonly Vector<int> PowersOfTwo = new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(i => 1 << i).ToArray());
 		public static readonly Vector<int>[] DimensionFilters = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : 1).ToArray())).ToArray();
+		public static readonly Vector<int>[] DimensionSignals = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : -1).ToArray())).ToArray();
+		public static readonly Vector<int>[] DimensionSignalsInverted = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? -1 : 0).ToArray())).ToArray();
 
 		public static readonly int VECT_CAPACITY = Vector<float>.Count;
 		private static readonly float[][] _tails = Enumerable.Range(1, VECT_CAPACITY).Select(l => Enumerable.Repeat(0f, l).ToArray()).ToArray();

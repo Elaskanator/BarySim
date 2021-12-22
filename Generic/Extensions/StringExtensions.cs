@@ -12,6 +12,8 @@ namespace Generic.Extensions {
 				if (stripZeros || minAccuracy < 2)
 					result = "0";
 				else result = value.ToString("0." + new string('0', minAccuracy - 1));
+			} else if (double.IsNaN(value) || double.IsInfinity(value)) {
+				result = value.ToString();
 			} else {
 				double mag = value.BaseExponent();
 				int magnitude = (int)Math.Floor(mag),
@@ -38,6 +40,7 @@ namespace Generic.Extensions {
 					}
 				} else result = ((int)Math.Round(value, 0)).ToString();
 			}
+
 			if (maxLength.HasValue)
 				result = value < 1d
 					? new string(result.Take(maxLength.Value).ToArray())

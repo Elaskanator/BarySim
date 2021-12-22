@@ -15,10 +15,7 @@ namespace Generic.Models.Trees {
 		public int MaxCapacity { get; private set; }
 		public int Count { get; private set; }
 		public IEnumerable<T> Items { get; private set; }
-		public IEnumerator<T> GetEnumerator() => this.Items.GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator() => this.Items.GetEnumerator();
-
-		public bool IsReadOnly => throw new System.NotImplementedException();
+		public bool IsReadOnly => false;
 
 		public T[] _members;
 		private HashSet<T> _leftovers = null;
@@ -76,6 +73,9 @@ namespace Generic.Models.Trees {
 						array[i + outOffset] = this._members[i];
 			else this._leftovers.CopyTo(array, outOffset);
 		}
+
+		public IEnumerator<T> GetEnumerator() => this.Items.GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator() => this.Items.GetEnumerator();
 
 		//public bool TryRemoveAll(IEnumerable<TElement> elements) {
 		//	if (this.Count == 0) return true;

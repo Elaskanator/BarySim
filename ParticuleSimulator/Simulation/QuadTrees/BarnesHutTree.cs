@@ -1,15 +1,16 @@
-﻿using System.Collections.Generic;
-using System.Numerics;
+﻿using System.Numerics;
 using Generic.Models.Trees;
 
 namespace ParticleSimulator.Simulation {
 	public class BarnesHutTree<T> : QuadTreeSIMD<T, float>
 	where T : BaryonParticle {
 		public BarnesHutTree(int dim, Vector<float> corner1, Vector<float> corner2, QuadTreeSIMD<T, float> parent = null)
-		: base(dim, corner1, corner2, parent, Parameters.QUADTREE_NODE_CAPACITY) { }
-		public BarnesHutTree(int dim, IEnumerable<T> items) : base(dim, items, Parameters.QUADTREE_NODE_CAPACITY) { }
+		: base(dim, corner1, corner2, parent) { }
+		public BarnesHutTree(int dim) : base(dim) { }
 		protected override BarnesHutTree<T> NewNode(QuadTreeSIMD<T, float> parent, Vector<float> cornerLeft, Vector<float> cornerRight) =>
 			new BarnesHutTree<T>(this.Dim, cornerLeft, cornerRight, parent);
+
+		public override int Capacity => Parameters.QUADTREE_NODE_CAPACITY;
 
 		public readonly BaryonCenter BaryCenter_Position = new();
 		public readonly BaryonCenter BaryCenter_Mass = new();

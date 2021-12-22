@@ -5,7 +5,7 @@ using Generic.Extensions;
 using Generic.Models;
 
 namespace ParticleSimulator.Engine {
-	public class ProcessThread : ACaclulationHandler {
+	public class ProcessThread : ACalculationHandler {
 		public ProcessThread(EvaluationStep config, IDataGatherer[] dataGatherers, EventWaitHandle[] readySignals, EventWaitHandle[] doneSignals)
 		: base(readySignals, doneSignals) {
 			this.Config = config;
@@ -13,30 +13,29 @@ namespace ParticleSimulator.Engine {
 		}
 
 		public static ProcessThread New(EvaluationStep config) {
-			IDataGatherer[] dataReceivers = new IDataGatherer[config.InputResourceUses.Length];
-			AutoResetEvent[] readySignals = new AutoResetEvent[config.InputResourceUses.Length],
-				doneSignals = new AutoResetEvent[config.InputResourceUses.Length],
-				refreshListeners = new AutoResetEvent[config.InputResourceUses.Length];
-			if (!(config.InputResourceUses is null)) {
-				IPrerequisite req;
-				for (int i = 0; i < config.InputResourceUses.Length; i++) {
-					req = config.InputResourceUses[i];
-					readySignals[i] = new AutoResetEvent(true);
-					doneSignals[i] = new AutoResetEvent(req.AllowDirtyRead);
-					if (req.OnChange)
-						refreshListeners[i] = req.Resource.AddRefreshListener();
-					dataReceivers[i] = DataGatherer.New(
-						req,
-						readySignals[i],
-						doneSignals[i],
-						refreshListeners[i]);
-				}
+			int numResources = config.InputResourceUses is null ? 0 : config.InputResourceUses.Length;
+			IDataGatherer[] dataReceivers = new IDataGatherer[numResources];
+			AutoResetEvent[] readySignals = new AutoResetEvent[numResources],
+				doneSignals = new AutoResetEvent[numResources],
+				refreshListeners = new AutoResetEvent[numResources];
+			IPrerequisite req;
+			for (int i = 0; i < numResources; i++) {
+				req = config.InputResourceUses[i];
+				readySignals[i] = new AutoResetEvent(true);
+				doneSignals[i] = new AutoResetEvent(req.AllowDirtyRead);
+				if (req.OnChange)
+					refreshListeners[i] = req.Resource.AddRefreshListener();
+				dataReceivers[i] = DataGatherer.New(
+					req,
+					readySignals[i],
+					doneSignals[i],
+					refreshListeners[i]);
 			}
 			return new ProcessThread(
 				config,
 				dataReceivers.Without(s => s is null).ToArray(),
-				readySignals.Without(s => s is null).ToArray(),
-				doneSignals.Without(s => s is null).ToArray());
+				doneSignals.Without(s => s is null).ToArray(),
+				readySignals.Without(s => s is null).ToArray());
 		}
 
 		public EvaluationStep Config { get; private set; }
@@ -48,15 +47,13 @@ namespace ParticleSimulator.Engine {
 
 		private IDataGatherer[] _dataGatherers = null;
 
-		public override void Initialize() { }
-
 		protected override void PreStart() {
 			if (!(this._dataGatherers is null))
 				for (int i = 0; i < this._dataGatherers.Length; i++)
 					this._dataGatherers[i].Start();
 		}
 
-		protected override void Process() {
+		protected override void Process(bool punctual) {
 			object[] parameters = this._dataGatherers.Select(x => x.Value).ToArray();
 
 			//bool waitHolds = false;
@@ -74,16 +71,13 @@ namespace ParticleSimulator.Engine {
 					//waitHolds = true;
 				}
 			}
-
-			if (!(this.Config.Callback is null))
-				this.Config.Callback(true);
 				
 			//if (waitHolds)
 			//	if (this.Config.OutputResource.RefreshReleaseListeners.Length > 0)
 			//		WaitHandle.WaitAll(this.Config.OutputResource.RefreshReleaseListeners);
 		}
 
-		protected override void PreStop() {
+		protected override void PostStop() {
 			if (!(this._dataGatherers is null))
 				for (int i = 0; i < this._dataGatherers.Length; i++)
 					this._dataGatherers[i].Stop();

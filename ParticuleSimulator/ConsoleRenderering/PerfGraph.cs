@@ -5,13 +5,13 @@ using Generic.Models;
 
 namespace ParticleSimulator.ConsoleRendering {
 	public class PerfGraph {
-		public PerfGraph() {
+		public PerfGraph(int numStats) {
 			int width =
 				Parameters.PERF_STATS_ENABLE
 					? Parameters.GRAPH_WIDTH > 0
 						? Parameters.GRAPH_WIDTH
 						: 3 + Parameters.NUMBER_SPACING
-							+ (2 + Program.Manager.Evaluators.Length)
+							+ (2 + numStats)
 								* (1 + Parameters.NUMBER_SPACING)
 					: Parameters.PERF_GRAPH_DEFAULT_WIDTH;
 			GraphWidth = Console.WindowWidth > width ? width : Console.WindowWidth;
@@ -53,7 +53,7 @@ namespace ParticleSimulator.ConsoleRendering {
 		}
 
 		public void DrawFpsGraph(ConsoleExtensions.CharInfo[] frameBuffer, AIncrementalAverage<double> frameTimingMs, AIncrementalAverage<double> fpsTimingMs) {
-			if (Program.StepEval_Render.ExclusiveTimeTicks.NumUpdates > 0) {
+			if (Program.StepEval_Render.ExclusiveTime.NumUpdates > 0) {
 				ConsoleExtensions.CharInfo[][] graphColumnsCopy;
 				lock (_columnStatsLock) {
 					if (_columnFrameTimeStatsMs[0] is null)
