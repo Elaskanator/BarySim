@@ -16,8 +16,8 @@ namespace ParticleSimulator.ConsoleRendering {
 		
 		private PerfGraph _graph;
 		private HeaderValue[] _statsHeaderValues;
-		private BiasedSmoothingTimeAverage _frameTimingMs = new BiasedSmoothingTimeAverage(TimeSpan.FromMilliseconds(100), Parameters.PERF_SMA_ALPHA);
-		private BiasedSmoothingTimeAverage _fpsTimingMs = new BiasedSmoothingTimeAverage(TimeSpan.FromMilliseconds(100), Parameters.PERF_SMA_ALPHA);
+		private AIncrementalAverage<TimeSpan> _frameTimingMs = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
+		private AIncrementalAverage<TimeSpan> _fpsTimingMs = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 		private int _framesCompleted = 0;
 
 		public void AfterRender(bool wasPunctual) {
@@ -71,7 +71,7 @@ namespace ParticleSimulator.ConsoleRendering {
 
 		private void RefreshStatsHedaer(bool isSlow) {
 			if (_fpsTimingMs.NumUpdates > 0)
-				_statsHeaderValues[0] = new("FPS", 1d / _fpsTimingMs.Current.TotalSeconds, ChooseFpsColor(_fpsTimingMs.LastUpdate.TotalMilliseconds), ConsoleColor.Black);
+				_statsHeaderValues[0] = new("FPS", 1d / _fpsTimingMs.Current.TotalSeconds, ChooseFrameIntervalColor(_fpsTimingMs.LastUpdate.TotalMilliseconds), ConsoleColor.Black);
 			else _statsHeaderValues[0] = new("FPS", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 			if (_frameTimingMs.NumUpdates > 0)
 				_statsHeaderValues[1] = new("Time(ms)", _frameTimingMs.Current.TotalMilliseconds, ChooseFrameIntervalColor(_frameTimingMs.LastUpdate.TotalMilliseconds), ConsoleColor.Black);

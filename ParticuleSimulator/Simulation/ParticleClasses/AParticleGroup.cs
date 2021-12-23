@@ -34,7 +34,8 @@ namespace ParticleSimulator.Simulation {
 
 			float radius = this.ComputeInitialSeparationRadius(this.InitialParticles);
 			for (int i = 0; i < this.NumParticles; i++) {
-				this.InitialParticles[i].Position += this.NewParticleOffset(radius);
+				if (this.NumParticles > 1)
+					this.InitialParticles[i].Position += this.NewParticleOffset(radius);
 				this.InitialParticles[i].Velocity += VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x * this.StartSpeedMax_Particle_Range))
 					+ this.StartSpeedMax_Particle_Angular * this.NewInitialDirection(this.SpawnCenter, this.InitialParticles[i].Position);
 			}

@@ -23,7 +23,10 @@ namespace Generic.Models.Trees {
 		public void Add(T item) {
 			if (this._leftovers is null && this.Count < this.MaxCapacity) {
 				this._members[this.Count] = item;
-				this.Items = this._members.Take(this.Count - 1);
+				T[] newItems = new T[this.Count + 1];
+				Array.Copy(this._members, newItems, this.Count + 1);
+				this.Items= newItems;
+				this.Items = this._members.Take(this.Count + 1);
 			} else {
 				if (this._leftovers is null) {
 					this._leftovers = new HashSet<T>(this._members);

@@ -11,15 +11,17 @@ namespace ParticleSimulator.ConsoleRendering {
 
 	public static class ColoringScales {
 		public static readonly Tuple<double, ConsoleColor>[] RatioColors = new Tuple<double, ConsoleColor>[] {
+			new Tuple<double, ConsoleColor>(1.25d, ConsoleColor.Blue),
 			new Tuple<double, ConsoleColor>(1.10d, ConsoleColor.Cyan),
-			new Tuple<double, ConsoleColor>(1.00d, ConsoleColor.DarkGreen),
-			new Tuple<double, ConsoleColor>(0.90d, ConsoleColor.Green),
+			new Tuple<double, ConsoleColor>(1.02d, ConsoleColor.DarkCyan),
+			new Tuple<double, ConsoleColor>(0.98d, ConsoleColor.Green),
+			new Tuple<double, ConsoleColor>(0.90d, ConsoleColor.DarkGreen),
 			new Tuple<double, ConsoleColor>(0.75d, ConsoleColor.Gray),
-			new Tuple<double, ConsoleColor>(0.50d, ConsoleColor.Yellow),
-			new Tuple<double, ConsoleColor>(0.33d, ConsoleColor.DarkYellow),
+			new Tuple<double, ConsoleColor>(0.50d, ConsoleColor.DarkYellow),
+			new Tuple<double, ConsoleColor>(0.33d, ConsoleColor.Yellow),
 			new Tuple<double, ConsoleColor>(0.25d, ConsoleColor.Magenta),
-			new Tuple<double, ConsoleColor>(0.10d, ConsoleColor.Red),
-			new Tuple<double, ConsoleColor>(0.00d, ConsoleColor.DarkRed),
+			new Tuple<double, ConsoleColor>(0.10d, ConsoleColor.DarkRed),
+			new Tuple<double, ConsoleColor>(0.00d, ConsoleColor.Red),
 			new Tuple<double, ConsoleColor>(double.NegativeInfinity, ConsoleColor.White)
 		};
 

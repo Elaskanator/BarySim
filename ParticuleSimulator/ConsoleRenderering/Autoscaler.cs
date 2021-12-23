@@ -12,13 +12,16 @@ namespace ParticleSimulator.ConsoleRendering {
 			else if (Parameters.COLOR_METHOD ==  ParticleColoringMethod.Depth)
 				this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => i / (Parameters.COLOR_ARRAY.Length + 1f)).ToArray();
 			else this.Values = Enumerable.Range(0, Parameters.COLOR_ARRAY.Length).Select(i => (float)i).ToArray();
+			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random)
+				this._randOffset = (int)(this.Values.Length * Program.Random.NextDouble());
 		}
 
 		public float[] Values { get; private set; }
+		private int _randOffset = 0;
 
 		public ConsoleColor RankColor(float rank, ParticleData particle) {
 			rank = Parameters.COLOR_METHOD == ParticleColoringMethod.Random
-				? particle.ID % this.Values.Length
+				? (particle.ID + this._randOffset) % this.Values.Length
 				: rank;
 			return Parameters.COLOR_ARRAY[this.Values.Drop(1).TakeWhile(ds => ds < rank).Count()];
 		}
