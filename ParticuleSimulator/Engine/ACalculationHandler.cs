@@ -28,27 +28,33 @@ namespace ParticleSimulator.Engine {
 		public EventWaitHandle[] DoneSignals { get; private set; }
 
 		public bool IsActive { get; private set; }
+		public bool IsPaused { get; private set; }
 		public int IterationCount { get; private set; }
-		public int PunctualIterationCount { get; private set; }
 		public bool IsWaiting { get; private set; }
 		public bool IsComputing { get; private set; }
 		public DateTime? LastComputeStartUtc { get; private set; }
 
-		public SimpleExponentialMovingTimeAverage Waitiyme { get; private set; }
+		public SimpleExponentialMovingTimeAverage WaitTime { get; private set; }
 		public SimpleExponentialMovingTimeAverage SyncTime { get; private set; }
 		public SimpleExponentialMovingTimeAverage ExclusiveTime { get; private set; }
+		public SimpleExponentialMovingTimeAverage FullTime { get; private set; }
 		
 		public virtual string Name => null;
 		public virtual TimeSpan? SignalTimeout => null;
 		public virtual Action<bool> Callback => null;
 		public virtual TimeSynchronizer Synchronizer => null;
+		public virtual bool ReleaseEarly => false;
 		protected virtual int StopWarnTimeMs => 1000;
 
 		private Thread _thread;
 		private EventWaitHandle _pauseSignal = new ManualResetEvent(true);
 		private Stopwatch _timer = new Stopwatch();
+		private Stopwatch _timerFull = new Stopwatch();
 
+		protected virtual void PreProcess() { }
 		protected abstract void Process(bool punctual);
+		protected virtual void PostProcess() { }
+
 		protected virtual void PreStart() { }
 		protected virtual void PostStop() { }
 
@@ -57,14 +63,15 @@ namespace ParticleSimulator.Engine {
 				throw new InvalidOperationException("Already open");
 			} else {
 				this.IsActive = false;
+				this.IsPaused = false;
 				this.IterationCount = 0;
-				this.PunctualIterationCount = 0;
 				this.IsComputing = false;
 				this.LastComputeStartUtc = null;
 
-				this.Waitiyme = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
+				this.WaitTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 				this.SyncTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 				this.ExclusiveTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
+				this.FullTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 
 				this.IsOpen = true;
 				this.StartTimeUtc = DateTime.UtcNow;
@@ -78,12 +85,14 @@ namespace ParticleSimulator.Engine {
 
 		public void Pause() {
 			if (this.IsOpen) {
+				this.IsPaused = true;
 				this._pauseSignal.Reset();
 			} else throw new InvalidOperationException("Not open");
 		}
 
 		public void Resume() {
 			if (this.IsOpen) {
+				this.IsPaused = false;
 				this._pauseSignal.Set();
 			} else throw new InvalidOperationException("Not open");
 		}
@@ -107,58 +116,70 @@ namespace ParticleSimulator.Engine {
 
 		public void Runner() {
 			this.IsActive = true;
+			try {
+				bool isPunctual = true;
+				while (this.IsOpen) {
+					this._timerFull.Reset();
+					this._timerFull.Start();
 
-			bool isPunctual = true;
-			while (this.IsOpen) {
-				if (this.ReadySignals.Length > 0) {
-					this._timer.Reset();
-					this._timer.Start();
-
-					this.IsWaiting = true;
-					isPunctual = this.SignalTimeout.HasValue
-						? WaitHandle.WaitAll(this.ReadySignals, this.SignalTimeout.Value)
-						: WaitHandle.WaitAll(this.ReadySignals);
-					this.IsWaiting = false;
-
-					this._timer.Stop();
-					this.Waitiyme.Update(this._timer.Elapsed);
-				}
-				
-				this._timer.Reset();
-				this._timer.Start();
-
-				this._pauseSignal.WaitOne();
-
-				this._timer.Stop();
-				this.SyncTime.Update(this._timer.Elapsed);
-
-				if (!(this.Synchronizer is null)) {
-					this.Synchronizer.Synchronize();
-					if (!this.IsOpen) return;
-				}
+					if (this.ReadySignals.Length > 0) {
+						this._timer.Reset();
+						this._timer.Start();
 						
-				if (this.IsOpen) {
+						this.IsWaiting = true;
+						isPunctual = this.SignalTimeout.HasValue
+							? WaitHandle.WaitAll(this.ReadySignals, this.SignalTimeout.Value)
+							: WaitHandle.WaitAll(this.ReadySignals);
+						this.IsWaiting = false;
+
+						this._timer.Stop();
+						this.WaitTime.Update(this._timer.Elapsed);
+					}
+				
 					this._timer.Reset();
-					this.LastComputeStartUtc = DateTime.UtcNow;
 					this._timer.Start();
 
-					this.IsComputing = true;
-					this.Process(isPunctual);
-					this.IsComputing = false;
+					this.PreProcess();
+					if (this.ReleaseEarly)
+						for (int i = 0; i < this.DoneSignals.Length; i++)
+							this.DoneSignals[i].Set();
+
+					this._pauseSignal.WaitOne();
 
 					this._timer.Stop();
-					this.ExclusiveTime.Update(this._timer.Elapsed);
+					this.SyncTime.Update(this._timer.Elapsed);
+
+					if (!(this.Synchronizer is null))
+						this.Synchronizer.Synchronize();
+						
+					if (this.IsOpen) {
+						this._timer.Reset();
+						this.LastComputeStartUtc = DateTime.UtcNow;
+						this._timer.Start();
+
+						this.IsComputing = true;
+						this.Process(isPunctual);
+						this.IsComputing = false;
+
+						this._timer.Stop();
+						this.ExclusiveTime.Update(this._timer.Elapsed);
+
+						this.PostProcess();
+
+						this.IterationCount++;
+
+						if (!(this.Callback is null))
+							this.Callback(isPunctual);
 				
-					for (int i = 0; this.IsOpen && i < this.DoneSignals.Length; i++)
-						this.DoneSignals[i].Set();
+						if (!this.ReleaseEarly)
+							for (int i = 0; i < this.DoneSignals.Length; i++)
+								this.DoneSignals[i].Set();
+					}
 
-					this.IterationCount++;
-					this.PunctualIterationCount += isPunctual ? 1 : 0;
-
-					if (this.IsOpen && !(this.Callback is null))
-						this.Callback(isPunctual);
+					this._timerFull.Stop();
+					this.FullTime.Update(this._timerFull.Elapsed);
 				}
-			}
+			} catch (ThreadInterruptedException) { }//die
 
 			this.IsActive = false;
 		}

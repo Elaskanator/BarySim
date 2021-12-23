@@ -2,6 +2,7 @@
 
 namespace ParticleSimulator.ConsoleRendering {
 	public enum ParticleColoringMethod {
+		Random,
 		Count,
 		Density,
 		Luminosity,

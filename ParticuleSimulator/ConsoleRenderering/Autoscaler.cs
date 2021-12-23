@@ -11,10 +11,17 @@ namespace ParticleSimulator.ConsoleRendering {
 				this.Values = Parameters.COLOR_FIXED_BANDS ?? new float[0];
 			else if (Parameters.COLOR_METHOD ==  ParticleColoringMethod.Depth)
 				this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => i / (Parameters.COLOR_ARRAY.Length + 1f)).ToArray();
-			else this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => (float)i).ToArray();
+			else this.Values = Enumerable.Range(0, Parameters.COLOR_ARRAY.Length).Select(i => (float)i).ToArray();
 		}
 
 		public float[] Values { get; private set; }
+
+		public ConsoleColor RankColor(float rank, ParticleData particle) {
+			rank = Parameters.COLOR_METHOD == ParticleColoringMethod.Random
+				? particle.ID % this.Values.Length
+				: rank;
+			return Parameters.COLOR_ARRAY[this.Values.Drop(1).TakeWhile(ds => ds < rank).Count()];
+		}
 
 		public void Update(object[] parameters) {
 			float[] scalingValues = ((float[])parameters[0]).Without(t => t == float.NegativeInfinity).ToArray();

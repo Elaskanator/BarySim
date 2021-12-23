@@ -46,32 +46,33 @@ namespace ParticleSimulator.Engine {
 		public override TimeSpan? SignalTimeout => this.Config.DataLoadingTimeout;
 
 		private IDataGatherer[] _dataGatherers = null;
+		private object[] _parameters;
+		private object _result;
 
 		protected override void PreStart() {
 			if (!(this._dataGatherers is null))
 				for (int i = 0; i < this._dataGatherers.Length; i++)
 					this._dataGatherers[i].Start();
 		}
-
+		
+		protected override void PreProcess() {
+			this._parameters = this._dataGatherers.Select(x => x.Value).ToArray();
+		}
 		protected override void Process(bool punctual) {
-			object[] parameters = this._dataGatherers.Select(x => x.Value).ToArray();
-
-			//bool waitHolds = false;
-			object result;
-			if (this.Config.OutputResource is null) {
-				this.Config.EvaluatorFn(parameters);
-			} else {
-				result = this.Config.GeneratorFn is null ? this.Config.CalculatorFn(parameters) : this.Config.GeneratorFn();
-
-				if (this.Config.OutputSkips < 1 || this.IterationCount % (this.Config.OutputSkips + 1) == 0) {
-					if (this.Config.IsOutputOverwrite)
-						this.Config.OutputResource.Overwrite(result);
-					else this.Config.OutputResource.Enqueue(result);
-
-					//waitHolds = true;
-				}
-			}
+			if (this.Config.OutputResource is null)
+				this.Config.EvaluatorFn(this._parameters);
+			else this._result = this.Config.GeneratorFn is null ? this.Config.CalculatorFn(this._parameters) : this.Config.GeneratorFn();
 				
+		}
+		protected override void PostProcess() {
+			//bool waitHolds = false;
+			if (!(this.Config.OutputResource is null) && (this.Config.OutputSkips < 1 || this.IterationCount % (this.Config.OutputSkips + 1) == 0)) {
+				if (this.Config.IsOutputOverwrite)
+					this.Config.OutputResource.Overwrite(this._result);
+				else this.Config.OutputResource.Enqueue(this._result);
+
+				//waitHolds = true;
+			}
 			//if (waitHolds)
 			//	if (this.Config.OutputResource.RefreshReleaseListeners.Length > 0)
 			//		WaitHandle.WaitAll(this.Config.OutputResource.RefreshReleaseListeners);

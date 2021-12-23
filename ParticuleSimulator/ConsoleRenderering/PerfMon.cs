@@ -16,23 +16,20 @@ namespace ParticleSimulator.ConsoleRendering {
 		
 		private PerfGraph _graph;
 		private HeaderValue[] _statsHeaderValues;
-		private SimpleExponentialMovingAverage _frameTimingMs = new SimpleExponentialMovingAverage(Parameters.PERF_SMA_ALPHA);
-		private SimpleExponentialMovingAverage _fpsTimingMs = new SimpleExponentialMovingAverage(Parameters.PERF_SMA_ALPHA);
+		private BiasedSmoothingTimeAverage _frameTimingMs = new BiasedSmoothingTimeAverage(TimeSpan.FromMilliseconds(100), Parameters.PERF_SMA_ALPHA);
+		private BiasedSmoothingTimeAverage _fpsTimingMs = new BiasedSmoothingTimeAverage(TimeSpan.FromMilliseconds(100), Parameters.PERF_SMA_ALPHA);
 		private int _framesCompleted = 0;
 
 		public void AfterRender(bool wasPunctual) {
 			if (wasPunctual) {
 				int frameIdx = _framesCompleted++ % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 
-				double currentFpsTimeMs = new TimeSpan[] {
-					Program.StepEval_Render.SyncTime.LastUpdate + Program.StepEval_Render.ExclusiveTime.LastUpdate,
-					Program.StepEval_Simulate.ExclusiveTime.LastUpdate
-				}.Max().TotalMilliseconds;
-				double currentFrameTimeMs = Program.StepEval_Simulate.ExclusiveTime.LastUpdate.TotalMilliseconds;
+				TimeSpan currentFpsTime = Program.StepEval_Render.FullTime.LastUpdate;
+				TimeSpan currentFrameTime = Program.StepEval_Simulate.ExclusiveTime.LastUpdate;
 
-				_fpsTimingMs.Update(currentFpsTimeMs);
-				_frameTimingMs.Update(currentFrameTimeMs);
-				this._graph.Update(frameIdx, currentFpsTimeMs, currentFrameTimeMs);
+				_fpsTimingMs.Update(currentFpsTime);
+				_frameTimingMs.Update(currentFrameTime);
+				this._graph.Update(frameIdx, currentFpsTime, currentFrameTime);
 			}
 		}
 		
@@ -47,7 +44,7 @@ namespace ParticleSimulator.ConsoleRendering {
 					activeParticles.Count(),
 					activeParticles.Count(p => p.IsVisible).Pluralize("Particle"));
 				if (_fpsTimingMs.NumUpdates > 0)
-					result += string.Format(" ({0} fps)", (1000d / _fpsTimingMs.Current).ToStringBetter(2, false));
+					result += string.Format(" ({0} fps)", (1d / _fpsTimingMs.Current.TotalSeconds).ToStringBetter(2, false));
 			}
 
 			Console.Title = result;
@@ -73,29 +70,28 @@ namespace ParticleSimulator.ConsoleRendering {
 		}
 
 		private void RefreshStatsHedaer(bool isSlow) {
-			double raw, smoothed;
-			if (_fpsTimingMs.NumUpdates > 0) {
-				raw = 1000d / _fpsTimingMs.LastUpdate;
-				smoothed = 1000d / _fpsTimingMs.Current;
-				_statsHeaderValues[0] = new("FPS", smoothed, ChooseFpsColor(raw), ConsoleColor.Black);
-			} else _statsHeaderValues[0] = new("FPS", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
-			if (_frameTimingMs.NumUpdates > 0) {
-				raw = _frameTimingMs.LastUpdate;
-				smoothed = _frameTimingMs.Current;
-				_statsHeaderValues[1] = new("Time(ms)", smoothed, ChooseFrameIntervalColor(raw), ConsoleColor.Black);
-			} else _statsHeaderValues[1] = new("Time(ms)", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
+			if (_fpsTimingMs.NumUpdates > 0)
+				_statsHeaderValues[0] = new("FPS", 1d / _fpsTimingMs.Current.TotalSeconds, ChooseFpsColor(_fpsTimingMs.LastUpdate.TotalMilliseconds), ConsoleColor.Black);
+			else _statsHeaderValues[0] = new("FPS", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
+			if (_frameTimingMs.NumUpdates > 0)
+				_statsHeaderValues[1] = new("Time(ms)", _frameTimingMs.Current.TotalMilliseconds, ChooseFrameIntervalColor(_frameTimingMs.LastUpdate.TotalMilliseconds), ConsoleColor.Black);
+			else _statsHeaderValues[1] = new("Time(ms)", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 
 			if (Parameters.PERF_STATS_ENABLE) {
 				string label;
 				for (int i = 0; i < Program.Manager.Evaluators.Length; i++) {
 					label = Program.Manager.Evaluators[i].Name[0].ToString();
-					if (isSlow && Program.Manager.Evaluators[i].Id != Program.StepEval_Render.Id && Program.Manager.Evaluators[i].IsComputing) {
-						_statsHeaderValues[i + 2] = new(label, DateTime.UtcNow.Subtract(Program.Manager.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds, ConsoleColor.White, ConsoleColor.DarkRed);
-					} else if (Program.Manager.Evaluators[i].ExclusiveTime.NumUpdates > 0) {
-						raw = Program.Manager.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds;
-						smoothed = Program.Manager.Evaluators[i].ExclusiveTime.LastUpdate.TotalMilliseconds;
-						_statsHeaderValues[i + 2] = new(label, smoothed, ChooseFrameIntervalColor(raw), ConsoleColor.Black);
-					} else _statsHeaderValues[i + 2] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
+					if (isSlow && Program.Manager.Evaluators[i].Id != Program.StepEval_Render.Id && Program.Manager.Evaluators[i].IsComputing)
+						_statsHeaderValues[i + 2] = new(label,
+							DateTime.UtcNow.Subtract(Program.Manager.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds,
+							ConsoleColor.White,
+							ConsoleColor.DarkRed);
+					else if (Program.Manager.Evaluators[i].ExclusiveTime.NumUpdates > 0)
+						_statsHeaderValues[i + 2] = new(label,
+							Program.Manager.Evaluators[i].ExclusiveTime.LastUpdate.TotalMilliseconds,
+							ChooseFrameIntervalColor(Program.Manager.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds),
+							ConsoleColor.Black);
+					else _statsHeaderValues[i + 2] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 				}
 			}
 		}

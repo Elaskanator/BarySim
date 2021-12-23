@@ -14,53 +14,41 @@ namespace Generic.Vectors {
 		public static readonly Vector<int> PowersOfTwo = new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(i => 1 << i).ToArray());
 		public static readonly Vector<int>[] DimensionFilters = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : 1).ToArray())).ToArray();
 		public static readonly Vector<int>[] DimensionSignals = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : -1).ToArray())).ToArray();
+		public static readonly Vector<int>[] DimensionFiltersInverted = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 1 : 0).ToArray())).ToArray();
 		public static readonly Vector<int>[] DimensionSignalsInverted = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? -1 : 0).ToArray())).ToArray();
 
 		public static readonly int VECT_CAPACITY = Vector<float>.Count;
-		private static readonly float[][] _tails = Enumerable.Range(1, VECT_CAPACITY).Select(l => Enumerable.Repeat(0f, l).ToArray()).ToArray();
-		
-		public static Vector<T> New<T>(params T[] components)
-		where T : struct {
-			if (components.Length == VECT_CAPACITY) {
-				return new Vector<T>(components);
-			} else {
-				T[] padded = new T[VECT_CAPACITY];
-				components.CopyTo(padded, 0);
-				_tails[VECT_CAPACITY - components.Length - 1].CopyTo(padded, components.Length);
-				return new Vector<T>(padded);
-			}
-		}
-		public static Vector<T> New<T>(IEnumerable<T> components)
-		where T : struct {
-			return New(components.ToArray());
-		}
 
 		public static Vector<float> New(params float[] components) {
 			if (components.Length == VECT_CAPACITY) {
 				return new Vector<float>(components);
 			} else {
-				float[] padded = new float[VECT_CAPACITY];
-				components.CopyTo(padded, 0);
-				_tails[VECT_CAPACITY - components.Length - 1].CopyTo(padded, components.Length);
-				return new Vector<float>(padded);
+				Span<float> values = stackalloc float[Vector<float>.Count];
+				values[0] = components.Length > 0 ? components[0] : 0;
+				values[1] = components.Length > 1 ? components[1] : 0;
+				values[2] = components.Length > 2 ? components[2] : 0;
+				values[3] = components.Length > 3 ? components[3] : 0;
+				values[4] = components.Length > 4 ? components[4] : 0;
+				values[5] = components.Length > 5 ? components[5] : 0;
+				values[6] = components.Length > 6 ? components[6] : 0;
+				values[7] = components.Length > 7 ? components[7] : 0;
+				return new Vector<float>(values);
 			}
 		}
-		public static Vector<float> New(IEnumerable<float> components) {
-			return New(components.ToArray());
+		public static Vector<float> New(IEnumerable<float> components) => New(components.ToArray());
+		public static Vector<float> New(float x, float y) {
+			Span<float> values = stackalloc float[Vector<float>.Count];
+			values[0] = x;
+			values[1] = y;
+			return new Vector<float>(values);
 		}
 
-		public static float Magnitude(this Vector<float> v) {
-			Vector<float> squares = Vector.Multiply(v, v);
-			return MathF.Sqrt(Vector.Dot(squares, Vector<float>.One));
+		public static float Magnitude(this Vector<float> v) =>  MathF.Sqrt(Vector.Dot(Vector.Multiply(v, v), Vector<float>.One));
 			//return MathF.Sqrt(
 			//	Enumerable.Range(0, dim)
 			//		.Select(d => v[d] * v[d])
 			//		.Sum());
-		}
-		public static float Magnitude(this float[] v) {
-			return MathF.Sqrt(
-				v.Sum(x => x * x));
-		}
+		public static float Magnitude(this float[] v) => MathF.Sqrt(v.Sum(x => x * x));
 
 		public static float Distance(this Vector<float> v1, Vector<float> v2) {
 			Vector<float> temp = Vector.Subtract(v1, v2);
@@ -88,15 +76,14 @@ namespace Generic.Vectors {
 				? v
 				: v.Select(x => x * ratio).ToArray();
 		}
-		public static Vector<float> Normalize(this Vector<float> v, float length = 1f) {
-			return v * (length / MathF.Sqrt(Vector.Dot(Vector.Multiply(v, v), Vector<float>.One)));
+		public static Vector<float> Normalize(this Vector<float> v, float length = 1f) =>
+			v * (length / MathF.Sqrt(Vector.Dot(Vector.Multiply(v, v), Vector<float>.One)));
 
 			//float magnitude = v.Magnitude(dim),
 			//	ratio = length / magnitude;
 			//return magnitude == length
 			//	? v
 			//	: New(Enumerable.Range(1, dim).Select(d => v[d] * ratio));
-		}
 
 		public static float AngleTo_FullRange(this Vector<float> v1, Vector<float> v2, int dim) {
 			switch (dim) {

@@ -34,7 +34,7 @@ namespace ParticleSimulator.ConsoleRendering {
 		private DateTime _lastGraphRenderFrameUtc = DateTime.UtcNow;
 		private readonly object _columnStatsLock = new object();
 
-		public void Update(int frameIdx, double simTimeMs, double frameTimeMs) {
+		public void Update(int frameIdx, TimeSpan simTime, TimeSpan frameTime) {
 			lock (_columnStatsLock) {
 				if (frameIdx == 0) {
 					_currentColumnFpsDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
@@ -44,15 +44,15 @@ namespace ParticleSimulator.ConsoleRendering {
 					_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.RotateRight();
 				}
 
-				_currentColumnFpsDataMs[frameIdx] = frameTimeMs;
+				_currentColumnFpsDataMs[frameIdx] = frameTime.TotalMilliseconds;
 				_columnFpsStatsMs[0] = new StatsInfo(_currentColumnFpsDataMs.Take(frameIdx + 1));
 
-				_currentColumnFrameTimeDataMs[frameIdx] = simTimeMs;
+				_currentColumnFrameTimeDataMs[frameIdx] = simTime.TotalMilliseconds;
 				_columnFrameTimeStatsMs[0] = new StatsInfo(_currentColumnFrameTimeDataMs.Take(frameIdx + 1));
 			}
 		}
 
-		public void DrawFpsGraph(ConsoleExtensions.CharInfo[] frameBuffer, AIncrementalAverage<double> frameTimingMs, AIncrementalAverage<double> fpsTimingMs) {
+		public void DrawFpsGraph(ConsoleExtensions.CharInfo[] frameBuffer, AIncrementalAverage<TimeSpan> frameTimings, AIncrementalAverage<TimeSpan> fpsTimings) {
 			if (Program.StepEval_Render.ExclusiveTime.NumUpdates > 0) {
 				ConsoleExtensions.CharInfo[][] graphColumnsCopy;
 				lock (_columnStatsLock) {
@@ -69,8 +69,8 @@ namespace ParticleSimulator.ConsoleRendering {
 					DrawGraphColumn(graphData, graphColumnsCopy[i], i);
 
 				double
-					frameTime = frameTimingMs.Current,
-					fpsTime = fpsTimingMs.Current,
+					frameTime = frameTimings.Current.TotalMilliseconds,
+					fpsTime = fpsTimings.Current.TotalMilliseconds,
 					targetTime = 1000d / (Parameters.TARGET_FPS > 0 ? Parameters.TARGET_FPS : Parameters.MAX_FPS);
 				string
 					label_min = _graphMin < 1000 ? _graphMin.ToStringBetter(2, false) : (_graphMin / 1000).ToStringBetter(2, false),

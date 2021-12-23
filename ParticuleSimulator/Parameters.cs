@@ -8,13 +8,13 @@ using ParticleSimulator.ConsoleRendering;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited
 	public static class Parameters {
-		public const int PARTICLES_GROUP_COUNT = 128;
+		public const int PARTICLES_GROUP_COUNT = 256;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 1;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float WORLD_SCALE = 1f;
-		public const float TIME_SCALE = 1f;
+		public const float TIME_SCALE = 1f;//can be any value, including negative
 		public const int DIM = 3;
 		
 		public const float ADAPTIVE_TIME_GRANULARITY = 0.01f;//subdivide time steps as necessary for very close interactions
@@ -27,9 +27,9 @@ namespace ParticleSimulator {
 		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
 		
-		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Luminosity;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
-		public const bool COLOR_USE_FIXED_BANDS = true;
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Random;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.DEFAULT_CONSOLE_COLORS;
+		public const bool COLOR_USE_FIXED_BANDS = false;
 		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
 
 		public const bool LEGEND_ENABLE = true;
@@ -61,7 +61,7 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 0E0f;
+		public const float GRAVITY_MIN_STARTING_MASS = 1E1f;
 		public const float GRAVITY_MAX_STARTING_MASS = 4E2f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
@@ -71,7 +71,7 @@ namespace ParticleSimulator {
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-2f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 0E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 0E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 2E-4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
 
@@ -107,7 +107,7 @@ namespace ParticleSimulator {
 		public static readonly Vector<float> DOMAIN_SIZE = VectorFunctions.New(Enumerable.Repeat(WORLD_SCALE, DIM - 1).Prepend(WORLD_SCALE * WORLD_ASPECT_RATIO));
 		public static readonly Vector<float> DOMAIN_CENTER = DOMAIN_SIZE * 0.5f; 
 		public static readonly float DOMAIN_MAX_RADIUS = Enumerable.Range(0, DIM).MinBy(d => DOMAIN_SIZE[d]) / (2f + WORLD_PADDING_PCT/25f);
-		public static readonly bool AUTOSCALER_ENABLE = !COLOR_USE_FIXED_BANDS && COLOR_ARRAY.Length > 1 && COLOR_METHOD != ParticleColoringMethod.Depth;
+		public static readonly bool AUTOSCALER_ENABLE = !COLOR_USE_FIXED_BANDS && COLOR_ARRAY.Length > 1 && COLOR_METHOD != ParticleColoringMethod.Depth && COLOR_METHOD != ParticleColoringMethod.Random;
 		#endregion Aux
 	}
 }

@@ -16,7 +16,6 @@ namespace ParticleSimulator.Simulation {
 			Parameters.GRAVITY_INITIAL_SEPARATION_SCALER
 			* MathF.Pow(particles.Sum(p => p.Mass) / Parameters.GRAVITY_RADIAL_DENSITY, 1f / Parameters.DIM);
 
-		static Vector<float> asdf = new Vector<float>(new float[] { 0, 0, 0.02f, 0, 0, 0, 0, 0 });
 		protected override MatterClump NewParticle(Vector<float> position, Vector<float> velocity) {
 			float massRange = Parameters.GRAVITY_MAX_STARTING_MASS - Parameters.GRAVITY_MIN_STARTING_MASS,
 				chargeRange = Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE;
@@ -25,7 +24,7 @@ namespace ParticleSimulator.Simulation {
 				Mass = Parameters.GRAVITY_MIN_STARTING_MASS + massRange * (float)Program.Random.NextDouble(),
 				Charge = Parameters.ELECTROSTATIC_MIN_CHARGE + chargeRange * (float)Program.Random.NextDouble(),
 				Position = position,
-				Velocity = velocity + asdf*(float)Program.Random.NextDouble(),
+				Velocity = velocity,
 			};
 		}
 

@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using ParticleSimulator.ConsoleRendering;
 
 namespace ParticleSimulator {
 	public struct ParticleData : IBaryonParticle {
@@ -10,12 +9,12 @@ namespace ParticleSimulator {
 			this.Density = particle.Density;
 			this.Luminosity = particle.Luminosity;
 
-			this.Position = ConsoleRenderer.RotateCoordinates(particle.Position);
+			this.Position = RotateCoordinates(particle.Position);
 
 			bool visible = true;
-			//for (int d = 0; visible && d < Parameters.DIM && d < 3; d++)
-			//	if (this.Position[d] + particle.Radius < 0f || this.Position[d] - particle.Radius >= Parameters.DOMAIN_SIZE[d])
-			//		visible = false;
+			for (int d = 0; visible && d < Parameters.DIM && d < 3; d++)
+				if (this.Position[d] + particle.Radius < 0f || this.Position[d] - particle.Radius >= Parameters.DOMAIN_SIZE[d])
+					visible = false;
 			this.IsVisible = visible;
 		}
 
@@ -29,5 +28,9 @@ namespace ParticleSimulator {
 		public float Luminosity { get; private set; }
 
 		public bool IsVisible { get; private set; }
+
+		public static Vector<float> RotateCoordinates(Vector<float> coordinates) {//TODODO
+			return coordinates;
+		}
 	}
 }

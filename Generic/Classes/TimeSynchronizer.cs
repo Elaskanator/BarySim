@@ -4,7 +4,7 @@ using System.Threading;
 namespace Generic.Models {
 	public class TimeSynchronizer {
 		//see https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-sleep
-		public const double THREAD_PULSE_MS = 1000d / 600d;//TODO read exact value for your system
+		public const double THREAD_PULSE_MS = 15;//TODO read exact value for your system
 
 		public TimeSynchronizer(TimeSpan? value, TimeSpan? min = null) {
 			if (min.HasValue && min.Value.Ticks > 0L) this.Min = min.Value;
