@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 
@@ -34,18 +32,12 @@ namespace ParticleSimulator.Rendering {
 		}
 		
 		public void TitleUpdate(object[] parameters = null) {
-			string result = string.Format("Baryon Simulator {0}D - ", Parameters.DIM);
+			string result = string.Format("Baryon Simulator {0}D", Parameters.DIM);
 
-			if (parameters is null) {
-				result += Program.Simulator.ParticleTree.Count.Pluralize("Particle");
-			} else {
-				IEnumerable<ParticleData> activeParticles = (IEnumerable<ParticleData>)parameters[0];
-				result += string.Format("{0}/{1}",
-					activeParticles.Count(),
-					activeParticles.Count(p => p.IsVisible).Pluralize("Particle"));
-				if (_fpsTimingMs.NumUpdates > 0)
-					result += string.Format(" ({0} fps)", (1d / _fpsTimingMs.Current.TotalSeconds).ToStringBetter(2, false));
-			}
+			if (!(Program.Simulator.ParticleTree is null))
+				result += string.Format(" - {0}", Program.Simulator.ParticleTree.Count.Pluralize("Particle"));
+			if (_fpsTimingMs.NumUpdates > 0)
+				result += string.Format(" ({0} fps)", (1d / _fpsTimingMs.Current.TotalSeconds).ToStringBetter(2, false));
 
 			Console.Title = result;
 		}

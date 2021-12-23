@@ -157,19 +157,37 @@ namespace Generic.Models.Trees {
 			else return false;
 		}
 
-		public IEnumerator<T> GetEnumerator() => this.GetAllElements().GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator() => this.GetAllElements().GetEnumerator();
-		private IEnumerable<T> GetAllElements() {
+		public IEnumerator<T> GetEnumerator() => this.AsEnumerable().GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator() => this.AsEnumerable().GetEnumerator();
+
+		public IEnumerable<T> AsEnumerable() {
 			Queue<ATree<T>> remaining = new Queue<ATree<T>>();
 			remaining.Enqueue(this);
 
 			while (remaining.TryDequeue(out ATree<T> node))
 				if (!node.IsLeaf)
-					foreach (ATree<T> subNode in node.Children)
-						remaining.Enqueue(subNode);
+					for (int i = 0; i < node.Children.Length; i++)
+						remaining.Enqueue(node.Children[i]);
 				else if (!(node._bin is null))
 					foreach (T item in node._bin)
 						yield return item;
+		}
+
+		public Queue<T> ToQueue() {
+			Queue<T> result = new Queue<T>();
+
+			Queue<ATree<T>> remaining = new Queue<ATree<T>>();
+			remaining.Enqueue(this);
+
+			while (remaining.TryDequeue(out ATree<T> node))
+				if (!node.IsLeaf)
+					for (int i = 0; i < node.Children.Length; i++)
+						remaining.Enqueue(node.Children[i]);
+				else if (!(node._bin is null))
+					foreach (T item in node._bin)
+						result.Enqueue(item);
+
+			return result;
 		}
 	}
 }

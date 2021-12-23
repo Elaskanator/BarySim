@@ -24,11 +24,22 @@ namespace ParticleSimulator.Simulation {
 		public virtual bool EnableCollisions => false;
 		public virtual float WorldBounceWeight => 0f;
 
-		public IEnumerable<ParticleData> RefreshSimulation() {
-			foreach (BaryonParticle particle in this.ParticleTree) {
+		public Queue<ParticleData> RefreshSimulation() {//170ms
+			Queue<ParticleData> result = new Queue<ParticleData>();
+			ParticleData pd;
+			Queue<BaryonParticle> particles = this.ParticleTree.ToQueue();
+			BaryonParticle particle;
+			while (particles.TryDequeue(out particle)) {
 				particle.ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
-				yield return new ParticleData(particle);
+				pd = new ParticleData(particle);
+				if (pd.IsVisible) result.Enqueue(pd);
 			}
+			return result;
+
+			//foreach (BaryonParticle particle in this.ParticleTree) {
+			//	particle.ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
+			//	yield return new ParticleData(particle);
+			//}
 		}
 
 		//private float HandleCollisions(IEnumerable<ABaryonParticle> particles) {

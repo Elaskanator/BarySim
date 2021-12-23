@@ -59,7 +59,7 @@ namespace ParticleSimulator {
 		}
 
 		private static RunManager BuildRunManager() {
-			SynchronousBuffer<IEnumerable<ParticleData>> particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
+			SynchronousBuffer<Queue<ParticleData>> particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
 			SynchronousBuffer<ConsoleExtensions.CharInfo[]> rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 			SynchronousBuffer<float[]> scalingResource = new("ScalingData", 0);
 
@@ -91,7 +91,7 @@ namespace ParticleSimulator {
 				CalculatorFn = Renderer.Rasterize,
 				OutputResource = Resource_Rasterization,
 				InputResourceUses = new IPrerequisite[] {
-					new IPrerequisite<IEnumerable<ParticleData>>() {
+					new IPrerequisite<Queue<ParticleData>>() {
 						Resource = particleResource,
 						DoConsume = true,
 			}}});
@@ -99,12 +99,7 @@ namespace ParticleSimulator {
 			StepEval_Monitor = ProcessThread.New(new() {
 				Name = "Monitor",
 				EvaluatorFn = Monitor.TitleUpdate,
-				Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.CONSOLE_TITLE_INTERVAL_MS)),
-				InputResourceUses = new IPrerequisite[] {
-					new IPrerequisite<IEnumerable<ParticleData>>() {
-						Resource = particleResource,
-						OnChange = true,
-			}}});
+				Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.CONSOLE_TITLE_INTERVAL_MS))});
 
 			if (Parameters.AUTOSCALER_ENABLE)
 				StepEval_Autoscale = ProcessThread.New(new() {

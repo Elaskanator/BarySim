@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using Generic.Extensions;
 
@@ -80,7 +79,7 @@ namespace ParticleSimulator.Rendering {
 			ConsoleExtensions.CharInfo[] results = new ConsoleExtensions.CharInfo[NumPixels];
 			float[] scalingValues = new float[NumPixels * 2];
 
-			Queue<Tuple<ParticleData, int, int, float>>[] bins = DiscreteParticleBin((IEnumerable<ParticleData>)parameters[0]);
+			Queue<Tuple<ParticleData, int, int, float>>[] bins = DiscreteParticleBin((Queue<ParticleData>)parameters[0]);
 
 			int topCount, bottomCount;
 			float topRank, topHeightMax, bottomRank, bottomHeightMax;
@@ -157,11 +156,15 @@ namespace ParticleSimulator.Rendering {
 			}
 		}
 
-		private Queue<Tuple<ParticleData, int, int, float>>[] DiscreteParticleBin(IEnumerable<ParticleData> particles) { 
+		private Queue<Tuple<ParticleData, int, int, float>>[] DiscreteParticleBin(Queue<ParticleData> particles) {
 			Queue<Tuple<ParticleData, int, int, float>>[] results = new Queue<Tuple<ParticleData, int, int, float>>[NumPixels];
 			int idx;
-			foreach (ParticleData particle in particles.Where(p => p.IsVisible)) {
-				foreach (Tuple<int, int, float> t in SpreadSample(particle)) {
+			Queue<Tuple<int, int, float>> spreadParticle;
+			Tuple<int, int, float> t;
+			ParticleData particle;
+			while (particles.TryDequeue(out particle)) {
+				spreadParticle = SpreadSample(particle);
+				while (spreadParticle.TryDequeue(out t)) {
 					idx = t.Item1 + Parameters.WINDOW_WIDTH * (t.Item2 >> 1);//divide by two for vertical splitting of console characters
 					results[idx] ??= new Queue<Tuple<ParticleData, int, int, float>>();
 					results[idx].Enqueue(new Tuple<ParticleData, int, int, float>(particle, t.Item1, t.Item2, t.Item3));
@@ -171,7 +174,8 @@ namespace ParticleSimulator.Rendering {
 		}
 
 		//assumption: particle is visible
-		private IEnumerable<Tuple<int, int, float>> SpreadSample(ParticleData particle) {
+		private Queue<Tuple<int, int, float>> SpreadSample(ParticleData particle) {
+			Queue<Tuple<int, int, float>> result = new Queue<Tuple<int, int, float>>();
 			if (particle.Radius > 0) {//let invisible particles remain so
 				Vector<float> scaledPosition = particle.Position * PixelScalar;
 				float scaledRadius = particle.Radius * PixelScalar;
@@ -180,7 +184,7 @@ namespace ParticleSimulator.Rendering {
 
 				if (0 <= xRounded && xRounded < RenderWidth
 				 && 0 <= yRounded && yRounded < RenderHeight)
-					yield return new Tuple<int, int, float>(xRounded, yRounded, scaledPosition[2] + scaledRadius);
+					result.Enqueue(new Tuple<int, int, float>(xRounded, yRounded, scaledPosition[2] + scaledRadius));
 
 				///If the particle's center is not visible,
 				///  Determine the visible radius by truncation, as r_visible = |<dx, dy>|
@@ -218,13 +222,13 @@ namespace ParticleSimulator.Rendering {
 					for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
 						dy = scaledPosition[1] - y;
 						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dy*dy);
-						yield return new Tuple<int, int, float>(xRounded, y, z);
+						result.Enqueue(new Tuple<int, int, float>(xRounded, y, z));
 					}
 					//top half
 					for (int y = yMax; y > yRounded && y >= 0; y--) {
 						dy = y - scaledPosition[1];
 						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dy*dy);
-						yield return new Tuple<int, int, float>(xRounded, y, z);
+						result.Enqueue(new Tuple<int, int, float>(xRounded, y, z));
 					}
 				}
 
@@ -242,19 +246,19 @@ namespace ParticleSimulator.Rendering {
 					//y middle
 					if (0 <= yRounded && yRounded < RenderHeight) {
 						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx);
-						yield return new Tuple<int, int, float>(x, yRounded, z);
+						result.Enqueue(new Tuple<int, int, float>(x, yRounded, z));
 					}
 					//bottom half
 					for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
 						dy = scaledPosition[1] - y;
 						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
-						yield return new Tuple<int, int, float>(x, y, z);
+						result.Enqueue(new Tuple<int, int, float>(x, y, z));
 					}
 					//top half
 					for (int y = yMax; y > yRounded && y >= 0; y--) {
 						dy = y - scaledPosition[1];
 						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
-						yield return new Tuple<int, int, float>(x, y, z);
+						result.Enqueue(new Tuple<int, int, float>(x, y, z));
 					}
 				}
 				//right half
@@ -270,22 +274,23 @@ namespace ParticleSimulator.Rendering {
 					//y middle
 					if (0 <= yRounded && yRounded < RenderHeight) {
 						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx);
-						yield return new Tuple<int, int, float>(x, yRounded, z);
+						result.Enqueue(new Tuple<int, int, float>(x, yRounded, z));
 					}
 					//bottom half
 					for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
 						dy = scaledPosition[1] - y;
 						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
-						yield return new Tuple<int, int, float>(x, y, z);
+						result.Enqueue(new Tuple<int, int, float>(x, y, z));
 					}
 					//top half
 					for (int y = yMax; y > yRounded && y >= 0; y--) {
 						dy = y - scaledPosition[1];
 						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
-						yield return new Tuple<int, int, float>(x, y, z);
+						result.Enqueue(new Tuple<int, int, float>(x, y, z));
 					}
 				}
 			}
+			return result;
 		}
 
 		public void DrawLegend(ConsoleExtensions.CharInfo[] buffer) {

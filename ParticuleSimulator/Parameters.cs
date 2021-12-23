@@ -8,9 +8,9 @@ using ParticleSimulator.Rendering;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited
 	public static class Parameters {
-		public const int PARTICLES_GROUP_COUNT = 32;
+		public const int PARTICLES_GROUP_COUNT = 64;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 32;
+		public const int PARTICLES_GROUP_MAX = 64;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float WORLD_SCALE = 1f;
@@ -62,16 +62,16 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
 		public const float GRAVITY_MIN_STARTING_MASS = 1E1f;
-		public const float GRAVITY_MAX_STARTING_MASS = 3E2f;
+		public const float GRAVITY_MAX_STARTING_MASS = 1E2f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
 		public const float GRAVITY_EJECTA_SPEED = 0.002f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP = 2E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 1E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 0E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 0E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 2E-4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
 
