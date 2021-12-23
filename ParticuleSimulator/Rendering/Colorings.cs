@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ParticleSimulator.ConsoleRendering {
+namespace ParticleSimulator.Rendering {
 	public enum ParticleColoringMethod {
 		Random,
 		Count,

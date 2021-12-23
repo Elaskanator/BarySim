@@ -4,7 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Generic.Extensions;
 
-namespace ParticleSimulator.ConsoleRendering {
+namespace ParticleSimulator.Rendering {
 	public class ConsoleRenderer {
 		public Autoscaler Scaling { get; private set; }
 
@@ -126,6 +126,7 @@ namespace ParticleSimulator.ConsoleRendering {
 
 			return results;
 		}
+
 		private float ComputeRank(Tuple<ParticleData, int, int, float> sample, int count, float running) {
 			return
 				Parameters.COLOR_METHOD == ParticleColoringMethod.Count
@@ -197,10 +198,10 @@ namespace ParticleSimulator.ConsoleRendering {
 						float dz = scaledPosition[2] - Parameters.DOMAIN_SIZE[2] * PixelScalar;
 						visibleRadius = MathF.Sqrt(scaledRadius*scaledRadius - dz*dz);
 					} else visibleRadius = scaledRadius;
-				} else visibleRadius = particle.Radius * PixelScalar;
+				} else visibleRadius = scaledRadius;
 
-				int xMin = (int)Math.Ceiling(scaledPosition[0] - visibleRadius),
-					xMax = (int)(scaledPosition[0] + visibleRadius);
+				int xMin = (int)Math.Ceiling(scaledPosition[0] - visibleRadius + 0.5f),
+					xMax = (int)(scaledPosition[0] + visibleRadius - 0.5f);
 				xMin = xMin < 0 ? 0 : xMin;
 				xMax = xMax >= RenderWidth ? RenderWidth - 1 : xMax;
 
@@ -209,24 +210,20 @@ namespace ParticleSimulator.ConsoleRendering {
 
 				//draw a vertical line at dx = 0
 				if (0 <= xRounded && xRounded < RenderWidth) {
-					yMin = (int)(scaledPosition[1] - visibleRadius + 0.5f);
+					yMin = (int)Math.Ceiling(scaledPosition[1] - visibleRadius + 0.5f);
 					yMin = yMin < 0 ? 0 : yMin;
 					yMax = (int)(scaledPosition[1] + visibleRadius - 0.5f);
 					yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
 					//bottom half
 					for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
 						dy = scaledPosition[1] - y;
-						z = Parameters.DIM > 2
-							? scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dy*dy)
-							: particle.ID;//preserve render order
+						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dy*dy);
 						yield return new Tuple<int, int, float>(xRounded, y, z);
 					}
 					//top half
 					for (int y = yMax; y > yRounded && y >= 0; y--) {
 						dy = y - scaledPosition[1];
-						z = Parameters.DIM > 2
-							? scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dy*dy)
-							: particle.ID;//preserve render order
+						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dy*dy);
 						yield return new Tuple<int, int, float>(xRounded, y, z);
 					}
 				}
@@ -237,32 +234,26 @@ namespace ParticleSimulator.ConsoleRendering {
 					dx = scaledPosition[0] - x;
 					yRangeRemainder = MathF.Sqrt(visibleRadius*visibleRadius - dx*dx);
 
-					yMin = (int)(scaledPosition[1] - yRangeRemainder + 0.5f);
+					yMin = (int)Math.Ceiling(scaledPosition[1] - yRangeRemainder + 0.5f);
 					yMin = yMin < 0 ? 0 : yMin;
 					yMax = (int)(scaledPosition[1] + yRangeRemainder - 0.5f);
 					yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
 					
 					//y middle
 					if (0 <= yRounded && yRounded < RenderHeight) {
-						z = Parameters.DIM > 2
-							? scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx)
-							: particle.ID;//preserve render order
+						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx);
 						yield return new Tuple<int, int, float>(x, yRounded, z);
 					}
 					//bottom half
 					for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
 						dy = scaledPosition[1] - y;
-						z = Parameters.DIM > 2
-							? scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy)
-							: particle.ID;//preserve render order
+						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
 						yield return new Tuple<int, int, float>(x, y, z);
 					}
 					//top half
 					for (int y = yMax; y > yRounded && y >= 0; y--) {
 						dy = y - scaledPosition[1];
-						z = Parameters.DIM > 2
-							? scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy)
-							: particle.ID;//preserve render order
+						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
 						yield return new Tuple<int, int, float>(x, y, z);
 					}
 				}
@@ -271,32 +262,26 @@ namespace ParticleSimulator.ConsoleRendering {
 					dx = x - scaledPosition[0];
 					yRangeRemainder = MathF.Sqrt(visibleRadius*visibleRadius - dx*dx);
 
-					yMin = (int)(scaledPosition[1] - yRangeRemainder + 0.5f);
+					yMin = (int)Math.Ceiling(scaledPosition[1] - yRangeRemainder + 0.5f);
 					yMin = yMin < 0 ? 0 : yMin;
 					yMax = (int)(scaledPosition[1] + yRangeRemainder - 0.5f);
 					yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
 					
 					//y middle
 					if (0 <= yRounded && yRounded < RenderHeight) {
-						z = Parameters.DIM > 2
-							? scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx)
-							: particle.ID;//preserve render order
+						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx);
 						yield return new Tuple<int, int, float>(x, yRounded, z);
 					}
 					//bottom half
 					for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
 						dy = scaledPosition[1] - y;
-						z = Parameters.DIM > 2
-							? scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy)
-							: particle.ID;//preserve render order
+						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
 						yield return new Tuple<int, int, float>(x, y, z);
 					}
 					//top half
 					for (int y = yMax; y > yRounded && y >= 0; y--) {
 						dy = y - scaledPosition[1];
-						z = Parameters.DIM > 2
-							? scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy)
-							: particle.ID;//preserve render order
+						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
 						yield return new Tuple<int, int, float>(x, y, z);
 					}
 				}

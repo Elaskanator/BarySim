@@ -1,7 +1,7 @@
 ﻿using System;
 using Generic.Extensions;
 using Generic.Models;
-using ParticleSimulator.ConsoleRendering;
+using ParticleSimulator.Rendering;
 using ParticleSimulator.Simulation;
 using ParticleSimulator.Engine;
 using System.Collections.Generic;

@@ -4,7 +4,7 @@ using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 
-namespace ParticleSimulator.ConsoleRendering {
+namespace ParticleSimulator.Rendering {
 	public class Autoscaler {
 		public Autoscaler() {
 			if (Parameters.COLOR_USE_FIXED_BANDS)

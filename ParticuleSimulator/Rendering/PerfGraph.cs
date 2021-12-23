@@ -3,7 +3,7 @@ using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 
-namespace ParticleSimulator.ConsoleRendering {
+namespace ParticleSimulator.Rendering {
 	public class PerfGraph {
 		public PerfGraph(int numStats) {
 			int width =

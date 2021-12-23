@@ -4,7 +4,7 @@ using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 
-namespace ParticleSimulator.ConsoleRendering {
+namespace ParticleSimulator.Rendering {
 	public class PerfMon {
 		public PerfMon(int numStats) {
 			_statsHeaderValues = new HeaderValue[
