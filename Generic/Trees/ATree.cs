@@ -173,7 +173,7 @@ namespace Generic.Models.Trees {
 						yield return item;
 		}
 
-		public Queue<T> ToQueue() {
+		public Queue<T> AsQueue() {
 			Queue<T> result = new Queue<T>();
 
 			Queue<ATree<T>> remaining = new Queue<ATree<T>>();

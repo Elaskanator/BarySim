@@ -205,9 +205,28 @@ namespace Generic.Vectors {
 						Math.Cos(phi)
 					};
 				default:
-					throw new NotImplementedException();
-					//return Enumerable.Range(0, dimensionality).Select(i => rand.NextDouble()).ToArray().Normalize();//TODODODO
+					//throw new NotImplementedException();
+					return Enumerable.Range(0, dimensionality).Select(i => rand.NextDouble()).ToArray().Normalize();//TODODODO
 			}
+		}
+
+		/// <summary>
+		/// Normalizes a vector to have a Euclidean length of 1
+		/// </summary>
+		/// <param name="v">The vector to normalize</param>
+		public static double[] Normalize(this double[] v, double len = 1d) {
+			double magnitude = Magnitude(v);
+			return magnitude == len
+				? v
+				: v.Multiply(len / magnitude);
+		}
+
+		public static double Magnitude(this double[] v) {
+			return Math.Sqrt(v.Sum(x => x * x));
+		}
+
+		public static double[] Multiply(this double[] v, double scalar) {
+			return v.Select(n => n * scalar).ToArray();
 		}
 
 		//see https://en.wikipedia.org/wiki/Volume_of_an_n-ball#Low_dimensions
@@ -286,27 +305,8 @@ namespace Generic.Vectors {
 		//	return v1.Select((n, i) => n - v2[i]).ToArray();
 		//}
 
-		//public static double[] Multiply(this double[] v, double scalar) {
-		//	return v.Select(n => n * scalar).ToArray();
-		//}
-
 		//public static double[] Divide(this double[] v, double scalar) {
 		//	return v.Select(n => n / scalar).ToArray();
-		//}
-
-		///// <summary>
-		///// Normalizes a vector to have a Euclidean length of 1
-		///// </summary>
-		///// <param name="v">The vector to normalize</param>
-		//public static double[] Normalize(this double[] v, double len = 1d) {
-		//	double magnitude = Magnitude(v);
-		//	return magnitude == len
-		//		? v
-		//		: v.Multiply(len / magnitude);
-		//}
-
-		//public static double Magnitude(this double[] v) {
-		//	return Math.Sqrt(v.Sum(x => x * x));
 		//}
 
 		//public static double DotProduct(this double[] v1, double[] v2) {

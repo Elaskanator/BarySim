@@ -7,6 +7,7 @@ namespace ParticleSimulator.Rendering {
 		Density,
 		Luminosity,
 		Depth,
+		Group,
 	}
 
 	public static class ColoringScales {

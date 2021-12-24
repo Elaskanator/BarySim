@@ -12,13 +12,15 @@ namespace Generic.Models.Trees {
 			this.CornerRight = cornerRight;
 		}
 		protected AQuadTree(int dim) { this.Dim = dim; }
+
 		protected abstract AQuadTree<TItem, TCorner> NewNode(int directionMask, bool isExpansion);
+
 		private AQuadTree<TItem, TCorner> CreateNewNode(int directionMask, bool isExpansion) {
 			AQuadTree<TItem, TCorner> result = this.NewNode(directionMask, isExpansion);
 			result._limitReached = !isExpansion && this.DetermineIfLimitReached();
 			return result;
 		}
-		protected virtual bool DetermineIfLimitReached() => false;
+
 		public override string ToString() => string.Format("{0}[{1} thru {2}]", base.ToString(), string.Join("", this.CornerLeft), string.Join("", this.CornerRight));
 		
 		public int Dim { get; private set; }
@@ -28,7 +30,9 @@ namespace Generic.Models.Trees {
 		private bool _limitReached = false;
 		public sealed override bool LimitReached => this._limitReached;
 
-		protected override int GetChildIndex(TItem item) => item.BitmaskLessThan(this.Center, this.Dim);//left-handed convention [a, b)
+		protected override int GetChildIndex(TItem item) => item.BitmaskGreaterThanOrEqual(this.Center, this.Dim);//left-handed convention [a, b)
+		protected int InverseIndex(int idx) => (1 << this.Dim) - idx - 1;
+		protected virtual bool DetermineIfLimitReached() => false;
 		
 		public override bool DoesEncompass(TItem item) {//left-handed convention [a, b)
 			return item.BitmaskLessThan(this.CornerLeft, this.Dim) == 0
@@ -45,6 +49,7 @@ namespace Generic.Models.Trees {
 			node.Add(item);
 			return node;
 		}
+
 		public AQuadTree<TItem, TCorner> AddUpOrDown(IEnumerable<TItem> items) {
 			AQuadTree<TItem, TCorner> root = this;
 			foreach (TItem item in items)
@@ -58,6 +63,7 @@ namespace Generic.Models.Trees {
 
 		private AQuadTree<TItem, TCorner> Expand(TItem item) {
 			int quadrantMask = this.GetChildIndex(item);
+			int inverseQuadrantMask = this.InverseIndex(quadrantMask);
 
 			AQuadTree<TItem, TCorner> newParent = this.CreateNewNode(quadrantMask, true);
 			this.Parent = newParent;
@@ -66,7 +72,7 @@ namespace Generic.Models.Trees {
 			newParent.Count = this.Count;
 			newParent.Children = new AQuadTree<TItem, TCorner>[1u << this.Dim];
 			foreach (AQuadTree<TItem, TCorner> node in newParent.FormSubnodes()) {
-				if (i == quadrantMask)
+				if (i == inverseQuadrantMask)
 					newParent.Children[i] = this;
 				else newParent.Children[i] = node;
 				i++;

@@ -18,11 +18,11 @@ namespace Generic.Vectors {
 	public interface IMultidimensionalFloat : IMultiDimensional<Vector<float>> {
 		int IMultiDimensional<Vector<float>>.BitmaskEqual(Vector<float> other, int? dim = null) => MultidimensionalSIMD.BitmaskEqual(this.Position, other, dim);
 
-		int IMultiDimensional<Vector<float>>.BitmaskGreaterThanOrEqual(Vector<float> other, int? dim = null) => MultidimensionalSIMD.BitmaskGreaterThanOrEqual(this.Position, other, dim);
 		int IMultiDimensional<Vector<float>>.BitmaskGreaterThan(Vector<float> other, int? dim = null) => MultidimensionalSIMD.BitmaskGreaterThan(this.Position, other, dim);
+		int IMultiDimensional<Vector<float>>.BitmaskGreaterThanOrEqual(Vector<float> other, int? dim = null) => MultidimensionalSIMD.BitmaskGreaterThanOrEqual(this.Position, other, dim);
 
-		int IMultiDimensional<Vector<float>>.BitmaskLessThanOrEqual(Vector<float> other, int? dim = null) => MultidimensionalSIMD.BitmaskLessThanOrEqual(this.Position, other, dim);
 		int IMultiDimensional<Vector<float>>.BitmaskLessThan(Vector<float> other, int? dim = null) => MultidimensionalSIMD.BitmaskLessThan(this.Position, other, dim);
+		int IMultiDimensional<Vector<float>>.BitmaskLessThanOrEqual(Vector<float> other, int? dim = null) => MultidimensionalSIMD.BitmaskLessThanOrEqual(this.Position, other, dim);
 	}
 	public static class MultidimensionalSIMD {
 		public static int BitmaskEqual(Vector<float> first, Vector<float> second, int? dim = null) =>

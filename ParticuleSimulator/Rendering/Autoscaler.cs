@@ -21,7 +21,9 @@ namespace ParticleSimulator.Rendering {
 
 		public ConsoleColor RankColor(float rank, ParticleData particle) {
 			rank = Parameters.COLOR_METHOD == ParticleColoringMethod.Random
-				? (particle.ID + this._randOffset) % this.Values.Length
+					? (particle.ID + this._randOffset) % this.Values.Length
+				: Parameters.COLOR_METHOD == ParticleColoringMethod.Group
+					? (particle.GroupID + this._randOffset) % this.Values.Length
 				: rank;
 			return Parameters.COLOR_ARRAY[this.Values.Drop(1).TakeWhile(ds => ds < rank).Count()];
 		}

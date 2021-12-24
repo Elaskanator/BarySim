@@ -32,14 +32,14 @@ namespace Generic.Models.Trees {
 		
 		private Vector<int> NewLeftBitmask(int directionMask) {
 			Span<int> values = stackalloc int[Vector<int>.Count];
-			values[0] = (directionMask & 0x01) > 0 ? -1 : 0;
-			values[1] = (directionMask & 0x02) > 0 ? -1 : 0;
-			values[2] = (directionMask & 0x04) > 0 ? -1 : 0;
-			values[3] = (directionMask & 0x08) > 0 ? -1 : 0;
-			values[4] = (directionMask & 0x10) > 0 ? -1 : 0;
-			values[5] = (directionMask & 0x20) > 0 ? -1 : 0;
-			values[6] = (directionMask & 0x40) > 0 ? -1 : 0;
-			values[7] = (directionMask & 0x80) > 0 ? -1 : 0;
+			values[0] = (directionMask & 0x01) == 0 ? -1 : 0;
+			values[1] = (directionMask & 0x02) == 0 ? -1 : 0;
+			values[2] = (directionMask & 0x04) == 0 ? -1 : 0;
+			values[3] = (directionMask & 0x08) == 0 ? -1 : 0;
+			values[4] = (directionMask & 0x10) == 0 ? -1 : 0;
+			values[5] = (directionMask & 0x20) == 0 ? -1 : 0;
+			values[6] = (directionMask & 0x40) == 0 ? -1 : 0;
+			values[7] = (directionMask & 0x80) == 0 ? -1 : 0;
 			return new Vector<int>(values);
 		}
 

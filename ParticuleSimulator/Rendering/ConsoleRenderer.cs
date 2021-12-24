@@ -5,6 +5,8 @@ using Generic.Extensions;
 
 namespace ParticleSimulator.Rendering {
 	public class ConsoleRenderer {
+		public const float OVERLAP_THRESHOLD = 0.5f;
+
 		public Autoscaler Scaling { get; private set; }
 
 		public readonly int NumPixels;
@@ -118,6 +120,7 @@ namespace ParticleSimulator.Rendering {
 			}
 
 			if (Parameters.LEGEND_ENABLE
+			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Group
 			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Random
 			&& (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth || Parameters.DIM > 2))
 				DrawLegend(results);
@@ -204,8 +207,8 @@ namespace ParticleSimulator.Rendering {
 					} else visibleRadius = scaledRadius;
 				} else visibleRadius = scaledRadius;
 
-				int xMin = (int)Math.Ceiling(scaledPosition[0] - visibleRadius + 0.5f),
-					xMax = (int)(scaledPosition[0] + visibleRadius - 0.5f);
+				int xMin = (int)Math.Ceiling(scaledPosition[0] - visibleRadius + OVERLAP_THRESHOLD),
+					xMax = (int)(scaledPosition[0] + visibleRadius - OVERLAP_THRESHOLD);
 				xMin = xMin < 0 ? 0 : xMin;
 				xMax = xMax >= RenderWidth ? RenderWidth - 1 : xMax;
 
@@ -214,9 +217,9 @@ namespace ParticleSimulator.Rendering {
 
 				//draw a vertical line at dx = 0
 				if (0 <= xRounded && xRounded < RenderWidth) {
-					yMin = (int)Math.Ceiling(scaledPosition[1] - visibleRadius + 0.5f);
+					yMin = (int)Math.Ceiling(scaledPosition[1] - visibleRadius + OVERLAP_THRESHOLD);
 					yMin = yMin < 0 ? 0 : yMin;
-					yMax = (int)(scaledPosition[1] + visibleRadius - 0.5f);
+					yMax = (int)(scaledPosition[1] + visibleRadius - OVERLAP_THRESHOLD);
 					yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
 					//bottom half
 					for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
@@ -238,9 +241,9 @@ namespace ParticleSimulator.Rendering {
 					dx = scaledPosition[0] - x;
 					yRangeRemainder = MathF.Sqrt(visibleRadius*visibleRadius - dx*dx);
 
-					yMin = (int)Math.Ceiling(scaledPosition[1] - yRangeRemainder + 0.5f);
+					yMin = (int)Math.Ceiling(scaledPosition[1] - yRangeRemainder + OVERLAP_THRESHOLD);
 					yMin = yMin < 0 ? 0 : yMin;
-					yMax = (int)(scaledPosition[1] + yRangeRemainder - 0.5f);
+					yMax = (int)(scaledPosition[1] + yRangeRemainder - OVERLAP_THRESHOLD);
 					yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
 					
 					//y middle
@@ -266,9 +269,9 @@ namespace ParticleSimulator.Rendering {
 					dx = x - scaledPosition[0];
 					yRangeRemainder = MathF.Sqrt(visibleRadius*visibleRadius - dx*dx);
 
-					yMin = (int)Math.Ceiling(scaledPosition[1] - yRangeRemainder + 0.5f);
+					yMin = (int)Math.Ceiling(scaledPosition[1] - yRangeRemainder + OVERLAP_THRESHOLD);
 					yMin = yMin < 0 ? 0 : yMin;
-					yMax = (int)(scaledPosition[1] + yRangeRemainder - 0.5f);
+					yMax = (int)(scaledPosition[1] + yRangeRemainder - OVERLAP_THRESHOLD);
 					yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
 					
 					//y middle

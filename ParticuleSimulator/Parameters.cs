@@ -8,19 +8,20 @@ using ParticleSimulator.Rendering;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited
 	public static class Parameters {
-		public const int PARTICLES_GROUP_COUNT = 64;
+		public const int PARTICLES_GROUP_COUNT = 100;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 64;
+		public const int PARTICLES_GROUP_MAX = 1;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
-		public const float WORLD_SCALE = 1f;
-		public const float TIME_SCALE = 1f;//can be any value, including negative
 		public const int DIM = 3;
+		public const float WORLD_SCALE = 1f;
+		public const float TIME_SCALE = 4f;//can be any value, including negative
 		
 		public const float ADAPTIVE_TIME_GRANULARITY = 0.01f;//subdivide time steps as necessary for very close interactions
 		public const float ADAPTIVE_TIME_CRITERION = 0.01f;//a weighted value based on range and velocity to other particles in the nearfield group
 		public const float PARTICLE_MAX_ACCELERATION = 0.0025f;
 		
+		public const bool WORLD_BOUNCING = true;
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNDING = false;
 		public const float WORLD_EPSILON = 1E-4f;
@@ -37,8 +38,8 @@ namespace ParticleSimulator {
 		public const float AUTOSCALE_CUTOFF_PCT = 0f;
 		public const float AUTOSCALE_MIN_STEP = 1f;
 		
-		public const float TARGET_FPS = -1;
 		public const float MAX_FPS = 30;
+		public const float TARGET_FPS = -1;
 		public static readonly int WINDOW_WIDTH = Console.LargestWindowWidth;
 		public static readonly int WINDOW_HEIGHT = Console.LargestWindowHeight;//using top and bottom halves of each character to get float the verticle resolution
 
@@ -62,7 +63,7 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
 		public const float GRAVITY_MIN_STARTING_MASS = 1E1f;
-		public const float GRAVITY_MAX_STARTING_MASS = 1E2f;
+		public const float GRAVITY_MAX_STARTING_MASS = 4E2f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
@@ -71,7 +72,7 @@ namespace ParticleSimulator {
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-4f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0E-4f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 0E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 2E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 4E-4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
 
@@ -98,7 +99,7 @@ namespace ParticleSimulator {
 		public const float PERF_SMA_ALPHA = 0.05f;
 
 		public const int GRAPH_WIDTH = -1;
-		public const int GRAPH_HEIGHT = 8;//at least 2
+		public const int GRAPH_HEIGHT = 20;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
 		public const float PERF_GRAPH_PERCENTILE_CUTOFF = 10f;
@@ -107,7 +108,11 @@ namespace ParticleSimulator {
 		public static readonly Vector<float> DOMAIN_SIZE = VectorFunctions.New(Enumerable.Repeat(WORLD_SCALE, DIM - 1).Prepend(WORLD_SCALE * WORLD_ASPECT_RATIO));
 		public static readonly Vector<float> DOMAIN_CENTER = DOMAIN_SIZE * 0.5f; 
 		public static readonly float DOMAIN_MAX_RADIUS = Enumerable.Range(0, DIM).MinBy(d => DOMAIN_SIZE[d]) / (2f + WORLD_PADDING_PCT/25f);
-		public static readonly bool AUTOSCALER_ENABLE = !COLOR_USE_FIXED_BANDS && COLOR_ARRAY.Length > 1 && COLOR_METHOD != ParticleColoringMethod.Depth && COLOR_METHOD != ParticleColoringMethod.Random;
+		public static readonly bool AUTOSCALER_ENABLE =
+			!COLOR_USE_FIXED_BANDS && COLOR_ARRAY.Length > 1
+			&& COLOR_METHOD != ParticleColoringMethod.Depth
+			&& COLOR_METHOD != ParticleColoringMethod.Group
+			&& COLOR_METHOD != ParticleColoringMethod.Random;
 		#endregion Aux
 	}
 }

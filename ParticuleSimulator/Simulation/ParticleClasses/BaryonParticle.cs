@@ -42,15 +42,24 @@ namespace ParticleSimulator {
 			this.Position += this.Velocity * timeStep;
 		}
 
-		public void HandleBounds() {
+		public void HandleBounds(float timeStep) {
 			if (Parameters.WORLD_WRAPPING)
 				this.WrapPosition();
+			else if (Parameters.WORLD_BOUNCING)
+				this.BounceWalls(timeStep);
 			else if (Parameters.WORLD_BOUNDING)
 				this.BoundPosition();
 			else this.CheckOutOfBounds();
 		}
 
-		public bool WrapPosition() {
+		private void CheckOutOfBounds() {
+			for (int d = 0; d < Parameters.DIM; d++)
+				if (this.Position[d] < -Parameters.WORLD_DEATH_BOUND_CNT * Parameters.DOMAIN_SIZE[d]
+				|| this.Position[d] > Parameters.DOMAIN_SIZE[d] * (1f + Parameters.WORLD_DEATH_BOUND_CNT))
+					this.IsEnabled = false;
+		}
+
+		private bool WrapPosition() {
 			bool result = false;
 			float[] coords = new float[Parameters.DIM];
 			for (int d = 0; d < Parameters.DIM; d++)
@@ -66,28 +75,56 @@ namespace ParticleSimulator {
 				this.Position = VectorFunctions.New(coords);
 			return result;
 		}
-		public bool BoundPosition() {
+
+		private bool BoundPosition() {
 			bool result = false;
 			float[] coords = new float[Parameters.DIM];
 			for (int d = 0; d < Parameters.DIM; d++) 
-				if (this.Position[d] < 0f) {
-					coords[d] = 0f;
+				if (this.Position[d] - this.Radius < 0f) {
+					coords[d] = this.Radius;
 					result = true;
-				} else if (this.Position[d] >= Parameters.DOMAIN_SIZE[d]) {
-					coords[d] = Parameters.DOMAIN_SIZE[d] - Parameters.WORLD_EPSILON;
+				} else if (this.Position[d] + this.Radius > Parameters.DOMAIN_SIZE[d]) {
+					coords[d] = Parameters.DOMAIN_SIZE[d] - this.Radius;
 					result = true;
-				}
+				} else coords[d] = this.Position[d];
 				
 			if (result)
 				this.Position = VectorFunctions.New(coords);
 			return result;
 		}
 
-		public void CheckOutOfBounds() {
-			for (int d = 0; d < Parameters.DIM; d++)
-				if (this.Position[d] < -Parameters.WORLD_DEATH_BOUND_CNT * Parameters.DOMAIN_SIZE[d]
-				|| this.Position[d] > Parameters.DOMAIN_SIZE[d] * (1f + Parameters.WORLD_DEATH_BOUND_CNT))
-					this.IsEnabled = false;
+		private bool BounceWalls(float timeStep) {
+			bool result = false;
+			float[] coords = new float[Parameters.DIM],
+				velocity = new float[Parameters.DIM];
+			for (int d = 0; d < Parameters.DIM; d++) {
+				coords[d] = this.Position[d];
+				velocity[d] = this.Velocity[d];
+				if (this.Position[d] - this.Radius < 0f) {
+					coords[d] = this.Radius;
+					result = true;
+				}
+				if (this.Position[d] + this.Radius >  Parameters.DOMAIN_SIZE[d]) {
+					coords[d] = Parameters.DOMAIN_SIZE[d] - this.Radius;
+					result = true;
+				}
+
+				if (this.Position[d] - this.Radius + this.Velocity[d]*timeStep < 0f) {
+					velocity[d] = -this.Velocity[d];
+					coords[d] = this.Radius;
+					result = true;
+				} else if (this.Position[d] + this.Radius + this.Velocity[d]*timeStep > Parameters.DOMAIN_SIZE[d]) {
+					velocity[d] = -this.Velocity[d];
+					coords[d] = Parameters.DOMAIN_SIZE[d] - this.Radius;
+					result = true;
+				}
+			}
+
+			if (result) {
+				this.Position = VectorFunctions.New(coords);
+				this.Velocity = VectorFunctions.New(velocity);
+			}
+			return result;
 		}
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 
@@ -23,7 +24,10 @@ namespace ParticleSimulator.Rendering {
 				int frameIdx = _framesCompleted++ % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN;
 
 				TimeSpan currentFpsTime = Program.StepEval_Render.FullTime.LastUpdate;
-				TimeSpan currentFrameTime = Program.StepEval_Simulate.ExclusiveTime.LastUpdate;
+				TimeSpan currentFrameTime = new TimeSpan[] {
+					Program.StepEval_Simulate.ExclusiveTime.LastUpdate,
+					Program.StepEval_Rasterize.ExclusiveTime.LastUpdate,
+				}.Max();
 
 				_fpsTimingMs.Update(currentFpsTime);
 				_frameTimingMs.Update(currentFrameTime);
