@@ -19,13 +19,23 @@ namespace ParticleSimulator.Rendering {
 		public float[] Values { get; private set; }
 		private int _randOffset = 0;
 
-		public ConsoleColor RankColor(float rank, ParticleData particle) {
-			rank = Parameters.COLOR_METHOD == ParticleColoringMethod.Random
-					? (particle.ID + this._randOffset) % this.Values.Length
-				: Parameters.COLOR_METHOD == ParticleColoringMethod.Group
-					? (particle.GroupID + this._randOffset) % this.Values.Length
-				: rank;
-			return Parameters.COLOR_ARRAY[this.Values.Drop(1).TakeWhile(ds => ds < rank).Count()];
+		public ConsoleColor RankColor(ParticleData particle, int count, float density) {
+			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random) {
+				return Parameters.COLOR_ARRAY[(particle.ID + this._randOffset) % this.Values.Length];
+			} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group) {
+				return Parameters.COLOR_ARRAY[(particle.GroupID + this._randOffset) % this.Values.Length];
+			} else {
+				float rank;
+				if (Parameters.COLOR_METHOD == ParticleColoringMethod.Count) {
+					rank = count;
+				} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Density) {
+					rank = density;
+				} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity) {
+					rank = particle.Luminosity;
+				} else return Parameters.COLOR_ARRAY[0];
+
+				return Parameters.COLOR_ARRAY[this.Values.Drop(1).TakeWhile(ds => ds < rank).Count()];
+			}
 		}
 
 		public void Update(object[] parameters) {

@@ -34,7 +34,7 @@ namespace ParticleSimulator.Simulation {
 				particle.ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
 				particle.HandleBounds(Parameters.TIME_SCALE);
 				pd = new ParticleData(particle);
-				if (pd.IsVisible) result.Enqueue(pd);
+				result.Enqueue(pd);
 			}
 			return result;
 		}

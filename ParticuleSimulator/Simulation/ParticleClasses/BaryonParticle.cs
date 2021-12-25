@@ -6,7 +6,6 @@ namespace ParticleSimulator {
 		int ID { get; }
 		int GroupID { get; }
 		float Radius { get; }
-		float Density { get; }
 		float Luminosity { get; }
 		
 		bool Equals(object other) => (other is IBaryonParticle data) && this.ID == data.ID;
@@ -26,7 +25,7 @@ namespace ParticleSimulator {
 		public virtual float Mass { get; set; }
 		public virtual float Charge { get; set; }
 		public virtual float Radius { get; set; }
-		public virtual float Density { get; set; }
+		//public virtual float Density { get; set; }
 		public virtual float Luminosity { get; set; }
 		
 		public Vector<float> Position { get; set; }

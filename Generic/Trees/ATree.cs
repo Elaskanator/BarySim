@@ -53,7 +53,7 @@ namespace Generic.Models.Trees {
 		protected virtual void Incorporate(T item) { }
 		protected virtual void AfterRemove(T item) { }
 
-		protected virtual int GetChildIndex(T item) {
+		protected virtual int GetIndex(T item) {
 			for (int i = 0; i < this.Children.Length; i++)
 				if (this.Children[i].DoesEncompass(item))
 					return i;
@@ -65,7 +65,7 @@ namespace Generic.Models.Trees {
 			while (!node.IsLeaf) {
 				node.Count++;
 				node.Incorporate(item);
-				node = node.Children[node.GetChildIndex(item)];
+				node = node.Children[node.GetIndex(item)];
 			}
 			node.Count++;
 			node.Incorporate(item);
@@ -79,11 +79,11 @@ namespace Generic.Models.Trees {
 			this.Children = this.FormSubnodes().ToArray();
 			foreach (T subItem in this._bin)
 				this.Children
-					[this.GetChildIndex(subItem)]
+					[this.GetIndex(subItem)]
 					.Add(subItem);
 			this._bin = null;
 			this.Children
-				[this.GetChildIndex(item)]
+				[this.GetIndex(item)]
 				.Add(item);
 		}
 
@@ -94,7 +94,7 @@ namespace Generic.Models.Trees {
 				bool encompasses = node.DoesEncompass(item);
 				while (encompasses && !node.IsLeaf) {
 					chain.Enqueue(node);
-					node = node.Children[this.GetChildIndex(item)];
+					node = node.Children[this.GetIndex(item)];
 					encompasses = node.DoesEncompass(item);
 				}
 
@@ -115,7 +115,7 @@ namespace Generic.Models.Trees {
 			node.Count--;
 			node.AfterRemove(item);
 			while (!node.IsLeaf) {
-				node = node.Children[this.GetChildIndex(item)];
+				node = node.Children[this.GetIndex(item)];
 				node.Count--;
 				node.AfterRemove(item);
 			}
@@ -148,7 +148,7 @@ namespace Generic.Models.Trees {
 			ATree<T> node = this;
 			bool encompasses = node.DoesEncompass(item);
 			while (encompasses && !node.IsLeaf) {
-				node = node.Children[this.GetChildIndex(item)];
+				node = node.Children[this.GetIndex(item)];
 				encompasses = node.DoesEncompass(item);
 			}
 
@@ -161,33 +161,51 @@ namespace Generic.Models.Trees {
 		IEnumerator IEnumerable.GetEnumerator() => this.AsEnumerable().GetEnumerator();
 
 		public IEnumerable<T> AsEnumerable() {
-			Queue<ATree<T>> remaining = new Queue<ATree<T>>();
-			remaining.Enqueue(this);
+			Stack<ATree<T>> remaining = new Stack<ATree<T>>();
 
-			while (remaining.TryDequeue(out ATree<T> node))
-				if (!node.IsLeaf)
-					for (int i = 0; i < node.Children.Length; i++)
-						remaining.Enqueue(node.Children[i]);
-				else if (!(node._bin is null))
-					foreach (T item in node._bin)
-						yield return item;
+			remaining.Push(this);
+
+			while (remaining.TryPop(out ATree<T> node))
+				if (node.IsLeaf) {
+					if (!(node._bin is null))
+						foreach (T item in node._bin)
+							yield return item;
+				} else for (int i = 0; i < node.Children.Length; i++)
+					remaining.Push(node.Children[i]);
 		}
 
 		public Queue<T> AsQueue() {
 			Queue<T> result = new Queue<T>();
 
-			Queue<ATree<T>> remaining = new Queue<ATree<T>>();
-			remaining.Enqueue(this);
+			Stack<ATree<T>> remaining = new Stack<ATree<T>>();
+			remaining.Push(this);
 
-			while (remaining.TryDequeue(out ATree<T> node))
-				if (!node.IsLeaf)
-					for (int i = 0; i < node.Children.Length; i++)
-						remaining.Enqueue(node.Children[i]);
-				else if (!(node._bin is null))
-					foreach (T item in node._bin)
-						result.Enqueue(item);
+			while (remaining.TryPop(out ATree<T> node))
+				if (node.IsLeaf) {
+					if (!(node._bin is null))
+						foreach (T item in node._bin)
+							result.Enqueue(item);
+				} else for (int i = 0; i < node.Children.Length; i++)
+					remaining.Push(node.Children[i]);
 
 			return result;
 		}
+
+		//public Stack<T> AsStack() {
+		//	Stack<T> result = new Stack<T>();
+
+		//	Stack<ATree<T>> remaining = new Stack<ATree<T>>();
+		//	remaining.Push(this);
+
+		//	while (remaining.TryPop(out ATree<T> node))
+		//		if (node.IsLeaf) {
+		//			if (!(node._bin is null))
+		//				foreach (T item in node._bin)
+		//					result.Push(item);
+		//		} else for (int i = 0; i < node.Children.Length; i++)
+		//			remaining.Push(node.Children[i]);
+
+		//	return result;
+		//}
 	}
 }

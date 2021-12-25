@@ -44,15 +44,16 @@ namespace ParticleSimulator.Simulation {
 		private bool IsNeighbor(BarnesHutTree<T> other) => this.Center.Distance(other.Center) <= _neighborDist;
 
 		public void Do() {
-			Stack<ATree<T>> stack = new();
 
-			ATree<T> node = this;
-			if (!node.IsLeaf) {
-				int inverse;
-				for (int i = 0; i < node.Children.Length; i++) {
-					inverse = this.InverseIndex(i);
-				}
-			}
+
+			//Stack<ATree<T>> stack = new();
+
+			//int inverse = this.InverseIndex(i);
+			//ATree<T> node = this;
+			//while (!node.IsLeaf) {
+			//	for (int i = 0; i < node.Children.Length; i++) {
+			//	}
+			//}
 		}
 
 		private struct Thingy {

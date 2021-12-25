@@ -30,7 +30,7 @@ namespace Generic.Models.Trees {
 		private bool _limitReached = false;
 		public sealed override bool LimitReached => this._limitReached;
 
-		protected override int GetChildIndex(TItem item) => item.BitmaskGreaterThanOrEqual(this.Center, this.Dim);//left-handed convention [a, b)
+		protected override int GetIndex(TItem item) => item.BitmaskGreaterThanOrEqual(this.Center, this.Dim);//left-handed convention [a, b)
 		protected int InverseIndex(int idx) => (1 << this.Dim) - idx - 1;
 		protected virtual bool DetermineIfLimitReached() => false;
 		
@@ -62,7 +62,7 @@ namespace Generic.Models.Trees {
 				.Select(i => this.CreateNewNode(i, false));
 
 		private AQuadTree<TItem, TCorner> Expand(TItem item) {
-			int quadrantMask = this.GetChildIndex(item);
+			int quadrantMask = this.GetIndex(item);
 			int inverseQuadrantMask = this.InverseIndex(quadrantMask);
 
 			AQuadTree<TItem, TCorner> newParent = this.CreateNewNode(quadrantMask, true);

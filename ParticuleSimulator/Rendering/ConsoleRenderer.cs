@@ -77,47 +77,63 @@ namespace ParticleSimulator.Rendering {
 			return isSlow;
 		}
 
+		public struct Resampling {
+			public ParticleData Particle;
+			public int X;
+			public int Y;
+			public float Z;
+			public float H;
+
+			public Resampling(ParticleData particle, int x, int y, float z, float h) {
+				this.Particle = particle;
+				this.X = x;
+				this.Y = y;
+				this.Z = z - h;
+				this.H = h;
+			}
+		}
+
 		public ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {//top down view (larger heights = closer)
 			ConsoleExtensions.CharInfo[] results = new ConsoleExtensions.CharInfo[NumPixels];
-			float[] scalingValues = new float[NumPixels * 2];
+			int[] topCounts = new int[NumPixels],
+				bottomCounts = new int[NumPixels];
+			float[] topDensities = new float[NumPixels],
+				bottomDensities = new float[NumPixels],
+				scalingValues = new float[NumPixels * 2];
+			Resampling[] nearestTops = new Resampling[NumPixels],
+				nearestBottoms = new Resampling[NumPixels];
 
-			Queue<Tuple<ParticleData, int, int, float>>[] bins = DiscreteParticleBin((Queue<ParticleData>)parameters[0]);
-
-			int topCount, bottomCount;
-			float topRank, topHeightMax, bottomRank, bottomHeightMax;
-			ParticleData topParticle, bottomParticle;
-			Tuple<ParticleData, int, int, float> binnedParticle;
-
-			for (int i = 0; i < bins.Length; i++) {
-				if (!(bins[i] is null)) {
-					topCount = bottomCount = 0;
-					topHeightMax = bottomHeightMax = float.NegativeInfinity;
-					topRank = bottomRank = float.NegativeInfinity;
-					topParticle = bottomParticle = default;
-
-					while (bins[i].TryDequeue(out binnedParticle)) {
-						if (binnedParticle.Item3 % 2 == 0) {
-							topCount++;
-							if (binnedParticle.Item4 > topHeightMax) {
-								topRank = ComputeRank(binnedParticle, topCount, topRank);
-								topParticle = binnedParticle.Item1;
-								topHeightMax = binnedParticle.Item4;
+			Queue<ParticleData> particles = (Queue<ParticleData>)parameters[0];
+			ParticleData particle;
+			Queue<Resampling> resamplings;
+			Resampling resampling;
+			int idx;
+			while (particles.TryDequeue(out particle)) {
+				if (particle.IsVisible) {
+					resamplings = Resample(particle);
+					while (resamplings.TryDequeue(out resampling)) {
+						idx = resampling.X + Parameters.WINDOW_WIDTH * (resampling.Y >> 1);//divide by two for vertical splitting of console characters
+						if (resampling.Y % 2 == 0) {
+							if (topCounts[idx] == 0 || nearestTops[idx].Z > resampling.Z
+							|| (nearestTops[idx].Z == resampling.Z && nearestTops[idx].Particle.ID > resampling.Particle.ID)) {
+								topCounts[idx]++;
+								topDensities[idx] += resampling.H;
+								nearestTops[idx] = resampling;
 							}
 						} else {
-							bottomCount++;
-							if (binnedParticle.Item4 > bottomHeightMax) {
-								bottomRank = ComputeRank(binnedParticle, bottomCount, bottomRank);
-								bottomParticle = binnedParticle.Item1;
-								bottomHeightMax = binnedParticle.Item4;
+							if (bottomCounts[idx] == 0 || nearestBottoms[idx].Z > resampling.Z
+							|| (nearestBottoms[idx].Z == resampling.Z && nearestBottoms[idx].Particle.ID > resampling.Particle.ID)) {
+								bottomCounts[idx]++;
+								bottomDensities[idx] += resampling.H;
+								nearestBottoms[idx] = resampling;
 							}
 						}
 					}
-
-					scalingValues[2*i] = topRank;
-					scalingValues[2*i + 1] = bottomRank;
-					results[i] = BuildChar(topRank, topParticle, bottomRank, bottomParticle);
 				}
 			}
+
+			for (int i = 0; i < NumPixels; i++)
+				results[i] = BuildChar(nearestTops[i].Particle, topCounts[i], topDensities[i], nearestBottoms[i].Particle, bottomCounts[i], bottomDensities[i]);
 
 			if (Parameters.LEGEND_ENABLE
 			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Group
@@ -129,56 +145,26 @@ namespace ParticleSimulator.Rendering {
 			return results;
 		}
 
-		private float ComputeRank(Tuple<ParticleData, int, int, float> sample, int count, float running) {
-			return
-				Parameters.COLOR_METHOD == ParticleColoringMethod.Count
-					? count//sum
-				: Parameters.COLOR_METHOD == ParticleColoringMethod.Density
-					? running + sample.Item1.Density//sum
-				: Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity
-					? sample.Item1.Luminosity//max
-				: 1f;//all equal
-		}
-
-		private ConsoleExtensions.CharInfo BuildChar(float topRank, ParticleData topParticle, float bottomRank, ParticleData bottomParticle) {
-			switch (((topRank == float.NegativeInfinity ? 0 : 1) << 1) + (bottomRank == float.NegativeInfinity ? 0 : 1)) {
+		private ConsoleExtensions.CharInfo BuildChar(ParticleData top, int topCount, float topDensity, ParticleData bottom, int bottomCount, float bottomDensity) {
+			switch (((topCount == 0 ? 0 : 1) << 1) + (bottomCount == 0 ? 0 : 1)) {
 				case 1://bottom only
-					return new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, this.Scaling.RankColor(bottomRank, bottomParticle), ConsoleColor.Black);
+					return new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, this.Scaling.RankColor(bottom, bottomCount, bottomDensity), ConsoleColor.Black);
 				case 2://top only
-					return new ConsoleExtensions.CharInfo(Parameters.CHAR_TOP, this.Scaling.RankColor(topRank, topParticle), ConsoleColor.Black);
+					return new ConsoleExtensions.CharInfo(Parameters.CHAR_TOP, this.Scaling.RankColor(top, topCount, topDensity), ConsoleColor.Black);
 				case 3://both
-					ConsoleColor bottomColor  = this.Scaling.RankColor(bottomRank, bottomParticle);
-					ConsoleColor topColor = this.Scaling.RankColor(topRank, topParticle);
+					ConsoleColor bottomColor  = this.Scaling.RankColor(bottom, bottomCount, bottomDensity);
+					ConsoleColor topColor = this.Scaling.RankColor(top, topCount, topDensity);
 					if (topColor == bottomColor)
 						return new ConsoleExtensions.CharInfo(0, 0, topColor);
-					else if (topRank < bottomRank)
-						return new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, bottomColor, topColor);
 					else return new ConsoleExtensions.CharInfo(Parameters.CHAR_TOP, topColor, bottomColor);
 				default:
 					return default;
 			}
 		}
 
-		private Queue<Tuple<ParticleData, int, int, float>>[] DiscreteParticleBin(Queue<ParticleData> particles) {
-			Queue<Tuple<ParticleData, int, int, float>>[] results = new Queue<Tuple<ParticleData, int, int, float>>[NumPixels];
-			int idx;
-			Queue<Tuple<int, int, float>> spreadParticle;
-			Tuple<int, int, float> t;
-			ParticleData particle;
-			while (particles.TryDequeue(out particle)) {
-				spreadParticle = SpreadSample(particle);
-				while (spreadParticle.TryDequeue(out t)) {
-					idx = t.Item1 + Parameters.WINDOW_WIDTH * (t.Item2 >> 1);//divide by two for vertical splitting of console characters
-					results[idx] ??= new Queue<Tuple<ParticleData, int, int, float>>();
-					results[idx].Enqueue(new Tuple<ParticleData, int, int, float>(particle, t.Item1, t.Item2, t.Item3));
-				}
-			}
-			return results;
-		}
-
 		//assumption: particle is visible
-		private Queue<Tuple<int, int, float>> SpreadSample(ParticleData particle) {
-			Queue<Tuple<int, int, float>> result = new Queue<Tuple<int, int, float>>();
+		private Queue<Resampling> Resample(ParticleData particle) {
+			Queue<Resampling> result = new();
 			if (particle.Radius > 0) {//let invisible particles remain so
 				Vector<float> scaledPosition = particle.Position * PixelScalar;
 				float scaledRadius = particle.Radius * PixelScalar;
@@ -187,109 +173,116 @@ namespace ParticleSimulator.Rendering {
 
 				if (0 <= xRounded && xRounded < RenderWidth
 				 && 0 <= yRounded && yRounded < RenderHeight)
-					result.Enqueue(new Tuple<int, int, float>(xRounded, yRounded, scaledPosition[2] + scaledRadius));
+					result.Enqueue(new(particle, xRounded, yRounded, scaledPosition[2], scaledRadius));
 
-				///If the particle's center is not visible,
-				///  Determine the visible radius by truncation, as r_visible = |<dx, dy>|
-				///    given the spherical radius r = |<dx, dy, dz_truncated, 0, ... , 0>|
-				///	     r^2 = dx^2 + dy^2 + dZ_truncated^2
-				///	     r_visible^2 = dx^2 + dy^2
-				///      => r^2 - r_visible^2 = dz_truncated^2
-				///      => r_visible = sqrt(r^2 - dz_truncated^2)
-				float visibleRadius;
-				if (Parameters.DIM > 2) {
-					if (scaledPosition[2] < 0) {//only the top is visible
-						//dz = scaledPosition[2] - 0f;
-						visibleRadius = MathF.Sqrt(scaledRadius*scaledRadius - scaledPosition[2]*scaledPosition[2]);
-					} else if (scaledPosition[2] > Parameters.DOMAIN_SIZE[2] * PixelScalar) {//only the bottom is visible
-						float dz = scaledPosition[2] - Parameters.DOMAIN_SIZE[2] * PixelScalar;
-						visibleRadius = MathF.Sqrt(scaledRadius*scaledRadius - dz*dz);
+				if (scaledRadius > OVERLAP_THRESHOLD) {
+					///If the particle's center is not visible,
+					///  Determine the visible radius by truncation, as r_visible = |<dx, dy>|
+					///    given the spherical radius r = |<dx, dy, dz_truncated, 0, ... , 0>|
+					///	     r^2 = dx^2 + dy^2 + dZ_truncated^2
+					///	     r_visible^2 = dx^2 + dy^2
+					///      => r^2 - r_visible^2 = dz_truncated^2
+					///      => r_visible = sqrt(r^2 - dz_truncated^2)
+					float visibleRadius;
+					if (Parameters.DIM > 2) {
+						if (scaledPosition[2] < 0) {//only the top is visible
+							//dz = scaledPosition[2] - 0f;
+							visibleRadius = MathF.Sqrt(scaledRadius*scaledRadius - scaledPosition[2]*scaledPosition[2]);
+						} else if (scaledPosition[2] > Parameters.DOMAIN_SIZE[2] * PixelScalar) {//only the bottom is visible
+							float dz = scaledPosition[2] - Parameters.DOMAIN_SIZE[2] * PixelScalar;
+							visibleRadius = MathF.Sqrt(scaledRadius*scaledRadius - dz*dz);
+						} else visibleRadius = scaledRadius;
 					} else visibleRadius = scaledRadius;
-				} else visibleRadius = scaledRadius;
 
-				int xMin = (int)Math.Ceiling(scaledPosition[0] - visibleRadius + OVERLAP_THRESHOLD),
-					xMax = (int)(scaledPosition[0] + visibleRadius - OVERLAP_THRESHOLD);
-				xMin = xMin < 0 ? 0 : xMin;
-				xMax = xMax >= RenderWidth ? RenderWidth - 1 : xMax;
+					int xMin = (int)MathF.Floor(scaledPosition[0] - visibleRadius + OVERLAP_THRESHOLD),
+						xMax = (int)MathF.Floor(scaledPosition[0] + visibleRadius - OVERLAP_THRESHOLD);
+					xMin = xMin < 0 ? 0 : xMin;
+					xMax = xMax >= RenderWidth ? RenderWidth - 1 : xMax;
 
-				int yMin, yMax;
-				float dx, dy, yRangeRemainder, z;//Allow height to exceed the visible maximum, to preserve top-down render order
+					int yMin, yMax;
+					float dx, dy, yRangeRemainder;//Allow height to exceed the visible maximum, to preserve top-down render order
+					float squareRemainingRadius;
 
-				//draw a vertical line at dx = 0
-				if (0 <= xRounded && xRounded < RenderWidth) {
-					yMin = (int)Math.Ceiling(scaledPosition[1] - visibleRadius + OVERLAP_THRESHOLD);
-					yMin = yMin < 0 ? 0 : yMin;
-					yMax = (int)(scaledPosition[1] + visibleRadius - OVERLAP_THRESHOLD);
-					yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
-					//bottom half
-					for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
-						dy = scaledPosition[1] - y;
-						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dy*dy);
-						result.Enqueue(new Tuple<int, int, float>(xRounded, y, z));
+					//draw a vertical line at dx = 0
+					if (0 <= xRounded && xRounded < RenderWidth) {
+						yMin = (int)MathF.Floor(scaledPosition[1] - visibleRadius + OVERLAP_THRESHOLD);
+						yMin = yMin < 0 ? 0 : yMin;
+						yMax = (int)MathF.Floor(scaledPosition[1] + visibleRadius - OVERLAP_THRESHOLD);
+						yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
+						//bottom half
+						for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
+							dy = scaledPosition[1] - (y + 1);
+							if (dy <= scaledRadius)
+								result.Enqueue(new(particle, xRounded, y, scaledPosition[2], MathF.Sqrt(scaledRadius*scaledRadius - dy*dy)));
+						}
+						//top half
+						for (int y = yMax; y > yRounded && y >= 0; y--) {
+							dy = y - scaledPosition[1];
+							if (dy <= scaledRadius)
+								result.Enqueue(new(particle, xRounded, y, scaledPosition[2], MathF.Sqrt(scaledRadius*scaledRadius - dy*dy)));
+						}
 					}
-					//top half
-					for (int y = yMax; y > yRounded && y >= 0; y--) {
-						dy = y - scaledPosition[1];
-						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dy*dy);
-						result.Enqueue(new Tuple<int, int, float>(xRounded, y, z));
-					}
-				}
 
-				///draw verticle lines inward toward center
-				//left half
-				for (int x = xMin; x < xRounded && x < RenderWidth; x++) {
-					dx = scaledPosition[0] - x;
-					yRangeRemainder = MathF.Sqrt(visibleRadius*visibleRadius - dx*dx);
+					///draw verticle lines inward toward center
+					//left half
+					for (int x = xMin; x < xRounded && x < RenderWidth; x++) {
+						dx = scaledPosition[0] - (x + 1);
+						yRangeRemainder = MathF.Sqrt(visibleRadius*visibleRadius - dx*dx);
 
-					yMin = (int)Math.Ceiling(scaledPosition[1] - yRangeRemainder + OVERLAP_THRESHOLD);
-					yMin = yMin < 0 ? 0 : yMin;
-					yMax = (int)(scaledPosition[1] + yRangeRemainder - OVERLAP_THRESHOLD);
-					yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
+						yMin = (int)MathF.Floor(scaledPosition[1] - yRangeRemainder + OVERLAP_THRESHOLD);
+						yMin = yMin < 0 ? 0 : yMin;
+						yMax = (int)MathF.Floor(scaledPosition[1] + yRangeRemainder - OVERLAP_THRESHOLD);
+						yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
 					
-					//y middle
-					if (0 <= yRounded && yRounded < RenderHeight) {
-						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx);
-						result.Enqueue(new Tuple<int, int, float>(x, yRounded, z));
+						//y middle
+						if (0 <= yRounded && yRounded < RenderHeight) {
+							if (dx <= scaledRadius)
+								result.Enqueue(new(particle, x, yRounded, scaledPosition[2], MathF.Sqrt(scaledRadius*scaledRadius - dx*dx)));
+						}
+						//bottom half
+						for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
+							dy = scaledPosition[1] - (y + 1);
+							squareRemainingRadius = scaledRadius*scaledRadius - dx*dx - dy*dy;
+							if (squareRemainingRadius >= 0)
+								result.Enqueue(new(particle, x, y, scaledPosition[2], MathF.Sqrt(squareRemainingRadius)));
+						}
+						//top half
+						for (int y = yMax; y > yRounded && y >= 0; y--) {
+							dy = y - scaledPosition[1];
+							squareRemainingRadius = scaledRadius*scaledRadius - dx*dx - dy*dy;
+							if (squareRemainingRadius >= 0)
+								result.Enqueue(new(particle, x, y, scaledPosition[2], MathF.Sqrt(squareRemainingRadius)));
+						}
 					}
-					//bottom half
-					for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
-						dy = scaledPosition[1] - y;
-						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
-						result.Enqueue(new Tuple<int, int, float>(x, y, z));
-					}
-					//top half
-					for (int y = yMax; y > yRounded && y >= 0; y--) {
-						dy = y - scaledPosition[1];
-						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
-						result.Enqueue(new Tuple<int, int, float>(x, y, z));
-					}
-				}
-				//right half
-				for (int x = xMax; x > xRounded && x >= 0; x--) {
-					dx = x - scaledPosition[0];
-					yRangeRemainder = MathF.Sqrt(visibleRadius*visibleRadius - dx*dx);
+					//right half
+					for (int x = xMax; x > xRounded && x >= 0; x--) {
+						dx = x - scaledPosition[0];
+						yRangeRemainder = MathF.Sqrt(visibleRadius*visibleRadius - dx*dx);
 
-					yMin = (int)Math.Ceiling(scaledPosition[1] - yRangeRemainder + OVERLAP_THRESHOLD);
-					yMin = yMin < 0 ? 0 : yMin;
-					yMax = (int)(scaledPosition[1] + yRangeRemainder - OVERLAP_THRESHOLD);
-					yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
+						yMin = (int)MathF.Floor(scaledPosition[1] - yRangeRemainder + OVERLAP_THRESHOLD);
+						yMin = yMin < 0 ? 0 : yMin;
+						yMax = (int)MathF.Floor(scaledPosition[1] + yRangeRemainder - OVERLAP_THRESHOLD);
+						yMax = yMax >= RenderHeight ? RenderHeight - 1 : yMax;
 					
-					//y middle
-					if (0 <= yRounded && yRounded < RenderHeight) {
-						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx);
-						result.Enqueue(new Tuple<int, int, float>(x, yRounded, z));
-					}
-					//bottom half
-					for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
-						dy = scaledPosition[1] - y;
-						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
-						result.Enqueue(new Tuple<int, int, float>(x, y, z));
-					}
-					//top half
-					for (int y = yMax; y > yRounded && y >= 0; y--) {
-						dy = y - scaledPosition[1];
-						z = scaledPosition[2] + MathF.Sqrt(scaledRadius*scaledRadius - dx*dx - dy*dy);
-						result.Enqueue(new Tuple<int, int, float>(x, y, z));
+						//y middle
+						if (0 <= yRounded && yRounded < RenderHeight) {
+							if (dx <= scaledRadius)
+								result.Enqueue(new(particle, x, yRounded, scaledPosition[2], MathF.Sqrt(scaledRadius*scaledRadius - dx*dx)));
+						}
+						//bottom half
+						for (int y = yMin; y < yRounded && y < RenderHeight; y++) {
+							dy = scaledPosition[1] - (y + 1);
+							squareRemainingRadius = scaledRadius*scaledRadius - dx*dx - dy*dy;
+							if (squareRemainingRadius >= 0)
+								result.Enqueue(new(particle, x, y, scaledPosition[2], MathF.Sqrt(squareRemainingRadius)));
+						}
+						//top half
+						for (int y = yMax; y > yRounded && y >= 0; y--) {
+							dy = y - scaledPosition[1];
+							squareRemainingRadius = scaledRadius*scaledRadius - dx*dx - dy*dy;
+							if (squareRemainingRadius >= 0)
+								result.Enqueue(new(particle, x, y, scaledPosition[2], MathF.Sqrt(squareRemainingRadius)));
+						}
 					}
 				}
 			}
