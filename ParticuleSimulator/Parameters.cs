@@ -15,7 +15,7 @@ namespace ParticleSimulator {
 
 		public const int DIM = 3;
 		public const float WORLD_SCALE = 1f;
-		public const float TIME_SCALE = 4f;//can be any value, including negative
+		public const float TIME_SCALE = 1f;//can be any value, including negative
 		
 		public const float ADAPTIVE_TIME_GRANULARITY = 0.01f;//subdivide time steps as necessary for very close interactions
 		public const float ADAPTIVE_TIME_CRITERION = 0.01f;//a weighted value based on range and velocity to other particles in the nearfield group
@@ -72,7 +72,7 @@ namespace ParticleSimulator {
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-4f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0E-4f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 0E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 5E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 5E-3f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
 
@@ -99,7 +99,7 @@ namespace ParticleSimulator {
 		public const float PERF_SMA_ALPHA = 0.05f;
 
 		public const int GRAPH_WIDTH = -1;
-		public const int GRAPH_HEIGHT = 20;//at least 2
+		public const int GRAPH_HEIGHT = 7;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
 		public const float PERF_GRAPH_PERCENTILE_CUTOFF = 10f;

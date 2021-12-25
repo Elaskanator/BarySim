@@ -195,82 +195,72 @@ namespace ParticleSimulator.Rendering {
 				? Parameters.TARGET_FPS
 				: Parameters.MAX_FPS;
 			double
-				yFps000Scaled = Parameters.GRAPH_HEIGHT * (yFps000 - _graphMin) / (_graphMax - _graphMin),
-				yFps010Scaled = Parameters.GRAPH_HEIGHT * (yFps010 - _graphMin) / (_graphMax - _graphMin),
-				yFps025Scaled = Parameters.GRAPH_HEIGHT * (yFps025 - _graphMin) / (_graphMax - _graphMin),
-				yFps040Scaled = Parameters.GRAPH_HEIGHT * (yFps040 - _graphMin) / (_graphMax - _graphMin),
-				yFps050Scaled = Parameters.GRAPH_HEIGHT * (yFps050 - _graphMin) / (_graphMax - _graphMin),
-				yFps060Scaled = Parameters.GRAPH_HEIGHT * (yFps060 - _graphMin) / (_graphMax - _graphMin),
-				yFps075Scaled = Parameters.GRAPH_HEIGHT * (yFps075 - _graphMin) / (_graphMax - _graphMin),
-				yFps090Scaled = Parameters.GRAPH_HEIGHT * (yFps090 - _graphMin) / (_graphMax - _graphMin),
-				yFps100Scaled = Parameters.GRAPH_HEIGHT * (yFps100 - _graphMin) / (_graphMax - _graphMin),
-				yTime000Scaled = Parameters.GRAPH_HEIGHT * (yTime000 - _graphMin) / (_graphMax - _graphMin),
-				yTime010Scaled = Parameters.GRAPH_HEIGHT * (yTime010 - _graphMin) / (_graphMax - _graphMin),
-				yTime025Scaled = Parameters.GRAPH_HEIGHT * (yTime025 - _graphMin) / (_graphMax - _graphMin),
-				yTime040Scaled = Parameters.GRAPH_HEIGHT * (yTime040 - _graphMin) / (_graphMax - _graphMin),
-				yTime050Scaled = Parameters.GRAPH_HEIGHT * (yTime050 - _graphMin) / (_graphMax - _graphMin),
-				yTime060Scaled = Parameters.GRAPH_HEIGHT * (yTime060 - _graphMin) / (_graphMax - _graphMin),
-				yTime075Scaled = Parameters.GRAPH_HEIGHT * (yTime075 - _graphMin) / (_graphMax - _graphMin),
-				yTime090Scaled = Parameters.GRAPH_HEIGHT * (yTime090 - _graphMin) / (_graphMax - _graphMin),
-				yTime100Scaled = Parameters.GRAPH_HEIGHT * (yTime100 - _graphMin) / (_graphMax - _graphMin),
-				yTargetTimeScaled = Parameters.GRAPH_HEIGHT * ((1000d / fps) - _graphMin) / (_graphMax - _graphMin);
+				yFps000Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps000 - _graphMin) / (_graphMax - _graphMin),
+				yFps010Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps010 - _graphMin) / (_graphMax - _graphMin),
+				yFps025Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps025 - _graphMin) / (_graphMax - _graphMin),
+				yFps040Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps040 - _graphMin) / (_graphMax - _graphMin),
+				yFps050Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps050 - _graphMin) / (_graphMax - _graphMin),
+				yFps060Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps060 - _graphMin) / (_graphMax - _graphMin),
+				yFps075Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps075 - _graphMin) / (_graphMax - _graphMin),
+				yFps090Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps090 - _graphMin) / (_graphMax - _graphMin),
+				yFps100Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps100 - _graphMin) / (_graphMax - _graphMin),
+				yTime000Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime000 - _graphMin) / (_graphMax - _graphMin),
+				yTime010Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime010 - _graphMin) / (_graphMax - _graphMin),
+				yTime025Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime025 - _graphMin) / (_graphMax - _graphMin),
+				yTime040Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime040 - _graphMin) / (_graphMax - _graphMin),
+				yTime050Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime050 - _graphMin) / (_graphMax - _graphMin),
+				yTime060Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime060 - _graphMin) / (_graphMax - _graphMin),
+				yTime075Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime075 - _graphMin) / (_graphMax - _graphMin),
+				yTime090Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime090 - _graphMin) / (_graphMax - _graphMin),
+				yTime100Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime100 - _graphMin) / (_graphMax - _graphMin),
+				yTargetTimeScaled = 2d*Parameters.GRAPH_HEIGHT * ((1000d / fps) - _graphMin) / (_graphMax - _graphMin);
 			double
 				y000Scaled = yFps000Scaled <= yTime000Scaled ? yFps000Scaled : yTime000Scaled,
 				y100Scaled = yFps100Scaled >= yTime100Scaled ? yFps100Scaled : yTime100Scaled;
+			int yMin = y000Scaled >= 0f ? (int)y000Scaled : 0,
+				yMax = (int)(y100Scaled <= 2*Parameters.GRAPH_HEIGHT ? y100Scaled : 2*Parameters.GRAPH_HEIGHT);
 				
-			ConsoleColor color; char chr;
-			for (int yIdx = y000Scaled >= 0f ? (int)y000Scaled : 0; yIdx < (y100Scaled <= Parameters.GRAPH_HEIGHT ? y100Scaled : Parameters.GRAPH_HEIGHT); yIdx++) {
-				if (yIdx == (int)y000Scaled) {//bottom pixel
-					if (y000Scaled % 1d >= 0.5d)//top half
-						chr = Parameters.CHAR_TOP;
-					else if (y100Scaled < yIdx + 0.5d)//bottom half
-						chr = Parameters.CHAR_LOW;
-					else chr = Parameters.CHAR_BOTH;
-				} else if (yIdx == (int)y100Scaled) {//top pixel
-					if (y100Scaled % 1d < 0.5d)//bottom half
-						chr = Parameters.CHAR_LOW;
-					else if (y000Scaled >= yIdx && y100Scaled >= yIdx + 0.5d)//top half
-						chr = Parameters.CHAR_TOP;
-					else chr = Parameters.CHAR_BOTH;
-				} else chr = Parameters.CHAR_BOTH;
-
+			ConsoleColor[] colors = new ConsoleColor[2*Parameters.GRAPH_HEIGHT];
+			for (int yIdx = yMin; yIdx < yMax; yIdx++) {
 				if (yIdx == (int)yFps050Scaled)
-					color = ConsoleColor.DarkGreen;
+					colors[yIdx] = ConsoleColor.DarkGreen;
 				else if (yIdx >= (int)yFps040Scaled && yIdx <= (int)yFps060Scaled)
-					color = ConsoleColor.Green;
+					colors[yIdx] = ConsoleColor.Green;
 
 				else if (yIdx == (int)yTime050Scaled)
-					color = ConsoleColor.DarkCyan;
+					colors[yIdx] = ConsoleColor.DarkCyan;
 				else if (yIdx >= (int)yTime040Scaled && yIdx <= (int)yTime060Scaled)
-					color = ConsoleColor.Cyan;
+					colors[yIdx] = ConsoleColor.Cyan;
 
 				else if (fps > 0d && yIdx == (int)yTargetTimeScaled)
-					color = ConsoleColor.DarkYellow;
+					colors[yIdx] = ConsoleColor.DarkYellow;
 				else if (fps > 0d && yIdx > yTargetTimeScaled && yIdx > (int)yTime100Scaled && yIdx < (int)yFps050Scaled)
-					if (yIdx > (int)yFps040Scaled) color = ConsoleColor.DarkMagenta;
-					else if (yIdx > (int)yFps025Scaled) color = ConsoleColor.Magenta;
-					else if (yIdx > (int)yFps010Scaled) color = ConsoleColor.DarkRed;
-					else color = ConsoleColor.Red;
+					if (yIdx > (int)yFps040Scaled) colors[yIdx] = ConsoleColor.DarkMagenta;
+					else if (yIdx > (int)yFps025Scaled) colors[yIdx] = ConsoleColor.Magenta;
+					else if (yIdx > (int)yFps010Scaled) colors[yIdx] = ConsoleColor.DarkRed;
+					else colors[yIdx] = ConsoleColor.Red;
 
 				else if (yIdx >= (int)yFps025Scaled && yIdx <= (int)yFps075Scaled)
-					color = ConsoleColor.White;
+					colors[yIdx] = ConsoleColor.White;
 				else if (yIdx >= (int)yTime025Scaled && yIdx <= (int)yTime075Scaled)
-					color = ConsoleColor.White;
+					colors[yIdx] = ConsoleColor.White;
 
 				else if (yIdx >= (int)yFps010Scaled && yIdx <= (int)yFps090Scaled)
-					color = ConsoleColor.Gray;
+					colors[yIdx] = ConsoleColor.Gray;
 				else if (yIdx >= (int)yTime010Scaled && yIdx <= (int)yTime090Scaled)
-					color = ConsoleColor.Gray;
+					colors[yIdx] = ConsoleColor.Gray;
 				
 				else if (yIdx >= (int)yFps000Scaled && yIdx <= (int)yFps100Scaled)
-					color = ConsoleColor.DarkGray;
+					colors[yIdx] = ConsoleColor.DarkGray;
 				else if (yIdx >= (int)yTime000Scaled && yIdx <= (int)yTime100Scaled)
-					color = ConsoleColor.DarkGray;
+					colors[yIdx] = ConsoleColor.DarkGray;
 
-				else color = ConsoleColor.Black;
-
-				result[yIdx] = new ConsoleExtensions.CharInfo(chr, color, ConsoleColor.Black);
+				else colors[yIdx] = ConsoleColor.Black;
 			}
+
+			for (int i = 0; i < Parameters.GRAPH_HEIGHT; i++)
+				result[i] = ConsoleRenderer.BuildChar(colors[2*i], colors[2*i + 1]);
+
 			return result;
 		}
 	}

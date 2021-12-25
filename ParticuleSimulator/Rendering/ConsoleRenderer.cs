@@ -132,8 +132,18 @@ namespace ParticleSimulator.Rendering {
 				}
 			}
 
-			for (int i = 0; i < NumPixels; i++)
-				results[i] = BuildChar(nearestTops[i].Particle, topCounts[i], topDensities[i], nearestBottoms[i].Particle, bottomCounts[i], bottomDensities[i]);
+			ConsoleColor bottomColor, topColor;
+			for (int i = 0; i < NumPixels; i++) {
+				if (bottomCounts[i] > 0 || topCounts[i] > 0) {
+					bottomColor = bottomCounts[i] > 0
+						? this.Scaling.RankColor(nearestBottoms[i].Particle, bottomCounts[i], bottomDensities[i])
+						: ConsoleColor.Black;
+					topColor = topCounts[i] > 0
+						? this.Scaling.RankColor(nearestTops[i].Particle, topCounts[i], topDensities[i])
+						: ConsoleColor.Black;
+					results[i] = BuildChar(bottomColor,topColor);
+				}
+			}
 
 			if (Parameters.LEGEND_ENABLE
 			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Group
@@ -145,21 +155,10 @@ namespace ParticleSimulator.Rendering {
 			return results;
 		}
 
-		private ConsoleExtensions.CharInfo BuildChar(ParticleData top, int topCount, float topDensity, ParticleData bottom, int bottomCount, float bottomDensity) {
-			switch (((topCount == 0 ? 0 : 1) << 1) + (bottomCount == 0 ? 0 : 1)) {
-				case 1://bottom only
-					return new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, this.Scaling.RankColor(bottom, bottomCount, bottomDensity), ConsoleColor.Black);
-				case 2://top only
-					return new ConsoleExtensions.CharInfo(Parameters.CHAR_TOP, this.Scaling.RankColor(top, topCount, topDensity), ConsoleColor.Black);
-				case 3://both
-					ConsoleColor bottomColor  = this.Scaling.RankColor(bottom, bottomCount, bottomDensity);
-					ConsoleColor topColor = this.Scaling.RankColor(top, topCount, topDensity);
-					if (topColor == bottomColor)
-						return new ConsoleExtensions.CharInfo(0, 0, topColor);
-					else return new ConsoleExtensions.CharInfo(Parameters.CHAR_TOP, topColor, bottomColor);
-				default:
-					return default;
-			}
+		public static ConsoleExtensions.CharInfo BuildChar(ConsoleColor bottomColor, ConsoleColor topColor) {
+			if (topColor == bottomColor)
+				return new ConsoleExtensions.CharInfo(0, 0, bottomColor);
+			else return new ConsoleExtensions.CharInfo(Parameters.CHAR_TOP, topColor, bottomColor);
 		}
 
 		//assumption: particle is visible
