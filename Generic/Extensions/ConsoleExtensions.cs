@@ -235,8 +235,8 @@ namespace Generic.Extensions {
 			[FieldOffset(0)] public CharUnion Char;
 			[FieldOffset(2)] public ushort Attributes;
 
-			public ConsoleColor ForegroundColor => (ConsoleColor)(this.Attributes & 0x00FF);
-			public ConsoleColor BackgroundColor => (ConsoleColor)(this.Attributes & 0xFF00);
+			public ConsoleColor ForegroundColor => (ConsoleColor)((this.Attributes & 0x0F));
+			public ConsoleColor BackgroundColor => (ConsoleColor)((this.Attributes & 0xF0) >> 4);
 
 			public CharInfo(char character, ConsoleColor? foreground = null, ConsoleColor? background = null) {
 				this.Char = new CharUnion() { UnicodeChar = character };
@@ -254,29 +254,29 @@ namespace Generic.Extensions {
 			}
 		}
 		
-		public static void Merge(this CharInfo[] source, int width, CharInfo[] additional, int xOffset, int yOffset, bool skipBlank = true) {
+		public static void Merge(this CharInfo[] buffer, int width, CharInfo[] additional, int xOffset, int yOffset) {
 			if (additional is null) return;
-			else if (xOffset == 0 && !skipBlank) Array.Copy(additional, 0, source, xOffset + yOffset*width, additional.Length);
+			else if (xOffset == 0)
+				Array.Copy(additional, 0, buffer, xOffset + yOffset*width, additional.Length);
 			else {
 				int row = 0;
-				foreach (CharInfo[] p in additional.Partition(width).Select(p => p.ToArray())) {
+				foreach (CharInfo[] p in additional.Partition(width)) {
 					for (int i = 0; i < p.Length; i++)
-						if (!skipBlank || !Equals(p[i], default(CharInfo)))
-							source[xOffset + width*(row + yOffset)] = p[i];
+						buffer[xOffset + width*(row + yOffset)] = p[i];
 					row++;
 				}
 			}
 		}
-		public static void RegionMerge(this CharInfo[] source, int sourceWidth, CharInfo[] additional, int addWidth, int xOffset, int yOffset, bool skipBlank = true) {
-			if (sourceWidth == addWidth) source.Merge(sourceWidth, additional, xOffset, yOffset, skipBlank);
-			else if (additional is null) return;
+		public static void RegionMerge(this CharInfo[] buffer, int sourceWidth, CharInfo[] additional, int addWidth, int xOffset, int yOffset, int? cols = null) {
+			if (additional is null) return;
+			else if (sourceWidth == addWidth)
+				buffer.Merge(sourceWidth, additional, xOffset, yOffset);
 			else {
 				int row = 0;
-				foreach (CharInfo[] p in additional.Partition(addWidth).Select(p => p.ToArray())) {
-					if (skipBlank) for (int i = 0; i < p.Length; i++) {
-						if (!Equals(p[i], default(CharInfo)))
-							source[i + xOffset + sourceWidth*(row + yOffset)] = p[i];
-					} else Array.Copy(p, 0, source, xOffset + sourceWidth * (row + yOffset), p.Length);
+				foreach (CharInfo[] p in additional.Partition(addWidth)) {
+					if (p.Length > 0)
+						Array.Copy(p, 0, buffer, xOffset + sourceWidth * (row + yOffset), cols ?? p.Length);
+					else break;
 					row++;
 				}
 			}

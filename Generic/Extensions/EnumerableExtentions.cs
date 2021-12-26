@@ -135,15 +135,23 @@ namespace Generic.Extensions {
 			return new(min, max);
 		}
 
-		public static IEnumerable<IEnumerable<T>> Partition<T>(this IEnumerable<T> source, int size) {
+		public static IEnumerable<T[]> Partition<T>(this IEnumerable<T> source, int size) {
 			if (size < 1) throw new ArgumentOutOfRangeException(nameof(size), "Must be strictly positive");
-			Enumerator2<T> iterator = new(source);
-			while (!iterator.HasEnded) yield return SubPartition(iterator, size);
+
+			IEnumerator<T> iterator = source.GetEnumerator();
+			bool remaining = true;
+			T[] subResult;
+			while (remaining) {
+				subResult = SubPartition(iterator, size).ToArray();
+				remaining = subResult.Length > 0;
+				yield return subResult;
+			}
 		}
 		private static IEnumerable<T> SubPartition<T>(IEnumerator<T> iterator, int size) {
 			int count = 0;
 			while (count++ < size && iterator.MoveNext())
 				yield return iterator.Current;
+
 		}
 		#endregion Projections
 

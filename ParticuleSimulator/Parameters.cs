@@ -8,7 +8,7 @@ using ParticleSimulator.Rendering;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited
 	public static class Parameters {
-		public const int PARTICLES_GROUP_COUNT = 128;
+		public const int PARTICLES_GROUP_COUNT = 64;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 1;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
@@ -28,8 +28,8 @@ namespace ParticleSimulator {
 		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
 		
-		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Random;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.DEFAULT_CONSOLE_COLORS;
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
 		public const bool COLOR_USE_FIXED_BANDS = false;
 		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
 
@@ -63,7 +63,7 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
 		public const float GRAVITY_MIN_STARTING_MASS = 100f;
-		public const float GRAVITY_MAX_STARTING_MASS = 200f;
+		public const float GRAVITY_MAX_STARTING_MASS = 500f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
@@ -92,6 +92,7 @@ namespace ParticleSimulator {
 		public const int PERF_WARN_MS = 2000;
 		public const int CONSOLE_TITLE_INTERVAL_MS = 500;
 		public const int AUTOSCALE_INTERVAL_MS = 1000;
+		public const float AUTOSCALE_DIFF_THRESH = 0.25f;
 		public const int PERF_GRAPH_REFRESH_MS = 250;
 
 		public const int NUMBER_ACCURACY = 2;
@@ -102,7 +103,7 @@ namespace ParticleSimulator {
 		public const int GRAPH_HEIGHT = 7;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
-		public const float PERF_GRAPH_PERCENTILE_CUTOFF = 10f;
+		public const float PERF_GRAPH_PERCENTILE_CUTOFF = 1f;
 		
 		public static readonly float WORLD_ASPECT_RATIO = WINDOW_WIDTH / (2f * WINDOW_HEIGHT);
 		public static readonly Vector<float> DOMAIN_SIZE = VectorFunctions.New(Enumerable.Repeat(WORLD_SCALE, DIM - 1).Prepend(WORLD_SCALE * WORLD_ASPECT_RATIO));

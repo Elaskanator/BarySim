@@ -5,7 +5,7 @@ using Generic.Extensions;
 
 namespace ParticleSimulator.Rendering {
 	public class ConsoleRenderer {
-		public const float OVERLAP_THRESHOLD = 0.5f;
+		public const float OVERLAP_THRESHOLD = 0f;
 
 		public Autoscaler Scaling { get; private set; }
 
@@ -50,6 +50,12 @@ namespace ParticleSimulator.Rendering {
 			Scaling = new();
 		}
 
+		public static ConsoleExtensions.CharInfo BuildChar(ConsoleColor bottomColor, ConsoleColor topColor) {
+			if (topColor == bottomColor)
+				return new ConsoleExtensions.CharInfo(0, 0, bottomColor);
+			else return new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, bottomColor, topColor);
+		}
+
 		public void FlushScreenBuffer(object[] parameters) {
 			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])parameters[0] ?? _lastFrame;
 			_lastFrame = buffer;
@@ -77,31 +83,15 @@ namespace ParticleSimulator.Rendering {
 			return isSlow;
 		}
 
-		public struct Resampling {
-			public ParticleData Particle;
-			public int X;
-			public int Y;
-			public float Z;
-			public float H;
-
-			public Resampling(ParticleData particle, int x, int y, float z, float h) {
-				this.Particle = particle;
-				this.X = x;
-				this.Y = y;
-				this.Z = z - h;
-				this.H = h;
-			}
-		}
-
 		public ConsoleExtensions.CharInfo[] Rasterize(object[] parameters) {//top down view (larger heights = closer)
 			ConsoleExtensions.CharInfo[] results = new ConsoleExtensions.CharInfo[NumPixels];
 			int[] topCounts = new int[NumPixels],
 				bottomCounts = new int[NumPixels];
 			float[] topDensities = new float[NumPixels],
-				bottomDensities = new float[NumPixels],
-				scalingValues = new float[NumPixels * 2];
+				bottomDensities = new float[NumPixels];
 			Resampling[] nearestTops = new Resampling[NumPixels],
 				nearestBottoms = new Resampling[NumPixels];
+			float?[] ranks = new float?[NumPixels*2];
 
 			Queue<ParticleData> particles = (Queue<ParticleData>)parameters[0];
 			ParticleData particle;
@@ -114,17 +104,17 @@ namespace ParticleSimulator.Rendering {
 					while (resamplings.TryDequeue(out resampling)) {
 						idx = resampling.X + Parameters.WINDOW_WIDTH * (resampling.Y >> 1);//divide by two for vertical splitting of console characters
 						if (resampling.Y % 2 == 0) {
+							topDensities[idx] += resampling.H;
 							if (topCounts[idx] == 0 || nearestTops[idx].Z > resampling.Z
 							|| (nearestTops[idx].Z == resampling.Z && nearestTops[idx].Particle.ID > resampling.Particle.ID)) {
 								topCounts[idx]++;
-								topDensities[idx] += resampling.H;
 								nearestTops[idx] = resampling;
 							}
 						} else {
+							bottomDensities[idx] += resampling.H;
 							if (bottomCounts[idx] == 0 || nearestBottoms[idx].Z > resampling.Z
 							|| (nearestBottoms[idx].Z == resampling.Z && nearestBottoms[idx].Particle.ID > resampling.Particle.ID)) {
 								bottomCounts[idx]++;
-								bottomDensities[idx] += resampling.H;
 								nearestBottoms[idx] = resampling;
 							}
 						}
@@ -133,15 +123,21 @@ namespace ParticleSimulator.Rendering {
 			}
 
 			ConsoleColor bottomColor, topColor;
+			float? rank;
 			for (int i = 0; i < NumPixels; i++) {
 				if (bottomCounts[i] > 0 || topCounts[i] > 0) {
+					rank = null;
 					bottomColor = bottomCounts[i] > 0
-						? this.Scaling.RankColor(nearestBottoms[i].Particle, bottomCounts[i], bottomDensities[i])
+						? this.Scaling.GetRankedColor(nearestBottoms[i].Particle, nearestBottoms[i].Z / PixelScalar, bottomCounts[i], bottomDensities[i], ref rank)
 						: ConsoleColor.Black;
+					ranks[2*i] = rank;
+
+					rank = null;
 					topColor = topCounts[i] > 0
-						? this.Scaling.RankColor(nearestTops[i].Particle, topCounts[i], topDensities[i])
+						? this.Scaling.GetRankedColor(nearestTops[i].Particle, nearestTops[i].Z / PixelScalar, topCounts[i], topDensities[i], ref rank)
 						: ConsoleColor.Black;
 					results[i] = BuildChar(bottomColor,topColor);
+					ranks[2*i + 1] = rank;
 				}
 			}
 
@@ -150,15 +146,10 @@ namespace ParticleSimulator.Rendering {
 			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Random
 			&& (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth || Parameters.DIM > 2))
 				DrawLegend(results);
-			Program.Resource_ScalingData.Overwrite(scalingValues);
+
+			Program.Resource_ScalingData.Overwrite(ranks);
 
 			return results;
-		}
-
-		public static ConsoleExtensions.CharInfo BuildChar(ConsoleColor bottomColor, ConsoleColor topColor) {
-			if (topColor == bottomColor)
-				return new ConsoleExtensions.CharInfo(0, 0, bottomColor);
-			else return new ConsoleExtensions.CharInfo(Parameters.CHAR_TOP, topColor, bottomColor);
 		}
 
 		//assumption: particle is visible
@@ -315,6 +306,22 @@ namespace ParticleSimulator.Rendering {
 					for (int i = 0; i < rowStringData.Length; i++)
 						buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);
 				}
+			}
+		}
+
+		private struct Resampling {
+			public ParticleData Particle;
+			public int X;
+			public int Y;
+			public float Z;
+			public float H;
+
+			public Resampling(ParticleData particle, int x, int y, float z, float h) {
+				this.Particle = particle;
+				this.X = x;
+				this.Y = y;
+				this.Z = z - h;
+				this.H = h;
 			}
 		}
 	}

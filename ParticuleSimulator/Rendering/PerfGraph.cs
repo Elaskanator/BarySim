@@ -34,7 +34,7 @@ namespace ParticleSimulator.Rendering {
 		private DateTime _lastGraphRenderFrameUtc = DateTime.UtcNow;
 		private readonly object _columnStatsLock = new object();
 
-		public void Update(int frameIdx, TimeSpan simTime, TimeSpan frameTime) {
+		public void Update(int frameIdx, TimeSpan frameTime, TimeSpan fpsTime) {
 			lock (_columnStatsLock) {
 				if (frameIdx == 0) {
 					_currentColumnFpsDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
@@ -44,10 +44,10 @@ namespace ParticleSimulator.Rendering {
 					_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.RotateRight();
 				}
 
-				_currentColumnFpsDataMs[frameIdx] = frameTime.TotalMilliseconds;
+				_currentColumnFpsDataMs[frameIdx] = fpsTime.TotalMilliseconds;
 				_columnFpsStatsMs[0] = new StatsInfo(_currentColumnFpsDataMs.Take(frameIdx + 1));
 
-				_currentColumnFrameTimeDataMs[frameIdx] = simTime.TotalMilliseconds;
+				_currentColumnFrameTimeDataMs[frameIdx] = frameTime.TotalMilliseconds;
 				_columnFrameTimeStatsMs[0] = new StatsInfo(_currentColumnFrameTimeDataMs.Take(frameIdx + 1));
 			}
 		}
@@ -62,6 +62,7 @@ namespace ParticleSimulator.Rendering {
 						RerenderGraph();
 					graphColumnsCopy = _graphColumns.TakeUntil(s => s is null).ToArray();
 				}
+				int numCols = graphColumnsCopy.Length;
 			
 				ConsoleExtensions.CharInfo[] graphData = new ConsoleExtensions.CharInfo[GraphWidth * Parameters.GRAPH_HEIGHT];
 
@@ -78,10 +79,6 @@ namespace ParticleSimulator.Rendering {
 					label_max = _graphMax < 1000 ? _graphMax.ToStringBetter(2, false) : (_graphMax / 1000).ToStringBetter(2, false),
 					label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(2, false): (frameTime / 1000).ToStringBetter(2, false),
 					label_FpsTime = fpsTime < 1000 ? fpsTime.ToStringBetter(3, false) + "ms" : (fpsTime / 1000).ToStringBetter(3, false) + "s";
-				
-				int yOffset;
-				Func<int, int, ConsoleColor> colorResolver = (x, yOffset) =>
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].ForegroundColor;
 
 				int offset_fps = (int)(Parameters.GRAPH_HEIGHT * (fpsTime - _graphMin) / (_graphMax - _graphMin));
 				offset_fps = offset_fps < 0 ? 0 : offset_fps < Parameters.GRAPH_HEIGHT ? offset_fps : Parameters.GRAPH_HEIGHT - 1;
@@ -99,52 +96,68 @@ namespace ParticleSimulator.Rendering {
 					if (frameTime < fpsTime)
 						drawFps = false;
 					else drawFrameTime = false;
-
-				if (drawMinTime) for (int x = 0; x < label_min.Length; x++) {
-					yOffset = 0;
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-						label_min[x], ConsoleColor.DarkBlue, colorResolver(x, yOffset));
+				
+				int yOffset;
+				if (drawMinTime) {
+					numCols = numCols < label_min.Length ? label_min.Length : numCols;
+					for (int x = 0; x < label_min.Length; x++) {
+						yOffset = 0;
+						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+							label_min[x], ConsoleColor.DarkBlue, graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].BackgroundColor);
+					}
 				}
 
-				if (drawFrameTime) for (int x = 0; x < label_frameTime.Length; x++) {
-					yOffset = offset_frameTime;
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-						label_frameTime[x], ConsoleColor.DarkBlue, colorResolver(x, yOffset));
+				if (drawFrameTime) {
+					numCols = numCols < label_frameTime.Length ? label_frameTime.Length : numCols;
+					for (int x = 0; x < label_frameTime.Length; x++) {
+						yOffset = offset_frameTime;
+						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+							label_frameTime[x], ConsoleColor.DarkBlue, offset_targetTime == offset_frameTime ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan);
+					}
 				}
 
-				if (drawtargetTime) for (int x = 0; x < label_target.Length; x++) {
-					yOffset = offset_targetTime;
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-						label_target[x], ConsoleColor.Black, ConsoleColor.DarkYellow);
+				if (drawtargetTime) {
+					numCols = numCols < label_target.Length ? label_target.Length : numCols;
+					for (int x = 0; x < label_target.Length; x++) {
+						yOffset = offset_targetTime;
+						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+							label_target[x], ConsoleColor.Black, ConsoleColor.DarkYellow);
+					}
 				}
 
-				if (drawFps) for (int x = 0; x < label_FpsTime.Length; x++) {
-					yOffset = offset_fps;
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-						label_FpsTime[x], ConsoleColor.DarkGreen, ConsoleColor.Black);
+				if (drawFps) {
+					numCols = numCols < label_FpsTime.Length ? label_FpsTime.Length : numCols;
+					for (int x = 0; x < label_FpsTime.Length; x++) {
+						yOffset = offset_fps;
+						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+							label_FpsTime[x], ConsoleColor.DarkBlue, offset_targetTime == offset_fps ? ConsoleColor.DarkYellow : ConsoleColor.DarkGreen);
+					}
 				}
 
-				if (drawMaxTime) for (int x = 0; x < label_max.Length; x++) {
-					yOffset = Parameters.GRAPH_HEIGHT - 1;
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-						label_max[x], ConsoleColor.DarkBlue, colorResolver(x, yOffset));
+				if (drawMaxTime) {
+					numCols = numCols < label_max.Length ? label_max.Length : numCols;
+					for (int x = 0; x < label_max.Length; x++) {
+						yOffset = Parameters.GRAPH_HEIGHT - 1;
+						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+							label_max[x], ConsoleColor.DarkBlue, graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].BackgroundColor);
+					}
 				}
 
-				frameBuffer.RegionMerge(Parameters.WINDOW_WIDTH, graphData, GraphWidth, 0, 1, true);
+				frameBuffer.RegionMerge(Parameters.WINDOW_WIDTH, graphData, GraphWidth, 0, 1, numCols);
 			}
 		}
 
 		private void RerenderGraph() {
 			StatsInfo[]
 				frameTimeStats = _columnFrameTimeStatsMs.Without(s => s is null).ToArray(),
-				iterationTimeStats = _columnFpsStatsMs.Without(s => s is null).ToArray();
-			if (frameTimeStats.Length + iterationTimeStats.Length > 0) {
-				StatsInfo rangeStats = new(frameTimeStats.Concat(iterationTimeStats).SelectMany(s => s.Data_asc));
+				fpsStats = _columnFpsStatsMs.Without(s => s is null).ToArray();
+			if (frameTimeStats.Length + fpsStats.Length > 0) {
+				StatsInfo rangeStats = new(frameTimeStats.Concat(fpsStats).SelectMany(s => s.Data_asc));
 			
 				double
 					min = rangeStats.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
 					max = rangeStats.GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
-					avg = frameTimeStats.Concat(iterationTimeStats).Average(s => s.GetPercentileValue(50d));
+					avg = frameTimeStats.Concat(fpsStats).Average(s => s.GetPercentileValue(50d));
 
 				min = min <= avg ? min : avg;
 				max = max >= avg ? max : avg;
@@ -157,7 +170,7 @@ namespace ParticleSimulator.Rendering {
 				if (Math.Abs(max - _graphMax) / _graphMax > 0.05d)
 					_graphMax = max;
 
-				for (int i = 0; i < frameTimeStats.Length || i < iterationTimeStats.Length; i++)
+				for (int i = 0; i < frameTimeStats.Length || i < fpsStats.Length; i++)
 					_graphColumns[i] = RenderGraphColumn(_columnFpsStatsMs[i], _columnFrameTimeStatsMs[i]);
 
 			}

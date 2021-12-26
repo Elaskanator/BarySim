@@ -31,7 +31,7 @@ namespace ParticleSimulator.Rendering {
 
 				_fpsTimingMs.Update(currentFpsTime);
 				_frameTimingMs.Update(currentFrameTime);
-				this._graph.Update(frameIdx, currentFpsTime, currentFrameTime);
+				this._graph.Update(frameIdx, currentFrameTime, currentFpsTime);
 			}
 		}
 		

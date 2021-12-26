@@ -19,27 +19,28 @@ namespace ParticleSimulator.Rendering {
 		public float[] Values { get; private set; }
 		private int _randOffset = 0;
 
-		public ConsoleColor RankColor(ParticleData particle, int count, float density) {
+		public ConsoleColor GetRankedColor(ParticleData particle, float depth, int count, float density, ref float? rank) {
 			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random) {
 				return Parameters.COLOR_ARRAY[(particle.ID + this._randOffset) % this.Values.Length];
 			} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group) {
 				return Parameters.COLOR_ARRAY[(particle.GroupID + this._randOffset) % this.Values.Length];
 			} else {
-				float rank;
 				if (Parameters.COLOR_METHOD == ParticleColoringMethod.Count) {
 					rank = count;
 				} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Density) {
 					rank = density;
+				} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth) {
+					rank = depth;
 				} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity) {
 					rank = particle.Luminosity;
 				} else return Parameters.COLOR_ARRAY[0];
-
-				return Parameters.COLOR_ARRAY[this.Values.Drop(1).TakeWhile(ds => ds < rank).Count()];
+				float r = rank.Value;
+				return Parameters.COLOR_ARRAY[this.Values.Drop(1).TakeWhile(ds => ds < r).Count()];
 			}
 		}
 
-		public void Update(object[] parameters) {
-			float[] scalingValues = ((float[])parameters[0]).Without(t => t == float.NegativeInfinity).ToArray();
+		public void Update(object[] parameters = null) {
+			float[] scalingValues = ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value).ToArray();
 
 			if (scalingValues.Length > 0) {
 				StatsInfo stats = new(scalingValues.Select(x => (double)x));
@@ -60,7 +61,7 @@ namespace ParticleSimulator.Rendering {
 
 					int bandIdx;
 					for (bandIdx = 0; bandIdx < totalBands && stats.Data_asc.Length > 0; bandIdx++) {
-						newValue = (float)stats.GetPercentileValue(100d * bandIdx / (totalBands + 1d), true);
+						newValue = (float)stats.GetPercentileValue(100d * (bandIdx + 1d) / (totalBands + 1d), true);
 
 						if (results.Count == 0) {
 							results.Add(newValue);
@@ -73,7 +74,7 @@ namespace ParticleSimulator.Rendering {
 							threshold = threshold == 0f
 								? Parameters.AUTOSCALE_MIN_STEP
 								: Parameters.AUTOSCALE_MIN_STEP < 0f
-									? threshold * (1f + 0.01f*MathF.Sign(threshold))
+									? threshold * (1f + Parameters.AUTOSCALE_DIFF_THRESH*MathF.Sign(threshold))
 									: threshold + Parameters.AUTOSCALE_MIN_STEP;
 
 							while (newValue < threshold) {
