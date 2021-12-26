@@ -75,17 +75,17 @@ namespace ParticleSimulator.Rendering {
 
 			if (Parameters.PERF_STATS_ENABLE) {
 				string label;
-				for (int i = 0; i < Program.Manager.Evaluators.Length; i++) {
-					label = Program.Manager.Evaluators[i].Name[0].ToString();
-					if (isSlow && Program.Manager.Evaluators[i].Id != Program.StepEval_Render.Id && Program.Manager.Evaluators[i].IsComputing)
+				for (int i = 0; i < Program.Engine.Evaluators.Length; i++) {
+					label = Program.Engine.Evaluators[i].Name[0].ToString();
+					if (isSlow && Program.Engine.Evaluators[i].Id != Program.StepEval_Render.Id && Program.Engine.Evaluators[i].IsComputing)
 						_statsHeaderValues[i + 2] = new(label,
-							DateTime.UtcNow.Subtract(Program.Manager.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds,
+							DateTime.UtcNow.Subtract(Program.Engine.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds,
 							ConsoleColor.White,
 							ConsoleColor.DarkRed);
-					else if (Program.Manager.Evaluators[i].ExclusiveTime.NumUpdates > 0)
+					else if (Program.Engine.Evaluators[i].ExclusiveTime.NumUpdates > 0)
 						_statsHeaderValues[i + 2] = new(label,
-							Program.Manager.Evaluators[i].ExclusiveTime.LastUpdate.TotalMilliseconds,
-							ChooseFrameIntervalColor(Program.Manager.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds),
+							Program.Engine.Evaluators[i].ExclusiveTime.LastUpdate.TotalMilliseconds,
+							ChooseFrameIntervalColor(Program.Engine.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds),
 							ConsoleColor.Black);
 					else _statsHeaderValues[i + 2] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 				}
@@ -108,12 +108,12 @@ namespace ParticleSimulator.Rendering {
 		}
 
 		public void WriteEnd() {
-			TimeSpan totalDuration = Program.Manager.EndTimeUtc.Value.Subtract(Program.Manager.StartTimeUtc.Value);
+			TimeSpan totalDuration = Program.Engine.EndTimeUtc.Value.Subtract(Program.Engine.StartTimeUtc.Value);
 			
 			Console.SetCursorPosition(0, 1);
 			Console.ForegroundColor = ConsoleColor.White;
 			Console.BackgroundColor = ConsoleColor.Black;
-			Console.WriteLine("---END--- Duration {0}s", Program.Manager.EndTimeUtc.Value.Subtract(Program.Manager.StartTimeUtc.Value).TotalSeconds.ToStringBetter(2));
+			Console.WriteLine("---END--- Duration {0}s", Program.Engine.EndTimeUtc.Value.Subtract(Program.Engine.StartTimeUtc.Value).TotalSeconds.ToStringBetter(2));
 			
 			Console.Write("Evaluated {0}{1}",
 				Program.StepEval_Simulate.IterationCount.Pluralize("time"),

@@ -16,14 +16,14 @@ namespace ParticleSimulator.Simulation {
 			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_SKEW_POWER) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
 
 			if (Parameters.PARTICLES_GROUP_COUNT < 2)
-				this.SpawnCenter = Parameters.DOMAIN_CENTER;
+				this.SpawnCenter = Vector<float>.Zero;
 			else this.SpawnCenter = VectorFunctions.New(Enumerable
 				.Range(0, Parameters.DIM)
 				.Select(d => (float)(
-					Parameters.DOMAIN_SIZE[d] * (Program.Random.NextDouble() * (100d - Parameters.WORLD_PADDING_PCT) + 0.5d * Parameters.WORLD_PADDING_PCT) / 100d)));
+					Parameters.WORLD_SCALE * (Program.Random.NextDouble() * (100d - Parameters.WORLD_PADDING_PCT) + 0.5d * Parameters.WORLD_PADDING_PCT) / 100d)));
 
 			this.InitialVelocity = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x * this.StartSpeedMax_Group_Rand))
-				+ (this.StartSpeedMax_Group_Angular * this.NewInitialDirection(Parameters.DOMAIN_CENTER, this.SpawnCenter));
+				+ (this.StartSpeedMax_Group_Angular * this.NewInitialDirection(Vector<float>.Zero, this.SpawnCenter));
 
 			this.InitialParticles = Enumerable
 				.Repeat(this.SpawnCenter, this.NumParticles)
@@ -33,11 +33,13 @@ namespace ParticleSimulator.Simulation {
 				.ToArray();
 
 			float radius = this.ComputeInitialSeparationRadius(this.InitialParticles);
+			Vector<float> min = new Vector<float>(this.StartSpeedMax_Particle_Min);
+			Vector<float> max = new Vector<float>(this.StartSpeedMax_Particle_Max);
+			Vector<float> range = max - min;
 			for (int i = 0; i < this.NumParticles; i++) {
 				if (this.NumParticles > 1)
 					this.InitialParticles[i].Position += this.NewParticleOffset(radius);
-				this.InitialParticles[i].Velocity += VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x * this.StartSpeedMax_Particle_Range))
-					+ this.StartSpeedMax_Particle_Angular * this.NewInitialDirection(this.SpawnCenter, this.InitialParticles[i].Position);
+				this.InitialParticles[i].Velocity += (min + (range * (float)Program.Random.NextDouble())) * VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x));
 			}
 		}
 
@@ -57,7 +59,8 @@ namespace ParticleSimulator.Simulation {
 		public abstract float StartSpeedMax_Group_Angular { get; }
 		public abstract float StartSpeedMax_Group_Rand { get; }
 		public abstract float StartSpeedMax_Particle_Angular { get; }
-		public abstract float StartSpeedMax_Particle_Range { get; }
+		public abstract float StartSpeedMax_Particle_Min { get; }
+		public abstract float StartSpeedMax_Particle_Max { get; }
 
 		protected abstract TParticle NewParticle(Vector<float> position, Vector<float> velocity);
 

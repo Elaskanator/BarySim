@@ -17,6 +17,15 @@ namespace Generic.Vectors {
 		public static readonly Vector<int>[] DimensionFiltersInverted = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 1 : 0).ToArray())).ToArray();
 		public static readonly Vector<int>[] DimensionSignalsInverted = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? -1 : 0).ToArray())).ToArray();
 
+		public static readonly Vector<float>[] IdentityMatrixColumns = Enumerable
+			.Range(0, Vector<float>.Count)
+			.Select(i => new Vector<float>(
+				Enumerable
+					.Range(0, Vector<float>.Count)
+					.Select(j => i == j ? 1f : 0f)
+					.ToArray()))
+			.ToArray();
+
 		public static readonly int VECT_CAPACITY = Vector<float>.Count;
 
 		public static Vector<float> New(params float[] components) {
@@ -197,12 +206,12 @@ namespace Generic.Vectors {
 						Math.Sin(angle)
 					};
 				case 3:
-					double theta = 2d * Math.PI * rand.NextDouble();
-					double phi = Math.PI * rand.NextDouble();
+					double theta = Math.Acos(-1d + 2d*rand.NextDouble());
+					double phi = 2d * Math.PI * rand.NextDouble();
 					return new double[] {
-						Math.Cos(theta) * Math.Sin(phi),
+						Math.Sin(theta) * Math.Cos(phi),
 						Math.Sin(theta) * Math.Sin(phi),
-						Math.Cos(phi)
+						Math.Cos(theta)
 					};
 				default:
 					//throw new NotImplementedException();

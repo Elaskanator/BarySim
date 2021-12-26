@@ -10,7 +10,8 @@ namespace ParticleSimulator.Simulation {
 		public override float StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
 		public override float StartSpeedMax_Group_Rand => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND;
 		public override float StartSpeedMax_Particle_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP;
-		public override float StartSpeedMax_Particle_Range => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
+		public override float StartSpeedMax_Particle_Min => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
+		public override float StartSpeedMax_Particle_Max => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
 
 		public override float ComputeInitialSeparationRadius(IEnumerable<MatterClump> particles) =>
 			Parameters.GRAVITY_INITIAL_SEPARATION_SCALER

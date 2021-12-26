@@ -53,7 +53,6 @@ namespace ParticleSimulator.Rendering {
 			ConsoleColor.Cyan,
 			ConsoleColor.DarkCyan,
 			ConsoleColor.Blue,
-			ConsoleColor.DarkBlue,
 			ConsoleColor.DarkGreen,
 			ConsoleColor.Green,
 			ConsoleColor.Yellow,
@@ -78,6 +77,12 @@ namespace ParticleSimulator.Rendering {
 			ConsoleColor.DarkCyan,
 			ConsoleColor.Blue,
 			ConsoleColor.DarkBlue,
+		};
+
+		public static readonly ConsoleColor[] Christmas = new ConsoleColor[] {
+			ConsoleColor.Red,
+			ConsoleColor.White,
+			ConsoleColor.Green,
 		};
 	}
 }

@@ -28,11 +28,13 @@ namespace ParticleSimulator.Simulation {
 		public Queue<ParticleData> RefreshSimulation() {
 			Queue<ParticleData> result = new Queue<ParticleData>();
 			ParticleData pd;
-			Queue<BaryonParticle> particles = this.ParticleTree.AsQueue();
-			BaryonParticle particle;
-			while (particles.TryDequeue(out particle)) {
-				particle.ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
-				particle.HandleBounds(Parameters.TIME_SCALE);
+			//Queue<BaryonParticle> particles = this.ParticleTree.AsQueue();
+			//BaryonParticle particle;
+			//while (particles.TryDequeue(out particle)) {
+			foreach (BaryonParticle particle in this.ParticleTree.AsEnumerable()) {
+				if (!Parameters.WORLD_BOUNCING || !particle.BounceWalls(Parameters.TIME_SCALE))
+					particle.ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
+				//particle.HandleBounds(Parameters.TIME_SCALE);
 				pd = new ParticleData(particle);
 				result.Enqueue(pd);
 			}

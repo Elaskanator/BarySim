@@ -10,10 +10,10 @@ namespace ParticleSimulator {
 	//TODO world wrap interaction: particles look forward only into adjoining quadrant
 	//SEEALSO https://www.youtube.com/watch?v=TrrbshL_0-s
 	public class Program {
-		public static RunManager Manager { get; private set; }
+		public static RenderEngine Engine { get; private set; }
+		public static PerfMon Monitor { get; private set; }
 		public static BaryonSimulator Simulator { get; private set; }
 		public static ConsoleRenderer Renderer { get; private set; }
-		public static PerfMon Monitor { get; private set; }
 		public static readonly Random Random = new();
 		
 		public static ISynchronousConsumedResource Resource_ParticleData, Resource_Rasterization, Resource_ScalingData;
@@ -52,13 +52,13 @@ namespace ParticleSimulator {
 			Renderer = new ConsoleRenderer();
 			Monitor = new PerfMon(Parameters.AUTOSCALER_ENABLE ? 5 : 4);
 
-			Manager = BuildRunManager();
+			Engine = BuildRunManager();
 			Monitor.TitleUpdate();
 			//ConsoleExtensions.WaitForEnter("Press enter to start");
-			Manager.Start();
+			Engine.Start();
 		}
 
-		private static RunManager BuildRunManager() {
+		private static RenderEngine BuildRunManager() {
 			SynchronousBuffer<Queue<ParticleData>> particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
 			SynchronousBuffer<ConsoleExtensions.CharInfo[]> rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 			SynchronousBuffer<float?[]> scalingResource = new("ScalingData", 0);
@@ -112,7 +112,7 @@ namespace ParticleSimulator {
 						OnChange = true,
 				}}});
 
-			return new RunManager(
+			return new RenderEngine(
 				new[] {
 					StepEval_Simulate,
 					StepEval_Rasterize,
@@ -127,9 +127,9 @@ namespace ParticleSimulator {
 			//also necessary to cleanup the application, otherwise any threading calls would immediately kill this thread
 			if (!(args is null)) args.Cancel = true;
 
-			Manager.Stop();
+			Engine.Stop();
 			Monitor.WriteEnd();
-			Manager.Dispose();
+			Engine.Dispose();
 
 			ConsoleExtensions.WaitForEnter("Press enter to exit");
 			//Manager.Dispose();

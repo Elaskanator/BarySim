@@ -3,15 +3,15 @@ using System.Linq;
 using Generic.Extensions;
 
 namespace ParticleSimulator.Engine {
-	public class RunManager : IRunnable {
+	public class RenderEngine : IRunnable {
 		private static int _globalId = 0;
 
-		public RunManager(params ACalculationHandler[] steps) { this.Evaluators = steps.Without(s => s is null).ToArray(); }
+		public RenderEngine(params ACalculationHandler[] steps) { this.Evaluators = steps.Without(s => s is null).ToArray(); }
 
-		~RunManager() => this.Dispose(false);
+		~RenderEngine() => this.Dispose(false);
 
 		public override string ToString() {
-			return string.Format("{0}<{1}>[{2}]", nameof(RunManager),
+			return string.Format("{0}<{1}>[{2}]", nameof(RenderEngine),
 				this.Evaluators.Length.Pluralize("step"),
 				string.Join(", ", this.Evaluators.AsEnumerable()));//string.Join ambiguous without AsEnumerable() (C# you STOOOPID)
 		}

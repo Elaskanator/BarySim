@@ -82,7 +82,9 @@ namespace ParticleSimulator.Rendering {
 
 				int offset_fps = (int)(Parameters.GRAPH_HEIGHT * (fpsTime - _graphMin) / (_graphMax - _graphMin));
 				offset_fps = offset_fps < 0 ? 0 : offset_fps < Parameters.GRAPH_HEIGHT ? offset_fps : Parameters.GRAPH_HEIGHT - 1;
+
 				int offset_targetTime = (int)(Parameters.GRAPH_HEIGHT * (targetTime - _graphMin) / (_graphMax - _graphMin));
+
 				int offset_frameTime = (int)(Parameters.GRAPH_HEIGHT * (frameTime - _graphMin) / (_graphMax - _graphMin));
 				offset_frameTime = offset_frameTime < 0 ? 0 : offset_frameTime < Parameters.GRAPH_HEIGHT ? offset_frameTime : Parameters.GRAPH_HEIGHT - 1;
 			
@@ -112,7 +114,7 @@ namespace ParticleSimulator.Rendering {
 					for (int x = 0; x < label_frameTime.Length; x++) {
 						yOffset = offset_frameTime;
 						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-							label_frameTime[x], ConsoleColor.DarkBlue, offset_targetTime == offset_frameTime ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan);
+							label_frameTime[x], ConsoleColor.White, offset_targetTime == offset_frameTime ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan);
 					}
 				}
 
@@ -130,7 +132,7 @@ namespace ParticleSimulator.Rendering {
 					for (int x = 0; x < label_FpsTime.Length; x++) {
 						yOffset = offset_fps;
 						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-							label_FpsTime[x], ConsoleColor.DarkBlue, offset_targetTime == offset_fps ? ConsoleColor.DarkYellow : ConsoleColor.DarkGreen);
+							label_FpsTime[x], ConsoleColor.White, offset_targetTime == offset_fps ? ConsoleColor.DarkYellow : ConsoleColor.DarkGreen);
 					}
 				}
 
