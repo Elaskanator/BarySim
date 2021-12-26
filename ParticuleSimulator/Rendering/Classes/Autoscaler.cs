@@ -12,32 +12,9 @@ namespace ParticleSimulator.Rendering {
 			else if (Parameters.COLOR_METHOD ==  ParticleColoringMethod.Depth)
 				this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => i / (Parameters.COLOR_ARRAY.Length + 1f)).ToArray();
 			else this.Values = Enumerable.Range(0, Parameters.COLOR_ARRAY.Length).Select(i => (float)i).ToArray();
-			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random)
-				this._randOffset = (int)(this.Values.Length * Program.Random.NextDouble());
 		}
 
 		public float[] Values { get; private set; }
-		private int _randOffset = 0;
-
-		public ConsoleColor GetRankedColor(ParticleData particle, float depth, int count, float density, ref float? rank) {
-			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random) {
-				return Parameters.COLOR_ARRAY[(particle.ID + this._randOffset) % this.Values.Length];
-			} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group) {
-				return Parameters.COLOR_ARRAY[(particle.GroupID + this._randOffset) % this.Values.Length];
-			} else {
-				if (Parameters.COLOR_METHOD == ParticleColoringMethod.Count) {
-					rank = count;
-				} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Density) {
-					rank = density;
-				} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth) {
-					rank = depth;
-				} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity) {
-					rank = particle.Luminosity;
-				} else return Parameters.COLOR_ARRAY[0];
-				float r = rank.Value;
-				return Parameters.COLOR_ARRAY[this.Values.Drop(1).TakeWhile(ds => ds < r).Count()];
-			}
-		}
 
 		public void Update(object[] parameters = null) {
 			float[] scalingValues = ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value).ToArray();

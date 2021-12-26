@@ -5,8 +5,8 @@ using ParticleSimulator.Rendering;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited
 	public static class Parameters {
-		//public const bool EXPORT_FRAMES = true;
-		//public const bool EXPORT_SYNC_RENDER = true;
+		public const bool EXPORT_FRAMES = true;
+		public const bool EXPORT_SYNC_RENDER = true;
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
@@ -15,7 +15,7 @@ namespace ParticleSimulator {
 
 		public const int DIM = 3;
 		public const float WORLD_SCALE = 1f;
-		public const float ZOOM_SCALE = 1f;//1f / MathF.Sqrt(2f);
+		public static readonly float ZOOM_SCALE = 1f / MathF.Sqrt(2f);
 		public const float TIME_SCALE = 1f;//can be any value, including negative
 
 		public const bool WORLD_ROTATION = true;

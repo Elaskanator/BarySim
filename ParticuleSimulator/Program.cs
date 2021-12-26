@@ -17,7 +17,7 @@ namespace ParticleSimulator {
 		public static readonly Random Random = new();
 		
 		public static ISynchronousConsumedResource Resource_ParticleData, Resource_Rasterization, Resource_ScalingData;
-		public static ProcessThread StepEval_Simulate, StepEval_Autoscale, StepEval_Rasterize, StepEval_Render, StepEval_Monitor;
+		public static ProcessThread StepEval_Simulate, StepEval_Autoscale, StepEval_Rasterize, StepEval_Render, Step_Export, StepEval_Monitor;
 
 		public static void Main(string[] args) {
 			Console.Title = string.Format("Barnes-Hut Simulator ({0}D) - Initializing", Parameters.DIM);
@@ -60,7 +60,7 @@ namespace ParticleSimulator {
 
 		private static RenderEngine BuildRunManager() {
 			SynchronousBuffer<Queue<ParticleData>> particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
-			SynchronousBuffer<ConsoleExtensions.CharInfo[]> rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
+			SynchronousBuffer<Resampling[]> rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 			SynchronousBuffer<float?[]> scalingResource = new("ScalingData", 0);
 
 			Resource_ParticleData = particleResource;
@@ -74,7 +74,7 @@ namespace ParticleSimulator {
 				Callback = Monitor.AfterRender,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
 				InputResourceUses = new IPrerequisite[] {
-					new IPrerequisite<ConsoleExtensions.CharInfo[]>() {
+					new IPrerequisite<Resampling[]>() {
 						Resource = rasterResource,
 						DoConsume = true,
 			}}});
@@ -88,7 +88,7 @@ namespace ParticleSimulator {
 			});
 			StepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterize",
-				CalculatorFn = Renderer.Rasterize,
+				CalculatorFn = Renderer.Rasterizer.Rasterize,
 				OutputResource = Resource_Rasterization,
 				InputResourceUses = new IPrerequisite[] {
 					new IPrerequisite<Queue<ParticleData>>() {
@@ -104,13 +104,25 @@ namespace ParticleSimulator {
 			if (Parameters.AUTOSCALER_ENABLE)
 				StepEval_Autoscale = ProcessThread.New(new() {
 					Name = "Autoscale",
-					EvaluatorFn = Renderer.Scaling.Update,
+					EvaluatorFn = Renderer.Rasterizer.Scaling.Update,
 					Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS)),
 					InputResourceUses = new IPrerequisite[] {
 					new IPrerequisite<float?[]>() {
 						Resource = scalingResource,
 						OnChange = true,
 				}}});
+
+			//if (Parameters.EXPORT_FRAMES) {
+			//	Step_Export = ProcessThread.New(new() {
+			//		Name = "Export",
+			//		EvaluatorFn = Exporter.Eport,
+			//		Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS)),
+			//		InputResourceUses = new IPrerequisite[] {
+			//		new IPrerequisite<float?[]>() {
+			//			Resource = scalingResource,
+			//			OnChange = true,
+			//	}}});
+			//}
 
 			return new RenderEngine(
 				new[] {
@@ -119,6 +131,7 @@ namespace ParticleSimulator {
 					StepEval_Monitor,
 					StepEval_Autoscale,
 					StepEval_Render,
+					Step_Export,
 				});
 		}
 
