@@ -79,8 +79,9 @@ namespace ParticleSimulator.Rendering {
 
 					this.Values = results.ToArray();
 				} else {
+					max = (float)stats.GetPercentileValue(95d);
 					float
-						min = 0f,//(float)stats.Data_asc[0],
+						min = (float)stats.GetPercentileValue(5d),
 						range = max - min;
 					if (range > Parameters.WORLD_EPSILON) {
 						float step = range / (Parameters.COLOR_ARRAY.Length + 1);

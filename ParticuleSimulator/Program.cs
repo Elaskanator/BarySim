@@ -14,6 +14,7 @@ namespace ParticleSimulator {
 		public static PerfMon Monitor { get; private set; }
 		public static BaryonSimulator Simulator { get; private set; }
 		public static ConsoleRenderer Renderer { get; private set; }
+		public static Rasterizer Rasterizer { get; private set; }
 		public static readonly Random Random = new();
 		
 		public static ISynchronousConsumedResource Resource_ParticleData, Resource_Rasterization, Resource_ScalingData;
@@ -49,6 +50,8 @@ namespace ParticleSimulator {
 			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
 			Simulator = new BaryonSimulator();
+
+			Rasterizer = new(Parameters.WINDOW_WIDTH, Parameters.WINDOW_HEIGHT * 2);
 			Renderer = new ConsoleRenderer();
 			Monitor = new PerfMon(Parameters.AUTOSCALER_ENABLE ? 5 : 4);
 
@@ -88,7 +91,7 @@ namespace ParticleSimulator {
 			});
 			StepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterize",
-				CalculatorFn = Renderer.Rasterizer.Rasterize,
+				CalculatorFn = Rasterizer.Rasterize,
 				OutputResource = Resource_Rasterization,
 				InputResourceUses = new IPrerequisite[] {
 					new IPrerequisite<Queue<ParticleData>>() {
@@ -104,7 +107,7 @@ namespace ParticleSimulator {
 			if (Parameters.AUTOSCALER_ENABLE)
 				StepEval_Autoscale = ProcessThread.New(new() {
 					Name = "Autoscale",
-					EvaluatorFn = Renderer.Rasterizer.Scaling.Update,
+					EvaluatorFn = Rasterizer.Scaling.Update,
 					Synchronizer = new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS)),
 					InputResourceUses = new IPrerequisite[] {
 					new IPrerequisite<float?[]>() {

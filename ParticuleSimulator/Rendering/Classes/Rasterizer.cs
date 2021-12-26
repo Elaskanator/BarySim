@@ -43,15 +43,17 @@ namespace ParticleSimulator.Rendering {
 		private int _randOffset = 0;
 		
 		public Pixel[] Rasterize(object[] parameters) {//top down view (smaller Z values = closer)
+			Queue<ParticleData> particles = (Queue<ParticleData>)parameters[0];
+
 			if (Parameters.WORLD_ROTATION) {
 				float numSeconds = Parameters.WORLD_ROTATION_SPEED_ABS
 					? this._framesRendered / Parameters.TARGET_FPS_DEFAULT
 					: (float)DateTime.UtcNow.Subtract(Program.Engine.StartTimeUtc.Value).TotalSeconds;
 
 				this.Camera.Set3DRotation(
-					Parameters.WORLD_ROTATION_PITCH ? Parameters.WORLD_ROTATION_SPEED * numSeconds : 0f,
-					Parameters.WORLD_ROTATION_YAW ? Parameters.WORLD_ROTATION_SPEED * numSeconds : 0f,
-					Parameters.WORLD_ROTATION_ROLL ? Parameters.WORLD_ROTATION_SPEED * numSeconds : 0f);
+					Parameters.WORLD_ROTATION_PITCH ? Parameters.WORLD_ROTATION_RADPERSEC * numSeconds : 0f,
+					Parameters.WORLD_ROTATION_YAW ? Parameters.WORLD_ROTATION_RADPERSEC * numSeconds : 0f,
+					Parameters.WORLD_ROTATION_ROLL ? Parameters.WORLD_ROTATION_RADPERSEC * numSeconds : 0f);
 			}
 
 			Pixel[] results = new Pixel[this.NumPixels];
@@ -60,7 +62,6 @@ namespace ParticleSimulator.Rendering {
 			Subsample[] nearest = new Subsample[this.NumPixels];
 			float?[] ranks = new float?[this.NumPixels];
 
-			Queue<ParticleData> particles = (Queue<ParticleData>)parameters[0];
 			ParticleData particle;
 			Queue<Subsample> resamplings = new();
 			Subsample resampling;

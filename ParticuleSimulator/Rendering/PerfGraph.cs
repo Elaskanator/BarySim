@@ -6,7 +6,7 @@ using Generic.Models;
 namespace ParticleSimulator.Rendering {
 	public class PerfGraph {
 		public PerfGraph(int numStats) {
-			int width =
+			int width =//TODO just F this
 				Parameters.PERF_STATS_ENABLE
 					? Parameters.GRAPH_WIDTH > 0
 						? Parameters.GRAPH_WIDTH
@@ -77,7 +77,7 @@ namespace ParticleSimulator.Rendering {
 					label_min = _graphMin < 1000 ? _graphMin.ToStringBetter(2, false) : (_graphMin / 1000).ToStringBetter(2, false),
 					label_target = targetTime < 1000 ? targetTime.ToStringBetter(3, true): (targetTime / 1000).ToStringBetter(3, true),
 					label_max = _graphMax < 1000 ? _graphMax.ToStringBetter(2, false) : (_graphMax / 1000).ToStringBetter(2, false),
-					label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(2, false): (frameTime / 1000).ToStringBetter(2, false),
+					label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(2, false) + "ms": (frameTime / 1000).ToStringBetter(2, false) + "s",
 					label_FpsTime = fpsTime < 1000 ? fpsTime.ToStringBetter(3, false) + "ms" : (fpsTime / 1000).ToStringBetter(3, false) + "s";
 
 				int offset_fps = (int)(Parameters.GRAPH_HEIGHT * (fpsTime - _graphMin) / (_graphMax - _graphMin));
@@ -89,15 +89,11 @@ namespace ParticleSimulator.Rendering {
 				offset_frameTime = offset_frameTime < 0 ? 0 : offset_frameTime < Parameters.GRAPH_HEIGHT ? offset_frameTime : Parameters.GRAPH_HEIGHT - 1;
 			
 				bool drawFps = true,
-					drawFrameTime = true,
+					drawFrameTime = offset_frameTime != offset_fps || frameTime > fpsTime,
 					drawtargetTime = offset_targetTime != offset_frameTime && offset_targetTime != offset_fps
 						&& offset_targetTime >= 0 && offset_targetTime < Parameters.GRAPH_HEIGHT,
 					drawMinTime = 0 != offset_frameTime && 0 != offset_fps && 0 != offset_targetTime,
 					drawMaxTime = Parameters.GRAPH_HEIGHT - 1 != offset_frameTime && Parameters.GRAPH_HEIGHT - 1 != offset_fps && Parameters.GRAPH_HEIGHT - 1 != offset_targetTime;
-				if (offset_frameTime == offset_fps)
-					if (frameTime < fpsTime)
-						drawFps = false;
-					else drawFrameTime = false;
 				
 				int yOffset;
 				if (drawMinTime) {
@@ -159,18 +155,21 @@ namespace ParticleSimulator.Rendering {
 				double
 					min = rangeStats.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
 					max = rangeStats.GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
+					minMedian = frameTimeStats.Concat(fpsStats).Min(s => s.GetPercentileValue(50d)),
+					maxMedian = frameTimeStats.Concat(fpsStats).Max(s => s.GetPercentileValue(50d)),
 					avg = frameTimeStats.Concat(fpsStats).Average(s => s.GetPercentileValue(50d));
 
-				min = min <= avg ? min : avg;
-				max = max >= avg ? max : avg;
+				min = min < minMedian ? min : minMedian;
+				max = max > maxMedian ? max : maxMedian;
 
-				min = min >= 1d ? min : 0f;
-				max = max >= min ? max : min + 1d;
+				min = min < avg ? min : avg;
+				max = max > avg ? max : avg;
 
-				if (Math.Abs(min - _graphMin) / _graphMin > 0.05d)
-					_graphMin = min;
-				if (Math.Abs(max - _graphMax) / _graphMax > 0.05d)
-					_graphMax = max;
+				min = min > 1d ? min : 0f;
+				max = max > min ? max : min + 1d;
+
+				_graphMin = min;
+				_graphMax = max;
 
 				for (int i = 0; i < frameTimeStats.Length || i < fpsStats.Length; i++)
 					_graphColumns[i] = RenderGraphColumn(_columnFpsStatsMs[i], _columnFrameTimeStatsMs[i]);
@@ -229,31 +228,32 @@ namespace ParticleSimulator.Rendering {
 				yTime090Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime090 - _graphMin) / (_graphMax - _graphMin),
 				yTime100Scaled =	2d*Parameters.GRAPH_HEIGHT * (yTime100 - _graphMin) / (_graphMax - _graphMin),
 				yTargetTimeScaled = 2d*Parameters.GRAPH_HEIGHT * ((1000d / fps) - _graphMin) / (_graphMax - _graphMin);
-			double
-				y000Scaled = yFps000Scaled <= yTime000Scaled ? yFps000Scaled : yTime000Scaled,
-				y100Scaled = yFps100Scaled >= yTime100Scaled ? yFps100Scaled : yTime100Scaled;
-			int yMin = y000Scaled >= 0f ? (int)y000Scaled : 0,
-				yMax = (int)(y100Scaled <= 2*Parameters.GRAPH_HEIGHT ? y100Scaled : 2*Parameters.GRAPH_HEIGHT);
 				
 			ConsoleColor[] colors = new ConsoleColor[2*Parameters.GRAPH_HEIGHT];
-			for (int yIdx = yMin; yIdx < yMax; yIdx++) {
+			for (int yIdx = 0; yIdx < 2*Parameters.GRAPH_HEIGHT; yIdx++) {
 				if (yIdx == (int)yFps050Scaled)
 					colors[yIdx] = ConsoleColor.DarkGreen;
-				else if (yIdx >= (int)yFps040Scaled && yIdx <= (int)yFps060Scaled)
-					colors[yIdx] = ConsoleColor.Green;
-
 				else if (yIdx == (int)yTime050Scaled)
 					colors[yIdx] = ConsoleColor.DarkCyan;
+
+				else if (yIdx >= (int)yFps040Scaled && yIdx <= (int)yFps060Scaled)
+					colors[yIdx] = ConsoleColor.Green;
 				else if (yIdx >= (int)yTime040Scaled && yIdx <= (int)yTime060Scaled)
 					colors[yIdx] = ConsoleColor.Cyan;
-
-				else if (fps > 0d && yIdx == (int)yTargetTimeScaled)
-					colors[yIdx] = ConsoleColor.DarkYellow;
-				else if (fps > 0d && yIdx > yTargetTimeScaled && yIdx > (int)yTime100Scaled && yIdx < (int)yFps050Scaled)
-					if (yIdx > (int)yFps040Scaled) colors[yIdx] = ConsoleColor.DarkMagenta;
-					else if (yIdx > (int)yFps025Scaled) colors[yIdx] = ConsoleColor.Magenta;
-					else if (yIdx > (int)yFps010Scaled) colors[yIdx] = ConsoleColor.DarkRed;
-					else colors[yIdx] = ConsoleColor.Red;
+				
+				else if (fps > 0d && yIdx >= (int)yTargetTimeScaled && yIdx < (int)yTime025Scaled) {
+					if (yIdx < (int)yTime000Scaled)
+						colors[yIdx] = ConsoleColor.DarkYellow;
+					else colors[yIdx] = ConsoleColor.Yellow;
+				} else if (yIdx > (int)yTime100Scaled && yIdx < (int)yFps050Scaled) {
+					if (yIdx <= (int)yFps010Scaled)
+						colors[yIdx] = ConsoleColor.Red;
+					else if (yIdx <= (int)yFps025Scaled)
+						colors[yIdx] = ConsoleColor.DarkRed;
+					else if (yIdx <= (int)yFps040Scaled)
+						colors[yIdx] = ConsoleColor.Magenta;
+					else colors[yIdx] = ConsoleColor.DarkMagenta;
+				}
 
 				else if (yIdx >= (int)yFps025Scaled && yIdx <= (int)yFps075Scaled)
 					colors[yIdx] = ConsoleColor.White;

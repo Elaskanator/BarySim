@@ -6,13 +6,11 @@ namespace ParticleSimulator.Rendering {
 	public partial class ConsoleRenderer {
 		public ConsoleRenderer() {
 			this.NumChars = Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT;
-			this.Rasterizer = new(Parameters.WINDOW_WIDTH, Parameters.WINDOW_HEIGHT * 2);
 
 			this._lastFrame = new ConsoleExtensions.CharInfo[NumChars];
 		}
 
 		public readonly int NumChars;
-		public readonly Rasterizer Rasterizer;
 
 		private ConsoleExtensions.CharInfo[] _lastFrame;
 
@@ -24,6 +22,7 @@ namespace ParticleSimulator.Rendering {
 
 		public void FlushScreenBuffer(object[] parameters) {
 			Pixel[] resampling = (Pixel[])parameters[0];
+			float[] scaling = Program.Rasterizer.Scaling.Values;
 			ConsoleExtensions.CharInfo[] buffer;
 			if (resampling is null) {
 				buffer = this._lastFrame;
@@ -34,8 +33,8 @@ namespace ParticleSimulator.Rendering {
 					i1 = col + (1 + (row << 1)) * Parameters.WINDOW_WIDTH;
 					i2 = col + (row << 1) * Parameters.WINDOW_WIDTH;
 					buffer[i] = BuildChar(
-						resampling[i1].IsNotNull ? this.GetRankColor(resampling[i1].Rank) : ConsoleColor.Black,
-						resampling[i2].IsNotNull ? this.GetRankColor(resampling[i2].Rank) : ConsoleColor.Black);
+						resampling[i1].IsNotNull ? this.GetRankColor(resampling[i1].Rank, scaling) : ConsoleColor.Black,
+						resampling[i2].IsNotNull ? this.GetRankColor(resampling[i2].Rank, scaling) : ConsoleColor.Black);
 					col++;
 					if (col >= Parameters.WINDOW_WIDTH) {
 						col = 0;
@@ -48,7 +47,7 @@ namespace ParticleSimulator.Rendering {
 			bool isSlow = Watchdog(buffer);
 
 			if (Parameters.LEGEND_ENABLE)
-				this.DrawLegend(buffer);
+				this.DrawLegend(buffer, scaling);
 
 			if (Parameters.PERF_ENABLE)
 				Program.Monitor.DrawStatsOverlay(buffer, isSlow);
@@ -71,8 +70,8 @@ namespace ParticleSimulator.Rendering {
 			return isSlow;
 		}
 
-		public void DrawLegend(ConsoleExtensions.CharInfo[] buffer) {
-			int numColors = this.Rasterizer.Scaling.Values.Length;
+		public void DrawLegend(ConsoleExtensions.CharInfo[] buffer, float[] scaling) {
+			int numColors = scaling.Length;
 			if (numColors > 0) {
 				bool isDiscrete = false;//Parameters.DIM < 3 && Parameters.SIM_TYPE == SimulationType.Boid;
 				string header = Parameters.COLOR_METHOD.ToString();
@@ -92,8 +91,8 @@ namespace ParticleSimulator.Rendering {
 					rowStringData = 
 						(isDiscrete && cIdx == 0 ? "=" : "≤")
 						+ (isDiscrete
-							? ((int)this.Rasterizer.Scaling.Values[cIdx]).ToString()
-							: this.Rasterizer.Scaling.Values[cIdx].ToStringBetter(2, true, 5));
+							? ((int)scaling[cIdx]).ToString()
+							: scaling[cIdx].ToStringBetter(2, true, 5));
 
 					for (int i = 0; i < rowStringData.Length; i++)
 						buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);
@@ -101,7 +100,7 @@ namespace ParticleSimulator.Rendering {
 			}
 		}
 
-		public ConsoleColor GetRankColor(float rank) =>
-			Parameters.COLOR_ARRAY[this.Rasterizer.Scaling.Values.Drop(1).TakeWhile(ds => ds < rank).Count()];
+		public ConsoleColor GetRankColor(float rank, float[] scaling) =>
+			Parameters.COLOR_ARRAY[scaling.Drop(1).TakeWhile(ds => ds < rank).Count()];
 	}
 }
