@@ -60,7 +60,7 @@ namespace ParticleSimulator {
 
 		private static RenderEngine BuildRunManager() {
 			SynchronousBuffer<Queue<ParticleData>> particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
-			SynchronousBuffer<Resampling[]> rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
+			SynchronousBuffer<Pixel[]> rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 			SynchronousBuffer<float?[]> scalingResource = new("ScalingData", 0);
 
 			Resource_ParticleData = particleResource;
@@ -74,7 +74,7 @@ namespace ParticleSimulator {
 				Callback = Monitor.AfterRender,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
 				InputResourceUses = new IPrerequisite[] {
-					new IPrerequisite<Resampling[]>() {
+					new IPrerequisite<Pixel[]>() {
 						Resource = rasterResource,
 						DoConsume = true,
 			}}});

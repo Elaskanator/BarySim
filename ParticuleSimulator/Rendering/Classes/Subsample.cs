@@ -14,20 +14,4 @@
 			this.H = h;
 		}
 	}
-
-	public struct Resampling {
-		public bool IsNotNull;
-		public int X;
-		public int Y;
-		public float Z;
-		public float Rank;
-
-		public Resampling(Subsample sample, float rank) {
-			this.IsNotNull = true;
-			this.X = sample.X;
-			this.Y = sample.Y;
-			this.Z = sample.Z;
-			this.Rank = rank;
-		}
-	}
 }

@@ -5,7 +5,7 @@ using Generic.Extensions;
 using Generic.Models;
 
 namespace ParticleSimulator.Rendering {
-	public class Autoscaler {
+	public class Autoscaler {//TODO smoothing updates to not have abrupt changes
 		public Autoscaler() {
 			if (Parameters.COLOR_USE_FIXED_BANDS)
 				this.Values = Parameters.COLOR_FIXED_BANDS ?? new float[0];

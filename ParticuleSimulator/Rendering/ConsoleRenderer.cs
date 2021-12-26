@@ -23,7 +23,7 @@ namespace ParticleSimulator.Rendering {
 		}
 
 		public void FlushScreenBuffer(object[] parameters) {
-			Resampling[] resampling = (Resampling[])parameters[0];
+			Pixel[] resampling = (Pixel[])parameters[0];
 			ConsoleExtensions.CharInfo[] buffer;
 			if (resampling is null) {
 				buffer = this._lastFrame;
@@ -46,6 +46,9 @@ namespace ParticleSimulator.Rendering {
 			}
 
 			bool isSlow = Watchdog(buffer);
+
+			if (Parameters.LEGEND_ENABLE)
+				this.DrawLegend(buffer);
 
 			if (Parameters.PERF_ENABLE)
 				Program.Monitor.DrawStatsOverlay(buffer, isSlow);

@@ -42,7 +42,7 @@ namespace ParticleSimulator.Rendering {
 		private int _framesRendered = 0;
 		private int _randOffset = 0;
 		
-		public Resampling[] Rasterize(object[] parameters) {//top down view (smaller Z values = closer)
+		public Pixel[] Rasterize(object[] parameters) {//top down view (smaller Z values = closer)
 			if (Parameters.WORLD_ROTATION) {
 				float numSeconds = Parameters.WORLD_ROTATION_SPEED_ABS
 					? this._framesRendered / Parameters.TARGET_FPS_DEFAULT
@@ -54,7 +54,7 @@ namespace ParticleSimulator.Rendering {
 					Parameters.WORLD_ROTATION_ROLL ? Parameters.WORLD_ROTATION_SPEED * numSeconds : 0f);
 			}
 
-			Resampling[] results = new Resampling[this.NumPixels];
+			Pixel[] results = new Pixel[this.NumPixels];
 			int[] counts = new int[this.NumPixels];
 			float[] densities = new float[this.NumPixels];
 			Subsample[] nearest = new Subsample[this.NumPixels];

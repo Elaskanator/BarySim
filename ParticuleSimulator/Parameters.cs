@@ -10,7 +10,7 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 18;
+		public const int PARTICLES_GROUP_MAX = 1 << 16;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;
@@ -39,7 +39,7 @@ namespace ParticleSimulator {
 		public const float WORLD_PADDING_PCT = 25f;
 		
 		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
 		public const bool AUTOSCALE_PERCENTILE = false;
 		public const bool COLOR_USE_FIXED_BANDS = false;
 		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
