@@ -11,7 +11,7 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 8;
+		public const int PARTICLES_GROUP_MAX = 1 << 16;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;
@@ -39,8 +39,8 @@ namespace ParticleSimulator {
 		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
 		
-		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Random;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.DEFAULT_CONSOLE_COLORS;
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
 		public const bool AUTOSCALE_PERCENTILE = false;
 		public const bool COLOR_USE_FIXED_BANDS = false;
 		public static readonly float[] COLOR_FIXED_BANDS = new float[] { 0f };//Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
@@ -74,8 +74,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 20f;
-		public const float GRAVITY_MAX_STARTING_MASS = 100f;
+		public const float GRAVITY_MIN_STARTING_MASS = 25f;
+		public const float GRAVITY_MAX_STARTING_MASS = 25f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;

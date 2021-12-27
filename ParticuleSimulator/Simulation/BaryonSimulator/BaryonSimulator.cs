@@ -7,20 +7,22 @@ using Generic.Models;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
-	public class BaryonSimulator {//modified Barnes-Hut Algorithm
+	public class BaryonSimulator : ISimulator {//modified Barnes-Hut Algorithm
 		public BaryonSimulator() {
 			this.InitialParticleGroups = Enumerable
 				.Range(0, Parameters.PARTICLES_GROUP_COUNT)
 				.Select(i => new Galaxy())
 				.ToArray();
 
-			this.ParticleTree = (BarnesHutTree<BaryonParticle>)new BarnesHutTree<BaryonParticle>(Parameters.DIM)
+			this.ParticleTree = (BarnesHutTree<Particle>)new BarnesHutTree<Particle>(Parameters.DIM)
 				.AddUpOrDown(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
 			this.ParticleTree.Do();
 		}
 
 		public Galaxy[] InitialParticleGroups { get; private set; }
-		public BarnesHutTree<BaryonParticle> ParticleTree { get; private set; }
+		public BarnesHutTree<Particle> ParticleTree { get; private set; }
+
+		public int ParticleCount => this.ParticleTree is null ? 0 : this.ParticleTree.Count;
 
 		public virtual bool EnableCollisions => false;
 		public virtual float WorldBounceWeight => 0f;
@@ -31,7 +33,7 @@ namespace ParticleSimulator.Simulation {
 			//Queue<BaryonParticle> particles = this.ParticleTree.AsQueue();
 			//BaryonParticle particle;
 			//while (particles.TryDequeue(out particle)) {
-			foreach (BaryonParticle particle in this.ParticleTree.AsEnumerable()) {
+			foreach (Particle particle in this.ParticleTree.AsEnumerable()) {
 				if (!Parameters.WORLD_BOUNCING || !particle.BounceWalls(Parameters.TIME_SCALE))
 					particle.ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
 				//particle.HandleBounds(Parameters.TIME_SCALE);

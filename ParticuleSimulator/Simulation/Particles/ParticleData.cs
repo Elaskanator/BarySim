@@ -1,8 +1,8 @@
 ﻿using System.Numerics;
 
 namespace ParticleSimulator {
-	public struct ParticleData : IBaryonParticle {
-		public ParticleData(IBaryonParticle particle) {
+	public struct ParticleData : IParticle {
+		public ParticleData(IParticle particle) {
 			this.ID = particle.ID;
 			this.GroupID = particle.GroupID;
 			this.Position = particle.Position;

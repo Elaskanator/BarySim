@@ -28,18 +28,19 @@ namespace ParticleSimulator.Engine {
 		public DateTime? StartTimeUtc { get; private set; }
 		public DateTime? EndTimeUtc { get; private set; }
 		
-		public ACalculationHandler[] Evaluators { get; private set; }
+		internal ACalculationHandler[] Evaluators { get; private set; }
+
+		public ISimulator Simulator { get; private set; }
+		public ARenderer Renderer { get; private set; }
 		
-		public BaryonSimulator Simulator { get; private set; }
 		public Autoscaler Scaling { get; private set; }
 		public Rasterizer Rasterizer { get; private set; }
-		public ARenderer Renderer { get; private set; }
 
-		public ProcessThread StepEval_Simulate { get; private set; }
-		public ProcessThread StepEval_Autoscale { get; private set; }
-		public ProcessThread StepEval_Rasterize { get; private set; }
-		public ProcessThread StepEval_Render { get; private set; }
-		public ProcessThread StepEval_Export { get; private set; }
+		internal ProcessThread StepEval_Simulate { get; private set; }
+		internal ProcessThread StepEval_Autoscale { get; private set; }
+		internal ProcessThread StepEval_Rasterize { get; private set; }
+		internal ProcessThread StepEval_Render { get; private set; }
+		internal ProcessThread StepEval_Export { get; private set; }
 
 		public void Init() {
 			ACalculationHandler[] steps;
@@ -105,10 +106,11 @@ namespace ParticleSimulator.Engine {
 						? new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS))
 						: null,
 					OutputResource = scaling,
+					IsOutputOverwrite = true,
 					InputResourceUses = new IPrerequisite[] {
 						new IPrerequisite<float?[]>() {
 							Resource = rawRankData,
-							OnChange = true,
+							DoConsume = true,
 						}
 					}
 			});

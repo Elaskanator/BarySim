@@ -2,23 +2,24 @@
 using Generic.Vectors;
 
 namespace ParticleSimulator {
-	public interface IBaryonParticle : IMultidimensionalFloat {
+	public interface IParticle : IMultidimensionalFloat {
 		int ID { get; }
 		int GroupID { get; }
 		float Radius { get; }
 		float Luminosity { get; }
 		
-		bool Equals(object other) => (other is IBaryonParticle data) && this.ID == data.ID;
+		bool Equals(object other) => (other is IParticle data) && this.ID == data.ID;
 		int GetHashCode() => this.ID;
 	}
 
-	public class BaryonParticle : IBaryonParticle {
-		public BaryonParticle() { this.IsEnabled = true; }
-		public override string ToString() => string.Format("Particle[<{0}> ID {1}]", this.ID, string.Join("", this.Position));
-		
+	public class Particle : IParticle {
 		private static int _globalID = 0;
-
 		private readonly int _id = ++_globalID;
+
+		public Particle() { this.IsEnabled = true; }
+
+		public override string ToString() => string.Format("Particle[<{0}> ID {1}]", this.ID, string.Join("", this.Position));
+
 		public int ID => this._id;
 		public int GroupID { get; set; }
 		public bool IsEnabled { get; set; }

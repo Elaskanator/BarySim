@@ -80,15 +80,17 @@ namespace ParticleSimulator.Rendering {
 						}
 				}
 			}
-
+			
+			bool any = false;
 			for (int i = 0; i < this.NumPixels; i++) {
 				if (counts[i] > 0) {
+					any = true;
 					ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densities[i]);
 					results[i] = new(nearest[i], ranks[i].Value);
 				}
 			}
 
-			this._rawRankingsResource.Overwrite(ranks);
+			if (any) this._rawRankingsResource.Overwrite(ranks);
 
 			this._framesRendered++;
 			return results;

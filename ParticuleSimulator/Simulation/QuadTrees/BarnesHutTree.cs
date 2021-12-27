@@ -10,7 +10,7 @@ using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public class BarnesHutTree<T> : QuadTreeSIMD<T, float>
-	where T : BaryonParticle {
+	where T : Particle {
 		private BarnesHutTree(int dim, Vector<float> corner1, Vector<float> corner2, QuadTreeSIMD<T, float> parent)
 		: base(dim, corner1, corner2, parent) { this._siblings.Add(this); }
 		public BarnesHutTree(int dim, Vector<float> size) : base(dim, size) { this._siblings.Add(this); }

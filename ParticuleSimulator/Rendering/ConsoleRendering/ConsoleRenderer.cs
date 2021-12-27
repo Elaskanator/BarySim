@@ -93,8 +93,8 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		private void TitleUpdate() {
 			string result = string.Format("Baryon Simulator {0}D", Parameters.DIM);
 
-			if (!(this.Engine.Simulator.ParticleTree is null))
-				result += string.Format(" - {0}", this.Engine.Simulator.ParticleTree.Count.Pluralize("Particle"));
+			if (this.Engine.Simulator.ParticleCount > 0)
+				result += string.Format(" - {0}", this.Engine.Simulator.ParticleCount.Pluralize("Particle"));
 			if (this.FpsTimings.NumUpdates > 0)
 				result += string.Format(" ({0} fps)", (1d / this.FpsTimings.Current.TotalSeconds).ToStringBetter(2, false));
 
