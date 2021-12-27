@@ -1,4 +1,4 @@
-﻿namespace ParticleSimulator.Rendering {
+﻿namespace ParticleSimulator.Rendering.Rasterization {
 	public struct Subsample {
 		public ParticleData Particle;
 		public int X;

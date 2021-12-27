@@ -1,11 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using Generic.Extensions;
 using System.Linq;
+using System.Threading;
 using Generic.Models;
 using ParticleSimulator.Rendering;
-using ParticleSimulator.Simulation;
+using ParticleSimulator.Rendering.Rasterization;
 using ParticleSimulator.Rendering.SystemConsole;
+using ParticleSimulator.Simulation;
+using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Engine {
 	public class RenderEngine : IRunnable {
@@ -42,9 +44,11 @@ namespace ParticleSimulator.Engine {
 		internal ProcessThread StepEval_Render { get; private set; }
 		internal ProcessThread StepEval_Export { get; private set; }
 
+		public bool IsPaused { get; private set; }
+
 		public void Init() {
 			ACalculationHandler[] steps;
-			SynchronousBuffer<Queue<ParticleData>> particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
+			SynchronousBuffer<ParticleData[]> particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
 			SynchronousBuffer<Pixel[]> rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 			SynchronousBuffer<float?[]> rawRankData = new("Ranks", 0);
 
@@ -60,16 +64,13 @@ namespace ParticleSimulator.Engine {
 				Name = "Draw",
 				EvaluatorFn = this.Renderer.Draw,
 				CallbackFn = this.Renderer.UpdateRenderTime,
-				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f
-					? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS)
-					: null,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
 				InputResourceUses = new IPrerequisite[] {
-					new IPrerequisite<Pixel[]>() {
+					new Prerequisite<Pixel[]>() {
 						Resource = rasterResource,
 						DoConsume = true,
 					},
-					new IPrerequisite<float[]>() {
+					new Prerequisite<float[]>() {
 						Resource = scaling,
 					},
 				}});
@@ -87,12 +88,16 @@ namespace ParticleSimulator.Engine {
 				Name = "Rasterize",
 				CalculatorFn = this.Rasterizer.Rasterize,
 				OutputResource = rasterResource,
+				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f
+					? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS)
+					: null,
 				InputResourceUses = new IPrerequisite[] {
-					new IPrerequisite<Queue<ParticleData>>() {
+					new Prerequisite<ParticleData[]>() {
 						Resource = particleResource,
 						DoConsume = true,
+						ReuseTolerance = -1
 					},
-					new IPrerequisite<float[]>() {
+					new Prerequisite<float[]>() {
 						Resource = scaling,
 					}
 				}
@@ -108,7 +113,7 @@ namespace ParticleSimulator.Engine {
 					OutputResource = scaling,
 					IsOutputOverwrite = true,
 					InputResourceUses = new IPrerequisite[] {
-						new IPrerequisite<float?[]>() {
+						new Prerequisite<float?[]>() {
 							Resource = rawRankData,
 							DoConsume = true,
 						}
@@ -133,8 +138,13 @@ namespace ParticleSimulator.Engine {
 				throw new InvalidOperationException("Already open");
 			} else {
 				this.Init();
+
 				this.IsOpen = true;
 				this.StartTimeUtc = DateTime.UtcNow;
+
+				Thread keyReader = new(this.HandleInputs);
+				keyReader.Start();
+
 				for (int i = 0; i < this.Evaluators.Length; i++)
 					this.Evaluators[i].Start();
 			}
@@ -142,16 +152,25 @@ namespace ParticleSimulator.Engine {
 
 		public void Pause() {
 			if (this.IsOpen) {
-				for (int i = 0; i < this.Evaluators.Length; i++)
-					this.Evaluators[i].Pause();
+				this.StepEval_Simulate.Pause();
+				if (!(this.StepEval_Autoscale is null))
+					this.StepEval_Autoscale.Pause();
 			} else throw new InvalidOperationException("Not open");
 		}
 
 		public void Resume() {
 			if (this.IsOpen) {
-				for (int i = 0; i < this.Evaluators.Length; i++)
-					this.Evaluators[i].Resume();
+				this.StepEval_Simulate.Resume();
+				if (!(this.StepEval_Autoscale is null))
+					this.StepEval_Autoscale.Resume();
 			} else throw new InvalidOperationException("Not open");
+		}
+
+		public void TogglePause() {
+			if (this.IsPaused)
+				this.Resume();
+			else this.Pause();
+			this.IsPaused = !this.IsPaused;
 		}
 
 		public void Stop () {
@@ -174,6 +193,16 @@ namespace ParticleSimulator.Engine {
 			if (fromDispose)
 				for (int i = 0; i < this.Evaluators.Length; i++)
 					this.Evaluators[i].Dispose(fromDispose);
+		}
+
+		private void HandleInputs() {
+			while (this.IsOpen) {
+				switch (Console.ReadKey(false).Key) {
+					case ConsoleKey.F1://the Pause key is apparently deprecated because pushing Pause/Break doesn't even trigger a keypress event!
+						this.TogglePause();
+						break;
+				}
+			}
 		}
 	}
 }

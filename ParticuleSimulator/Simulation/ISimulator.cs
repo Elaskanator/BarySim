@@ -8,6 +8,6 @@ namespace ParticleSimulator.Simulation {
 	public interface ISimulator {
 		int ParticleCount { get; }
 
-		Queue<ParticleData> RefreshSimulation();
+		ParticleData[] RefreshSimulation();
 	}
 }

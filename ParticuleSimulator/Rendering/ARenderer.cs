@@ -2,6 +2,7 @@
 using System.Linq;
 using Generic.Models;
 using ParticleSimulator.Engine;
+using ParticleSimulator.Rendering.Rasterization;
 
 namespace ParticleSimulator.Rendering {
 	public abstract class ARenderer {
@@ -18,7 +19,7 @@ namespace ParticleSimulator.Rendering {
 		public void Draw(bool wasPunctual, object[] parameters) {
 			float[] scaling = this.Engine.Scaling.Values;
 			object buffer = this.PrepareBuffer(scaling, (Pixel[])parameters[0]);
-			this.DrawOverlays(wasPunctual, scaling, buffer);
+			this.DrawOverlays(this.Engine.IsPaused, wasPunctual, scaling, buffer);
 			this.Flush(buffer);
 		}
 
@@ -43,7 +44,7 @@ namespace ParticleSimulator.Rendering {
 		public abstract void Init();
 
 		protected abstract object PrepareBuffer(float[] scaling, Pixel[] buffer);
-		protected abstract void DrawOverlays(bool wasPunctual, float[] scaling, object buffer);
+		protected abstract void DrawOverlays(bool isPaused, bool wasPunctual, float[] scaling, object buffer);
 		protected abstract void Flush(object buffer);
 		protected abstract void UpdateMonitor(int framesCompleted, TimeSpan frameTime, TimeSpan fpsTime);
 	}

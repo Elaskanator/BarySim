@@ -5,7 +5,7 @@ using System.Numerics;
 using Generic.Extensions;
 using Generic.Vectors;
 
-namespace ParticleSimulator.Simulation {
+namespace ParticleSimulator.Simulation.Baryon {
 	public class Galaxy : AParticleGroup<MatterClump> {
 		public override float StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
 		public override float StartSpeedMax_Group_Rand => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND;

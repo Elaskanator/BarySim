@@ -2,6 +2,7 @@
 using System.Linq;
 using Generic.Extensions;
 using ParticleSimulator.Engine;
+using ParticleSimulator.Rendering.Rasterization;
 
 namespace ParticleSimulator.Rendering.SystemConsole {
 	public class ConsoleRenderer : ARenderer {
@@ -69,13 +70,20 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			return this._lastFrame;
 		}
 
-		protected override void DrawOverlays(bool wasPunctual, float[] scaling, object bufferData) {
+		protected override void DrawOverlays(bool isPaused, bool wasPunctual, float[] scaling, object bufferData) {
 			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])bufferData;
 			this.Watchdog(buffer);
 			if (Parameters.PERF_ENABLE)
 				this._perfMon.DrawStatsOverlay(buffer, wasPunctual);
-			if (Parameters.LEGEND_ENABLE)
+			if (Parameters.LEGEND_ENABLE
+			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Random
+			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Group)
 				this.DrawLegend(scaling, buffer);
+			if (isPaused) {
+				string message = "Paused";
+				for (int i = 0; i < message.Length; i++)
+					buffer[i + 50] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Yellow, ConsoleColor.Black);
+			}
 		}
 
 		protected override void UpdateMonitor(int framesCompleted, TimeSpan frameTime, TimeSpan fpsTime) =>

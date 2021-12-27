@@ -4,7 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Generic.Vectors;
 
-namespace ParticleSimulator.Simulation {
+namespace ParticleSimulator.Simulation.Baryon {
 	public class MatterClump : Particle {
 		private float _radius = 0f;
 		public override float Radius => this._radius;

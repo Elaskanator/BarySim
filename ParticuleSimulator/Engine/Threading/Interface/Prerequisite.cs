@@ -21,7 +21,7 @@ namespace ParticleSimulator.Engine {
 			this.ReuseTolerance);
 	}
 
-	public struct IPrerequisite<T> : IPrerequisite {
+	public struct Prerequisite<T> : IPrerequisite {
 		public SynchronousBuffer<T> Resource { get; set; }
 		ISynchronousConsumedResource IPrerequisite.Resource => this.Resource;
 

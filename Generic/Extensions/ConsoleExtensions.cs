@@ -13,17 +13,15 @@ namespace Generic.Extensions {
 			bool oldVisibility = Console.CursorVisible;
 			ConsoleColor oldForeground = Console.ForegroundColor,
 				oldbackground = Console.BackgroundColor;
-			
+
             Console.ForegroundColor = foreground;
             Console.BackgroundColor = background;
             Console.Write(message);
             Console.ForegroundColor = oldForeground;
             Console.BackgroundColor = oldbackground;
 			Console.CursorVisible = true;
-
-            ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-			while (keyInfo.Key != ConsoleKey.Enter)
-				keyInfo = Console.ReadKey(true);
+			
+			while (Console.ReadKey(true).Key != ConsoleKey.Enter) ;
 
 			Console.CursorVisible = oldVisibility;
         }

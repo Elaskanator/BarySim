@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using ParticleSimulator.Engine;
 
-namespace ParticleSimulator.Rendering {
+namespace ParticleSimulator.Rendering.Rasterization {
 	public class Rasterizer {
 		public Rasterizer(int width, int height, Random rand, SynchronousBuffer<float?[]> rawRankings) {
 			this.Width = width;
@@ -43,7 +43,7 @@ namespace ParticleSimulator.Rendering {
 		private int _framesRendered = 0;
 		
 		public Pixel[] Rasterize(bool wasPunctual, object[] parameters) {//top down view (smaller Z values = closer)
-			Queue<ParticleData> particles = (Queue<ParticleData>)parameters[0];
+			ParticleData[] particles = (ParticleData[])parameters[0];
 			float[] scalings = (float[])parameters[1];
 
 			if (Parameters.WORLD_ROTATION) {
@@ -67,8 +67,8 @@ namespace ParticleSimulator.Rendering {
 			Queue<Subsample> resamplings = new();
 			Subsample resampling;
 			int idx;
-			while (particles.TryDequeue(out particle)) {
-				this.Resample(particle, resamplings);
+			for (int i = 0; i < particles.Length; i++) {
+				this.Resample(particles[i], resamplings);
 				while (resamplings.TryDequeue(out resampling)) {
 					idx = resampling.X + this.Width * resampling.Y;
 						densities[idx] += resampling.H;

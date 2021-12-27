@@ -1,4 +1,4 @@
-﻿namespace ParticleSimulator.Rendering {
+﻿namespace ParticleSimulator.Rendering.Rasterization {
 	public struct Pixel {
 		public bool IsNotNull;
 		public int X;

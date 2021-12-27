@@ -11,7 +11,7 @@ namespace ParticleSimulator.Engine {
 	}
 
 	public class DataGatherer<T> : ACalculationHandler, IDataGatherer {
-		public DataGatherer(IPrerequisite<T> config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal)
+		public DataGatherer(Prerequisite<T> config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal)
 		: base (readySignal, doneSignal) {
 			this.Config = config;
 			this._refreshSignal = refreshSignal;
@@ -20,7 +20,7 @@ namespace ParticleSimulator.Engine {
 		public T Value => this._myValue;
 		object IDataGatherer.Value => this.Value;
 
-		public IPrerequisite<T> Config { get; private set; }
+		public Prerequisite<T> Config { get; private set; }
 		public int Skips { get; private set; }
 		public int Reuses { get; private set; }
 		

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Numerics;
 using Generic.Vectors;
 
-namespace ParticleSimulator.Rendering {
+namespace ParticleSimulator.Rendering.Rasterization {
 	public class Camera {
 		public Camera(float scaling = 1f) {
 			this.Scaling = scaling;
