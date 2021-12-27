@@ -8,7 +8,17 @@ using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Baryon {
 	public class BaryonSimulator : ISimulator {//modified Barnes-Hut Algorithm
-		public BaryonSimulator() {
+		public BaryonSimulator() { }
+
+		public Galaxy[] InitialParticleGroups { get; private set; }
+		public BarnesHutTree<Particle> ParticleTree { get; private set; }
+
+		public int ParticleCount => this.ParticleTree is null ? 0 : this.ParticleTree.Count;
+
+		public virtual bool EnableCollisions => false;
+		public virtual float WorldBounceWeight => 0f;
+
+		public void Init() {
 			this.InitialParticleGroups = Enumerable
 				.Range(0, Parameters.PARTICLES_GROUP_COUNT)
 				.Select(i => new Galaxy())
@@ -18,14 +28,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 				.AddUpOrDown(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
 			this.ParticleTree.Do();
 		}
-
-		public Galaxy[] InitialParticleGroups { get; private set; }
-		public BarnesHutTree<Particle> ParticleTree { get; private set; }
-
-		public int ParticleCount => this.ParticleTree is null ? 0 : this.ParticleTree.Count;
-
-		public virtual bool EnableCollisions => false;
-		public virtual float WorldBounceWeight => 0f;
 
 		public ParticleData[] RefreshSimulation() {
 			ParticleData[] result = new	ParticleData[this.ParticleTree.Count];

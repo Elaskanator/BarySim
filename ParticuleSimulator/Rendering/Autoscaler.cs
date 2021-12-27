@@ -5,17 +5,20 @@ using Generic.Extensions;
 using Generic.Models;
 
 namespace ParticleSimulator.Rendering {
-	public class Autoscaler {//TODO smoothing updates to not have abrupt changes
+	public class Autoscaler {
 		public Autoscaler() {
 			if (Parameters.COLOR_USE_FIXED_BANDS)
 				this.Values = Parameters.COLOR_FIXED_BANDS ?? new float[0];
-			else if (Parameters.COLOR_METHOD ==  ParticleColoringMethod.Depth)
-				this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => i / (Parameters.COLOR_ARRAY.Length + 1f)).ToArray();
-			else this.Values = Enumerable.Range(0, Parameters.COLOR_ARRAY.Length).Select(i => (float)i).ToArray();
+			else if (Parameters.COLOR_METHOD ==  ParticleColoringMethod.Depth) {
+				int minDim = Parameters.WINDOW_WIDTH > Parameters.WINDOW_HEIGHT ? Parameters.WINDOW_HEIGHT : Parameters.WINDOW_WIDTH;
+				float range = MathF.Sqrt(3f) * minDim / 2f;
+				this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => -range + (i * 2f*range / (Parameters.COLOR_ARRAY.Length + 1f))).ToArray();
+			} else this.Values = Enumerable.Range(0, Parameters.COLOR_ARRAY.Length).Select(i => (float)i).ToArray();
 		}
 
 		public float[] Values { get; private set; }
-		private SimpleExponentialMovingAverage _max = new SimpleExponentialMovingAverage(0.1f);
+		private SimpleExponentialMovingAverage _min = new SimpleExponentialMovingAverage(0.2f);
+		private SimpleExponentialMovingAverage _max = new SimpleExponentialMovingAverage(0.2f);
 
 		public float[] Update(bool wasPunctual, object[] parameters) {
 			float[] scalingValues = ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value).ToArray();
@@ -80,14 +83,34 @@ namespace ParticleSimulator.Rendering {
 
 					this.Values = results.ToArray();
 				} else {
-					this._max.Update(stats.GetPercentileValue(95d));
-					max = (float)this._max.Current;
-					float
-						min = (float)stats.GetPercentileValue(5d),
-						range = max - min;
-					if (range > Parameters.WORLD_EPSILON) {
-						float step = range / (Parameters.COLOR_ARRAY.Length + 1);
-						this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => min + step*i).ToArray();
+					this._min.Update(stats.GetPercentileValue(100d / (Parameters.COLOR_ARRAY.Length + 1)));
+					this._max.Update(stats.GetPercentileValue(100d * (1d - 1d / (Parameters.COLOR_ARRAY.Length + 1))));
+					float min, range;
+
+					if (Parameters.AUTOSCALE_FIXED_MIN >= 0 && Parameters.AUTOSCALE_FIXED_MAX >= 0) {
+						min = Parameters.AUTOSCALE_FIXED_MIN;
+						max = Parameters.AUTOSCALE_FIXED_MAX;
+					} else if (Parameters.AUTOSCALE_FIXED_MIN >= 0) {
+						if (Parameters.AUTOSCALE_FIXED_MIN > (float)this._max.Current) {
+							min = Parameters.AUTOSCALE_FIXED_MIN;
+							max = Parameters.AUTOSCALE_FIXED_MIN;
+						} else {
+							min = Parameters.AUTOSCALE_FIXED_MIN;
+							max = (float)this._max.Current;
+						}
+					} else if (Parameters.AUTOSCALE_FIXED_MAX >= 0) {
+						min = Parameters.AUTOSCALE_FIXED_MAX / (Parameters.COLOR_ARRAY.Length + 1);
+						max = Parameters.AUTOSCALE_FIXED_MAX;
+					} else {
+						min = (float)this._min.Current;
+						max = (float)this._max.Current;
+					}
+					range = max - min;
+					int numSteps = (int)range;
+					numSteps = numSteps <= Parameters.COLOR_ARRAY.Length ? numSteps : Parameters.COLOR_ARRAY.Length;
+					if (numSteps > 0) {
+						float step = range / (numSteps + 1);
+						this.Values = Enumerable.Range(1, numSteps).Select(i => min + step*i).ToArray();
 					} else this.Values = new float[] { max };
 				}
 			}

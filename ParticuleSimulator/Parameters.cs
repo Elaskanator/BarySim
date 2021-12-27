@@ -11,21 +11,19 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 16;
+		public const int PARTICLES_GROUP_MAX = 1 << 15;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;
 		public const float TIME_SCALE = 1f;//can be any value, including negative
 		public const float WORLD_SCALE = 1f;
-		public static readonly float ZOOM_SCALE = 1f;// / MathF.Sqrt(2f);
+		public static readonly float ZOOM_SCALE = 1f / MathF.Sqrt(2f);
 		public static int SUPERSAMPLING = 1;
 
-		public const bool WORLD_ROTATION = false;
-		public const float WORLD_ROTATION_RADPERSEC = 0.1f;
+		public const float WORLD_ROTATION_RADPERFRAME = 0.004f;
 		public const bool WORLD_ROTATION_PITCH = true;
 		public const bool WORLD_ROTATION_YAW = true;
 		public const bool WORLD_ROTATION_ROLL = true;
-		public const bool WORLD_ROTATION_SPEED_ABS = true;
 		
 		public const int DETERMINISTIC_RANDOM_SEED = 0;
 		public const float ADAPTIVE_TIME_GRANULARITY = 0.01f;//subdivide time steps as necessary for very close interactions
@@ -42,7 +40,9 @@ namespace ParticleSimulator {
 		public const float WORLD_PADDING_PCT = 25f;
 		
 		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
+		public const float AUTOSCALE_FIXED_MIN = -1f;
+		public const float AUTOSCALE_FIXED_MAX = -1f;
 		public const bool AUTOSCALE_PERCENTILE = false;
 		public const bool COLOR_USE_FIXED_BANDS = false;
 		public static readonly float[] COLOR_FIXED_BANDS = new float[] { 0f };//Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
@@ -76,8 +76,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 40f;
-		public const float GRAVITY_MAX_STARTING_MASS = 40f;
+		public const float GRAVITY_MIN_STARTING_MASS = 50f;
+		public const float GRAVITY_MAX_STARTING_MASS = 50f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
@@ -117,7 +117,7 @@ namespace ParticleSimulator {
 		public const int GRAPH_HEIGHT = 8;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
-		public const float PERF_GRAPH_PERCENTILE_CUTOFF = 10f;
+		public const float PERF_GRAPH_PERCENTILE_CUTOFF = 25f;
 
 		public static readonly bool AUTOSCALER_ENABLE =
 			!COLOR_USE_FIXED_BANDS && COLOR_ARRAY.Length > 1

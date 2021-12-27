@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using Generic.Extensions;
 using ParticleSimulator.Engine;
 using ParticleSimulator.Rendering.Rasterization;
@@ -24,11 +25,6 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		}
 
 		public override void Init() {
-			string result = string.Format("Baryon Simulator {0}D - {1}",
-				Parameters.DIM,
-				this.Engine.Simulator.ParticleCount.Pluralize("Particle"));
-			Console.Title = result;
-
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
 			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
@@ -40,6 +36,11 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
 			this._perfMon.Init();
+		}
+
+		public override void Startup() {
+			Thread titleMon = new(this.ConsoleTitleUpdate);
+			titleMon.Start();
 		}
 
 		protected override void Flush(object buffer) =>
@@ -89,6 +90,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		protected override void UpdateMonitor(int framesCompleted, TimeSpan frameTime, TimeSpan fpsTime) =>
 			this._perfMon.Graph.Update(framesCompleted % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN, frameTime, fpsTime);
 
+
 		private void Watchdog(ConsoleExtensions.CharInfo[] buffer) {
 			int xOffset = Parameters.PERF_ENABLE ? 6 : 0,
 				yOffset = Parameters.PERF_ENABLE ? 1 : 0;
@@ -99,6 +101,19 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s") + " ";
 				for (int i = 0; i < message.Length; i++)
 					buffer[i + xOffset + Parameters.WINDOW_WIDTH*yOffset] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
+			}
+		}
+
+		private void ConsoleTitleUpdate() {
+			while (this.Engine.IsOpen) {
+				string result = string.Format("Baryon Simulator {0}D - {1}",
+					Parameters.DIM,
+					this.Engine.Simulator.ParticleCount.Pluralize("Particle"));
+				if (this.Engine.StepEval_Render.FullIterationCount > 0)
+					result += string.Format(" ({0} FPS)", (1d / this.Engine.StepEval_Render.FullTimePunctual.Current.TotalSeconds).ToStringBetter(2));
+
+				Console.Title = result;
+				Thread.Sleep(500);
 			}
 		}
 

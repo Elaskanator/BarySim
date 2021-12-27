@@ -135,6 +135,7 @@ namespace ParticleSimulator.Engine {
 			this.Evaluators = steps.Without(s => s is null).ToArray();
 
 			this.Renderer.Init();
+			this.Simulator.Init();
 		}
 
 		public void Start() {
@@ -145,6 +146,8 @@ namespace ParticleSimulator.Engine {
 
 				this.IsOpen = true;
 				this.StartTimeUtc = DateTime.UtcNow;
+
+				this.Renderer.Startup();
 
 				Thread keyReader = new(this.HandleInputs);
 				keyReader.Start();
@@ -204,6 +207,9 @@ namespace ParticleSimulator.Engine {
 				switch (Console.ReadKey(false).Key) {
 					case ConsoleKey.F1://the Pause key is apparently deprecated because pushing Pause/Break doesn't even trigger a keypress event!
 						this.TogglePause();
+						break;
+					case ConsoleKey.F2:
+						this.Rasterizer.Camera.IsAutoIncrementActive = !this.Rasterizer.Camera.IsAutoIncrementActive;
 						break;
 				}
 			}

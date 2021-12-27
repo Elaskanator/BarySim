@@ -55,24 +55,13 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		
 		private readonly SynchronousBuffer<float?[]> _rawRankingsResource;
 		private readonly int _randOffset = 0;
-
-		private int _framesRendered = 0;
 		
 		public Pixel[] Rasterize(bool wasPunctual, object[] parameters) {//top down view (smaller Z values = closer)
 			Generic.Extensions.DebugExtensions.DebugWriteline_Interval(null);
 			ParticleData[] particles = (ParticleData[])parameters[0];
 			float[] scalings = (float[])parameters[1];
 
-			if (Parameters.WORLD_ROTATION) {
-				float numSeconds = Parameters.WORLD_ROTATION_SPEED_ABS
-					? this._framesRendered / Parameters.TARGET_FPS_DEFAULT
-					: (float)DateTime.UtcNow.Subtract(Program.Engine.StartTimeUtc.Value).TotalSeconds;
-
-				this.Camera.Set3DRotation(
-					Parameters.WORLD_ROTATION_PITCH ? Parameters.WORLD_ROTATION_RADPERSEC * numSeconds : 0f,
-					Parameters.WORLD_ROTATION_YAW ? Parameters.WORLD_ROTATION_RADPERSEC * numSeconds : 0f,
-					Parameters.WORLD_ROTATION_ROLL ? Parameters.WORLD_ROTATION_RADPERSEC * numSeconds : 0f);
-			}
+			this.Camera.IncrementRotation();
 
 			int[] counts = new int[this.InternalNumPixels];
 			float[] densities = new float[this.InternalNumPixels];
@@ -89,14 +78,15 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						if (counts[idx] == 0
 						|| nearest[idx].Z > resampling.Z
 						|| (nearest[idx].Z == resampling.Z && nearest[idx].Particle.ID > resampling.Particle.ID)) {
-							counts[idx]++;
 							nearest[idx] = resampling;
 						}
+						counts[idx]++;
 				}
 			}
 			
 			Pixel[] results = new Pixel[this.OutNumPixels];
 			float?[] ranks = new float?[this.OutNumPixels];
+			float densityScalar = 2f * Parameters.GRAVITY_RADIAL_DENSITY / this.InternalScaleFactor;
 			bool any = false;
 			if (this.Supersampling > 1) {
 				bool any2;
@@ -117,7 +107,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 									any = any2 = true;
 									totalCount += counts[idx2];
 									totalDensity += densities[idx2];
-									rank = this.GetRank(scalings, nearest[idx2], (float)totalCount / count, totalDensity / count);
+									rank = this.GetRank(scalings, nearest[idx2], (float)totalCount / count, totalDensity * densityScalar / count);
 									maxRank = rank > maxRank ? rank : maxRank;
 								}
 							}
@@ -132,7 +122,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				for (int i = 0; i < this.OutNumPixels; i++) {
 					if (counts[i] > 0) {
 						any = true;
-						ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densities[i]);
+						ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densities[i] * densityScalar);
 						results[i] = new(nearest[i].X, nearest[i].Y, ranks[i].Value);
 					}
 				}
@@ -140,7 +130,6 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 			if (any) this._rawRankingsResource.Overwrite(ranks);
 
-			this._framesRendered++;
 			return results;
 		}
 

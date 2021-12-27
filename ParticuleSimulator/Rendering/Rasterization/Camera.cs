@@ -14,6 +14,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				Vector<float>.One);
 		}
 
+		public bool IsAutoIncrementActive { get; set; }
+
 		public Vector<float> Left { get; private set; }
 		public Vector<float> Center { get; private set; }
 		public Vector<float> Right { get; private set; }
@@ -67,6 +69,17 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				//	values[i] = offsetV[i];
 				return new Vector<float>(values) + this.Center;
 			} else return offsetV + this.Center;
+		}
+
+		private int _rotationSteps = 0;
+		internal void IncrementRotation() {
+			if (this.IsAutoIncrementActive) {
+				this.Set3DRotation(
+					Parameters.WORLD_ROTATION_PITCH ? Parameters.WORLD_ROTATION_RADPERFRAME * this._rotationSteps : 0f,
+					Parameters.WORLD_ROTATION_YAW ? Parameters.WORLD_ROTATION_RADPERFRAME * this._rotationSteps : 0f,
+					Parameters.WORLD_ROTATION_ROLL ? Parameters.WORLD_ROTATION_RADPERFRAME * this._rotationSteps : 0f);
+				this._rotationSteps++;
+			}
 		}
 	}
 }

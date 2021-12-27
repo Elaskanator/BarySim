@@ -28,7 +28,7 @@ namespace ParticleSimulator.Rendering {
 
 		public void UpdateRenderTime(bool wasPunctual) {
 			if (wasPunctual) {
-				TimeSpan currentFpsTime = this.Engine.StepEval_Render.FullTime.LastUpdate;
+				TimeSpan currentFpsTime = this.Engine.StepEval_Render.FullTimePunctual.LastUpdate;
 				this.FpsTimings.Update(currentFpsTime);
 				this.UpdateMonitor(this.FramesCompleted, this.FrameTimings.LastUpdate, this.FpsTimings.LastUpdate);
 				this.FramesCompleted++;
@@ -39,12 +39,14 @@ namespace ParticleSimulator.Rendering {
 			TimeSpan currentFrameTime = new TimeSpan[] {
 				this.Engine.StepEval_Simulate.ExclusiveTime.LastUpdate,
 				this.Engine.StepEval_Rasterize.ExclusiveTime.LastUpdate,
+				this.Engine.StepEval_Render.ExclusiveTime.LastUpdate,
 			}.Max();
 
 			this.FrameTimings.Update(currentFrameTime);
 		}
 
 		public abstract void Init();
+		public abstract void Startup();
 
 		protected abstract object PrepareBuffer(float[] scaling, Pixel[] buffer);
 		protected abstract void DrawOverlays(bool isPaused, bool wasPunctual, float[] scaling, object buffer);

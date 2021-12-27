@@ -30,6 +30,7 @@ namespace ParticleSimulator.Engine {
 		public bool IsActive { get; private set; }
 		public bool IsPaused { get; private set; }
 		public int IterationCount { get; private set; }
+		public int FullIterationCount { get; private set; }
 		public bool IsWaiting { get; private set; }
 		public bool IsComputing { get; private set; }
 		public DateTime? LastComputeStartUtc { get; private set; }
@@ -38,6 +39,7 @@ namespace ParticleSimulator.Engine {
 		public SimpleExponentialMovingTimeAverage SyncTime { get; private set; }
 		public SimpleExponentialMovingTimeAverage ExclusiveTime { get; private set; }
 		public SimpleExponentialMovingTimeAverage FullTime { get; private set; }
+		public SimpleExponentialMovingTimeAverage FullTimePunctual { get; private set; }
 		
 		public virtual string Name => null;
 		public virtual TimeSpan? SignalTimeout => null;
@@ -50,6 +52,7 @@ namespace ParticleSimulator.Engine {
 		private EventWaitHandle _pauseSignal = new ManualResetEvent(true);
 		private Stopwatch _timer = new Stopwatch();
 		private Stopwatch _timerFull = new Stopwatch();
+		private Stopwatch _timerFullPunctual = new Stopwatch();
 
 		protected virtual void PreProcess() { }
 		protected abstract void Process(bool punctual);
@@ -65,6 +68,7 @@ namespace ParticleSimulator.Engine {
 				this.IsActive = false;
 				this.IsPaused = false;
 				this.IterationCount = 0;
+				this.FullIterationCount = 0;
 				this.IsComputing = false;
 				this.LastComputeStartUtc = null;
 
@@ -72,6 +76,7 @@ namespace ParticleSimulator.Engine {
 				this.SyncTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 				this.ExclusiveTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 				this.FullTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
+				this.FullTimePunctual = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 
 				this.IsOpen = true;
 				this.StartTimeUtc = DateTime.UtcNow;
@@ -118,13 +123,12 @@ namespace ParticleSimulator.Engine {
 			this.IsActive = true;
 			try {
 				bool isPunctual = true;
+				this._timerFullPunctual.Restart();
 				while (this.IsOpen) {
-					this._timerFull.Reset();
-					this._timerFull.Start();
+					this._timerFull.Restart();
 
 					if (this.ReadySignals.Length > 0) {
-						this._timer.Reset();
-						this._timer.Start();
+						this._timer.Restart();
 						
 						this.IsWaiting = true;
 						isPunctual = this.SignalTimeout.HasValue
@@ -136,8 +140,7 @@ namespace ParticleSimulator.Engine {
 						this.WaitTime.Update(this._timer.Elapsed);
 					}
 				
-					this._timer.Reset();
-					this._timer.Start();
+					this._timer.Restart();
 
 					this.PreProcess();
 					if (this.ReleaseEarly)
@@ -153,9 +156,8 @@ namespace ParticleSimulator.Engine {
 						this.Synchronizer.Synchronize();
 						
 					if (this.IsOpen) {
-						this._timer.Reset();
 						this.LastComputeStartUtc = DateTime.UtcNow;
-						this._timer.Start();
+						this._timer.Restart();
 
 						this.IsComputing = true;
 						this.Process(isPunctual);
@@ -167,6 +169,8 @@ namespace ParticleSimulator.Engine {
 						this.PostProcess();
 
 						this.IterationCount++;
+						if (isPunctual)
+							this.FullIterationCount++;
 
 						if (!(this.Callback is null))
 							this.Callback(isPunctual);
@@ -174,10 +178,15 @@ namespace ParticleSimulator.Engine {
 						if (!this.ReleaseEarly)
 							for (int i = 0; i < this.DoneSignals.Length; i++)
 								this.DoneSignals[i].Set();
-					}
 
-					this._timerFull.Stop();
-					this.FullTime.Update(this._timerFull.Elapsed);
+						this._timerFull.Stop();
+						this.FullTime.Update(this._timerFull.Elapsed);
+						if (isPunctual) {
+							this._timerFullPunctual.Stop();
+							this.FullTimePunctual.Update(this._timerFullPunctual.Elapsed);
+							this._timerFullPunctual.Restart();
+						}
+					}
 				}
 			} catch (ThreadInterruptedException) { }//die
 
