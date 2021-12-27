@@ -26,10 +26,8 @@ namespace Generic.Vectors {
 					.ToArray()))
 			.ToArray();
 
-		public static readonly int VECT_CAPACITY = Vector<float>.Count;
-
 		public static Vector<float> New(params float[] components) {
-			if (components.Length == VECT_CAPACITY) {
+			if (components.Length == Vector<float>.Count) {
 				return new Vector<float>(components);
 			} else {
 				Span<float> values = stackalloc float[Vector<float>.Count];

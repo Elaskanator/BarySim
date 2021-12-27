@@ -23,6 +23,11 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		}
 
 		public override void Init() {
+			string result = string.Format("Baryon Simulator {0}D - {1}",
+				Parameters.DIM,
+				this.Engine.Simulator.ParticleCount.Pluralize("Particle"));
+			Console.Title = result;
+
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
 			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
@@ -66,7 +71,6 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 		protected override void DrawOverlays(bool wasPunctual, float[] scaling, object bufferData) {
 			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])bufferData;
-			this.TitleUpdate();
 			this.Watchdog(buffer);
 			if (Parameters.PERF_ENABLE)
 				this._perfMon.DrawStatsOverlay(buffer, wasPunctual);
@@ -88,17 +92,6 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				for (int i = 0; i < message.Length; i++)
 					buffer[i + xOffset + Parameters.WINDOW_WIDTH*yOffset] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
 			}
-		}
-		
-		private void TitleUpdate() {
-			string result = string.Format("Baryon Simulator {0}D", Parameters.DIM);
-
-			if (this.Engine.Simulator.ParticleCount > 0)
-				result += string.Format(" - {0}", this.Engine.Simulator.ParticleCount.Pluralize("Particle"));
-			if (this.FpsTimings.NumUpdates > 0)
-				result += string.Format(" ({0} fps)", (1d / this.FpsTimings.Current.TotalSeconds).ToStringBetter(2, false));
-
-			Console.Title = result;
 		}
 
 		private void DrawLegend(float[] scaling, ConsoleExtensions.CharInfo[] buffer) {

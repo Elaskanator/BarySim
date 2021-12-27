@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using Generic.Extensions;
 using ParticleSimulator.Engine;
 
@@ -7,16 +8,16 @@ namespace ParticleSimulator {
 		public static RenderEngine Engine { get; private set; }
 
 		public static void Main(string[] args) {
-			Console.Title = string.Format("Barnes-Hut Simulator ({0}D) - Initializing", Parameters.DIM);
+			Console.Title = string.Format("Particle Simulator ({0}D) - Initializing", Parameters.DIM);
 
-			if (Generic.Vectors.VectorFunctions.VECT_CAPACITY < Parameters.DIM) {
+			if (Vector<float>.Count < Parameters.DIM) {
 				Console.ForegroundColor = ConsoleColor.Red;
-				Console.WriteLine("Vector dimensionality greater than maximum support of {0}", Generic.Vectors.VectorFunctions.VECT_CAPACITY);
+				Console.WriteLine("Vector dimensionality greater than maximum support of {0}", Vector<float>.Count);
 				ConsoleExtensions.WaitForEnter("Press enter to exit");
 				Environment.Exit(0);
 			}
 
-			if (!System.Numerics.Vector.IsHardwareAccelerated) {
+			if (!Vector.IsHardwareAccelerated) {
 				Console.ForegroundColor = ConsoleColor.Red;
 				Console.WriteLine("Hardware vector acceleration is disabled");
 				Console.ResetColor();
