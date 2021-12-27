@@ -3,36 +3,28 @@ using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
 
-namespace ParticleSimulator.Rendering {
+namespace ParticleSimulator.Rendering.SystemConsole {
 	public class PerfGraph {
 		public PerfGraph(int numStats) {
-			int width =//TODO just F this
-				Parameters.PERF_STATS_ENABLE
-					? Parameters.GRAPH_WIDTH > 0
-						? Parameters.GRAPH_WIDTH
-						: 3 + Parameters.NUMBER_SPACING
-							+ (2 + numStats)
-								* (1 + Parameters.NUMBER_SPACING)
-					: Parameters.PERF_GRAPH_DEFAULT_WIDTH;
-			GraphWidth = Console.WindowWidth > width ? width : Console.WindowWidth;
+			GraphWidth = Parameters.GRAPH_WIDTH;
 
 			_columnFrameTimeStatsMs = new StatsInfo[GraphWidth];
 			_columnFpsStatsMs = new StatsInfo[GraphWidth];
 			_graphColumns = new ConsoleExtensions.CharInfo[GraphWidth][];
 		}
 
-		public int GraphWidth;
+		public readonly int GraphWidth;
+		private readonly object _columnStatsLock = new object();
 		
 		private StatsInfo[] _columnFrameTimeStatsMs;
 		private StatsInfo[] _columnFpsStatsMs;
-		private ConsoleExtensions.CharInfo[][] _graphColumns;
 		private double[] _currentColumnFrameTimeDataMs;
 		private double[] _currentColumnFpsDataMs;
 
 		private double _graphMin = 0;
 		private double _graphMax = 0;
+		private ConsoleExtensions.CharInfo[][] _graphColumns;
 		private DateTime _lastGraphRenderFrameUtc = DateTime.UtcNow;
-		private readonly object _columnStatsLock = new object();
 
 		public void Update(int frameIdx, TimeSpan frameTime, TimeSpan fpsTime) {
 			lock (_columnStatsLock) {
@@ -53,96 +45,94 @@ namespace ParticleSimulator.Rendering {
 		}
 
 		public void DrawFpsGraph(ConsoleExtensions.CharInfo[] frameBuffer, AIncrementalAverage<TimeSpan> frameTimings, AIncrementalAverage<TimeSpan> fpsTimings) {
-			if (Program.StepEval_Render.ExclusiveTime.NumUpdates > 0) {
-				ConsoleExtensions.CharInfo[][] graphColumnsCopy;
-				lock (_columnStatsLock) {
-					if (_columnFrameTimeStatsMs[0] is null)
-						return;
-					else if (_graphColumns[0] is null || DateTime.UtcNow.Subtract(_lastGraphRenderFrameUtc).TotalMilliseconds >= Parameters.PERF_GRAPH_REFRESH_MS)
-						RerenderGraph();
-					graphColumnsCopy = _graphColumns.TakeUntil(s => s is null).ToArray();
-				}
-				int numCols = graphColumnsCopy.Length;
-			
-				ConsoleExtensions.CharInfo[] graphData = new ConsoleExtensions.CharInfo[GraphWidth * Parameters.GRAPH_HEIGHT];
-
-				for (int i = 0; i < graphColumnsCopy.Length; i++)
-					DrawGraphColumn(graphData, graphColumnsCopy[i], i);
-
-				double
-					frameTime = frameTimings.Current.TotalMilliseconds,
-					fpsTime = fpsTimings.Current.TotalMilliseconds,
-					targetTime = 1000d / (Parameters.TARGET_FPS > 0 ? Parameters.TARGET_FPS : Parameters.MAX_FPS);
-				string
-					label_min = _graphMin < 1000 ? _graphMin.ToStringBetter(2, false) : (_graphMin / 1000).ToStringBetter(2, false),
-					label_target = targetTime < 1000 ? targetTime.ToStringBetter(3, true): (targetTime / 1000).ToStringBetter(3, true),
-					label_max = _graphMax < 1000 ? _graphMax.ToStringBetter(2, false) : (_graphMax / 1000).ToStringBetter(2, false),
-					label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(2, false) + "ms": (frameTime / 1000).ToStringBetter(2, false) + "s",
-					label_FpsTime = fpsTime < 1000 ? fpsTime.ToStringBetter(3, false) + "ms" : (fpsTime / 1000).ToStringBetter(3, false) + "s";
-
-				int offset_fps = (int)(Parameters.GRAPH_HEIGHT * (fpsTime - _graphMin) / (_graphMax - _graphMin));
-				offset_fps = offset_fps < 0 ? 0 : offset_fps < Parameters.GRAPH_HEIGHT ? offset_fps : Parameters.GRAPH_HEIGHT - 1;
-
-				int offset_targetTime = (int)(Parameters.GRAPH_HEIGHT * (targetTime - _graphMin) / (_graphMax - _graphMin));
-
-				int offset_frameTime = (int)(Parameters.GRAPH_HEIGHT * (frameTime - _graphMin) / (_graphMax - _graphMin));
-				offset_frameTime = offset_frameTime < 0 ? 0 : offset_frameTime < Parameters.GRAPH_HEIGHT ? offset_frameTime : Parameters.GRAPH_HEIGHT - 1;
-			
-				bool drawFps = true,
-					drawFrameTime = offset_frameTime != offset_fps || frameTime > fpsTime,
-					drawtargetTime = offset_targetTime != offset_frameTime && offset_targetTime != offset_fps
-						&& offset_targetTime >= 0 && offset_targetTime < Parameters.GRAPH_HEIGHT,
-					drawMinTime = 0 != offset_frameTime && 0 != offset_fps && 0 != offset_targetTime,
-					drawMaxTime = Parameters.GRAPH_HEIGHT - 1 != offset_frameTime && Parameters.GRAPH_HEIGHT - 1 != offset_fps && Parameters.GRAPH_HEIGHT - 1 != offset_targetTime;
-				
-				int yOffset;
-				if (drawMinTime) {
-					numCols = numCols < label_min.Length ? label_min.Length : numCols;
-					for (int x = 0; x < label_min.Length; x++) {
-						yOffset = 0;
-						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-							label_min[x], ConsoleColor.DarkBlue, graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].BackgroundColor);
-					}
-				}
-
-				if (drawFrameTime) {
-					numCols = numCols < label_frameTime.Length ? label_frameTime.Length : numCols;
-					for (int x = 0; x < label_frameTime.Length; x++) {
-						yOffset = offset_frameTime;
-						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-							label_frameTime[x], ConsoleColor.White, offset_targetTime == offset_frameTime ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan);
-					}
-				}
-
-				if (drawtargetTime) {
-					numCols = numCols < label_target.Length ? label_target.Length : numCols;
-					for (int x = 0; x < label_target.Length; x++) {
-						yOffset = offset_targetTime;
-						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-							label_target[x], ConsoleColor.Black, ConsoleColor.DarkYellow);
-					}
-				}
-
-				if (drawFps) {
-					numCols = numCols < label_FpsTime.Length ? label_FpsTime.Length : numCols;
-					for (int x = 0; x < label_FpsTime.Length; x++) {
-						yOffset = offset_fps;
-						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-							label_FpsTime[x], ConsoleColor.White, offset_targetTime == offset_fps ? ConsoleColor.DarkYellow : ConsoleColor.DarkGreen);
-					}
-				}
-
-				if (drawMaxTime) {
-					numCols = numCols < label_max.Length ? label_max.Length : numCols;
-					for (int x = 0; x < label_max.Length; x++) {
-						yOffset = Parameters.GRAPH_HEIGHT - 1;
-						graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-							label_max[x], ConsoleColor.DarkBlue, graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].BackgroundColor);
-					}
-				}
-
-				frameBuffer.RegionMerge(Parameters.WINDOW_WIDTH, graphData, GraphWidth, 0, 1, numCols);
+			ConsoleExtensions.CharInfo[][] graphColumnsCopy;
+			lock (_columnStatsLock) {
+				if (_columnFrameTimeStatsMs[0] is null)
+					return;
+				else if (_graphColumns[0] is null || DateTime.UtcNow.Subtract(_lastGraphRenderFrameUtc).TotalMilliseconds >= Parameters.PERF_GRAPH_REFRESH_MS)
+					RerenderGraph();
+				graphColumnsCopy = _graphColumns.TakeUntil(s => s is null).ToArray();
 			}
+			int numCols = graphColumnsCopy.Length;
+			
+			ConsoleExtensions.CharInfo[] graphData = new ConsoleExtensions.CharInfo[GraphWidth * Parameters.GRAPH_HEIGHT];
+
+			for (int i = 0; i < graphColumnsCopy.Length; i++)
+				DrawGraphColumn(graphData, graphColumnsCopy[i], i);
+
+			double
+				frameTime = frameTimings.Current.TotalMilliseconds,
+				fpsTime = fpsTimings.Current.TotalMilliseconds,
+				targetTime = 1000d / (Parameters.TARGET_FPS > 0 ? Parameters.TARGET_FPS : Parameters.MAX_FPS);
+			string
+				label_min = _graphMin < 1000 ? _graphMin.ToStringBetter(2, false) : (_graphMin / 1000).ToStringBetter(2, false),
+				label_target = targetTime < 1000 ? targetTime.ToStringBetter(3, true): (targetTime / 1000).ToStringBetter(3, true),
+				label_max = _graphMax < 1000 ? _graphMax.ToStringBetter(2, false) : (_graphMax / 1000).ToStringBetter(2, false),
+				label_frameTime = frameTime < 1000 ? frameTime.ToStringBetter(2, false) + "ms": (frameTime / 1000).ToStringBetter(2, false) + "s",
+				label_FpsTime = fpsTime < 1000 ? fpsTime.ToStringBetter(3, false) + "ms" : (fpsTime / 1000).ToStringBetter(3, false) + "s";
+
+			int offset_fps = (int)(Parameters.GRAPH_HEIGHT * (fpsTime - _graphMin) / (_graphMax - _graphMin));
+			offset_fps = offset_fps < 0 ? 0 : offset_fps < Parameters.GRAPH_HEIGHT ? offset_fps : Parameters.GRAPH_HEIGHT - 1;
+
+			int offset_targetTime = (int)(Parameters.GRAPH_HEIGHT * (targetTime - _graphMin) / (_graphMax - _graphMin));
+
+			int offset_frameTime = (int)(Parameters.GRAPH_HEIGHT * (frameTime - _graphMin) / (_graphMax - _graphMin));
+			offset_frameTime = offset_frameTime < 0 ? 0 : offset_frameTime < Parameters.GRAPH_HEIGHT ? offset_frameTime : Parameters.GRAPH_HEIGHT - 1;
+			
+			bool drawFps = true,
+				drawFrameTime = offset_frameTime != offset_fps || frameTime > fpsTime,
+				drawtargetTime = offset_targetTime != offset_frameTime && offset_targetTime != offset_fps
+					&& offset_targetTime >= 0 && offset_targetTime < Parameters.GRAPH_HEIGHT,
+				drawMinTime = 0 != offset_frameTime && 0 != offset_fps && 0 != offset_targetTime,
+				drawMaxTime = Parameters.GRAPH_HEIGHT - 1 != offset_frameTime && Parameters.GRAPH_HEIGHT - 1 != offset_fps && Parameters.GRAPH_HEIGHT - 1 != offset_targetTime;
+				
+			int yOffset;
+			if (drawMinTime) {
+				numCols = numCols < label_min.Length ? label_min.Length : numCols;
+				for (int x = 0; x < label_min.Length; x++) {
+					yOffset = 0;
+					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+						label_min[x], ConsoleColor.DarkBlue, graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].BackgroundColor);
+				}
+			}
+
+			if (drawFrameTime) {
+				numCols = numCols < label_frameTime.Length ? label_frameTime.Length : numCols;
+				for (int x = 0; x < label_frameTime.Length; x++) {
+					yOffset = offset_frameTime;
+					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+						label_frameTime[x], ConsoleColor.White, offset_targetTime == offset_frameTime ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan);
+				}
+			}
+
+			if (drawtargetTime) {
+				numCols = numCols < label_target.Length ? label_target.Length : numCols;
+				for (int x = 0; x < label_target.Length; x++) {
+					yOffset = offset_targetTime;
+					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+						label_target[x], ConsoleColor.Black, ConsoleColor.DarkYellow);
+				}
+			}
+
+			if (drawFps) {
+				numCols = numCols < label_FpsTime.Length ? label_FpsTime.Length : numCols;
+				for (int x = 0; x < label_FpsTime.Length; x++) {
+					yOffset = offset_fps;
+					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+						label_FpsTime[x], ConsoleColor.White, offset_targetTime == offset_fps ? ConsoleColor.DarkYellow : ConsoleColor.DarkGreen);
+				}
+			}
+
+			if (drawMaxTime) {
+				numCols = numCols < label_max.Length ? label_max.Length : numCols;
+				for (int x = 0; x < label_max.Length; x++) {
+					yOffset = Parameters.GRAPH_HEIGHT - 1;
+					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+						label_max[x], ConsoleColor.DarkBlue, graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].BackgroundColor);
+				}
+			}
+
+			frameBuffer.RegionMerge(Parameters.WINDOW_WIDTH, graphData, GraphWidth, 0, 1, numCols);
 		}
 
 		private void RerenderGraph() {
@@ -245,7 +235,7 @@ namespace ParticleSimulator.Rendering {
 					if (yIdx < (int)yTime000Scaled)
 						colors[yIdx] = ConsoleColor.DarkYellow;
 					else colors[yIdx] = ConsoleColor.Yellow;
-				} else if (yIdx > (int)yTime100Scaled && yIdx < (int)yFps050Scaled) {
+				} else if (fps > 0d && yIdx >= (int)yTargetTimeScaled && yIdx > (int)yTime100Scaled && yIdx < (int)yFps050Scaled) {
 					if (yIdx <= (int)yFps010Scaled)
 						colors[yIdx] = ConsoleColor.Red;
 					else if (yIdx <= (int)yFps025Scaled)

@@ -6,11 +6,11 @@ namespace ParticleSimulator.Engine {
 		public string Name;
 
 		public Func<object> GeneratorFn;
-		public Action<object[]> EvaluatorFn;
-		public Func<object[], object> CalculatorFn;
+		public Action<bool, object[]> EvaluatorFn;
+		public Func<bool, object[], object> CalculatorFn;
 
 		public ISynchronousConsumedResource OutputResource;
-		public Action<bool> Callback;//whether calculation was punctual
+		public Action<bool> CallbackFn;//whether calculation was punctual
 		public bool IsOutputOverwrite;
 		public int OutputSkips;
 

@@ -16,7 +16,7 @@ namespace ParticleSimulator.Rendering {
 
 		public float[] Values { get; private set; }
 
-		public void Update(object[] parameters = null) {
+		public float[] Update(bool wasPunctual, object[] parameters) {
 			float[] scalingValues = ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value).ToArray();
 
 			if (scalingValues.Length > 0) {
@@ -25,7 +25,7 @@ namespace ParticleSimulator.Rendering {
 				if (Parameters.AUTOSCALE_CUTOFF_PCT > 0f) {
 					stats.FilterData(Parameters.AUTOSCALE_CUTOFF_PCT);
 					if (stats.Data_asc.Length == 0)
-						return;
+						return Array.Empty<float>();
 				}
 
 				if (Parameters.AUTOSCALE_PERCENTILE) {
@@ -89,6 +89,7 @@ namespace ParticleSimulator.Rendering {
 					} else this.Values = new float[] { max };
 				}
 			}
+			return this.Values;
 		}
 	}
 }

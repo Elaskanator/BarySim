@@ -22,8 +22,8 @@ namespace ParticleSimulator.Simulation {
 				chargeRange = Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE;
 			return new MatterClump() {
 				GroupID = this.ID,
-				Mass = Parameters.GRAVITY_MIN_STARTING_MASS + massRange * (float)Program.Random.NextDouble(),
-				Charge = Parameters.ELECTROSTATIC_MIN_CHARGE + chargeRange * (float)Program.Random.NextDouble(),
+				Mass = Parameters.GRAVITY_MIN_STARTING_MASS + massRange * (float)Program.Engine.Random.NextDouble(),
+				Charge = Parameters.ELECTROSTATIC_MIN_CHARGE + chargeRange * (float)Program.Engine.Random.NextDouble(),
 				Position = position,
 				Velocity = velocity,
 			};
@@ -58,7 +58,7 @@ namespace ParticleSimulator.Simulation {
 				float angle = MathF.Atan2(position[1] - center[1], position[0] - center[0]);
 				angle += 2f * MathF.PI
 					* (0.25f//90 degree rotation
-						+ (MathF.Pow((float)Program.Random.NextDouble(), Parameters.GRAVITY_ALIGNMENT_SKEW_POW)
+						+ (MathF.Pow((float)Program.Engine.Random.NextDouble(), Parameters.GRAVITY_ALIGNMENT_SKEW_POW)
 							* Parameters.GRAVITY_ALIGNMENT_SKEW_RANGE_PCT / 100f));
 
 				IEnumerable<float> rotation = new float[] {

@@ -1,15 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using ParticleSimulator.Engine;
 
 namespace ParticleSimulator.Rendering {
 	public class Rasterizer {
-		public Rasterizer(int width, int height) {
+		public Rasterizer(int width, int height, Random rand, SynchronousBuffer<float?[]> rawRankings) {
 			this.Width = width;
 			this.Height = height;
 			this.NumPixels = width * height;
 			this.WidthF = this.Width;
 			this.HeightF = this.Height;
+
+			this._rawRankingsResource = rawRankings;
+			this.Camera = new Camera(Parameters.ZOOM_SCALE);
+
+			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random)
+				this._randOffset = (int)(100d * rand.NextDouble());
 		
 			float[] offset = new float[Vector<float>.Count];
 			offset[0] = Parameters.WINDOW_WIDTH / 2f;
@@ -18,32 +25,26 @@ namespace ParticleSimulator.Rendering {
 			this.ScaleFactor = Parameters.WINDOW_WIDTH > 2f*Parameters.WINDOW_HEIGHT
 				? Parameters.WINDOW_HEIGHT
 				: Parameters.WINDOW_WIDTH/2f;
-
-			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random)
-				this._randOffset = (int)(this.Scaling.Values.Length * Program.Random.NextDouble());
-
-			this.Camera = new Camera(Parameters.ZOOM_SCALE);
-
-			this.Scaling = new();
 		}
-		
-		public readonly Camera Camera;
-		public readonly Autoscaler Scaling;
 
 		public readonly int NumPixels;
 		public readonly float WidthF;
 		public readonly float HeightF;
 		public readonly int Width;
 		public readonly int Height;
-
+		
+		public readonly Camera Camera;
 		public readonly Vector<float> Offset;
 		public readonly float ScaleFactor;
 		
+		private readonly SynchronousBuffer<float?[]> _rawRankingsResource;
+		private readonly int _randOffset = 0;
+
 		private int _framesRendered = 0;
-		private int _randOffset = 0;
 		
-		public Pixel[] Rasterize(object[] parameters) {//top down view (smaller Z values = closer)
+		public Pixel[] Rasterize(bool wasPunctual, object[] parameters) {//top down view (smaller Z values = closer)
 			Queue<ParticleData> particles = (Queue<ParticleData>)parameters[0];
+			float[] scalings = (float[])parameters[1];
 
 			if (Parameters.WORLD_ROTATION) {
 				float numSeconds = Parameters.WORLD_ROTATION_SPEED_ABS
@@ -82,31 +83,34 @@ namespace ParticleSimulator.Rendering {
 
 			for (int i = 0; i < this.NumPixels; i++) {
 				if (counts[i] > 0) {
-					ranks[i] = this.GetRank(nearest[i], counts[i], densities[i]);
+					ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densities[i]);
 					results[i] = new(nearest[i], ranks[i].Value);
 				}
 			}
 
-			Program.Resource_ScalingData.Overwrite(ranks);
+			this._rawRankingsResource.Overwrite(ranks);
 
 			this._framesRendered++;
 			return results;
 		}
 
-		public float GetRank(Subsample resampling, int count, float density) {
-			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random) {
-				return (resampling.Particle.ID + this._randOffset) % this.Scaling.Values.Length;
-			} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Group) {
-				return (resampling.Particle.GroupID + this._randOffset) % this.Scaling.Values.Length;
-			} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Luminosity) {
-				return resampling.Particle.Luminosity;
-			} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth) {
-				return resampling.Z;
-			} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Count) {
-				return count;
-			} else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Density) {
-				return density;
-			} else return 0f;
+		private float GetRank(float[] scaling, Subsample resampling, int count, float density) {
+			switch (Parameters.COLOR_METHOD) {
+				case ParticleColoringMethod.Random:
+					return (resampling.Particle.ID + this._randOffset) % scaling.Length;
+				case ParticleColoringMethod.Group:
+					return (resampling.Particle.GroupID + this._randOffset) % scaling.Length;
+				case ParticleColoringMethod.Luminosity:
+					return resampling.Particle.Luminosity;
+				case ParticleColoringMethod.Depth:
+					return resampling.Z;
+				case ParticleColoringMethod.Count:
+					return count;
+				case ParticleColoringMethod.Density:
+					return density;
+				default:
+					return 0f;
+			}
 		}
 
 		//TODO rewrite to not use Sqrt

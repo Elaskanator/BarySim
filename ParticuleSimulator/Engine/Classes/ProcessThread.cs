@@ -41,7 +41,7 @@ namespace ParticleSimulator.Engine {
 		public EvaluationStep Config { get; private set; }
 		
 		public override string Name => this.Config.Name;
-		public override Action<bool> Callback => this.Config.Callback;
+		public override Action<bool> Callback => this.Config.CallbackFn;
 		public override TimeSynchronizer Synchronizer => this.Config.Synchronizer;
 		public override TimeSpan? SignalTimeout => this.Config.DataLoadingTimeout;
 
@@ -49,7 +49,7 @@ namespace ParticleSimulator.Engine {
 		private object[] _parameters;
 		private object _result;
 
-		protected override void PreStart() {
+		protected override void Init() {
 			if (!(this._dataGatherers is null))
 				for (int i = 0; i < this._dataGatherers.Length; i++)
 					this._dataGatherers[i].Start();
@@ -60,8 +60,10 @@ namespace ParticleSimulator.Engine {
 		}
 		protected override void Process(bool punctual) {
 			if (this.Config.OutputResource is null)
-				this.Config.EvaluatorFn(this._parameters);
-			else this._result = this.Config.GeneratorFn is null ? this.Config.CalculatorFn(this._parameters) : this.Config.GeneratorFn();
+				this.Config.EvaluatorFn(punctual, this._parameters);
+			else this._result = this.Config.GeneratorFn is null
+					? this.Config.CalculatorFn(punctual, this._parameters)
+					: this.Config.GeneratorFn();
 				
 		}
 		protected override void PostProcess() {

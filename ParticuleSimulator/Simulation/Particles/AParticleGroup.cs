@@ -13,16 +13,16 @@ namespace ParticleSimulator.Simulation {
 	public abstract class AParticleGroup<TParticle> : IParticleGroup
 	where TParticle : BaryonParticle {
 		public AParticleGroup() {
-			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_SKEW_POWER) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
+			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Engine.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_SKEW_POWER) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
 
 			if (Parameters.PARTICLES_GROUP_COUNT < 2)
 				this.SpawnCenter = Vector<float>.Zero;
 			else this.SpawnCenter = VectorFunctions.New(Enumerable
 				.Range(0, Parameters.DIM)
 				.Select(d => (float)(
-					Parameters.WORLD_SCALE * (Program.Random.NextDouble() * (100d - Parameters.WORLD_PADDING_PCT) + 0.5d * Parameters.WORLD_PADDING_PCT) / 100d)));
+					Parameters.WORLD_SCALE * (Program.Engine.Random.NextDouble() * (100d - Parameters.WORLD_PADDING_PCT) + 0.5d * Parameters.WORLD_PADDING_PCT) / 100d)));
 
-			this.InitialVelocity = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x * this.StartSpeedMax_Group_Rand))
+			this.InitialVelocity = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random).Select(x => (float)x * this.StartSpeedMax_Group_Rand))
 				+ (this.StartSpeedMax_Group_Angular * this.NewInitialDirection(Vector<float>.Zero, this.SpawnCenter));
 
 			this.InitialParticles = Enumerable
@@ -39,7 +39,7 @@ namespace ParticleSimulator.Simulation {
 			for (int i = 0; i < this.NumParticles; i++) {
 				if (this.NumParticles > 1)
 					this.InitialParticles[i].Position += this.NewParticleOffset(radius);
-				this.InitialParticles[i].Velocity += (min + (range * (float)Program.Random.NextDouble())) * VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x));
+				this.InitialParticles[i].Velocity += (min + (range * (float)Program.Engine.Random.NextDouble())) * VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
 			}
 		}
 
@@ -65,11 +65,11 @@ namespace ParticleSimulator.Simulation {
 		protected abstract TParticle NewParticle(Vector<float> position, Vector<float> velocity);
 
 		protected virtual Vector<float> NewParticleOffset(float radius) {
-			return VectorFunctions.New(VectorFunctions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Random).Select(x => (float)x));
+			return VectorFunctions.New(VectorFunctions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
 		}
 
 		protected virtual Vector<float> NewInitialDirection(Vector<float> center, Vector<float> position) {
-			return VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random).Select(x => (float)x));
+			return VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
 		}
 
 		public bool Equals(IParticleGroup other) { return !(other is null) && this.ID == other.ID; }

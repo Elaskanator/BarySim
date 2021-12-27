@@ -55,7 +55,7 @@ namespace ParticleSimulator.Engine {
 		protected abstract void Process(bool punctual);
 		protected virtual void PostProcess() { }
 
-		protected virtual void PreStart() { }
+		protected virtual void Init() { }
 		protected virtual void PostStop() { }
 
 		public void Start() {
@@ -77,7 +77,7 @@ namespace ParticleSimulator.Engine {
 				this.StartTimeUtc = DateTime.UtcNow;
 
 				this._pauseSignal.Set();
-				this.PreStart();
+				this.Init();
 				this._thread = new Thread(Runner);
 				this._thread.Start();
 			}
