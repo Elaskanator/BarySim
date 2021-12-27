@@ -15,6 +15,7 @@ namespace ParticleSimulator.Rendering {
 		}
 
 		public float[] Values { get; private set; }
+		private SimpleExponentialMovingAverage _max = new SimpleExponentialMovingAverage(0.1f);
 
 		public float[] Update(bool wasPunctual, object[] parameters) {
 			float[] scalingValues = ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value).ToArray();
@@ -79,7 +80,8 @@ namespace ParticleSimulator.Rendering {
 
 					this.Values = results.ToArray();
 				} else {
-					max = (float)stats.GetPercentileValue(95d);
+					this._max.Update(stats.GetPercentileValue(95d));
+					max = (float)this._max.Current;
 					float
 						min = (float)stats.GetPercentileValue(5d),
 						range = max - min;

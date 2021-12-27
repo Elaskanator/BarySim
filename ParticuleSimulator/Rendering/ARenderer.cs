@@ -16,10 +16,13 @@ namespace ParticleSimulator.Rendering {
 		public readonly AIncrementalAverage<TimeSpan> FpsTimings = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 		public int FramesCompleted { get; private set; }
 
+		private float[] _scaling = null;
+
 		public void Draw(bool wasPunctual, object[] parameters) {
-			float[] scaling = this.Engine.Scaling.Values;
-			object buffer = this.PrepareBuffer(scaling, (Pixel[])parameters[0]);
-			this.DrawOverlays(this.Engine.IsPaused, wasPunctual, scaling, buffer);
+			if (wasPunctual || this._scaling is null)
+				this._scaling = (float[])parameters[1];
+			object buffer = this.PrepareBuffer(this._scaling, (Pixel[])parameters[0]);
+			this.DrawOverlays(this.Engine.IsPaused, wasPunctual, this._scaling, buffer);
 			this.Flush(buffer);
 		}
 

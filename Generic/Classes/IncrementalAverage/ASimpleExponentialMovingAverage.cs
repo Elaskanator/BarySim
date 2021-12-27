@@ -19,14 +19,14 @@ namespace Generic.Models {
 	}
 
 	public class SimpleExponentialMovingAverage : ASimpleExponentialMovingAverage<double> {
-		public SimpleExponentialMovingAverage(double weighting = 1) : base(weighting) { }
+		public SimpleExponentialMovingAverage(double weighting) : base(weighting) { }
 
 		protected override double Add(double first, double second) => first + second;
 		protected override double Scale(double value, double scalar) => value * scalar;
 	}
 
 	public class SimpleExponentialMovingTimeAverage : ASimpleExponentialMovingAverage<TimeSpan> {
-		public SimpleExponentialMovingTimeAverage(double weighting = 1) : base(weighting) { }
+		public SimpleExponentialMovingTimeAverage(double weighting) : base(weighting) { }
 
 		protected override TimeSpan Add(TimeSpan first, TimeSpan second) => first + second;
 		protected override TimeSpan Scale(TimeSpan value, double scalar) => value * scalar;

@@ -14,6 +14,12 @@ namespace ParticleSimulator.Engine {
 		private static int _globalId = 0;
 		private readonly int _id = ++_globalId;
 
+		public RenderEngine() {
+			this.Random = Parameters.DETERMINISTIC_RANDOM_SEED == -1
+				? new()
+				: new(Parameters.DETERMINISTIC_RANDOM_SEED);
+		}
+
 		~RenderEngine() => this.Dispose(false);
 
 		public override string ToString() {
@@ -24,27 +30,25 @@ namespace ParticleSimulator.Engine {
 
 		public int Id => this._id;
 		public string Name => "Run Manager";
-		public readonly Random Random = new();
 
 		public bool IsOpen { get; private set; }
+		public bool IsPaused { get; private set; }
 		public DateTime? StartTimeUtc { get; private set; }
 		public DateTime? EndTimeUtc { get; private set; }
-		
-		internal ACalculationHandler[] Evaluators { get; private set; }
 
 		public ISimulator Simulator { get; private set; }
 		public ARenderer Renderer { get; private set; }
-		
 		public Autoscaler Scaling { get; private set; }
 		public Rasterizer Rasterizer { get; private set; }
+		public Random Random { get; private set; }
+		
+		internal ACalculationHandler[] Evaluators { get; private set; }
 
 		internal ProcessThread StepEval_Simulate { get; private set; }
 		internal ProcessThread StepEval_Autoscale { get; private set; }
 		internal ProcessThread StepEval_Rasterize { get; private set; }
 		internal ProcessThread StepEval_Render { get; private set; }
 		internal ProcessThread StepEval_Export { get; private set; }
-
-		public bool IsPaused { get; private set; }
 
 		public void Init() {
 			ACalculationHandler[] steps;

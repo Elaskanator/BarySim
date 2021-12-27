@@ -5,10 +5,10 @@
 		public int Y;
 		public float Rank;
 
-		public Pixel(Subsample sample, float rank) {
+		public Pixel(int x, int y, float rank) {
+			this.X = x;
+			this.Y = y;
 			this.IsNotNull = true;
-			this.X = sample.X;
-			this.Y = sample.Y;
 			this.Rank = rank;
 		}
 	}
