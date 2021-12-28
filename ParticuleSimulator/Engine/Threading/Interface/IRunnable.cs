@@ -12,6 +12,7 @@ namespace ParticleSimulator.Engine {
 
 		void Start();
 		void Pause();
+		void SetPauseState(bool state);
 		void Resume();
 		void Stop();
 		void Restart();

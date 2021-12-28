@@ -66,7 +66,6 @@ namespace ParticleSimulator.Engine {
 				throw new InvalidOperationException("Already open");
 			} else {
 				this.IsActive = false;
-				this.IsPaused = false;
 				this.IterationCount = 0;
 				this.FullIterationCount = 0;
 				this.IsComputing = false;
@@ -81,7 +80,6 @@ namespace ParticleSimulator.Engine {
 				this.IsOpen = true;
 				this.StartTimeUtc = DateTime.UtcNow;
 
-				this._pauseSignal.Set();
 				this.Init();
 				this._thread = new Thread(Runner);
 				this._thread.Start();
@@ -89,17 +87,24 @@ namespace ParticleSimulator.Engine {
 		}
 
 		public void Pause() {
-			if (this.IsOpen) {
-				this.IsPaused = true;
-				this._pauseSignal.Reset();
-			} else throw new InvalidOperationException("Not open");
+			this.IsPaused = true;
+			this._pauseSignal.Reset();
+		}
+
+		public void SetPauseState(bool state) {
+			if (state) this.Resume();
+			else this.Pause();
+		}
+
+		public virtual void TogglePause() {
+			if (this.IsPaused)
+				this.Resume();
+			else this.Pause();
 		}
 
 		public void Resume() {
-			if (this.IsOpen) {
-				this.IsPaused = false;
-				this._pauseSignal.Set();
-			} else throw new InvalidOperationException("Not open");
+			this.IsPaused = false;
+			this._pauseSignal.Set();
 		}
 
 		public void Stop() {

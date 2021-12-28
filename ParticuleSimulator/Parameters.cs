@@ -11,7 +11,7 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 15;
+		public const int PARTICLES_GROUP_MAX = 1 << 8;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;
@@ -20,15 +20,12 @@ namespace ParticleSimulator {
 		public static readonly float ZOOM_SCALE = 1f / MathF.Sqrt(2f);
 		public static int SUPERSAMPLING = 1;
 
-		public const float WORLD_ROTATION_RADPERFRAME = 0.004f;
-		public const bool WORLD_ROTATION_PITCH = true;
-		public const bool WORLD_ROTATION_YAW = true;
-		public const bool WORLD_ROTATION_ROLL = true;
+		public const float WORLD_ROTATION_RADS_PER_STEP = 0.004f;
 		
 		public const int DETERMINISTIC_RANDOM_SEED = 0;
 		public const float ADAPTIVE_TIME_GRANULARITY = 0.01f;//subdivide time steps as necessary for very close interactions
 		public const float ADAPTIVE_TIME_CRITERION = 0.01f;//a weighted value based on range and velocity to other particles in the nearfield group
-		public const float PARTICLE_MAX_ACCELERATION = 0.0025f;
+		//public const float PARTICLE_MAX_ACCELERATION = 0.0025f;
 		
 		public const bool WORLD_BOUNCING = true;
 		public const bool WORLD_BOUNCING_EXTENSION = true;
@@ -40,7 +37,7 @@ namespace ParticleSimulator {
 		public const float WORLD_PADDING_PCT = 25f;
 		
 		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
 		public const float AUTOSCALE_FIXED_MIN = -1f;
 		public const float AUTOSCALE_FIXED_MAX = -1f;
 		public const bool AUTOSCALE_PERCENTILE = false;
@@ -76,8 +73,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 50f;
-		public const float GRAVITY_MAX_STARTING_MASS = 50f;
+		public const float GRAVITY_MIN_STARTING_MASS = 100f;
+		public const float GRAVITY_MAX_STARTING_MASS = 500f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;

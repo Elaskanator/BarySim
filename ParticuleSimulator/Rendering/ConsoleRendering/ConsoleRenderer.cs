@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Generic.Extensions;
 using ParticleSimulator.Engine;
+using ParticleSimulator.Engine.Interaction;
 using ParticleSimulator.Rendering.Rasterization;
 
 namespace ParticleSimulator.Rendering.SystemConsole {
@@ -11,18 +13,24 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			this.NumChars = Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT;
 			this._lastFrame = new ConsoleExtensions.CharInfo[NumChars];
 			this._perfMon = new PerfMon(this);
+			this._listeners = this.BuildListeners().ToArray();
 		}
 
 		public readonly int NumChars;
 		private readonly PerfMon _perfMon;
+		private readonly KeyListener[] _listeners;
+
+		public override KeyListener[] Listeners => this._listeners;
 
 		private ConsoleExtensions.CharInfo[] _lastFrame;
 
-		public static ConsoleExtensions.CharInfo BuildChar(ConsoleColor bottomColor, ConsoleColor topColor) {
-			if (topColor == bottomColor)
-				return new ConsoleExtensions.CharInfo(0, 0, bottomColor);
-			else return new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, bottomColor, topColor);
-		}
+		public static ConsoleExtensions.CharInfo BuildChar(ConsoleColor bottomColor, ConsoleColor topColor) =>
+			topColor == bottomColor
+				? new ConsoleExtensions.CharInfo(0, 0, bottomColor)
+				: new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, bottomColor, topColor);
+
+		public static ConsoleColor GetRankColor(float rank, float[] scaling) =>
+			Parameters.COLOR_ARRAY[scaling.Drop(1).TakeWhile(ds => ds < rank).Count()];
 
 		public override void Init() {
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
@@ -71,36 +79,52 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			return this._lastFrame;
 		}
 
-		protected override void DrawOverlays(bool isPaused, bool wasPunctual, float[] scaling, object bufferData) {
+		protected override void DrawOverlays(bool wasPunctual, float[] scaling, object bufferData) {
 			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])bufferData;
-			this.Watchdog(buffer);
+			this.Watchdog(wasPunctual, buffer);
 			if (Parameters.PERF_ENABLE)
 				this._perfMon.DrawStatsOverlay(buffer, wasPunctual);
 			if (Parameters.LEGEND_ENABLE
 			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Random
 			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Group)
 				this.DrawLegend(scaling, buffer);
-			if (isPaused) {
-				string message = "Paused";
-				for (int i = 0; i < message.Length; i++)
-					buffer[i + 50] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Yellow, ConsoleColor.Black);
+
+			ConsoleExtensions.CharInfo[] label;
+			int position = 51, keyLabelOffset;
+			string keyStr;
+			for (int i = 0; i < this.Listeners.Length; i++) {
+				label = this.Listeners[i].ToConsoleCharString();
+				keyStr = this.Listeners[i].Key.ToString();
+
+				keyLabelOffset = (int)(label.Length/2d - keyStr.Length/2d);
+				for (int j = 0; j < keyStr.Length; j++)
+					buffer[position + j + keyLabelOffset] = new(keyStr[j], ConsoleColor.DarkGray, ConsoleColor.Black);
+
+				for (int j = 0; j < label.Length; j++)
+					buffer[position + j + Parameters.WINDOW_WIDTH] = label[j];
+
+				position += label.Length + 2;
 			}
 		}
 
 		protected override void UpdateMonitor(int framesCompleted, TimeSpan frameTime, TimeSpan fpsTime) =>
 			this._perfMon.Graph.Update(framesCompleted % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN, frameTime, fpsTime);
 
-
-		private void Watchdog(ConsoleExtensions.CharInfo[] buffer) {
+		private DateTime _lastPunctualWrite = DateTime.UtcNow;
+		private void Watchdog(bool wasPunctual, ConsoleExtensions.CharInfo[] buffer) {
 			int xOffset = Parameters.PERF_ENABLE ? 6 : 0,
 				yOffset = Parameters.PERF_ENABLE ? 1 : 0;
 
-			TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(this.Engine.StepEval_Rasterize.LastComputeStartUtc ?? Program.Engine.StartTimeUtc.Value);
-			bool isSlow = timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS;
-			if (isSlow) {
-				string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s") + " ";
-				for (int i = 0; i < message.Length; i++)
-					buffer[i + xOffset + Parameters.WINDOW_WIDTH*yOffset] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
+			if (!this.Engine.IsPaused) {
+				if (wasPunctual)
+					this._lastPunctualWrite = DateTime.UtcNow;
+				TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(this._lastPunctualWrite);
+
+				if (timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS) {
+					string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s") + " ";
+					for (int i = 0; i < message.Length; i++)
+						buffer[i + xOffset + Parameters.WINDOW_WIDTH*yOffset] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
+				}
 			}
 		}
 
@@ -147,7 +171,71 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			}
 		}
 
-		public static ConsoleColor GetRankColor(float rank, float[] scaling) =>
-			Parameters.COLOR_ARRAY[scaling.Drop(1).TakeWhile(ds => ds < rank).Count()];
+		private IEnumerable<KeyListener> BuildListeners() {
+			KeyListener[] standardFunctions = new KeyListener[] {
+				new(ConsoleKey.F1, "Paused",
+				() => { return !this.Engine.IsPaused; },
+				s => { this.Engine.SetPauseState(s); }) {
+					ForegroundActive = ConsoleColor.DarkGray,
+					BackgroundActive = ConsoleColor.Black,
+					ForegroundInactive = ConsoleColor.White,
+					BackgroundInactive = ConsoleColor.DarkYellow,
+				},
+				new(ConsoleKey.F2, "Simulation",
+				() => { return !this.Engine.StepEval_Simulate.IsPaused; },
+				s => { if (!this.Engine.IsPaused) this.Engine.StepEval_Simulate.SetPauseState(s); }) {
+					ForegroundActive = ConsoleColor.Black,
+					BackgroundActive = ConsoleColor.DarkGreen,
+					ForegroundInactive = ConsoleColor.DarkGray,
+					BackgroundInactive = ConsoleColor.Black,
+				},
+			};
+			KeyListener autoscale = new(ConsoleKey.F3, "Autoscaling",
+				() => { return !this.Engine.StepEval_Autoscale.IsPaused; },
+				s => { this.Engine.StepEval_Autoscale.SetPauseState(s); }) {
+					ForegroundActive = ConsoleColor.Black,
+					BackgroundActive = ConsoleColor.DarkGreen,
+					ForegroundInactive = ConsoleColor.DarkGray,
+					BackgroundInactive = ConsoleColor.Black,
+			};
+			KeyListener[] rotationFunctions = new KeyListener[] {
+				new(ConsoleKey.F4, "Rotating",
+				() => { return this.Engine.Rasterizer.Camera.IsAutoIncrementActive; },
+				s => { if (s) this.Engine.StepEval_Rasterize.Resume(); else if (this.Engine.IsPaused) this.Engine.StepEval_Rasterize.Pause(); this.Engine.Rasterizer.Camera.IsAutoIncrementActive = s; }) {
+					ForegroundActive = ConsoleColor.Black,
+					BackgroundActive = ConsoleColor.DarkGreen,
+					ForegroundInactive = ConsoleColor.DarkGray,
+					BackgroundInactive = ConsoleColor.Black,
+				},
+				new(ConsoleKey.F5, "Roll",
+				() => { return this.Engine.Rasterizer.Camera.IsRollRotationActive; },
+				s => { this.Engine.Rasterizer.Camera.IsRollRotationActive = s; }) {
+					ForegroundActive = ConsoleColor.Black,
+					BackgroundActive = ConsoleColor.DarkGreen,
+					ForegroundInactive = ConsoleColor.DarkGray,
+					BackgroundInactive = ConsoleColor.Black,
+				},
+				new(ConsoleKey.F6, "Pitch",
+				() => { return this.Engine.Rasterizer.Camera.IsPitchRotationActive; },
+				s => { this.Engine.Rasterizer.Camera.IsPitchRotationActive = s; }) {
+					ForegroundActive = ConsoleColor.Black,
+					BackgroundActive = ConsoleColor.DarkGreen,
+					ForegroundInactive = ConsoleColor.DarkGray,
+					BackgroundInactive = ConsoleColor.Black,
+				},
+				new(ConsoleKey.F7, "Yaw",
+				() => { return this.Engine.Rasterizer.Camera.IsYawRotationActive; },
+				s => { this.Engine.Rasterizer.Camera.IsYawRotationActive = s; }) {
+					ForegroundActive = ConsoleColor.Black,
+					BackgroundActive = ConsoleColor.DarkGreen,
+					ForegroundInactive = ConsoleColor.DarkGray,
+					BackgroundInactive = ConsoleColor.Black,
+				},
+			};
+
+			if (Parameters.AUTOSCALER_ENABLE)
+				return standardFunctions.Append(autoscale).Concat(rotationFunctions);
+			else return standardFunctions.Concat(rotationFunctions);
+		}
 	}
 }

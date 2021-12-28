@@ -82,7 +82,6 @@ namespace ParticleSimulator.Engine {
 			this.StepEval_Simulate = ProcessThread.New(new() {
 				Name = "Simulate",
 				GeneratorFn = this.Simulator.RefreshSimulation,
-				CallbackFn = this.Renderer.UpdateRasterizationTime,
 				OutputResource = particleResource,
 				IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
 				OutputSkips = Parameters.SIMULATION_SKIPS,
@@ -91,6 +90,7 @@ namespace ParticleSimulator.Engine {
 			this.StepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterize",
 				CalculatorFn = this.Rasterizer.Rasterize,
+				CallbackFn = this.Renderer.UpdateRasterizationTime,
 				OutputResource = rasterResource,
 				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f
 					? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS)
@@ -108,7 +108,7 @@ namespace ParticleSimulator.Engine {
 			});
 			
 			if (Parameters.AUTOSCALER_ENABLE)
-				this.StepEval_Autoscale = ProcessThread.New(new() {
+				this.StepEval_Autoscale = ProcessThread.New(false, new() {
 					Name = "Autoscale",
 					CalculatorFn = this.Scaling.Update,
 					Synchronizer = Parameters.AUTOSCALE_INTERVAL_MS > 0
@@ -157,27 +157,32 @@ namespace ParticleSimulator.Engine {
 			}
 		}
 
+		private bool _autoscalePaused = true;
 		public void Pause() {
 			if (this.IsOpen) {
-				this.StepEval_Simulate.Pause();
-				if (!(this.StepEval_Autoscale is null))
-					this.StepEval_Autoscale.Pause();
+				for (int i = 0; i < this.Evaluators.Length; i++) {
+					if (this.Evaluators[i] == this.StepEval_Autoscale)
+						this._autoscalePaused = this.Evaluators[i].IsPaused;
+					if (this.Evaluators[i] != this.StepEval_Render
+					&& (this.Evaluators[i] != this.StepEval_Rasterize || !this.Rasterizer.Camera.IsAutoIncrementActive))
+						this.Evaluators[i].Pause();
+				}
+				this.IsPaused = true;
 			} else throw new InvalidOperationException("Not open");
 		}
 
 		public void Resume() {
 			if (this.IsOpen) {
-				this.StepEval_Simulate.Resume();
-				if (!(this.StepEval_Autoscale is null))
-					this.StepEval_Autoscale.Resume();
+				for (int i = 0; i < this.Evaluators.Length; i++)
+					if (this.Evaluators[i] != this.StepEval_Autoscale || !this._autoscalePaused)
+						this.Evaluators[i].Resume();
+				this.IsPaused = false;
 			} else throw new InvalidOperationException("Not open");
 		}
 
-		public void TogglePause() {
-			if (this.IsPaused)
-				this.Resume();
+		public void SetPauseState(bool state) {
+			if (state) this.Resume();
 			else this.Pause();
-			this.IsPaused = !this.IsPaused;
 		}
 
 		public void Stop () {
@@ -203,15 +208,12 @@ namespace ParticleSimulator.Engine {
 		}
 
 		private void HandleInputs() {
+			ConsoleKey key;
 			while (this.IsOpen) {
-				switch (Console.ReadKey(false).Key) {
-					case ConsoleKey.F1://the Pause key is apparently deprecated because pushing Pause/Break doesn't even trigger a keypress event!
-						this.TogglePause();
-						break;
-					case ConsoleKey.F2:
-						this.Rasterizer.Camera.IsAutoIncrementActive = !this.Rasterizer.Camera.IsAutoIncrementActive;
-						break;
-				}
+				key = Console.ReadKey(true).Key;
+				for (int i = 0; i < this.Renderer.Listeners.Length; i++)
+					if (key == this.Renderer.Listeners[i].Key)
+						this.Renderer.Listeners[i].Toggle();
 			}
 		}
 	}

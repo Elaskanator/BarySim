@@ -1,7 +1,7 @@
 ﻿namespace ParticleSimulator.Rendering {
 	public enum ParticleColoringMethod {
 		Random,
-		Count,
+		Overlap,//count of particles
 		Density,
 		Luminosity,
 		Depth,

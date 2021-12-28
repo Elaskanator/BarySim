@@ -2,6 +2,7 @@
 using System.Linq;
 using Generic.Models;
 using ParticleSimulator.Engine;
+using ParticleSimulator.Engine.Interaction;
 using ParticleSimulator.Rendering.Rasterization;
 
 namespace ParticleSimulator.Rendering {
@@ -16,28 +17,33 @@ namespace ParticleSimulator.Rendering {
 		public readonly AIncrementalAverage<TimeSpan> FpsTimings = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 		public int FramesCompleted { get; private set; }
 
+		public abstract KeyListener[] Listeners { get; }
+
 		private float[] _scaling = null;
 
 		public void Draw(bool wasPunctual, object[] parameters) {
 			if (wasPunctual || this._scaling is null)
 				this._scaling = (float[])parameters[1];
 			object buffer = this.PrepareBuffer(this._scaling, (Pixel[])parameters[0]);
-			this.DrawOverlays(this.Engine.IsPaused, wasPunctual, this._scaling, buffer);
+			this.DrawOverlays(wasPunctual, this._scaling, buffer);
 			this.Flush(buffer);
 		}
 
 		public void UpdateRenderTime(bool wasPunctual) {
-			if (wasPunctual) {
+			if (wasPunctual && !this.Engine.IsPaused) {
 				TimeSpan currentFpsTime = this.Engine.StepEval_Render.FullTimePunctual.LastUpdate;
 				this.FpsTimings.Update(currentFpsTime);
-				this.UpdateMonitor(this.FramesCompleted, this.FrameTimings.LastUpdate, this.FpsTimings.LastUpdate);
+				this.UpdateMonitor(
+					this.FramesCompleted,
+					this.Engine.StepEval_Simulate.IsPaused ? TimeSpan.Zero : this.FrameTimings.LastUpdate,
+					this.FpsTimings.LastUpdate);
 				this.FramesCompleted++;
 			}
 		}
 
 		public void UpdateRasterizationTime(bool wasPunctual = true) {
 			TimeSpan currentFrameTime = new TimeSpan[] {
-				this.Engine.StepEval_Simulate.ExclusiveTime.LastUpdate,
+				this.Engine.StepEval_Simulate.IsPaused ? TimeSpan.Zero : this.Engine.StepEval_Simulate.ExclusiveTime.LastUpdate,
 				this.Engine.StepEval_Rasterize.ExclusiveTime.LastUpdate,
 				this.Engine.StepEval_Render.ExclusiveTime.LastUpdate,
 			}.Max();
@@ -49,7 +55,7 @@ namespace ParticleSimulator.Rendering {
 		public abstract void Startup();
 
 		protected abstract object PrepareBuffer(float[] scaling, Pixel[] buffer);
-		protected abstract void DrawOverlays(bool isPaused, bool wasPunctual, float[] scaling, object buffer);
+		protected abstract void DrawOverlays(bool wasPunctual, float[] scaling, object buffer);
 		protected abstract void Flush(object buffer);
 		protected abstract void UpdateMonitor(int framesCompleted, TimeSpan frameTime, TimeSpan fpsTime);
 	}

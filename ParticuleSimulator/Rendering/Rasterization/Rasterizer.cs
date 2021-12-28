@@ -74,13 +74,14 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				this.Resample(particles[i], resamplings);
 				while (resamplings.TryDequeue(out resampling)) {
 					idx = resampling.X + this.InternalWidth * resampling.Y;
-						densities[idx] += resampling.H;
-						if (counts[idx] == 0
-						|| nearest[idx].Z > resampling.Z
-						|| (nearest[idx].Z == resampling.Z && nearest[idx].Particle.ID > resampling.Particle.ID)) {
-							nearest[idx] = resampling;
-						}
-						counts[idx]++;
+					densities[idx] += resampling.H;
+					counts[idx]++;
+
+					if (counts[idx] == 1
+					|| nearest[idx].Z > resampling.Z
+					|| (nearest[idx].Z == resampling.Z && nearest[idx].Particle.ID > resampling.Particle.ID)) {
+						nearest[idx] = resampling;
+					}
 				}
 			}
 			
@@ -91,14 +92,14 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			if (this.Supersampling > 1) {
 				bool any2;
 				int idx2, count, totalCount;
-				float totalDensity, rank, maxRank = float.NegativeInfinity;
+				float totalDensity, rank, maxRank;
 				for (int x = 0; x < this.OutWidth; x++) {
 					for (int y = 0; y < this.OutHeight; y++) {
 						any2 = false;
 						idx = x + y *this.OutWidth;
 						count = totalCount = 0;
 						totalDensity = 0f;
-						maxRank = 0f;
+						maxRank = float.NegativeInfinity;
 						for (int sx = 0; sx < this.Supersampling; sx++) {
 							for (int sy = 0; sy < this.Supersampling; sy++) {
 								idx2 = (sx + x * this.Supersampling) + (sy + y * this.Supersampling) * this.InternalWidth;
@@ -107,14 +108,14 @@ namespace ParticleSimulator.Rendering.Rasterization {
 									any = any2 = true;
 									totalCount += counts[idx2];
 									totalDensity += densities[idx2];
-									rank = this.GetRank(scalings, nearest[idx2], (float)totalCount / count, totalDensity * densityScalar / count);
+									rank = this.GetRank(scalings, nearest[idx2], (float)totalCount / count, totalDensity / count);
 									maxRank = rank > maxRank ? rank : maxRank;
 								}
 							}
 						}
 						if (any2) {
-							ranks[idx] = maxRank;
-							results[idx] = new(x * this.Supersampling, y * this.Supersampling, maxRank);
+							ranks[idx] = maxRank * densityScalar;
+							results[idx] = new(x * this.Supersampling, y * this.Supersampling, ranks[idx].Value);
 						}
 					}
 				}
@@ -143,7 +144,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 					return resampling.Particle.Luminosity;
 				case ParticleColoringMethod.Depth:
 					return resampling.Z;
-				case ParticleColoringMethod.Count:
+				case ParticleColoringMethod.Overlap:
 					return count;
 				case ParticleColoringMethod.Density:
 					return density;

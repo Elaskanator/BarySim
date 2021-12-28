@@ -12,7 +12,7 @@ namespace ParticleSimulator.Engine {
 			this._dataGatherers = dataGatherers ?? Array.Empty<IDataGatherer>();
 		}
 
-		public static ProcessThread New(EvaluationStep config) {
+		public static ProcessThread New(bool startState, EvaluationStep config) {
 			int numResources = config.InputResourceUses is null ? 0 : config.InputResourceUses.Length;
 			IDataGatherer[] dataReceivers = new IDataGatherer[numResources];
 			AutoResetEvent[] readySignals = new AutoResetEvent[numResources],
@@ -31,12 +31,16 @@ namespace ParticleSimulator.Engine {
 					doneSignals[i],
 					refreshListeners[i]);
 			}
-			return new ProcessThread(
+			ProcessThread result = new ProcessThread(
 				config,
 				dataReceivers.Without(s => s is null).ToArray(),
 				doneSignals.Without(s => s is null).ToArray(),
 				readySignals.Without(s => s is null).ToArray());
+			if (!startState)
+				result.Pause();
+			return result;
 		}
+		public static ProcessThread New(EvaluationStep config) => New(true, config);
 
 		public EvaluationStep Config { get; private set; }
 		
