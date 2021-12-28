@@ -13,17 +13,17 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 18;
+		public const int PARTICLES_GROUP_MAX = 1 << 16;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;
 		public const float TIME_SCALE = 1f;//can be any value, including negative
 		public const float WORLD_SCALE = 1f;
-		public const float X_SCALE = 2f;
+		public const float X_SCALE = 1f;
 		public const float Y_SCALE = 1f;
 		public const float Z_SCALE = 1f;
-		public static readonly float ZOOM_SCALE = 1f / MathF.Sqrt(2f);
-		public static int SUPERSAMPLING = 1;
+		public static readonly float ZOOM_SCALE = 1f;// / MathF.Sqrt(2f);
+		public static int SUPERSAMPLING = 2;
 
 		public const float GOLDEN_RATIO = 1.61803398874989484820458683436f;
 		public static readonly Vector<float> LEFT_BOUND = VectorFunctions.New(-X_SCALE * WORLD_SCALE / 2f, -Y_SCALE * WORLD_SCALE / 2f, -Z_SCALE * WORLD_SCALE / 2f);
@@ -46,7 +46,7 @@ namespace ParticleSimulator {
 		public const float WORLD_PADDING_PCT = 25f;
 		
 		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
 		public const float AUTOSCALE_FIXED_MIN = -1f;
 		public const float AUTOSCALE_FIXED_MAX = -1f;
 		public const bool AUTOSCALE_PERCENTILE = false;
@@ -59,13 +59,9 @@ namespace ParticleSimulator {
 		
 		public const float MAX_FPS = -1;
 		public const float TARGET_FPS = 30;
-		public static readonly int WINDOW_HEIGHT = Console.LargestWindowHeight;// - 1;//using top and bottom halves of each character to get float the verticle resolution
-		public static readonly int WINDOW_WIDTH = Console.LargestWindowWidth;//WINDOW_HEIGHT * 2;
+		public static readonly int WINDOW_WIDTH = 100;//Console.LargestWindowWidth;//WINDOW_HEIGHT * 2;
+		public static readonly int WINDOW_HEIGHT = 50;//Console.LargestWindowHeight;// - 1;//using top and bottom halves of each character to get float the verticle resolution
 		public const float PIXEL_OVERLAP_THRESHOLD = 0f;
-
-		public const bool PERF_ENABLE = true;
-		public const bool PERF_STATS_ENABLE = true;
-		public const bool PERF_GRAPH_ENABLE = true;
 		
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
@@ -82,8 +78,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 20f;
-		public const float GRAVITY_MAX_STARTING_MASS = 20f;
+		public const float GRAVITY_MIN_STARTING_MASS = 50f;
+		public const float GRAVITY_MAX_STARTING_MASS = 50f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
@@ -119,7 +115,6 @@ namespace ParticleSimulator {
 		public const int NUMBER_SPACING = 5;
 		public const float PERF_SMA_ALPHA = 0.05f;
 
-		public const int GRAPH_WIDTH = 50;
 		public const int GRAPH_HEIGHT = 8;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;

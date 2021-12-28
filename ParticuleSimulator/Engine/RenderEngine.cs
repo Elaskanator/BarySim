@@ -18,6 +18,7 @@ namespace ParticleSimulator.Engine {
 			this.Random = Parameters.DETERMINISTIC_RANDOM_SEED == -1
 				? new()
 				: new(Parameters.DETERMINISTIC_RANDOM_SEED);
+			this.OverlaysEnabled = true;
 		}
 
 		~RenderEngine() => this.Dispose(false);
@@ -33,6 +34,7 @@ namespace ParticleSimulator.Engine {
 
 		public bool IsOpen { get; private set; }
 		public bool IsPaused { get; private set; }
+		public bool OverlaysEnabled { get; set; }
 		public DateTime? StartTimeUtc { get; private set; }
 		public DateTime? EndTimeUtc { get; private set; }
 

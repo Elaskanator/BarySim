@@ -9,16 +9,15 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		}
 
 		public PerfGraph Graph { get; private set; }
+		public int HeaderWidth { get; private set; }
 		
 		private readonly RenderEngine _engine;
 		private HeaderValue[] _statsHeaderValues;
 
 		public void Init() {
-			_statsHeaderValues = new HeaderValue[
-				1 + (Parameters.PERF_STATS_ENABLE
-					? 1 + this._engine.Evaluators.Length
-					: 0)];
-			this.Graph = new PerfGraph(this._engine.Evaluators.Length);
+			_statsHeaderValues = new HeaderValue[2 + this._engine.Evaluators.Length];
+			this.HeaderWidth = ((this._engine.Evaluators.Length + 1) * (1 + Parameters.NUMBER_SPACING)) + 14;
+			this.Graph = new PerfGraph(this.HeaderWidth);
 		}
 
 		public void DrawStatsOverlay(ConsoleExtensions.CharInfo[] frameBuffer, bool wasPunctual) {
@@ -36,7 +35,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				position += numberStr.Length;
 			}
 
-			if (Parameters.PERF_GRAPH_ENABLE && this._engine.StepEval_Render.ExclusiveTime.NumUpdates > 0)
+			if (this._engine.StepEval_Render.ExclusiveTime.NumUpdates > 0)
 				this.Graph.DrawFpsGraph(frameBuffer, this._engine.Renderer.FrameTimings, this._engine.Renderer.FpsTimings);
 		}
 
@@ -54,22 +53,20 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					ConsoleColor.Black);
 			else _statsHeaderValues[1] = new("Time(ms)", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 
-			if (Parameters.PERF_STATS_ENABLE) {
-				string label;
-				for (int i = 0; i < this._engine.Evaluators.Length; i++) {
-					label = this._engine.Evaluators[i].Name[0].ToString();
-					if (!wasPunctual && this._engine.Evaluators[i].Id != this._engine.StepEval_Render.Id && this._engine.Evaluators[i].IsComputing)
-						_statsHeaderValues[i + 2] = new(label,
-							DateTime.UtcNow.Subtract(this._engine.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds,
-							ConsoleColor.White,
-							ConsoleColor.DarkRed);
-					else if (this._engine.Evaluators[i].ExclusiveTime.NumUpdates > 0)
-						_statsHeaderValues[i + 2] = new(label,
-							this._engine.Evaluators[i].ExclusiveTime.LastUpdate.TotalMilliseconds,
-							ChooseFrameIntervalColor(this._engine.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds),
-							ConsoleColor.Black);
-					else _statsHeaderValues[i + 2] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
-				}
+			string label;
+			for (int i = 0; i < this._engine.Evaluators.Length; i++) {
+				label = this._engine.Evaluators[i].Name[0].ToString();
+				if (!wasPunctual && this._engine.Evaluators[i].Id != this._engine.StepEval_Render.Id && this._engine.Evaluators[i].IsComputing)
+					_statsHeaderValues[i + 2] = new(label,
+						DateTime.UtcNow.Subtract(this._engine.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds,
+						ConsoleColor.White,
+						ConsoleColor.DarkRed);
+				else if (this._engine.Evaluators[i].ExclusiveTime.NumUpdates > 0)
+					_statsHeaderValues[i + 2] = new(label,
+						this._engine.Evaluators[i].ExclusiveTime.LastUpdate.TotalMilliseconds,
+						ChooseFrameIntervalColor(this._engine.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds),
+						ConsoleColor.Black);
+				else _statsHeaderValues[i + 2] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 			}
 		}
 

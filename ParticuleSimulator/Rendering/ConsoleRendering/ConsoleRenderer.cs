@@ -82,28 +82,29 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		protected override void DrawOverlays(bool wasPunctual, float[] scaling, object bufferData) {
 			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])bufferData;
 			this.Watchdog(wasPunctual, buffer);
-			if (Parameters.PERF_ENABLE)
+			if (this.Engine.OverlaysEnabled) {
 				this._perfMon.DrawStatsOverlay(buffer, wasPunctual);
-			if (Parameters.LEGEND_ENABLE
-			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Random
-			&& Parameters.COLOR_METHOD != ParticleColoringMethod.Group)
-				this.DrawLegend(scaling, buffer);
+				if (Parameters.LEGEND_ENABLE
+				&& Parameters.COLOR_METHOD != ParticleColoringMethod.Random
+				&& Parameters.COLOR_METHOD != ParticleColoringMethod.Group)
+					this.DrawLegend(scaling, buffer);
 
-			ConsoleExtensions.CharInfo[] label;
-			int position = 1 + Parameters.GRAPH_WIDTH, keyLabelOffset;
-			string keyStr;
-			for (int i = 0; i < this.Listeners.Length; i++) {
-				label = this.Listeners[i].ToConsoleCharString();
-				keyStr = this.Listeners[i].Key.ToString();
+				ConsoleExtensions.CharInfo[] label;
+				int position = 1 + this._perfMon.Graph.Width, keyLabelOffset;
+				string keyStr;
+				for (int i = 0; i < this.Listeners.Length; i++) {
+					label = this.Listeners[i].ToConsoleCharString();
+					keyStr = this.Listeners[i].Key.ToString();
 
-				keyLabelOffset = (int)(label.Length/2d - keyStr.Length/2d);
-				for (int j = 0; j < keyStr.Length; j++)
-					buffer[position + j + keyLabelOffset] = new(keyStr[j], ConsoleColor.DarkGray, ConsoleColor.Black);
+					keyLabelOffset = (int)(label.Length/2d - keyStr.Length/2d);
+					for (int j = 0; j < keyStr.Length; j++)
+						buffer[position + j + keyLabelOffset] = new(keyStr[j], ConsoleColor.DarkGray, ConsoleColor.Black);
 
-				for (int j = 0; j < label.Length; j++)
-					buffer[position + j + Parameters.WINDOW_WIDTH] = label[j];
+					for (int j = 0; j < label.Length; j++)
+						buffer[position + j + Parameters.WINDOW_WIDTH] = label[j];
 
-				position += label.Length + 2;
+					position += label.Length + 2;
+				}
 			}
 		}
 
@@ -112,8 +113,8 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 		private DateTime _lastPunctualWrite = DateTime.UtcNow;
 		private void Watchdog(bool wasPunctual, ConsoleExtensions.CharInfo[] buffer) {
-			int xOffset = Parameters.PERF_ENABLE ? 6 : 0,
-				yOffset = Parameters.PERF_ENABLE ? 1 : 0;
+			int xOffset = 6,
+				yOffset = 1;
 
 			if (!this.Engine.IsPaused) {
 				if (wasPunctual)
@@ -173,15 +174,23 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 		private IEnumerable<KeyListener> BuildListeners() {
 			KeyListener[] standardFunctions = new KeyListener[] {
-				new(ConsoleKey.F1, "Master",
-				() => { return !this.Engine.IsPaused; },
-				s => { this.Engine.SetPauseState(s); }) {
+				new(ConsoleKey.F1, "Stats",
+				() => { return this.Engine.OverlaysEnabled; },
+				s => { this.Engine.OverlaysEnabled = s; }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
 					ForegroundInactive = ConsoleColor.DarkGray,
 					BackgroundInactive = ConsoleColor.Black,
 				},
-				new(ConsoleKey.F2, "Simulate",
+				new(ConsoleKey.F2, "Master",
+				() => { return !this.Engine.IsPaused; },
+				s => { this.Engine.SetPauseState(s); }) {
+					ForegroundActive = ConsoleColor.Black,
+					BackgroundActive = ConsoleColor.DarkGreen,
+					ForegroundInactive = ConsoleColor.Black,
+					BackgroundInactive = ConsoleColor.DarkYellow,
+				},
+				new(ConsoleKey.F3, "Sim",
 				() => { return !this.Engine.StepEval_Simulate.IsPaused; },
 				s => { if (!this.Engine.IsPaused) this.Engine.StepEval_Simulate.SetPauseState(s); }) {
 					ForegroundActive = ConsoleColor.Black,
@@ -190,7 +199,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					BackgroundInactive = ConsoleColor.Black,
 				},
 			};
-			KeyListener autoscale = new(ConsoleKey.F3, "Autoscale",
+			KeyListener autoscale = new(ConsoleKey.F4, "Scale",
 				() => { return !this.Engine.StepEval_Autoscale.IsPaused; },
 				s => { this.Engine.StepEval_Autoscale.SetPauseState(s); }) {
 					ForegroundActive = ConsoleColor.Black,
@@ -199,7 +208,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					BackgroundInactive = ConsoleColor.Black,
 			};
 			KeyListener[] rotationFunctions = new KeyListener[] {
-				new(ConsoleKey.F4, "Rotate",
+				new(ConsoleKey.F5, "Rotate",
 				() => { return this.Engine.Rasterizer.Camera.IsAutoIncrementActive; },
 				s => { if (s) this.Engine.StepEval_Rasterize.Resume(); else if (this.Engine.IsPaused) this.Engine.StepEval_Rasterize.Pause(); this.Engine.Rasterizer.Camera.IsAutoIncrementActive = s; }) {
 					ForegroundActive = ConsoleColor.Black,
@@ -207,7 +216,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					ForegroundInactive = ConsoleColor.DarkGray,
 					BackgroundInactive = ConsoleColor.Black,
 				},
-				new(ConsoleKey.F5, "Roll",
+				new(ConsoleKey.F6, "α",
 				() => { return this.Engine.Rasterizer.Camera.IsRollRotationActive; },
 				s => { this.Engine.Rasterizer.Camera.IsRollRotationActive = s; }) {
 					ForegroundActive = ConsoleColor.Black,
@@ -215,7 +224,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					ForegroundInactive = ConsoleColor.DarkGray,
 					BackgroundInactive = ConsoleColor.Black,
 				},
-				new(ConsoleKey.F6, "Pitch",
+				new(ConsoleKey.F7, "β",
 				() => { return this.Engine.Rasterizer.Camera.IsPitchRotationActive; },
 				s => { this.Engine.Rasterizer.Camera.IsPitchRotationActive = s; }) {
 					ForegroundActive = ConsoleColor.Black,
@@ -223,7 +232,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					ForegroundInactive = ConsoleColor.DarkGray,
 					BackgroundInactive = ConsoleColor.Black,
 				},
-				new(ConsoleKey.F7, "Yaw",
+				new(ConsoleKey.F8, "γ",
 				() => { return this.Engine.Rasterizer.Camera.IsYawRotationActive; },
 				s => { this.Engine.Rasterizer.Camera.IsYawRotationActive = s; }) {
 					ForegroundActive = ConsoleColor.Black,
@@ -233,9 +242,11 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				},
 			};
 
+			IEnumerable<KeyListener> result = standardFunctions;
 			if (Parameters.AUTOSCALER_ENABLE)
-				return standardFunctions.Append(autoscale).Concat(rotationFunctions);
-			else return standardFunctions.Concat(rotationFunctions);
+				result = result.Append(autoscale);
+			result = result.Concat(rotationFunctions);
+			return result;
 		}
 	}
 }

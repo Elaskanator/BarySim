@@ -5,15 +5,15 @@ using Generic.Models;
 
 namespace ParticleSimulator.Rendering.SystemConsole {
 	public class PerfGraph {
-		public PerfGraph(int numStats) {
-			GraphWidth = Parameters.GRAPH_WIDTH;
+		public PerfGraph(int width) {
+			this.Width = width;
 
-			_columnFrameTimeStatsMs = new StatsInfo[GraphWidth];
-			_columnFpsStatsMs = new StatsInfo[GraphWidth];
-			_graphColumns = new ConsoleExtensions.CharInfo[GraphWidth][];
+			_columnFrameTimeStatsMs = new StatsInfo[this.Width];
+			_columnFpsStatsMs = new StatsInfo[this.Width];
+			_graphColumns = new ConsoleExtensions.CharInfo[this.Width][];
 		}
 
-		public readonly int GraphWidth;
+		public readonly int Width;
 		private readonly object _columnStatsLock = new object();
 		
 		private StatsInfo[] _columnFrameTimeStatsMs;
@@ -55,7 +55,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			}
 			int numCols = graphColumnsCopy.Length;
 			
-			ConsoleExtensions.CharInfo[] graphData = new ConsoleExtensions.CharInfo[GraphWidth * Parameters.GRAPH_HEIGHT];
+			ConsoleExtensions.CharInfo[] graphData = new ConsoleExtensions.CharInfo[Width * Parameters.GRAPH_HEIGHT];
 
 			for (int i = 0; i < graphColumnsCopy.Length; i++)
 				DrawGraphColumn(graphData, graphColumnsCopy[i], i);
@@ -91,8 +91,8 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				numCols = numCols < label_min.Length ? label_min.Length : numCols;
 				for (int x = 0; x < label_min.Length; x++) {
 					yOffset = 0;
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-						label_min[x], ConsoleColor.DarkBlue, graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].BackgroundColor);
+					graphData[x + Width * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+						label_min[x], ConsoleColor.DarkBlue, graphData[x + Width * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].BackgroundColor);
 				}
 			}
 
@@ -100,7 +100,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				numCols = numCols < label_frameTime.Length ? label_frameTime.Length : numCols;
 				for (int x = 0; x < label_frameTime.Length; x++) {
 					yOffset = offset_frameTime;
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+					graphData[x + Width * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
 						label_frameTime[x], ConsoleColor.White, offset_targetTime == offset_frameTime ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan);
 				}
 			}
@@ -109,7 +109,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				numCols = numCols < label_target.Length ? label_target.Length : numCols;
 				for (int x = 0; x < label_target.Length; x++) {
 					yOffset = offset_targetTime;
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+					graphData[x + Width * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
 						label_target[x], ConsoleColor.Black, ConsoleColor.DarkYellow);
 				}
 			}
@@ -118,7 +118,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				numCols = numCols < label_FpsTime.Length ? label_FpsTime.Length : numCols;
 				for (int x = 0; x < label_FpsTime.Length; x++) {
 					yOffset = offset_fps;
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+					graphData[x + Width * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
 						label_FpsTime[x], ConsoleColor.White, offset_targetTime == offset_fps ? ConsoleColor.DarkYellow : ConsoleColor.DarkGreen);
 				}
 			}
@@ -127,12 +127,12 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				numCols = numCols < label_max.Length ? label_max.Length : numCols;
 				for (int x = 0; x < label_max.Length; x++) {
 					yOffset = Parameters.GRAPH_HEIGHT - 1;
-					graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
-						label_max[x], ConsoleColor.DarkBlue, graphData[x + GraphWidth * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].BackgroundColor);
+					graphData[x + Width * (Parameters.GRAPH_HEIGHT - 1 - yOffset)] = new ConsoleExtensions.CharInfo(
+						label_max[x], ConsoleColor.DarkBlue, graphData[x + Width * (Parameters.GRAPH_HEIGHT - 1 - yOffset)].BackgroundColor);
 				}
 			}
 
-			frameBuffer.RegionMerge(Parameters.WINDOW_WIDTH, graphData, GraphWidth, 0, 1, numCols);
+			frameBuffer.RegionMerge(Parameters.WINDOW_WIDTH, graphData, Width, 0, 1, numCols);
 		}
 
 		private void RerenderGraph() {
@@ -171,7 +171,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		private void DrawGraphColumn(ConsoleExtensions.CharInfo[] buffer, ConsoleExtensions.CharInfo[] newColumn, int xIdx) {
 			for (int yIdx = 0; yIdx < Parameters.GRAPH_HEIGHT; yIdx++)
 				if (!Equals(newColumn[yIdx], default(ConsoleExtensions.CharInfo)))
-					buffer[xIdx + (Parameters.GRAPH_HEIGHT - yIdx - 1)*GraphWidth] = newColumn[yIdx];
+					buffer[xIdx + (Parameters.GRAPH_HEIGHT - yIdx - 1)*Width] = newColumn[yIdx];
 		}
 		private ConsoleExtensions.CharInfo[] RenderGraphColumn(StatsInfo fpsStatsMs, StatsInfo simTimeStatsMs) {
 			ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[Parameters.GRAPH_HEIGHT];
