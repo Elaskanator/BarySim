@@ -90,7 +90,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				this.DrawLegend(scaling, buffer);
 
 			ConsoleExtensions.CharInfo[] label;
-			int position = 51, keyLabelOffset;
+			int position = 1 + Parameters.GRAPH_WIDTH, keyLabelOffset;
 			string keyStr;
 			for (int i = 0; i < this.Listeners.Length; i++) {
 				label = this.Listeners[i].ToConsoleCharString();
@@ -173,15 +173,15 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 		private IEnumerable<KeyListener> BuildListeners() {
 			KeyListener[] standardFunctions = new KeyListener[] {
-				new(ConsoleKey.F1, "Paused",
+				new(ConsoleKey.F1, "Engine",
 				() => { return !this.Engine.IsPaused; },
 				s => { this.Engine.SetPauseState(s); }) {
-					ForegroundActive = ConsoleColor.DarkGray,
-					BackgroundActive = ConsoleColor.Black,
-					ForegroundInactive = ConsoleColor.White,
-					BackgroundInactive = ConsoleColor.DarkYellow,
+					ForegroundActive = ConsoleColor.Black,
+					BackgroundActive = ConsoleColor.DarkGreen,
+					ForegroundInactive = ConsoleColor.DarkGray,
+					BackgroundInactive = ConsoleColor.Black,
 				},
-				new(ConsoleKey.F2, "Simulation",
+				new(ConsoleKey.F2, "Simulate",
 				() => { return !this.Engine.StepEval_Simulate.IsPaused; },
 				s => { if (!this.Engine.IsPaused) this.Engine.StepEval_Simulate.SetPauseState(s); }) {
 					ForegroundActive = ConsoleColor.Black,
@@ -190,7 +190,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					BackgroundInactive = ConsoleColor.Black,
 				},
 			};
-			KeyListener autoscale = new(ConsoleKey.F3, "Autoscaling",
+			KeyListener autoscale = new(ConsoleKey.F3, "Autoscale",
 				() => { return !this.Engine.StepEval_Autoscale.IsPaused; },
 				s => { this.Engine.StepEval_Autoscale.SetPauseState(s); }) {
 					ForegroundActive = ConsoleColor.Black,
@@ -199,7 +199,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					BackgroundInactive = ConsoleColor.Black,
 			};
 			KeyListener[] rotationFunctions = new KeyListener[] {
-				new(ConsoleKey.F4, "Rotating",
+				new(ConsoleKey.F4, "Rotate",
 				() => { return this.Engine.Rasterizer.Camera.IsAutoIncrementActive; },
 				s => { if (s) this.Engine.StepEval_Rasterize.Resume(); else if (this.Engine.IsPaused) this.Engine.StepEval_Rasterize.Pause(); this.Engine.Rasterizer.Camera.IsAutoIncrementActive = s; }) {
 					ForegroundActive = ConsoleColor.Black,

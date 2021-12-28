@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Linq;
+using System.Numerics;
+using Generic.Vectors;
 using ParticleSimulator.Rendering;
 using ParticleSimulator.Rendering.SystemConsole;
 
@@ -11,14 +13,21 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 8;
+		public const int PARTICLES_GROUP_MAX = 1 << 16;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;
 		public const float TIME_SCALE = 1f;//can be any value, including negative
 		public const float WORLD_SCALE = 1f;
+		public const float X_SCALE = 2f;
+		public const float Y_SCALE = 1f;
+		public const float Z_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f / MathF.Sqrt(2f);
 		public static int SUPERSAMPLING = 1;
+
+		public const float GOLDEN_RATIO = 1.61803398874989484820458683436f;
+		public static readonly Vector<float> LEFT_BOUND = VectorFunctions.New(-X_SCALE * WORLD_SCALE / 2f, -Y_SCALE * WORLD_SCALE / 2f, -Z_SCALE * WORLD_SCALE / 2f);
+		public static readonly Vector<float> RIGHT_BOUND = VectorFunctions.New(X_SCALE * WORLD_SCALE / 2f, Y_SCALE * WORLD_SCALE / 2f, Z_SCALE * WORLD_SCALE / 2f);
 
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.004f;
 		
@@ -73,8 +82,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 100f;
-		public const float GRAVITY_MAX_STARTING_MASS = 500f;
+		public const float GRAVITY_MIN_STARTING_MASS = 40f;
+		public const float GRAVITY_MAX_STARTING_MASS = 40f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;

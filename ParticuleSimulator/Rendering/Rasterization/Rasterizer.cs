@@ -26,7 +26,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			this.InternalHeightF = this.InternalHeight;
 
 			this._rawRankingsResource = rawRankings;
-			this.Camera = new Camera(Parameters.ZOOM_SCALE);
+			this.Camera = new Camera(Parameters.ZOOM_SCALE * Parameters.WORLD_SCALE * 2f);
 
 			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random)
 				this._randOffset = (int)(100d * rand.NextDouble());

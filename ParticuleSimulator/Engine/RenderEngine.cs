@@ -108,7 +108,7 @@ namespace ParticleSimulator.Engine {
 			});
 			
 			if (Parameters.AUTOSCALER_ENABLE)
-				this.StepEval_Autoscale = ProcessThread.New(false, new() {
+				this.StepEval_Autoscale = ProcessThread.New(Parameters.COLOR_METHOD != ParticleColoringMethod.Overlap, new() {
 					Name = "Autoscale",
 					CalculatorFn = this.Scaling.Update,
 					Synchronizer = Parameters.AUTOSCALE_INTERVAL_MS > 0

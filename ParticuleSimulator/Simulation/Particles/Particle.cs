@@ -50,15 +50,15 @@ namespace ParticleSimulator {
 				this.BounceWalls(timeStep);
 		//	else if (Parameters.WORLD_BOUNDING)
 		//		this.BoundPosition();
-			else this.CheckOutOfBounds();
+		//	else this.CheckOutOfBounds();
 		}
 
-		private void CheckOutOfBounds() {
-			for (int d = 0; d < Parameters.DIM; d++)
-				if (this.Position[d] < -Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_SCALE
-				|| this.Position[d] > Parameters.WORLD_SCALE * (1f + Parameters.WORLD_DEATH_BOUND_CNT))
-					this.IsEnabled = false;
-		}
+		//private void CheckOutOfBounds() {
+		//	for (int d = 0; d < Parameters.DIM; d++)
+		//		if (this.Position[d] < -Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_SCALE
+		//		|| this.Position[d] > Parameters.WORLD_SCALE * (1f + Parameters.WORLD_DEATH_BOUND_CNT))
+		//			this.IsEnabled = false;
+		//}
 
 		//private bool WrapPosition() {
 		//	bool result = false;
@@ -94,13 +94,11 @@ namespace ParticleSimulator {
 		//	return result;
 		//}
 
-		private static readonly Vector<float> _leftBounds = new Vector<float>(-Parameters.WORLD_SCALE);
-		private static readonly Vector<float> _rightBounds = new Vector<float>(Parameters.WORLD_SCALE);
 		public bool BounceWalls(float timeStep) {//TODODODO
 			bool result = false;
 			Vector<int>
-				lessThans = Vector.LessThan(this.Position + timeStep*this.Velocity, _leftBounds),
-				greaterThans = Vector.GreaterThanOrEqual(this.Position + timeStep*this.Velocity, _rightBounds);
+				lessThans = Vector.LessThan(this.Position + timeStep*this.Velocity, Parameters.LEFT_BOUND),
+				greaterThans = Vector.GreaterThanOrEqual(this.Position + timeStep*this.Velocity, Parameters.RIGHT_BOUND);
 			if (Vector.LessThanAny(lessThans, Vector<int>.Zero) || Vector.LessThanAny(greaterThans, Vector<int>.Zero)) {
 				this.Velocity = Vector.ConditionalSelect(
 					lessThans,
@@ -111,10 +109,10 @@ namespace ParticleSimulator {
 						this.Velocity));
 				this.Position += Vector.ConditionalSelect(//v is reversed already
 					lessThans,
-					timeStep*this.Velocity - (this.Position - _leftBounds),
+					timeStep*this.Velocity - (this.Position - Parameters.LEFT_BOUND),
 					Vector.ConditionalSelect(
 						greaterThans,
-						timeStep*this.Velocity - (_rightBounds - this.Position),
+						timeStep*this.Velocity - (Parameters.RIGHT_BOUND - this.Position),
 						Vector<float>.Zero));
 			}
 			
