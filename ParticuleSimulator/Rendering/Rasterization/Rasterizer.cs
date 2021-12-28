@@ -23,6 +23,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			}
 
 			this.InternalWidthF = this.InternalWidth;
+			this.NegInternalWidthF = -this.InternalWidth;
 			this.InternalHeightF = this.InternalHeight;
 
 			this._rawRankingsResource = rawRankings;
@@ -46,6 +47,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		public readonly int InternalNumPixels;
 		public readonly int InternalWidth;
 		private readonly float InternalWidthF;
+		private readonly float NegInternalWidthF;
 		public readonly int InternalHeight;
 		private readonly float InternalHeightF;
 		
@@ -91,18 +93,21 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			bool any = false;
 			if (this.Supersampling > 1) {
 				bool any2;
-				int idx2, count, totalCount;
+				int idx2, count, totalCount, y2, x2, y3;
 				float totalDensity, rank, maxRank;
 				for (int x = 0; x < this.OutWidth; x++) {
+					x2 = x * this.Supersampling;
 					for (int y = 0; y < this.OutHeight; y++) {
+						y3 = y * this.Supersampling;
 						any2 = false;
 						idx = x + y *this.OutWidth;
 						count = totalCount = 0;
 						totalDensity = 0f;
 						maxRank = float.NegativeInfinity;
-						for (int sx = 0; sx < this.Supersampling; sx++) {
-							for (int sy = 0; sy < this.Supersampling; sy++) {
-								idx2 = (sx + x * this.Supersampling) + (sy + y * this.Supersampling) * this.InternalWidth;
+						for (int sy = 0; sy < this.Supersampling; sy++) {
+							y2 = (sy + y3) * this.InternalWidth;
+							for (int sx = 0; sx < this.Supersampling; sx++) {
+								idx2 = (sx + x2) + y2;
 								if (counts[idx2] > 0) {
 									count++;
 									any = any2 = true;
@@ -115,7 +120,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						}
 						if (any2) {
 							ranks[idx] = maxRank * densityScalar;
-							results[idx] = new(x * this.Supersampling, y * this.Supersampling, ranks[idx].Value);
+							results[idx] = new(x, y, ranks[idx].Value);
 						}
 					}
 				}
@@ -181,7 +186,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						float visibleRadius;
 						if (Parameters.DIM > 2) {
 							float dz;
-							if (position[2] < -this.InternalWidthF) {//only the bottom is visible
+							if (position[2] < this.NegInternalWidthF) {//only the bottom is visible
 								dz = position[2] + this.InternalWidthF;
 								visibleRadius = MathF.Sqrt(radius*radius - dz*dz);
 							} else if (position[2] > this.InternalWidthF) {//only the top is visible
@@ -231,10 +236,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 							yMax = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax;
 					
 							//y middle
-							if (0 <= yRounded && yRounded < this.InternalHeight) {
-								if (dx <= radius)
-									result.Enqueue(new(particle, x, yRounded, position[2], MathF.Sqrt(radius*radius - dx*dx)));
-							}
+							if (0 <= yRounded && yRounded < this.InternalHeight)
+								result.Enqueue(new(particle, x, yRounded, position[2], MathF.Sqrt(radius*radius - dx*dx)));
 							//bottom half
 							for (int y = yMin; y < yRounded && y < this.InternalHeight; y++) {
 								dy = position[1] - (y + 1);//near side
@@ -261,10 +264,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 							yMax = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax;
 					
 							//y middle
-							if (0 <= yRounded && yRounded < this.InternalHeight) {
-								if (dx <= radius)
-									result.Enqueue(new(particle, x, yRounded, position[2], MathF.Sqrt(radius*radius - dx*dx)));
-							}
+							if (0 <= yRounded && yRounded < this.InternalHeight)
+								result.Enqueue(new(particle, x, yRounded, position[2], MathF.Sqrt(radius*radius - dx*dx)));
 							//bottom half
 							for (int y = yMin; y < yRounded && y < this.InternalHeight; y++) {
 								dy = position[1] - (y + 1);//near side

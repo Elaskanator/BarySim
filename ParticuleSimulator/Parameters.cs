@@ -13,7 +13,7 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 16;
+		public const int PARTICLES_GROUP_MAX = 1 << 20;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;
@@ -23,7 +23,14 @@ namespace ParticleSimulator {
 		public const float Y_SCALE = 1f;
 		public const float Z_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f;// / MathF.Sqrt(2f);
-		public static int SUPERSAMPLING = 2;
+		
+		public const float MAX_FPS = -1;
+		public const float TARGET_FPS = 30;
+		public static readonly int WINDOW_WIDTH = 100;//Console.LargestWindowWidth;//WINDOW_HEIGHT * 2;
+		public static readonly int WINDOW_HEIGHT = 50;//Console.LargestWindowHeight;// - 1;//using top and bottom halves of each character to get float the verticle resolution
+
+		public const float PIXEL_OVERLAP_THRESHOLD = 0.5f;
+		public static int SUPERSAMPLING = 3;
 
 		public const float GOLDEN_RATIO = 1.61803398874989484820458683436f;
 		public static readonly Vector<float> LEFT_BOUND = VectorFunctions.New(-X_SCALE * WORLD_SCALE / 2f, -Y_SCALE * WORLD_SCALE / 2f, -Z_SCALE * WORLD_SCALE / 2f);
@@ -56,12 +63,6 @@ namespace ParticleSimulator {
 		public const bool LEGEND_ENABLE = true;
 		public const float AUTOSCALE_CUTOFF_PCT = 0f;
 		public const float AUTOSCALE_MIN_STEP = 1f;
-		
-		public const float MAX_FPS = -1;
-		public const float TARGET_FPS = 30;
-		public static readonly int WINDOW_WIDTH = 100;//Console.LargestWindowWidth;//WINDOW_HEIGHT * 2;
-		public static readonly int WINDOW_HEIGHT = 50;//Console.LargestWindowHeight;// - 1;//using top and bottom halves of each character to get float the verticle resolution
-		public const float PIXEL_OVERLAP_THRESHOLD = 0f;
 		
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
@@ -117,7 +118,7 @@ namespace ParticleSimulator {
 
 		public const int GRAPH_HEIGHT = 8;//at least 2
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
-		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 20;
+		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 30;
 		public const float PERF_GRAPH_PERCENTILE_CUTOFF = 25f;
 
 		public static readonly bool AUTOSCALER_ENABLE =

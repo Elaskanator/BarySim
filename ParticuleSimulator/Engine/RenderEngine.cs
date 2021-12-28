@@ -18,7 +18,7 @@ namespace ParticleSimulator.Engine {
 			this.Random = Parameters.DETERMINISTIC_RANDOM_SEED == -1
 				? new()
 				: new(Parameters.DETERMINISTIC_RANDOM_SEED);
-			this.OverlaysEnabled = true;
+			this.OverlaysEnabled = false;
 		}
 
 		~RenderEngine() => this.Dispose(false);
