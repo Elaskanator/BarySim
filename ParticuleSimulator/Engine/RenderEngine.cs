@@ -158,15 +158,15 @@ namespace ParticleSimulator.Engine {
 		}
 
 		private bool _autoscalePaused = true;
+		private bool _rotationActive = false;
 		public void Pause() {
 			if (this.IsOpen) {
-				for (int i = 0; i < this.Evaluators.Length; i++) {
-					if (this.Evaluators[i] == this.StepEval_Autoscale)
-						this._autoscalePaused = this.Evaluators[i].IsPaused;
-					if (this.Evaluators[i] != this.StepEval_Render
-					&& (this.Evaluators[i] != this.StepEval_Rasterize || !this.Rasterizer.Camera.IsAutoIncrementActive))
+				this._autoscalePaused = this.StepEval_Autoscale.IsPaused;
+				this._rotationActive = this.Rasterizer.Camera.IsAutoIncrementActive;
+				this.Rasterizer.Camera.IsAutoIncrementActive = false;
+				for (int i = 0; i < this.Evaluators.Length; i++)
+					if (this.Evaluators[i] != this.StepEval_Render)
 						this.Evaluators[i].Pause();
-				}
 				this.IsPaused = true;
 			} else throw new InvalidOperationException("Not open");
 		}
@@ -176,6 +176,7 @@ namespace ParticleSimulator.Engine {
 				for (int i = 0; i < this.Evaluators.Length; i++)
 					if (this.Evaluators[i] != this.StepEval_Autoscale || !this._autoscalePaused)
 						this.Evaluators[i].Resume();
+				this.Rasterizer.Camera.IsAutoIncrementActive |= this._rotationActive;
 				this.IsPaused = false;
 			} else throw new InvalidOperationException("Not open");
 		}

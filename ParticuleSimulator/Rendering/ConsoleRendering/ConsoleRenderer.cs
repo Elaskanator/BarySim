@@ -173,7 +173,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 		private IEnumerable<KeyListener> BuildListeners() {
 			KeyListener[] standardFunctions = new KeyListener[] {
-				new(ConsoleKey.F1, "Engine",
+				new(ConsoleKey.F1, "Master",
 				() => { return !this.Engine.IsPaused; },
 				s => { this.Engine.SetPauseState(s); }) {
 					ForegroundActive = ConsoleColor.Black,

@@ -13,7 +13,7 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 16;
+		public const int PARTICLES_GROUP_MAX = 1 << 18;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;
@@ -82,8 +82,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 40f;
-		public const float GRAVITY_MAX_STARTING_MASS = 40f;
+		public const float GRAVITY_MIN_STARTING_MASS = 20f;
+		public const float GRAVITY_MAX_STARTING_MASS = 20f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
