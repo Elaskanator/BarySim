@@ -33,7 +33,7 @@ namespace ParticleSimulator.Engine {
 		private T _myValue;
 
 		protected override void Process(EvalResult prepResult) {
-			bool allowAccess = true, allowReuse = false, ready;
+			bool allowAccess = true, allowReuse = false;
 			if (this.IterationCount > 0) {
 				allowReuse = true;
 				if (this.Config.ReuseAmount < 0) {
@@ -48,20 +48,15 @@ namespace ParticleSimulator.Engine {
 
 			if (allowReuse) {
 				this.Skips++;
-				if (allowAccess) {
-					ready = true;
-					if (!(this._refreshSignal is null))
-						ready = this._refreshSignal.WaitOne(TimeSpan.Zero);
-					if (ready)
-						if (this.Config.DoConsume) {
-							if (this.Config.Resource.TryDequeue(ref this._myValue, TimeSpan.Zero)) {
-								this.Skips = 0;
-								this.Reuses = 0;
-							} else if (this.Config.AllowDirtyRead)
-								this._myValue = this.Config.Resource.Current;
+				if (allowAccess && ((this._refreshSignal is null) || this._refreshSignal.WaitOne(TimeSpan.Zero)))
+					if (this.Config.DoConsume) {
+						if (this.Config.Resource.TryDequeue(ref this._myValue, TimeSpan.Zero)) {
+							this.Skips = 0;
+							this.Reuses = 0;
 						} else if (this.Config.AllowDirtyRead)
 							this._myValue = this.Config.Resource.Current;
-				}
+					} else if (this.Config.AllowDirtyRead)
+						this._myValue = this.Config.Resource.Current;
 			} else if (allowAccess) {
 				if (!(this._refreshSignal is null))
 					this._refreshSignal.WaitOne();

@@ -85,7 +85,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])bufferData;
 			this.Watchdog(prepResults, buffer);
 			if (this.Engine.OverlaysEnabled) {
-				this._perfMon.DrawStatsOverlay(buffer, prepResults);
+				this._perfMon.DrawStatsOverlay(prepResults, buffer);
 				if (Parameters.LEGEND_ENABLE
 				&& Parameters.COLOR_METHOD != ParticleColoringMethod.Random
 				&& Parameters.COLOR_METHOD != ParticleColoringMethod.Group)
@@ -105,7 +105,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					for (int j = 0; j < label.Length; j++)
 						buffer[position + j + Parameters.WINDOW_WIDTH] = label[j];
 
-					position += label.Length + 2;
+					position += (label.Length < 2 ? 2 : label.Length) + 1;
 				}
 			}
 		}

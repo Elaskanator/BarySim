@@ -130,8 +130,9 @@ namespace ParticleSimulator.Engine {
 			try {
 				bool isPunctual = true;
 				this._timerFullPunctual.Restart();
-				EvalResult evalResult = new();
+				EvalResult evalResult;
 				while (this.IsOpen) {
+					evalResult = new();
 					this._timerFull.Restart();
 
 					if (this.ReadySignals.Length > 0) {
@@ -145,23 +146,27 @@ namespace ParticleSimulator.Engine {
 
 						this._timer.Stop();
 						this.WaitTime.Update(this._timer.Elapsed);
+						evalResult.PrepTime = this._timer.Elapsed;
 					}
 					evalResult.PrepPunctual = true;
-				
-					this._timer.Restart();
 
 					this.PreProcess(evalResult);
 					if (this.ReleaseEarly)
 						for (int i = 0; i < this.DoneSignals.Length; i++)
 							this.DoneSignals[i].Set();
+					
+					this._timer.Restart();
 
 					this._pauseSignal.WaitOne();
 
 					this._timer.Stop();
-					this.SyncTime.Update(this._timer.Elapsed);
+					evalResult.PauseDelay = this._timer.Elapsed;
 
-					if (!(this.Synchronizer is null))
+					if (!(this.Synchronizer is null)) {
 						this.Synchronizer.Synchronize();
+						evalResult.SyncDelay = this.Synchronizer.LastSyncDuration.Value;
+						this.SyncTime.Update(this.Synchronizer.LastSyncDuration.Value);
+					}
 						
 					if (this.IsOpen) {
 						this.LastComputeStartUtc = DateTime.UtcNow;
@@ -181,20 +186,22 @@ namespace ParticleSimulator.Engine {
 						if (isPunctual)
 							this.FullIterationCount++;
 
+						this._timerFull.Stop();
+						this.FullTime.Update(this._timerFull.Elapsed);
+						evalResult.TotalTime = this._timerFull.Elapsed;
+						if (isPunctual) {
+							this._timerFullPunctual.Stop();
+							this.FullTimePunctual.Update(this._timerFullPunctual.Elapsed);
+							evalResult.TotalTimePunctual = this._timerFullPunctual.Elapsed;
+							this._timerFullPunctual.Restart();
+						}
+
 						if (!(this.Callback is null))
 							this.Callback(evalResult);
 				
 						if (!this.ReleaseEarly)
 							for (int i = 0; i < this.DoneSignals.Length; i++)
 								this.DoneSignals[i].Set();
-
-						this._timerFull.Stop();
-						this.FullTime.Update(this._timerFull.Elapsed);
-						if (isPunctual) {
-							this._timerFullPunctual.Stop();
-							this.FullTimePunctual.Update(this._timerFullPunctual.Elapsed);
-							this._timerFullPunctual.Restart();
-						}
 					}
 				}
 			} catch (ThreadInterruptedException) { }//die

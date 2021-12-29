@@ -21,7 +21,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			this.Graph = new PerfGraph(this.HeaderWidth);
 		}
 
-		public void DrawStatsOverlay(ConsoleExtensions.CharInfo[] frameBuffer, EvalResult prepResults) {
+		public void DrawStatsOverlay(EvalResult prepResults, ConsoleExtensions.CharInfo[] frameBuffer) {
 			this.RefreshStatsHeader(prepResults);
 
 			int position = 0;

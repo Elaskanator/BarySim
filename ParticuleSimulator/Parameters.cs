@@ -8,12 +8,11 @@ using ParticleSimulator.Rendering.SystemConsole;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited or to disable the feature
 	public static class Parameters {
-		public const bool EXPORT_FRAMES = true;
-		public const bool EXPORT_SYNC_RENDER = true;
+		public const bool EXPORT_FRAMES = false;
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 20;
+		public const int PARTICLES_GROUP_MAX = 1 << 16;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;

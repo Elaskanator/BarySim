@@ -68,21 +68,6 @@ namespace ParticleSimulator.Engine {
 			this.Rasterizer = new(Parameters.WINDOW_WIDTH, Parameters.WINDOW_HEIGHT * 2, this.Random, rawRankData);
 			this.Renderer = new ConsoleRenderer(this);
 			this.Exporter = new BitmapGenerator(Parameters.WINDOW_WIDTH, Parameters.WINDOW_HEIGHT * 2);
-			
-			this.StepEval_Render = ProcessThread.New(new() {
-				Name = "Draw",
-				EvaluatorFn = this.Renderer.Draw,
-				CallbackFn = this.Renderer.UpdateRenderTime,
-				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
-				InputResourceUses = new IPrerequisite[] {
-					new Prerequisite<Pixel[]>() {
-						Resource = rasterResource,
-						DoConsume = true,
-					},
-					new Prerequisite<float[]>() {
-						Resource = scaling,
-					},
-				}});
 
 			this.StepEval_Simulate = ProcessThread.New(new() {
 				Name = "Simulate",
@@ -95,11 +80,8 @@ namespace ParticleSimulator.Engine {
 			this.StepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterize",
 				CalculatorFn = this.Rasterizer.Rasterize,
-				CallbackFn = this.Renderer.UpdateRasterizationTime,
+				CallbackFn = this.Renderer.UpdateFrameTime,
 				OutputResource = rasterResource,
-				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f
-					? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS)
-					: null,
 				InputResourceUses = new IPrerequisite[] {
 					new Prerequisite<ParticleData[]>() {
 						Resource = particleResource,
@@ -108,7 +90,7 @@ namespace ParticleSimulator.Engine {
 					},
 					new Prerequisite<float[]>() {
 						Resource = scaling,
-					}
+					},
 				}
 			});
 			
@@ -125,21 +107,41 @@ namespace ParticleSimulator.Engine {
 						new Prerequisite<float?[]>() {
 							Resource = rawRankData,
 							DoConsume = true,
-						}
+						},
 					}
 			});
+			
+			this.StepEval_Render = ProcessThread.New(new() {
+				Name = "Draw",
+				EvaluatorFn = this.Renderer.Draw,
+				CallbackFn = this.Renderer.UpdateFullTime,
+				Synchronizer = Parameters.TARGET_FPS > 0f || Parameters.MAX_FPS > 0f
+					? TimeSynchronizer.FromFps(Parameters.TARGET_FPS, Parameters.MAX_FPS)
+					: null,
+				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
+				InputResourceUses = new IPrerequisite[] {
+					new Prerequisite<Pixel[]>() {
+						Resource = rasterResource,
+						DoConsume = !Parameters.EXPORT_FRAMES,
+						OnChange = Parameters.EXPORT_FRAMES,
+					},
+					new Prerequisite<float[]>() {
+						Resource = scaling,
+					},
+				}});
 			
 			if (Parameters.EXPORT_FRAMES)
 				this.StepEval_Export = ProcessThread.New(new() {
 					Name = "Exporter",
 					EvaluatorFn = this.Exporter.RenderOut,
-					OutputResource = scaling,
-					IsOutputOverwrite = true,
 					InputResourceUses = new IPrerequisite[] {
-						new Prerequisite<float?[]>() {
-							Resource = rawRankData,
+						new Prerequisite<Pixel[]>() {
+							Resource = rasterResource,
 							DoConsume = true,
-						}
+						},
+						new Prerequisite<float[]>() {
+							Resource = scaling,
+						},
 					}
 			});
 			

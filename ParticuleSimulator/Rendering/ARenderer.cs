@@ -30,26 +30,25 @@ namespace ParticleSimulator.Rendering {
 			this.Flush(buffer);
 		}
 
-		public void UpdateRenderTime(EvalResult prepResults) {
+		public void UpdateFrameTime(EvalResult prepResults) {
+			TimeSpan currentFrameTime = new TimeSpan[] {
+				this.Engine.StepEval_Simulate.IsPaused ? TimeSpan.Zero : this.Engine.StepEval_Simulate.ExclusiveTime.LastUpdate,
+				prepResults.TotalTime,
+				this.Engine.StepEval_Render.ExclusiveTime.LastUpdate,
+			}.Max();
+
+			this.FrameTimings.Update(currentFrameTime);
+		}
+
+		public void UpdateFullTime(EvalResult prepResults) {
 			if (prepResults.PrepPunctual && !this.Engine.IsPaused) {
-				TimeSpan currentFpsTime = this.Engine.StepEval_Render.FullTimePunctual.LastUpdate;
-				this.FpsTimings.Update(currentFpsTime);
+				this.FpsTimings.Update(prepResults.TotalTimePunctual.Value);
 				this.UpdateMonitor(
 					this.FramesCompleted,
 					this.Engine.StepEval_Simulate.IsPaused ? TimeSpan.Zero : this.FrameTimings.LastUpdate,
 					this.FpsTimings.LastUpdate);
 				this.FramesCompleted++;
 			}
-		}
-
-		public void UpdateRasterizationTime(EvalResult prepResults) {
-			TimeSpan currentFrameTime = new TimeSpan[] {
-				this.Engine.StepEval_Simulate.IsPaused ? TimeSpan.Zero : this.Engine.StepEval_Simulate.ExclusiveTime.LastUpdate,
-				this.Engine.StepEval_Rasterize.ExclusiveTime.LastUpdate,
-				this.Engine.StepEval_Render.ExclusiveTime.LastUpdate,
-			}.Max();
-
-			this.FrameTimings.Update(currentFrameTime);
 		}
 
 		public abstract void Init();
