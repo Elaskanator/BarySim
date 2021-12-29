@@ -148,7 +148,7 @@ namespace ParticleSimulator.Engine {
 						this.WaitTime.Update(this._timer.Elapsed);
 						evalResult.PrepTime = this._timer.Elapsed;
 					}
-					evalResult.PrepPunctual = true;
+					evalResult.PrepPunctual = isPunctual;
 
 					this.PreProcess(evalResult);
 					if (this.ReleaseEarly)

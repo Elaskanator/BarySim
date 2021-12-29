@@ -17,6 +17,59 @@ namespace Generic.Vectors {
 		public static readonly Vector<int>[] DimensionFiltersInverted = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 1 : 0).ToArray())).ToArray();
 		public static readonly Vector<int>[] DimensionSignalsInverted = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? -1 : 0).ToArray())).ToArray();
 
+		public static bool EqualsAny(this Vector<float> first, Vector<float> second, int? dim = null) =>
+			!Vector.EqualsAny(
+				Vector<int>.Zero,
+				Vector.ConditionalSelect(
+					DimensionSignals[dim ?? Vector<int>.Count],
+					Vector.Equals(first, second),
+					Vector<int>.One));
+
+		public static int BitmaskEqual(this Vector<float> first, Vector<float> second, int? dim = null) =>
+			Vector.Dot(
+				Vector.ConditionalSelect(
+					Vector.Equals(first, second),
+					PowersOfTwo,
+					Vector<int>.Zero),
+				DimensionFilters[dim ?? Vector<float>.Count]);
+		public static int BitmaskInequal(this Vector<float> first, Vector<float> second, int? dim = null) =>
+			Vector.Dot(
+				Vector.ConditionalSelect(
+					Vector.Equals(first, second),
+					Vector<int>.Zero,
+					PowersOfTwo),
+				DimensionFilters[dim ?? Vector<float>.Count]);
+		
+		public static int BitmaskGreaterThan(this Vector<float> first, Vector<float> second, int? dim = null) =>
+			Vector.Dot(
+				Vector.ConditionalSelect(
+					Vector.GreaterThan(first, second),
+					PowersOfTwo,
+					Vector<int>.Zero),
+				DimensionFilters[dim ?? Vector<float>.Count]);
+		public static int BitmaskGreaterThanOrEqual(this Vector<float> first, Vector<float> second, int? dim = null) =>
+			Vector.Dot(
+				Vector.ConditionalSelect(
+					Vector.GreaterThanOrEqual(first, second),
+					PowersOfTwo,
+					Vector<int>.Zero),
+				DimensionFilters[dim ?? Vector<float>.Count]);
+		
+		public static int BitmaskLessThan(this Vector<float> first, Vector<float> second, int? dim = null) =>
+			Vector.Dot(
+				Vector.ConditionalSelect(
+					Vector.LessThan(first, second),
+					PowersOfTwo,
+					Vector<int>.Zero),
+				DimensionFilters[dim ?? Vector<float>.Count]);
+		public static int BitmaskLessThanOrEqual(this Vector<float> first, Vector<float> second, int? dim = null) =>
+			Vector.Dot(
+				Vector.ConditionalSelect(
+					Vector.LessThanOrEqual(first, second),
+					PowersOfTwo,
+					Vector<int>.Zero),
+				DimensionFilters[dim ?? Vector<float>.Count]);
+
 		public static readonly Vector<float>[] IdentityMatrixColumns = Enumerable
 			.Range(0, Vector<float>.Count)
 			.Select(i => new Vector<float>(

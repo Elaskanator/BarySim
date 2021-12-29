@@ -3,7 +3,7 @@ using System.Numerics;
 using Generic.Vectors;
 
 namespace ParticleSimulator {
-	public interface IParticle : IMultidimensionalFloat, IEquatable<IParticle> {
+	public interface IParticle : IPosition<Vector<float>>, IEquatable<IParticle> {
 		int ID { get; }
 		int GroupID { get; }
 		float Radius { get; }

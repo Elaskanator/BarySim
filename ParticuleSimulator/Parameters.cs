@@ -12,41 +12,38 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 16;
+		public const int PARTICLES_GROUP_MAX = 1 << 20;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;
 		public const float TIME_SCALE = 1f;//can be any value, including negative
 		public const float WORLD_SCALE = 1f;
+		public static readonly int WINDOW_WIDTH = 100;//Console.LargestWindowWidth;//WINDOW_HEIGHT * 2;
+		public static readonly int WINDOW_HEIGHT = 50;//Console.LargestWindowHeight;// - 1;//using top and bottom halves of each character to get float the verticle resolution
+
 		public const float X_SCALE = 1f;
 		public const float Y_SCALE = 1f;
 		public const float Z_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f;// / MathF.Sqrt(2f);
+		public static int SUPERSAMPLING = 1;
+		public const float PIXEL_OVERLAP_THRESHOLD = 0.5f;
 		
 		public const float MAX_FPS = -1;
 		public const float TARGET_FPS = 30;
-		public static readonly int WINDOW_WIDTH = 100;//Console.LargestWindowWidth;//WINDOW_HEIGHT * 2;
-		public static readonly int WINDOW_HEIGHT = 50;//Console.LargestWindowHeight;// - 1;//using top and bottom halves of each character to get float the verticle resolution
-
-		public const float PIXEL_OVERLAP_THRESHOLD = 0.5f;
-		public static int SUPERSAMPLING = 3;
+		public const float WORLD_ROTATION_RADS_PER_STEP = 0.004f;
 
 		public const float GOLDEN_RATIO = 1.61803398874989484820458683436f;
-		public static readonly Vector<float> LEFT_BOUND = VectorFunctions.New(-X_SCALE * WORLD_SCALE / 2f, -Y_SCALE * WORLD_SCALE / 2f, -Z_SCALE * WORLD_SCALE / 2f);
-		public static readonly Vector<float> RIGHT_BOUND = VectorFunctions.New(X_SCALE * WORLD_SCALE / 2f, Y_SCALE * WORLD_SCALE / 2f, Z_SCALE * WORLD_SCALE / 2f);
 
-		public const float WORLD_ROTATION_RADS_PER_STEP = 0.004f;
-		
 		public const int DETERMINISTIC_RANDOM_SEED = 0;
-		public const float ADAPTIVE_TIME_GRANULARITY = 0.01f;//subdivide time steps as necessary for very close interactions
-		public const float ADAPTIVE_TIME_CRITERION = 0.01f;//a weighted value based on range and velocity to other particles in the nearfield group
+		//public const float ADAPTIVE_TIME_GRANULARITY = 0.01f;//subdivide time steps as necessary for very close interactions
+		//public const float ADAPTIVE_TIME_CRITERION = 0.01f;//a weighted value based on range and velocity to other particles in the nearfield group
 		//public const float PARTICLE_MAX_ACCELERATION = 0.0025f;
+		//public const bool WORLD_BOUNCING_EXTENSION = true;
+		//public const bool WORLD_WRAPPING = false;
+		//public const bool WORLD_BOUNDING = false;
+		//public const bool WORLD_TRUNCATION = true;
 		
 		public const bool WORLD_BOUNCING = true;
-		public const bool WORLD_BOUNCING_EXTENSION = true;
-		public const bool WORLD_WRAPPING = false;
-		public const bool WORLD_BOUNDING = false;
-		public const bool WORLD_TRUNCATION = true;
 		public const float WORLD_EPSILON = 1E-4f;
 		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
@@ -78,8 +75,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 50f;
-		public const float GRAVITY_MAX_STARTING_MASS = 50f;
+		public const float GRAVITY_MIN_STARTING_MASS = 40f;
+		public const float GRAVITY_MAX_STARTING_MASS = 40f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
@@ -98,6 +95,9 @@ namespace ParticleSimulator {
 		
 		public const int QUADTREE_NODE_CAPACITY = 1;
 		#endregion Gravity
+		
+		public static readonly Vector<float> LEFT_BOUND = VectorFunctions.New(-X_SCALE * WORLD_SCALE / 2f, -Y_SCALE * WORLD_SCALE / 2f, -Z_SCALE * WORLD_SCALE / 2f);
+		public static readonly Vector<float> RIGHT_BOUND = VectorFunctions.New(X_SCALE * WORLD_SCALE / 2f, Y_SCALE * WORLD_SCALE / 2f, Z_SCALE * WORLD_SCALE / 2f);
 
 		#region Aux
 		public const char CHAR_LOW  = '\u2584';//▄

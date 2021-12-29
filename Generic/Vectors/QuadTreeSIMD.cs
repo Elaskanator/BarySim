@@ -3,27 +3,34 @@ using System.Numerics;
 using Generic.Vectors;
 
 namespace Generic.Models.Trees {
-	public class QuadTreeSIMD<TItem, N> : AQuadTree<TItem, Vector<float>>
-	where TItem : IMultiDimensional<Vector<float>> {
-		public QuadTreeSIMD(int dim, Vector<float> corner1, Vector<float> corner2, QuadTreeSIMD<TItem, N> parent = null) 
+	public class QuadTreeSIMD<TItem> : AQuadTree<TItem, Vector<float>>
+	where TItem : IPosition<Vector<float>> {
+		protected QuadTreeSIMD(int dim, Vector<float> corner1, Vector<float> corner2, QuadTreeSIMD<TItem> parent = null) 
 		: base(dim, corner1, corner2, parent) {//caller needs to ensure all values in x1 are smaller than x2 (the corners of a cubic volume)
 			this.Size = corner2 - corner1;
-			this._center = this.CornerLeft + (this.Size * (1f / 2f));
+			this._center = this.CornerLeft + (this.Size * 0.5f);
 		}
 		public QuadTreeSIMD(int dim, Vector<float> startingLength)
 		: base(dim) {
 			startingLength = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[dim], startingLength, Vector<float>.Zero);
-
 			this.CornerLeft = Vector<float>.Zero;
-			this.CornerRight = Vector<float>.One * startingLength;
+			this.CornerRight = startingLength;
 			this.Size = startingLength;
-			this._center = startingLength * (1f / 2f);
+			this._center = startingLength * 0.5f;
 		}
 		public QuadTreeSIMD(int dim) : this(dim, Vector<float>.One) { }
-		protected virtual QuadTreeSIMD<TItem, N> NewNode(QuadTreeSIMD<TItem, N> parent, Vector<float> cornerLeft, Vector<float> cornerRight) =>
-			new QuadTreeSIMD<TItem, N>(this.Dim, cornerLeft, cornerRight, parent);
+		protected virtual QuadTreeSIMD<TItem> NewNode(QuadTreeSIMD<TItem> parent, Vector<float> cornerLeft, Vector<float> cornerRight) =>
+			new QuadTreeSIMD<TItem>(this.Dim, cornerLeft, cornerRight, parent);
+
 		protected override bool DetermineIfLimitReached() =>
-			Vector.EqualsAny(this.CornerLeft, this.Center) || Vector.EqualsAny(this.CornerRight, this.Center);
+			this.CornerLeft.EqualsAny(this.Center, this.Dim) || this.CornerRight.EqualsAny(this.Center, this.Dim);
+
+		protected override int BitmaskLessThan(Vector<float> first, Vector<float> second) {
+			return first.BitmaskLessThan(second, this.Dim);
+		}
+		protected override int BitmaskGreaterThanOrEqual(Vector<float> first, Vector<float> second) {
+			return first.BitmaskGreaterThanOrEqual(second, this.Dim);
+		}
 
 		public Vector<float> Size { get; private set; }
 
@@ -43,7 +50,7 @@ namespace Generic.Models.Trees {
 			return new Vector<int>(values);
 		}
 
-		protected override QuadTreeSIMD<TItem, N> NewNode(int directionMask, bool isExpansion) {
+		protected override QuadTreeSIMD<TItem> NewNode(int directionMask, bool isExpansion) {
 			Vector<int> leftMask = this.NewLeftBitmask(directionMask);
 			//Vector<float> sizeFraction = Vector<float>.One / (Vector<float>.One + Vector<float>.One);
 			//Vector<float> additionalSize = this.Size * ((Vector<float>.One / sizeFraction) - Vector<float>.One);

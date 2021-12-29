@@ -4,7 +4,7 @@ using Generic.Vectors;
 
 namespace Generic.Models.Trees {
 	public abstract class AQuadTree<TItem, TCorner> : ATree<TItem>
-	 where TItem : IMultiDimensional<TCorner> {
+	 where TItem : IPosition<TCorner> {
 		protected AQuadTree(int dim, TCorner cornerLeft, TCorner cornerRight, AQuadTree<TItem, TCorner> parent = null)
 		: base (parent) {
 			this.Dim = dim;
@@ -30,14 +30,17 @@ namespace Generic.Models.Trees {
 		private bool _limitReached = false;
 		public sealed override bool LimitReached => this._limitReached;
 
-		protected override int GetIndex(TItem item) => item.BitmaskGreaterThanOrEqual(this.Center, this.Dim);//left-handed convention [a, b)
+		protected override int GetIndex(TItem item) => this.BitmaskGreaterThanOrEqual(item.Position, this.Center);//left-handed convention [a, b)
 		protected int InverseIndex(int idx) => (1 << this.Dim) - idx - 1;
 		protected virtual bool DetermineIfLimitReached() => false;
 		
 		public override bool DoesEncompass(TItem item) {//left-handed convention [a, b)
-			return item.BitmaskLessThan(this.CornerLeft, this.Dim) == 0
-				&& item.BitmaskGreaterThanOrEqual(this.CornerRight, this.Dim) == 0;
+			return this.BitmaskLessThan(item.Position, this.CornerLeft) == 0
+				&& this.BitmaskGreaterThanOrEqual(item.Position, this.CornerRight) == 0;
 		}
+
+		protected abstract int BitmaskLessThan(TCorner first, TCorner second);
+		protected abstract int BitmaskGreaterThanOrEqual(TCorner first, TCorner second);
 		
 		public AQuadTree<TItem, TCorner> AddUpOrDown(TItem item) {
 			AQuadTree<TItem, TCorner> node = this;

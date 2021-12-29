@@ -11,9 +11,10 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public BaryonSimulator() { }
 
 		public Galaxy[] InitialParticleGroups { get; private set; }
-		public BarnesHutTree<Particle> ParticleTree { get; private set; }
+		//public BarnesHutTree ParticleTree { get; private set; }
+		public Particle[] Particles { get; private set; }
 
-		public int ParticleCount => this.ParticleTree is null ? 0 : this.ParticleTree.Count;
+		public int ParticleCount => this.Particles is null ? 0 : this.Particles.Length;//this.ParticleTree is null ? 0 : this.ParticleTree.Count;
 
 		public virtual bool EnableCollisions => false;
 		public virtual float WorldBounceWeight => 0f;
@@ -24,13 +25,21 @@ namespace ParticleSimulator.Simulation.Baryon {
 				.Select(i => new Galaxy())
 				.ToArray();
 
-			this.ParticleTree = (BarnesHutTree<Particle>)new BarnesHutTree<Particle>(Parameters.DIM)
-				.AddUpOrDown(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
-			this.ParticleTree.Do();
+			this.Particles = this.InitialParticleGroups.SelectMany(g => g.InitialParticles).ToArray();
+
+			//this.ParticleTree = (BarnesHutTree)new BarnesHutTree(Parameters.DIM)
+			//	.AddUpOrDown(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
+			//this.ParticleTree.Do();
 		}
 
 		public ParticleData[] RefreshSimulation() {
-			ParticleData[] result = new	ParticleData[this.ParticleTree.Count];
+			ParticleData[] result = new	ParticleData[this.ParticleCount];
+			for (int i = 0; i < this.ParticleCount; i++) {
+				if (!Parameters.WORLD_BOUNCING || !this.Particles[i].BounceWalls(Parameters.TIME_SCALE))
+					this.Particles[i].ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
+				result[i] = new(this.Particles[i]);
+			}
+			/*
 			ParticleData pd;
 			//Queue<BaryonParticle> particles = this.ParticleTree.AsQueue();
 			//BaryonParticle particle;
@@ -43,6 +52,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 				pd = new ParticleData(particle);
 				result[i++] = pd;
 			}
+			*/
 			return result;
 		}
 	}
