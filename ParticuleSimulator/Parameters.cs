@@ -18,8 +18,8 @@ namespace ParticleSimulator {
 		public const int DIM = 3;
 		public const float TIME_SCALE = 1f;//can be any value, including negative
 		public const float WORLD_SCALE = 1f;
-		public static readonly int WINDOW_WIDTH = 100;//Console.LargestWindowWidth;//WINDOW_HEIGHT * 2;
-		public static readonly int WINDOW_HEIGHT = 50;//Console.LargestWindowHeight;// - 1;//using top and bottom halves of each character to get float the verticle resolution
+		public static readonly int WINDOW_WIDTH = Console.LargestWindowWidth;//WINDOW_HEIGHT * 2;
+		public static readonly int WINDOW_HEIGHT = Console.LargestWindowHeight;// - 1;//using top and bottom halves of each character to get float the verticle resolution
 
 		public const float X_SCALE = 1f;
 		public const float Y_SCALE = 1f;
@@ -75,8 +75,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 40f;
-		public const float GRAVITY_MAX_STARTING_MASS = 40f;
+		public const float GRAVITY_MIN_STARTING_MASS = 100f;
+		public const float GRAVITY_MAX_STARTING_MASS = 100f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
@@ -108,6 +108,7 @@ namespace ParticleSimulator {
 		public const int PERF_WARN_MS = 2000;
 		public const int CONSOLE_TITLE_INTERVAL_MS = 500;
 		public const int AUTOSCALE_INTERVAL_MS = 0;
+		public const float AUTOSCALE_STRENGTH = 0.25f;
 		public const float AUTOSCALE_DIFF_THRESH = 0f;
 		public const int PERF_GRAPH_REFRESH_MS = 250;
 

@@ -28,7 +28,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			string numberStr;
 			for (int i = 0; i < _statsHeaderValues.Length; i++) {
 				for (int j = 0; j < _statsHeaderValues[i].Label.Length; j++)
-					frameBuffer[position + j] = new ConsoleExtensions.CharInfo(_statsHeaderValues[i].Label[j], ConsoleColor.White);
+					frameBuffer[position + j] = new ConsoleExtensions.CharInfo(_statsHeaderValues[i].Label[j], ConsoleColor.Gray);
 				position += _statsHeaderValues[i].Label.Length;
 				numberStr = _statsHeaderValues[i].Value.ToStringBetter(Parameters.NUMBER_ACCURACY, false, Parameters.NUMBER_SPACING).PadCenter(Parameters.NUMBER_SPACING);
 				for (int j = 0; j < numberStr.Length; j++)

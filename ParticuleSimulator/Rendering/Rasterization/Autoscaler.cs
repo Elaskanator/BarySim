@@ -5,7 +5,7 @@ using Generic.Extensions;
 using Generic.Models;
 using ParticleSimulator.Engine.Threading;
 
-namespace ParticleSimulator.Rendering {
+namespace ParticleSimulator.Rendering.Rasterization {
 	public class Autoscaler {
 		public Autoscaler() {
 			if (Parameters.COLOR_USE_FIXED_BANDS)
@@ -18,8 +18,8 @@ namespace ParticleSimulator.Rendering {
 		}
 
 		public float[] Values { get; private set; }
-		private SimpleExponentialMovingAverage _min = new SimpleExponentialMovingAverage(0.2f);
-		private SimpleExponentialMovingAverage _max = new SimpleExponentialMovingAverage(0.2f);
+		private SimpleExponentialMovingAverage _min = new SimpleExponentialMovingAverage(Parameters.AUTOSCALE_STRENGTH);
+		private SimpleExponentialMovingAverage _max = new SimpleExponentialMovingAverage(Parameters.AUTOSCALE_STRENGTH);
 
 		public float[] Update(EvalResult prepResults, object[] parameters) {
 			float[] scalingValues = ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value).ToArray();

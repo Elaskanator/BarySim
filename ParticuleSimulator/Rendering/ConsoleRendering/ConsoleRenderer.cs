@@ -100,7 +100,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 					keyLabelOffset = (int)(label.Length/2d - keyStr.Length/2d);
 					for (int j = 0; j < keyStr.Length; j++)
-						buffer[position + j + keyLabelOffset] = new(keyStr[j], ConsoleColor.DarkGray, ConsoleColor.Black);
+						buffer[position + j + keyLabelOffset] = new(keyStr[j], ConsoleColor.Gray, ConsoleColor.Black);
 
 					for (int j = 0; j < label.Length; j++)
 						buffer[position + j + Parameters.WINDOW_WIDTH] = label[j];
@@ -148,7 +148,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 				int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - numColors - 1);
 				for (int i = 0; i < header.Length; i++)
-					buffer[pixelIdx + i] = new ConsoleExtensions.CharInfo(header[i], ConsoleColor.White);
+					buffer[pixelIdx + i] = new ConsoleExtensions.CharInfo(header[i], ConsoleColor.Gray);
 			
 				string rowStringData;
 				for (int cIdx = 0; cIdx < numColors; cIdx++) {
@@ -165,7 +165,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 							: scaling[cIdx].ToStringBetter(2, true, 5));
 
 					for (int i = 0; i < rowStringData.Length; i++)
-						buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.White);
+						buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.Gray);
 				}
 			}
 		}
@@ -177,7 +177,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				s => { this.Engine.OverlaysEnabled = s; }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
-					ForegroundInactive = ConsoleColor.DarkGray,
+					ForegroundInactive = ConsoleColor.Gray,
 					BackgroundInactive = ConsoleColor.Black,
 				},
 				new(ConsoleKey.F2, "Master",
@@ -193,7 +193,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				s => { if (!this.Engine.IsPaused) this.Engine.StepEval_Simulate.SetRunningState(s); }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
-					ForegroundInactive = ConsoleColor.DarkGray,
+					ForegroundInactive = ConsoleColor.Gray,
 					BackgroundInactive = ConsoleColor.Black,
 				},
 			};
@@ -202,7 +202,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				s => { this.Engine.StepEval_Autoscale.SetRunningState(s); }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
-					ForegroundInactive = ConsoleColor.DarkGray,
+					ForegroundInactive = ConsoleColor.Gray,
 					BackgroundInactive = ConsoleColor.Black,
 			};
 			KeyListener[] rotationFunctions = new KeyListener[] {
@@ -211,7 +211,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				s => { if (s) this.Engine.StepEval_Rasterize.Resume(); else if (this.Engine.IsPaused) this.Engine.StepEval_Rasterize.Pause(); this.Engine.Rasterizer.Camera.IsAutoIncrementActive = s; }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
-					ForegroundInactive = ConsoleColor.DarkGray,
+					ForegroundInactive = ConsoleColor.Gray,
 					BackgroundInactive = ConsoleColor.Black,
 				},
 				new(ConsoleKey.F6, "α",
@@ -219,7 +219,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				s => { this.Engine.Rasterizer.Camera.IsRollRotationActive = s; }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
-					ForegroundInactive = ConsoleColor.DarkGray,
+					ForegroundInactive = ConsoleColor.Gray,
 					BackgroundInactive = ConsoleColor.Black,
 				},
 				new(ConsoleKey.F7, "β",
@@ -227,7 +227,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				s => { this.Engine.Rasterizer.Camera.IsPitchRotationActive = s; }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
-					ForegroundInactive = ConsoleColor.DarkGray,
+					ForegroundInactive = ConsoleColor.Gray,
 					BackgroundInactive = ConsoleColor.Black,
 				},
 				new(ConsoleKey.F8, "γ",
@@ -235,7 +235,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				s => { this.Engine.Rasterizer.Camera.IsYawRotationActive = s; }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
-					ForegroundInactive = ConsoleColor.DarkGray,
+					ForegroundInactive = ConsoleColor.Gray,
 					BackgroundInactive = ConsoleColor.Black,
 				},
 			};
