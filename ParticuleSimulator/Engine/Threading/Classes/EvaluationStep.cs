@@ -1,16 +1,16 @@
 ﻿using System;
 using Generic.Models;
 
-namespace ParticleSimulator.Engine {
+namespace ParticleSimulator.Engine.Threading {
 	public struct EvaluationStep {
 		public string Name;
 
 		public Func<object> GeneratorFn;
-		public Action<bool, object[]> EvaluatorFn;
-		public Func<bool, object[], object> CalculatorFn;
+		public Action<EvalResult, object[]> EvaluatorFn;
+		public Func<EvalResult, object[], object> CalculatorFn;
 
 		public ISynchronousConsumedResource OutputResource;
-		public Action<bool> CallbackFn;//whether calculation was punctual
+		public Action<EvalResult> CallbackFn;//whether calculation was punctual
 		public bool IsOutputOverwrite;
 		public int OutputSkips;
 

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using Generic.Extensions;
 using Generic.Models;
+using ParticleSimulator.Engine.Threading;
 
 namespace ParticleSimulator.Engine {
 	public class ProcessThread : ACalculationHandler {
@@ -12,7 +13,7 @@ namespace ParticleSimulator.Engine {
 			this._dataGatherers = dataGatherers ?? Array.Empty<IDataGatherer>();
 		}
 
-		public static ProcessThread New(bool startState, EvaluationStep config) {
+		public static ProcessThread New(bool startUnpaused, EvaluationStep config) {
 			int numResources = config.InputResourceUses is null ? 0 : config.InputResourceUses.Length;
 			IDataGatherer[] dataReceivers = new IDataGatherer[numResources];
 			AutoResetEvent[] readySignals = new AutoResetEvent[numResources],
@@ -36,7 +37,7 @@ namespace ParticleSimulator.Engine {
 				dataReceivers.Without(s => s is null).ToArray(),
 				doneSignals.Without(s => s is null).ToArray(),
 				readySignals.Without(s => s is null).ToArray());
-			if (!startState)
+			if (!startUnpaused)
 				result.Pause();
 			return result;
 		}
@@ -45,7 +46,7 @@ namespace ParticleSimulator.Engine {
 		public EvaluationStep Config { get; private set; }
 		
 		public override string Name => this.Config.Name;
-		public override Action<bool> Callback => this.Config.CallbackFn;
+		public override Action<EvalResult> Callback => this.Config.CallbackFn;
 		public override TimeSynchronizer Synchronizer => this.Config.Synchronizer;
 		public override TimeSpan? SignalTimeout => this.Config.DataLoadingTimeout;
 
@@ -59,18 +60,18 @@ namespace ParticleSimulator.Engine {
 					this._dataGatherers[i].Start();
 		}
 		
-		protected override void PreProcess() {
+		protected override void PreProcess(EvalResult prepResult) {
 			this._parameters = this._dataGatherers.Select(x => x.Value).ToArray();
 		}
-		protected override void Process(bool punctual) {
+		protected override void Process(EvalResult prepResult) {
 			if (this.Config.OutputResource is null)
-				this.Config.EvaluatorFn(punctual, this._parameters);
+				this.Config.EvaluatorFn(prepResult, this._parameters);
 			else this._result = this.Config.GeneratorFn is null
-					? this.Config.CalculatorFn(punctual, this._parameters)
+					? this.Config.CalculatorFn(prepResult, this._parameters)
 					: this.Config.GeneratorFn();
 				
 		}
-		protected override void PostProcess() {
+		protected override void PostProcess(EvalResult result) {
 			//bool waitHolds = false;
 			if (!(this.Config.OutputResource is null) && (this.Config.OutputSkips < 1 || this.IterationCount % (this.Config.OutputSkips + 1) == 0)) {
 				if (this.Config.IsOutputOverwrite)

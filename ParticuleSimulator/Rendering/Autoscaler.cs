@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
+using ParticleSimulator.Engine.Threading;
 
 namespace ParticleSimulator.Rendering {
 	public class Autoscaler {
@@ -20,7 +21,7 @@ namespace ParticleSimulator.Rendering {
 		private SimpleExponentialMovingAverage _min = new SimpleExponentialMovingAverage(0.2f);
 		private SimpleExponentialMovingAverage _max = new SimpleExponentialMovingAverage(0.2f);
 
-		public float[] Update(bool wasPunctual, object[] parameters) {
+		public float[] Update(EvalResult prepResults, object[] parameters) {
 			float[] scalingValues = ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value).ToArray();
 
 			if (scalingValues.Length > 0) {

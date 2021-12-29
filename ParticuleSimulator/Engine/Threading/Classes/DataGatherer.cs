@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Generic.Models;
+using ParticleSimulator.Engine.Threading;
 
 namespace ParticleSimulator.Engine {
 	public static class DataGatherer {
@@ -31,7 +32,7 @@ namespace ParticleSimulator.Engine {
 		private readonly EventWaitHandle _refreshSignal;
 		private T _myValue;
 
-		protected override void Process(bool punctual) {
+		protected override void Process(EvalResult prepResult) {
 			bool allowAccess = true, allowReuse = false, ready;
 			if (this.IterationCount > 0) {
 				allowReuse = true;

@@ -5,6 +5,7 @@ using System.Threading;
 using Generic.Extensions;
 using ParticleSimulator.Engine;
 using ParticleSimulator.Engine.Interaction;
+using ParticleSimulator.Engine.Threading;
 using ParticleSimulator.Rendering.Rasterization;
 
 namespace ParticleSimulator.Rendering.SystemConsole {
@@ -16,18 +17,19 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			this._listeners = this.BuildListeners().ToArray();
 		}
 
-		public readonly int NumChars;
-		private readonly PerfMon _perfMon;
-		private readonly KeyListener[] _listeners;
-
-		public override KeyListener[] Listeners => this._listeners;
-
-		private ConsoleExtensions.CharInfo[] _lastFrame;
-
 		public static ConsoleExtensions.CharInfo BuildChar(ConsoleColor bottomColor, ConsoleColor topColor) =>
 			topColor == bottomColor
 				? new ConsoleExtensions.CharInfo(0, 0, bottomColor)
 				: new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, bottomColor, topColor);
+
+		public readonly int NumChars;
+
+		public override KeyListener[] Listeners => this._listeners;
+
+		private readonly PerfMon _perfMon;
+		private readonly KeyListener[] _listeners;
+		private ConsoleExtensions.CharInfo[] _lastFrame;
+		private DateTime _lastPunctualWrite = DateTime.UtcNow;
 
 		public static ConsoleColor GetRankColor(float rank, float[] scaling) =>
 			Parameters.COLOR_ARRAY[scaling.Drop(1).TakeWhile(ds => ds < rank).Count()];
@@ -79,11 +81,11 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			return this._lastFrame;
 		}
 
-		protected override void DrawOverlays(bool wasPunctual, float[] scaling, object bufferData) {
+		protected override void DrawOverlays(EvalResult prepResults, float[] scaling, object bufferData) {
 			ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])bufferData;
-			this.Watchdog(wasPunctual, buffer);
+			this.Watchdog(prepResults, buffer);
 			if (this.Engine.OverlaysEnabled) {
-				this._perfMon.DrawStatsOverlay(buffer, wasPunctual);
+				this._perfMon.DrawStatsOverlay(buffer, prepResults);
 				if (Parameters.LEGEND_ENABLE
 				&& Parameters.COLOR_METHOD != ParticleColoringMethod.Random
 				&& Parameters.COLOR_METHOD != ParticleColoringMethod.Group)
@@ -111,20 +113,16 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		protected override void UpdateMonitor(int framesCompleted, TimeSpan frameTime, TimeSpan fpsTime) =>
 			this._perfMon.Graph.Update(framesCompleted % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN, frameTime, fpsTime);
 
-		private DateTime _lastPunctualWrite = DateTime.UtcNow;
-		private void Watchdog(bool wasPunctual, ConsoleExtensions.CharInfo[] buffer) {
-			int xOffset = 6,
-				yOffset = 1;
-
-			if (!this.Engine.IsPaused) {
-				if (wasPunctual)
+		private void Watchdog(EvalResult prepResults, ConsoleExtensions.CharInfo[] buffer) {
+			if (!this.Engine.IsPaused && !this.Engine.OverlaysEnabled) {
+				if (prepResults.PrepPunctual)
 					this._lastPunctualWrite = DateTime.UtcNow;
 				TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(this._lastPunctualWrite);
 
 				if (timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS) {
 					string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s") + " ";
 					for (int i = 0; i < message.Length; i++)
-						buffer[i + xOffset + Parameters.WINDOW_WIDTH*yOffset] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
+						buffer[i] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
 				}
 			}
 		}
@@ -184,7 +182,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				},
 				new(ConsoleKey.F2, "Master",
 				() => { return !this.Engine.IsPaused; },
-				s => { this.Engine.SetPauseState(s); }) {
+				s => { this.Engine.SetRunningState(s); }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
 					ForegroundInactive = ConsoleColor.Black,
@@ -192,7 +190,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				},
 				new(ConsoleKey.F3, "Sim",
 				() => { return !this.Engine.StepEval_Simulate.IsPaused; },
-				s => { if (!this.Engine.IsPaused) this.Engine.StepEval_Simulate.SetPauseState(s); }) {
+				s => { if (!this.Engine.IsPaused) this.Engine.StepEval_Simulate.SetRunningState(s); }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
 					ForegroundInactive = ConsoleColor.DarkGray,
@@ -201,7 +199,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			};
 			KeyListener autoscale = new(ConsoleKey.F4, "Scale",
 				() => { return !this.Engine.StepEval_Autoscale.IsPaused; },
-				s => { this.Engine.StepEval_Autoscale.SetPauseState(s); }) {
+				s => { this.Engine.StepEval_Autoscale.SetRunningState(s); }) {
 					ForegroundActive = ConsoleColor.Black,
 					BackgroundActive = ConsoleColor.DarkGreen,
 					ForegroundInactive = ConsoleColor.DarkGray,

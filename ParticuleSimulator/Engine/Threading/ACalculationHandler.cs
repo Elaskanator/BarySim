@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using Generic.Models;
+using ParticleSimulator.Engine.Threading;
 
 namespace ParticleSimulator.Engine {
 	public abstract class ACalculationHandler : IRunnable {
@@ -43,7 +44,7 @@ namespace ParticleSimulator.Engine {
 		
 		public virtual string Name => null;
 		public virtual TimeSpan? SignalTimeout => null;
-		public virtual Action<bool> Callback => null;
+		public virtual Action<EvalResult> Callback => null;
 		public virtual TimeSynchronizer Synchronizer => null;
 		public virtual bool ReleaseEarly => false;
 		protected virtual int StopWarnTimeMs => 1000;
@@ -54,9 +55,9 @@ namespace ParticleSimulator.Engine {
 		private Stopwatch _timerFull = new Stopwatch();
 		private Stopwatch _timerFullPunctual = new Stopwatch();
 
-		protected virtual void PreProcess() { }
-		protected abstract void Process(bool punctual);
-		protected virtual void PostProcess() { }
+		protected virtual void PreProcess(EvalResult prepResult) { }
+		protected abstract void Process(EvalResult prepResult);
+		protected virtual void PostProcess(EvalResult result) { }
 
 		protected virtual void Init() { }
 		protected virtual void PostStop() { }
@@ -91,8 +92,8 @@ namespace ParticleSimulator.Engine {
 			this._pauseSignal.Reset();
 		}
 
-		public void SetPauseState(bool state) {
-			if (state) this.Resume();
+		public void SetRunningState(bool isUnpaused) {
+			if (isUnpaused) this.Resume();
 			else this.Pause();
 		}
 
@@ -129,6 +130,7 @@ namespace ParticleSimulator.Engine {
 			try {
 				bool isPunctual = true;
 				this._timerFullPunctual.Restart();
+				EvalResult evalResult = new();
 				while (this.IsOpen) {
 					this._timerFull.Restart();
 
@@ -144,10 +146,11 @@ namespace ParticleSimulator.Engine {
 						this._timer.Stop();
 						this.WaitTime.Update(this._timer.Elapsed);
 					}
+					evalResult.PrepPunctual = true;
 				
 					this._timer.Restart();
 
-					this.PreProcess();
+					this.PreProcess(evalResult);
 					if (this.ReleaseEarly)
 						for (int i = 0; i < this.DoneSignals.Length; i++)
 							this.DoneSignals[i].Set();
@@ -165,20 +168,21 @@ namespace ParticleSimulator.Engine {
 						this._timer.Restart();
 
 						this.IsComputing = true;
-						this.Process(isPunctual);
+						this.Process(evalResult);
 						this.IsComputing = false;
 
 						this._timer.Stop();
+						evalResult.ExclusiveTime = this._timer.Elapsed;
 						this.ExclusiveTime.Update(this._timer.Elapsed);
 
-						this.PostProcess();
+						this.PostProcess(evalResult);
 
 						this.IterationCount++;
 						if (isPunctual)
 							this.FullIterationCount++;
 
 						if (!(this.Callback is null))
-							this.Callback(isPunctual);
+							this.Callback(evalResult);
 				
 						if (!this.ReleaseEarly)
 							for (int i = 0; i < this.DoneSignals.Length; i++)

@@ -1,14 +1,16 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using Generic.Vectors;
 
 namespace ParticleSimulator {
-	public interface IParticle : IMultidimensionalFloat {
+	public interface IParticle : IMultidimensionalFloat, IEquatable<IParticle> {
 		int ID { get; }
 		int GroupID { get; }
 		float Radius { get; }
 		float Luminosity { get; }
 		
 		bool Equals(object other) => (other is IParticle data) && this.ID == data.ID;
+		bool IEquatable<IParticle>.Equals(IParticle other) => this.ID == other.ID;
 		int GetHashCode() => this.ID;
 	}
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using Generic.Extensions;
 using ParticleSimulator.Engine;
+using ParticleSimulator.Engine.Threading;
 
 namespace ParticleSimulator.Rendering.SystemConsole {
 	public class PerfMon {
@@ -20,8 +21,8 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			this.Graph = new PerfGraph(this.HeaderWidth);
 		}
 
-		public void DrawStatsOverlay(ConsoleExtensions.CharInfo[] frameBuffer, bool wasPunctual) {
-			this.RefreshStatsHeader(wasPunctual);
+		public void DrawStatsOverlay(ConsoleExtensions.CharInfo[] frameBuffer, EvalResult prepResults) {
+			this.RefreshStatsHeader(prepResults);
 
 			int position = 0;
 			string numberStr;
@@ -39,7 +40,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				this.Graph.DrawFpsGraph(frameBuffer, this._engine.Renderer.FrameTimings, this._engine.Renderer.FpsTimings);
 		}
 
-		private void RefreshStatsHeader(bool wasPunctual) {
+		private void RefreshStatsHeader(EvalResult prepResults) {
 			if (this._engine.Renderer.FpsTimings.NumUpdates > 0)
 				_statsHeaderValues[0] = new("FPS",
 					1d / this._engine.Renderer.FpsTimings.Current.TotalSeconds,
@@ -56,7 +57,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			string label;
 			for (int i = 0; i < this._engine.Evaluators.Length; i++) {
 				label = this._engine.Evaluators[i].Name[0].ToString();
-				if (!wasPunctual && this._engine.Evaluators[i].Id != this._engine.StepEval_Render.Id && this._engine.Evaluators[i].IsComputing)
+				if (!prepResults.PrepPunctual && this._engine.Evaluators[i].Id != this._engine.StepEval_Render.Id && this._engine.Evaluators[i].IsComputing)
 					_statsHeaderValues[i + 2] = new(label,
 						DateTime.UtcNow.Subtract(this._engine.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds,
 						ConsoleColor.White,

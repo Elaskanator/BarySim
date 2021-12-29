@@ -8,6 +8,7 @@ using ParticleSimulator.Rendering.Rasterization;
 using ParticleSimulator.Rendering.SystemConsole;
 using ParticleSimulator.Simulation;
 using ParticleSimulator.Simulation.Baryon;
+using ParticleSimulator.Rendering.Exporter;
 
 namespace ParticleSimulator.Engine {
 	public class RenderEngine : IRunnable {
@@ -38,11 +39,12 @@ namespace ParticleSimulator.Engine {
 		public DateTime? StartTimeUtc { get; private set; }
 		public DateTime? EndTimeUtc { get; private set; }
 
+		public Random Random { get; private set; }
 		public ISimulator Simulator { get; private set; }
 		public ARenderer Renderer { get; private set; }
 		public Autoscaler Scaling { get; private set; }
 		public Rasterizer Rasterizer { get; private set; }
-		public Random Random { get; private set; }
+		public BitmapGenerator Exporter { get; private set; }
 		
 		internal ACalculationHandler[] Evaluators { get; private set; }
 
@@ -55,8 +57,8 @@ namespace ParticleSimulator.Engine {
 		public void Init() {
 			ACalculationHandler[] steps;
 			SynchronousBuffer<ParticleData[]> particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
-			SynchronousBuffer<Pixel[]> rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 			SynchronousBuffer<float?[]> rawRankData = new("Ranks", 0);
+			SynchronousBuffer<Pixel[]> rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 
 			SynchronousBuffer<float[]> scaling = new("Scaling", 0);
 			this.Scaling = new();
@@ -65,6 +67,7 @@ namespace ParticleSimulator.Engine {
 			this.Simulator = new BaryonSimulator();
 			this.Rasterizer = new(Parameters.WINDOW_WIDTH, Parameters.WINDOW_HEIGHT * 2, this.Random, rawRankData);
 			this.Renderer = new ConsoleRenderer(this);
+			this.Exporter = new BitmapGenerator(Parameters.WINDOW_WIDTH, Parameters.WINDOW_HEIGHT * 2);
 			
 			this.StepEval_Render = ProcessThread.New(new() {
 				Name = "Draw",
@@ -116,6 +119,20 @@ namespace ParticleSimulator.Engine {
 					Synchronizer = Parameters.AUTOSCALE_INTERVAL_MS > 0
 						? new TimeSynchronizer(null, TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS))
 						: null,
+					OutputResource = scaling,
+					IsOutputOverwrite = true,
+					InputResourceUses = new IPrerequisite[] {
+						new Prerequisite<float?[]>() {
+							Resource = rawRankData,
+							DoConsume = true,
+						}
+					}
+			});
+			
+			if (Parameters.EXPORT_FRAMES)
+				this.StepEval_Export = ProcessThread.New(new() {
+					Name = "Exporter",
+					EvaluatorFn = this.Exporter.RenderOut,
 					OutputResource = scaling,
 					IsOutputOverwrite = true,
 					InputResourceUses = new IPrerequisite[] {
@@ -183,7 +200,7 @@ namespace ParticleSimulator.Engine {
 			} else throw new InvalidOperationException("Not open");
 		}
 
-		public void SetPauseState(bool state) {
+		public void SetRunningState(bool state) {
 			if (state) this.Resume();
 			else this.Pause();
 		}
