@@ -2,6 +2,8 @@
 
 namespace Generic.Extensions {
 	public static class NumberExtensions {
+		public const double GOLDEN_RATIO = 1.61803398874989484820458683436d;
+
 		public static double RoundDown_Log(this double value, double numberBase = 10) {
 			if (value == 0) return 0;
 

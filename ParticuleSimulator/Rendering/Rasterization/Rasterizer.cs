@@ -60,7 +60,6 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		private readonly int _randOffset = 0;
 		
 		public Pixel[] Rasterize(EvalResult prepResults, object[] parameters) {//top down view (smaller Z values = closer)
-			Generic.Extensions.DebugExtensions.DebugWriteline_Interval(null);
 			ParticleData[] particles = (ParticleData[])parameters[0];
 			float[] scalings = (float[])parameters[1];
 

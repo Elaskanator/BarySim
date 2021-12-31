@@ -28,15 +28,15 @@ namespace Generic.Models.Trees {
 		}
 
 		public override string ToString() => string.Format("{0}Node[{1}]",
-			this.IsRoot ? "Root" : this.IsLeaf ? "Leaf" : "Inner",
+			this.IsRoot && this.IsLeaf ? "Sole" : this.IsRoot ? "Root" : this.IsLeaf ? "Leaf" : "Inner",
 			this.Count.Pluralize("item"));
 		
 		public virtual int Capacity => 1;
 		public int Count { get; protected set; }
+		public abstract bool LimitReached { get; }
 
 		public bool IsRoot => this.Parent is null;
 		public bool IsLeaf => this.Children is null;
-		public virtual bool LimitReached => false;
 
 		public ATree<T> Parent { get; protected set; }
 		ITree<T> ITree<T>.Parent => this.Parent;

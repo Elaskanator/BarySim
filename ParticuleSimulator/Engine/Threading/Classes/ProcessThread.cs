@@ -19,12 +19,12 @@ namespace ParticleSimulator.Engine {
 			AutoResetEvent[] readySignals = new AutoResetEvent[numResources],
 				doneSignals = new AutoResetEvent[numResources],
 				refreshListeners = new AutoResetEvent[numResources];
-			IPrerequisite req;
+			IIngestedResource req;
 			for (int i = 0; i < numResources; i++) {
 				req = config.InputResourceUses[i];
 				readySignals[i] = new AutoResetEvent(true);
-				doneSignals[i] = new AutoResetEvent(req.AllowDirtyRead);
-				if (req.OnChange)
+				doneSignals[i] = new AutoResetEvent(false);
+				if (req.ReadType == ConsumptionType.ReadOnChange)
 					refreshListeners[i] = req.Resource.AddRefreshListener();
 				dataReceivers[i] = DataGatherer.New(
 					req,
@@ -63,14 +63,15 @@ namespace ParticleSimulator.Engine {
 		protected override void PreProcess(EvalResult prepResult) {
 			this._parameters = this._dataGatherers.Select(x => x.Value).ToArray();
 		}
+
 		protected override void Process(EvalResult prepResult) {
 			if (this.Config.OutputResource is null)
 				this.Config.EvaluatorFn(prepResult, this._parameters);
 			else this._result = this.Config.GeneratorFn is null
 					? this.Config.CalculatorFn(prepResult, this._parameters)
 					: this.Config.GeneratorFn();
-				
 		}
+
 		protected override void PostProcess(EvalResult result) {
 			//bool waitHolds = false;
 			if (!(this.Config.OutputResource is null) && (this.Config.OutputSkips < 1 || this.IterationCount % (this.Config.OutputSkips + 1) == 0)) {

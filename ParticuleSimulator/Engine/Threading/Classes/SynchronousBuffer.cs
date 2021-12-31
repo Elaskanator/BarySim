@@ -169,7 +169,7 @@ namespace ParticleSimulator.Engine {
 		// MUST lock and enforce size constraints before invoking either Pop or Add
 		private T CommitPop() {
 			this._latch_canAdd.Set();
-			if (this.Count > this.BufferSize)
+			if (this.Count > 0)
 				this._latch_canPop.Set();
 
 			if (this.BufferSize == 0) {

@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Linq;
 using Generic.Models;
 using ParticleSimulator.Engine;
-using ParticleSimulator.Engine.Interaction;
 using ParticleSimulator.Engine.Threading;
 using ParticleSimulator.Rendering.Rasterization;
 
@@ -18,8 +16,6 @@ namespace ParticleSimulator.Rendering {
 		public readonly AIncrementalAverage<TimeSpan> FpsTimings = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 		public int FramesCompleted { get; private set; }
 
-		public abstract KeyListener[] Listeners { get; }
-
 		private float[] _scaling = null;
 
 		public void Draw(EvalResult prepResults, object[] parameters) {
@@ -30,14 +26,8 @@ namespace ParticleSimulator.Rendering {
 			this.Flush(buffer);
 		}
 
-		public void UpdateFrameTime(EvalResult prepResults) {
-			TimeSpan currentFrameTime = new TimeSpan[] {
-				this.Engine.StepEval_Simulate.IsPaused ? TimeSpan.Zero : this.Engine.StepEval_Simulate.ExclusiveTime.LastUpdate,
-				prepResults.TotalTime,
-				this.Engine.StepEval_Render.ExclusiveTime.LastUpdate,
-			}.Max();
-
-			this.FrameTimings.Update(currentFrameTime);
+		public void UpdateSimTime(EvalResult prepResults) {
+			this.FrameTimings.Update(prepResults.ExclusiveTime);
 		}
 
 		public void UpdateFullTime(EvalResult prepResults) {
@@ -45,7 +35,7 @@ namespace ParticleSimulator.Rendering {
 				this.FpsTimings.Update(prepResults.TotalTimePunctual.Value);
 				this.UpdateMonitor(
 					this.FramesCompleted,
-					this.Engine.StepEval_Simulate.IsPaused ? TimeSpan.Zero : this.FrameTimings.LastUpdate,
+					this.FrameTimings.LastUpdate,
 					this.FpsTimings.LastUpdate);
 				this.FramesCompleted++;
 			}

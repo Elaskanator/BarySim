@@ -39,6 +39,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 					this.Particles[i].ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
 				result[i] = new(this.Particles[i]);
 			}
+
 			/*
 			ParticleData pd;
 			//Queue<BaryonParticle> particles = this.ParticleTree.AsQueue();

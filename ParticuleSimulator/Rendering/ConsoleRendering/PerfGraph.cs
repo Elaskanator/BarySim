@@ -63,7 +63,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			double
 				frameTime = frameTimings.Current.TotalMilliseconds,
 				fpsTime = fpsTimings.Current.TotalMilliseconds,
-				targetTime = 1000d / (Parameters.TARGET_FPS > 0 ? Parameters.TARGET_FPS : Parameters.MAX_FPS);
+				targetTime = 1000d / (Parameters.TARGET_FPS > 0 ? Parameters.TARGET_FPS : Parameters.TARGET_FPS_DEFAULT);
 			string
 				label_min = _graphMin < 1000 ? _graphMin.ToStringBetter(2, false) : (_graphMin / 1000).ToStringBetter(2, false),
 				label_target = targetTime < 1000 ? targetTime.ToStringBetter(3, true): (targetTime / 1000).ToStringBetter(3, true),
@@ -145,9 +145,16 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				double
 					min = rangeStats.GetPercentileValue(Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
 					max = rangeStats.GetPercentileValue(100d - Parameters.PERF_GRAPH_PERCENTILE_CUTOFF),
-					minMedian = frameTimeStats.Concat(fpsStats).Min(s => s.GetPercentileValue(50d)),
-					maxMedian = frameTimeStats.Concat(fpsStats).Max(s => s.GetPercentileValue(50d)),
 					avg = frameTimeStats.Concat(fpsStats).Average(s => s.GetPercentileValue(50d));
+
+				double minMedian, maxMedian;
+				if (frameTimeStats.Length > 1 && fpsStats.Length > 1) {
+					minMedian = frameTimeStats.Skip(1).Concat(fpsStats.Skip(1)).Min(s => s.GetPercentileValue(50d));
+					maxMedian = frameTimeStats.Skip(1).Concat(fpsStats.Skip(1)).Max(s => s.GetPercentileValue(50d));
+				} else {
+					minMedian = frameTimeStats.Concat(fpsStats).Min(s => s.GetPercentileValue(50d));
+					maxMedian = frameTimeStats.Concat(fpsStats).Max(s => s.GetPercentileValue(50d));
+				}
 
 				min = min < minMedian ? min : minMedian;
 				max = max > maxMedian ? max : maxMedian;
@@ -197,7 +204,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				yTime100 = simTimeStatsMs.Max;
 			double fps = Parameters.TARGET_FPS > 0
 				? Parameters.TARGET_FPS
-				: Parameters.MAX_FPS;
+				: Parameters.TARGET_FPS_DEFAULT;
 			double
 				yFps000Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps000 - _graphMin) / (_graphMax - _graphMin),
 				yFps010Scaled =		2d*Parameters.GRAPH_HEIGHT * (yFps010 - _graphMin) / (_graphMax - _graphMin),
@@ -235,14 +242,6 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					if (yIdx < (int)yTime000Scaled)
 						colors[yIdx] = ConsoleColor.DarkYellow;
 					else colors[yIdx] = ConsoleColor.Yellow;
-				} else if (fps > 0d && yIdx >= (int)yTargetTimeScaled && yIdx > (int)yTime100Scaled && yIdx < (int)yFps050Scaled) {
-					if (yIdx <= (int)yFps010Scaled)
-						colors[yIdx] = ConsoleColor.Red;
-					else if (yIdx <= (int)yFps025Scaled)
-						colors[yIdx] = ConsoleColor.DarkRed;
-					else if (yIdx <= (int)yFps040Scaled)
-						colors[yIdx] = ConsoleColor.Magenta;
-					else colors[yIdx] = ConsoleColor.DarkMagenta;
 				}
 
 				else if (yIdx >= (int)yFps025Scaled && yIdx <= (int)yFps075Scaled)
@@ -259,6 +258,16 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					colors[yIdx] = ConsoleColor.DarkGray;
 				else if (yIdx >= (int)yTime000Scaled && yIdx <= (int)yTime100Scaled)
 					colors[yIdx] = ConsoleColor.DarkGray;
+
+				else if (fps > 0d && yIdx >= (int)yTargetTimeScaled && yIdx > (int)yTime100Scaled && yIdx < (int)yFps050Scaled) {
+					if (yIdx <= (int)yFps010Scaled)
+						colors[yIdx] = ConsoleColor.Red;
+					else if (yIdx <= (int)yFps025Scaled)
+						colors[yIdx] = ConsoleColor.DarkRed;
+					else if (yIdx <= (int)yFps040Scaled)
+						colors[yIdx] = ConsoleColor.Magenta;
+					else colors[yIdx] = ConsoleColor.DarkMagenta;
+				}
 
 				else colors[yIdx] = ConsoleColor.Black;
 			}

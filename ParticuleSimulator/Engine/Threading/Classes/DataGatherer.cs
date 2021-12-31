@@ -5,14 +5,14 @@ using ParticleSimulator.Engine.Threading;
 
 namespace ParticleSimulator.Engine {
 	public static class DataGatherer {
-		public static IDataGatherer New(IPrerequisite config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal) =>
+		public static IDataGatherer New(IIngestedResource config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal) =>
 			(IDataGatherer)Activator.CreateInstance(
 				typeof(DataGatherer<>).MakeGenericType(config.Resource.DataType),
 				config, readySignal, doneSignal, refreshSignal);
 	}
 
 	public class DataGatherer<T> : ACalculationHandler, IDataGatherer {
-		public DataGatherer(Prerequisite<T> config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal)
+		public DataGatherer(IngestedResource<T> config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal)
 		: base (readySignal, doneSignal) {
 			this.Config = config;
 			this._refreshSignal = refreshSignal;
@@ -21,7 +21,7 @@ namespace ParticleSimulator.Engine {
 		public T Value => this._myValue;
 		object IDataGatherer.Value => this.Value;
 
-		public Prerequisite<T> Config { get; private set; }
+		public IngestedResource<T> Config { get; private set; }
 		public int Skips { get; private set; }
 		public int Reuses { get; private set; }
 		
@@ -46,45 +46,53 @@ namespace ParticleSimulator.Engine {
 					allowReuse = false;
 			}
 
-			if (allowReuse) {
-				this.Skips++;
-				if (allowAccess && ((this._refreshSignal is null) || this._refreshSignal.WaitOne(TimeSpan.Zero)))
-					if (this.Config.DoConsume) {
-						if (this.Config.Resource.TryDequeue(ref this._myValue, TimeSpan.Zero)) {
+			if (allowAccess) {
+				switch (this.Config.ReadType) {
+					case ConsumptionType.Consume:
+						if (allowReuse) {
+							if (this.Config.Resource.TryDequeue(ref this._myValue, TimeSpan.Zero)) {
+								this.Skips = 0;
+								this.Reuses = 0;
+							}
+						} else {
+							if (this.Config.ReadTimeout.HasValue)
+								this.Config.Resource.TryDequeue(ref this._myValue, this.Config.ReadTimeout.Value);
+							else this._myValue = this.Config.Resource.Dequeue();
+
 							this.Skips = 0;
 							this.Reuses = 0;
-						} else if (this.Config.AllowDirtyRead)
-							this._myValue = this.Config.Resource.Current;
-					} else if (this.Config.AllowDirtyRead)
-						this._myValue = this.Config.Resource.Current;
-			} else if (allowAccess) {
-				if (!(this._refreshSignal is null))
-					this._refreshSignal.WaitOne();
+						}
+						break;
+					case ConsumptionType.ReadOnChange:
+						if (allowReuse) {
+							if (this._refreshSignal.WaitOne(TimeSpan.Zero)) {
+								this._myValue = this.Config.Resource.Current;
+								this.Skips = 0;
+								this.Reuses = 0;
+							}
+						} else {
+							if (this.Config.ReadTimeout.HasValue)
+								this._refreshSignal.WaitOne(this.Config.ReadTimeout.Value);
+							else this._refreshSignal.WaitOne();
 
-				if (this.Config.DoConsume) {
-					if (this.Config.ReadTimeout.HasValue && this.Config.Resource.TryDequeue(ref this._myValue, this.Config.ReadTimeout.Value)) {
+							this._myValue = this.Config.Resource.Current;
+							this.Skips = 0;
+							this.Reuses = 0;
+						}
+						break;
+					case ConsumptionType.ReadReady:
+						if (this.Config.ReadTimeout.HasValue)
+							this.Config.Resource.TryPeek(ref this._myValue, this.Config.ReadTimeout.Value);
+						else this._myValue = this.Config.Resource.Peek();
+
 						this.Skips = 0;
 						this.Reuses = 0;
-					} else if (this.Config.AllowDirtyRead) {
-						this.Skips++;
+						break;
+					case ConsumptionType.ReadImmediate:
 						this._myValue = this.Config.Resource.Current;
-					} else {
-						this._myValue = this.Config.Resource.Dequeue();
 						this.Skips = 0;
 						this.Reuses = 0;
-					}
-				} else {
-					if (this.Config.ReadTimeout.HasValue && this.Config.Resource.TryPeek(ref this._myValue, this.Config.ReadTimeout.Value)) {
-						this.Skips = 0;
-						this.Reuses = 0;
-					} else if (this.Config.AllowDirtyRead) {
-						this.Skips++;
-						this._myValue = this.Config.Resource.Current;
-					} else {
-						this._myValue = this.Config.Resource.Peek();
-						this.Skips = 0;
-						this.Reuses = 0;
-					}
+						break;
 				}
 			}
 		}

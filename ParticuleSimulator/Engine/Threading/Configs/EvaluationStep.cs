@@ -14,7 +14,7 @@ namespace ParticleSimulator.Engine.Threading {
 		public bool IsOutputOverwrite;
 		public int OutputSkips;
 
-		public IPrerequisite[] InputResourceUses;
+		public IIngestedResource[] InputResourceUses;
 		public TimeSpan? DataLoadingTimeout;
 		public TimeSynchronizer Synchronizer;
 

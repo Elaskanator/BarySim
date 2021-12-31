@@ -6,19 +6,18 @@ namespace Generic.Models {
 		//see https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-sleep
 		public const double THREAD_PULSE_MS = 15;//TODO read exact value for your system
 
-		public TimeSynchronizer(TimeSpan? value, TimeSpan? min = null) {
-			if (min.HasValue && min.Value.Ticks > 0L) this.Min = min.Value;
-			if (value.HasValue && value.Value.Ticks > 0L) this.Interval = value.Value;
+		public TimeSynchronizer(TimeSpan value, bool vSync) {
+			this.Target = value;
+			this.VSync = vSync;
 		}
-		public static TimeSynchronizer FromFps(double? value, double? max = null) {
-			return new TimeSynchronizer(
-				value.HasValue && value.Value > 0d ? TimeSpan.FromSeconds(1d / value.Value) : null,
-				max.HasValue && max.Value > 0d ? TimeSpan.FromSeconds(1d / max.Value) : null);
+		public TimeSynchronizer (double fps, bool vSync) {
+			this.Target = TimeSpan.FromSeconds(1d / fps);
+			this.VSync = vSync;
 		}
 		
 		private DateTime? _targetTimeUtc = null;
-		public readonly TimeSpan Min = TimeSpan.Zero;
-		public readonly TimeSpan Interval = TimeSpan.Zero;
+		public readonly TimeSpan Target;
+		public readonly bool VSync;
 
 		public TimeSpan? LastSyncDuration { get; private set; }
 
@@ -30,20 +29,20 @@ namespace Generic.Models {
 			this._targetTimeUtc ??= new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, nowUtc.Minute, nowUtc.Second, DateTimeKind.Utc);
 			TimeSpan waitDuration = TimeSpan.Zero;
 
-			if (this.Interval.Ticks > 0L) {
+			if (this.VSync) {
 				waitDuration = this._targetTimeUtc.Value - nowUtc;
 				if (waitDuration.Ticks >= 0L) {
-					this._targetTimeUtc += this.Interval;
+					this._targetTimeUtc += this.Target;
 				} else {
-					int slip = (int)Math.Ceiling(-waitDuration / this.Interval);
-					this._targetTimeUtc += this.Interval * slip;
+					int slip = (int)Math.Ceiling(-waitDuration / this.Target);
+					this._targetTimeUtc += this.Target * slip;
 					waitDuration = this._targetTimeUtc.Value - nowUtc;
 				}
-			} else if (this.Min.Ticks > 0L) {
+			} else {
 				waitDuration = this._targetTimeUtc.Value - nowUtc;
 				if (waitDuration.Ticks > 0L)
-					this._targetTimeUtc += this.Min;
-				else this._targetTimeUtc = nowUtc + this.Min;//missed it (this does not preserve absolute synchronization and can de-phase from metered interval times)
+					this._targetTimeUtc += this.Target;
+				else this._targetTimeUtc = nowUtc + this.Target;//missed it (this does not preserve absolute synchronization and can de-phase from metered interval times)
 			}
 
 			if (waitDuration.TotalMilliseconds > THREAD_PULSE_MS/2d) {

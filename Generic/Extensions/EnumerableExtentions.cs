@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Generic.Models;
 
 namespace Generic.Extensions {
 	public static class EnumerableExtentions {

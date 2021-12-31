@@ -19,8 +19,13 @@ namespace ParticleSimulator.Simulation {
 			new BarnesHutTree(this.Dim, cornerLeft, cornerRight, parent);
 
 		public override int Capacity => Parameters.QUADTREE_NODE_CAPACITY;
+		public void Do() {
+			ATree<Particle> node = this;
+			while (!node.IsLeaf)
+				node = node.Children[0];
+		}
 
-		public bool[] CompleteChildren { get; private set; }
+		//public bool[] CompleteChildren { get; private set; }
 
 		//public readonly BaryonCenter BaryCenter_Position = new();
 		//public readonly BaryonCenter BaryCenter_Mass = new();
@@ -44,11 +49,6 @@ namespace ParticleSimulator.Simulation {
 		//private const float _neighborDist = 0.1f;
 		//private bool IsNeighbor(BarnesHutTree<T> other) => this.Center.Distance(other.Center) <= _neighborDist;
 		//
-		public void Do() {
-			ATree<Particle> node = this;
-			while (!node.IsLeaf)
-				node = node.Children[0];
-		}
 		//
 		//	//Stack<ATree<T>> stack = new();
 		//

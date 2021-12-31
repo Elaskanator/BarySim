@@ -97,10 +97,12 @@ namespace ParticleSimulator {
 		//}
 
 		public bool BounceWalls(float timeStep) {//TODODODO
+			Vector<float> displacement = timeStep*this.Velocity;
+			Vector<float> newP = this.Position + displacement;
 			bool result = false;
 			Vector<int>
-				lessThans = Vector.LessThan(this.Position + timeStep*this.Velocity, Parameters.LEFT_BOUND),
-				greaterThans = Vector.GreaterThanOrEqual(this.Position + timeStep*this.Velocity, Parameters.RIGHT_BOUND);
+				lessThans = Vector.LessThan(newP, Parameters.LEFT_BOUND),
+				greaterThans = Vector.GreaterThanOrEqual(newP, Parameters.RIGHT_BOUND);
 			if (Vector.LessThanAny(lessThans, Vector<int>.Zero) || Vector.LessThanAny(greaterThans, Vector<int>.Zero)) {
 				this.Velocity = Vector.ConditionalSelect(
 					lessThans,
@@ -114,7 +116,7 @@ namespace ParticleSimulator {
 					timeStep*this.Velocity - (this.Position - Parameters.LEFT_BOUND),
 					Vector.ConditionalSelect(
 						greaterThans,
-						timeStep*this.Velocity - (Parameters.RIGHT_BOUND - this.Position),
+						timeStep*this.Velocity + (this.Position - Parameters.RIGHT_BOUND),
 						Vector<float>.Zero));
 			}
 			
