@@ -17,10 +17,11 @@ namespace ParticleSimulator.Simulation {
 
 			if (Parameters.PARTICLES_GROUP_COUNT < 2)
 				this.SpawnCenter = Vector<float>.Zero;
-			else this.SpawnCenter = VectorFunctions.New(Enumerable
-				.Range(0, Parameters.DIM)
-				.Select(d => (float)(
-					Parameters.WORLD_SCALE * (Program.Engine.Random.NextDouble() * (100d - Parameters.WORLD_PADDING_PCT) + 0.5d * Parameters.WORLD_PADDING_PCT) / 100d)));
+			else this.SpawnCenter = VectorFunctions.New(
+					Enumerable.Range(0, Parameters.DIM)
+						.Select(d => (float)(Parameters.WORLD_SIZE[d] * Program.Engine.Random.NextDouble() * (1d - Parameters.WORLD_PADDING_PCT/50d)
+							+ Parameters.WORLD_LEFT[d]
+							+ (Parameters.WORLD_SIZE[d] * Parameters.WORLD_PADDING_PCT/100d))));
 
 			this.InitialVelocity = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random).Select(x => (float)x * this.StartSpeedMax_Group_Rand))
 				+ (this.StartSpeedMax_Group_Angular * this.NewInitialDirection(Vector<float>.Zero, this.SpawnCenter));

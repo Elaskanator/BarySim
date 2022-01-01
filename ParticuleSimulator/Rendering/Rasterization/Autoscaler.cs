@@ -10,11 +10,18 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		public Autoscaler() {
 			if (Parameters.COLOR_USE_FIXED_BANDS)
 				this.Values = Parameters.COLOR_FIXED_BANDS ?? new float[0];
-			else if (Parameters.COLOR_METHOD ==  ParticleColoringMethod.Depth) {
+			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth) {
 				int minDim = Parameters.WINDOW_WIDTH > Parameters.WINDOW_HEIGHT ? Parameters.WINDOW_HEIGHT : Parameters.WINDOW_WIDTH;
 				float range = MathF.Sqrt(3f) * minDim / 2f;
 				this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => -range + (i * 2f*range / (Parameters.COLOR_ARRAY.Length + 1f))).ToArray();
-			} else this.Values = Enumerable.Range(0, Parameters.COLOR_ARRAY.Length).Select(i => (float)i).ToArray();
+			} else this.Values = Enumerable
+					.Range(
+						Parameters.COLOR_METHOD == ParticleColoringMethod.Group ? 0
+							: Parameters.COLOR_METHOD == ParticleColoringMethod.Random ? 0
+							: 1,
+						Parameters.COLOR_ARRAY.Length)
+					.Select(i => (float)i)
+					.ToArray();
 		}
 
 		public float[] Values { get; private set; }

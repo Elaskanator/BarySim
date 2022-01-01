@@ -26,6 +26,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 				.ToArray();
 
 			this.Particles = this.InitialParticleGroups.SelectMany(g => g.InitialParticles).ToArray();
+			if (Parameters.WORLD_BOUNCING)
+				for (int i = 0; i < this.ParticleCount; i++)
+					this.Particles[i].WrapPosition();
 
 			//this.ParticleTree = (BarnesHutTree)new BarnesHutTree(Parameters.DIM)
 			//	.AddUpOrDown(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
@@ -35,8 +38,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public ParticleData[] RefreshSimulation() {
 			ParticleData[] result = new	ParticleData[this.ParticleCount];
 			for (int i = 0; i < this.ParticleCount; i++) {
-				if (!Parameters.WORLD_BOUNCING || !this.Particles[i].BounceWalls(Parameters.TIME_SCALE))
-					this.Particles[i].ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
+				this.Particles[i].ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
 				result[i] = new(this.Particles[i]);
 			}
 

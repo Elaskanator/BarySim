@@ -11,9 +11,9 @@ namespace ParticleSimulator {
 		public const bool EXPORT_FRAMES = false;
 		public const string EXPORT_DIR = null;
 
-		public const int PARTICLES_GROUP_COUNT = 1;
+		public const int PARTICLES_GROUP_COUNT = 1 << 20;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 19;
+		public const int PARTICLES_GROUP_MAX = 1;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const int DIM = 3;
@@ -50,7 +50,7 @@ namespace ParticleSimulator {
 		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
 		
-		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Overlap;
 		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
 		public const float AUTOSCALE_FIXED_MIN = -1f;
 		public const float AUTOSCALE_FIXED_MAX = -1f;
@@ -66,7 +66,7 @@ namespace ParticleSimulator {
 		public const bool SYNC_SIMULATION = true;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
 
 		#region Gravity
-		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 0f;
+		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 0.1f;
 
 		public const float GRAVITATIONAL_CONSTANT = 6E-10f;
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;
@@ -76,8 +76,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 40f;
-		public const float GRAVITY_MAX_STARTING_MASS = 40f;
+		public const float GRAVITY_MIN_STARTING_MASS = 1f;
+		public const float GRAVITY_MAX_STARTING_MASS = 1f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
@@ -97,8 +97,9 @@ namespace ParticleSimulator {
 		public const int QUADTREE_NODE_CAPACITY = 1;
 		#endregion Gravity
 		
-		public static readonly Vector<float> LEFT_BOUND = VectorFunctions.New(-X_SCALE * WORLD_SCALE / 2f, -Y_SCALE * WORLD_SCALE / 2f, -Z_SCALE * WORLD_SCALE / 2f);
-		public static readonly Vector<float> RIGHT_BOUND = VectorFunctions.New(X_SCALE * WORLD_SCALE / 2f, Y_SCALE * WORLD_SCALE / 2f, Z_SCALE * WORLD_SCALE / 2f);
+		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-X_SCALE * WORLD_SCALE / 2f, -Y_SCALE * WORLD_SCALE / 2f, -Z_SCALE * WORLD_SCALE / 2f);
+		public static readonly Vector<float> WORLD_RIGHT = VectorFunctions.New(X_SCALE * WORLD_SCALE / 2f, Y_SCALE * WORLD_SCALE / 2f, Z_SCALE * WORLD_SCALE / 2f);
+		public static readonly Vector<float> WORLD_SIZE = WORLD_RIGHT - WORLD_LEFT;
 
 		#region Aux
 		public const char CHAR_LOW  = '\u2584';//▄

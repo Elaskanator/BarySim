@@ -39,20 +39,11 @@ namespace ParticleSimulator {
 			set { this.Momentum = this.Mass * value; }}
 
 		public void ApplyTimeStep(Vector<float> acceleration, float timeStep) {
-			/*this.Velocity += acceleration
-				.Clamp(Parameters.PARTICLE_MAX_ACCELERATION / timeStep)
-				* timeStep;*/
-			this.Position += this.Velocity;// * timeStep;
-		}
-
-		public void HandleBounds(float timeStep) {
-		//	if (Parameters.WORLD_WRAPPING)
-		//		this.WrapPosition();
-			if (Parameters.WORLD_BOUNCING)
-				this.BounceWalls(timeStep);
-		//	else if (Parameters.WORLD_BOUNDING)
-		//		this.BoundPosition();
-		//	else this.CheckOutOfBounds();
+			if (!Parameters.WORLD_BOUNCING || !this.BounceWalls(timeStep))
+				/*this.Velocity += acceleration
+					.Clamp(Parameters.PARTICLE_MAX_ACCELERATION / timeStep)
+					* timeStep;*/
+				this.Position += this.Velocity;// * timeStep;
 		}
 
 		//private void CheckOutOfBounds() {
@@ -62,22 +53,58 @@ namespace ParticleSimulator {
 		//			this.IsEnabled = false;
 		//}
 
-		//private bool WrapPosition() {
-		//	bool result = false;
-		//	float[] coords = new float[Parameters.DIM];
-		//	for (int d = 0; d < Parameters.DIM; d++)
-		//		if (this.Position[d] < 0f) {
-		//			coords[d] = (this.Position[d] % Parameters.DOMAIN_SIZE[d]) + Parameters.DOMAIN_SIZE[d];//don't want symmetric modulus
-		//			result = true;
-		//		} else if (this.Position[d] >= Parameters.DOMAIN_SIZE[d]) {
-		//			coords[d] = this.Position[d] % Parameters.DOMAIN_SIZE[d];
-		//			result = true;
-		//		} else coords[d] = this.Position[d];
-
-		//	if (result)
-		//		this.Position = VectorFunctions.New(coords);
-		//	return result;
-		//}
+		public void WrapPosition() {
+			Span<float> values = stackalloc float[Vector<float>.Count];
+			values[0] = Parameters.DIM < 1 ? 0f :
+				this.Position[0] < Parameters.WORLD_LEFT[0]
+				? Parameters.WORLD_LEFT[0] + Parameters.WORLD_SIZE[0] + ((this.Position[0] - Parameters.WORLD_LEFT[0]) % Parameters.WORLD_SIZE[0])
+				: this.Position[0] >= Parameters.WORLD_RIGHT[0]
+					? Parameters.WORLD_LEFT[0] + ((this.Position[0] - Parameters.WORLD_LEFT[0]) % Parameters.WORLD_SIZE[0])
+					: this.Position[0];
+			values[1] = Parameters.DIM < 2 ? 0f :
+				this.Position[1] < Parameters.WORLD_LEFT[1]
+				? Parameters.WORLD_LEFT[1] + Parameters.WORLD_SIZE[1] + ((this.Position[1] - Parameters.WORLD_LEFT[1]) % Parameters.WORLD_SIZE[1])
+				: this.Position[1] >= Parameters.WORLD_RIGHT[1]
+					? Parameters.WORLD_LEFT[1] + ((this.Position[1] - Parameters.WORLD_LEFT[1]) % Parameters.WORLD_SIZE[1])
+					: this.Position[1];
+			values[2] = Parameters.DIM < 3 ? 0f :
+				this.Position[2] < Parameters.WORLD_LEFT[2]
+				? Parameters.WORLD_LEFT[2] + Parameters.WORLD_SIZE[2] + ((this.Position[2] - Parameters.WORLD_LEFT[2]) % Parameters.WORLD_SIZE[2])
+				: this.Position[2] >= Parameters.WORLD_RIGHT[2]
+					? Parameters.WORLD_LEFT[2] + ((this.Position[2] - Parameters.WORLD_LEFT[2]) % Parameters.WORLD_SIZE[2])
+					: this.Position[2];
+			values[3] = Parameters.DIM < 4 ? 0f :
+				this.Position[3] < Parameters.WORLD_LEFT[3]
+				? Parameters.WORLD_LEFT[3] + Parameters.WORLD_SIZE[3] + ((this.Position[3] - Parameters.WORLD_LEFT[3]) % Parameters.WORLD_SIZE[3])
+				: this.Position[3] >= Parameters.WORLD_RIGHT[3]
+					? Parameters.WORLD_LEFT[3] + ((this.Position[3] - Parameters.WORLD_LEFT[3]) % Parameters.WORLD_SIZE[3])
+					: this.Position[3];
+			values[4] = Parameters.DIM < 5 ? 0f :
+				this.Position[4] < Parameters.WORLD_LEFT[4]
+				? Parameters.WORLD_LEFT[4] + Parameters.WORLD_SIZE[4] + ((this.Position[4] - Parameters.WORLD_LEFT[4]) % Parameters.WORLD_SIZE[4])
+				: this.Position[4] >= Parameters.WORLD_RIGHT[4]
+					? Parameters.WORLD_LEFT[4] + ((this.Position[4] - Parameters.WORLD_LEFT[4]) % Parameters.WORLD_SIZE[4])
+					: this.Position[4];
+			values[5] = Parameters.DIM < 6 ? 0f :
+				this.Position[5] < Parameters.WORLD_LEFT[5]
+				? Parameters.WORLD_LEFT[5] + Parameters.WORLD_SIZE[5] + ((this.Position[5] - Parameters.WORLD_LEFT[5]) % Parameters.WORLD_SIZE[5])
+				: this.Position[5] >= Parameters.WORLD_RIGHT[5]
+					? Parameters.WORLD_LEFT[5] + ((this.Position[5] - Parameters.WORLD_LEFT[5]) % Parameters.WORLD_SIZE[5])
+					: this.Position[5];
+			values[6] = Parameters.DIM < 7 ? 0f :
+				this.Position[6] < Parameters.WORLD_LEFT[6]
+				? Parameters.WORLD_LEFT[6] + Parameters.WORLD_SIZE[6] + ((this.Position[6] - Parameters.WORLD_LEFT[6]) % Parameters.WORLD_SIZE[6])
+				: this.Position[6] >= Parameters.WORLD_RIGHT[6]
+					? Parameters.WORLD_LEFT[6] + ((this.Position[6] - Parameters.WORLD_LEFT[6]) % Parameters.WORLD_SIZE[6])
+					: this.Position[6];
+			values[7] = Parameters.DIM < 8 ? 0f :
+				this.Position[7] < Parameters.WORLD_LEFT[7]
+				? Parameters.WORLD_LEFT[7] + Parameters.WORLD_SIZE[7] + ((this.Position[7] - Parameters.WORLD_LEFT[7]) % Parameters.WORLD_SIZE[7])
+				: this.Position[7] >= Parameters.WORLD_RIGHT[7]
+					? Parameters.WORLD_LEFT[7] + ((this.Position[7] - Parameters.WORLD_LEFT[7]) % Parameters.WORLD_SIZE[7])
+					: this.Position[7];
+			this.Position = new Vector<float>(values);
+		}
 
 		//private bool BoundPosition() {
 		//	bool result = false;
@@ -97,61 +124,34 @@ namespace ParticleSimulator {
 		//}
 
 		public bool BounceWalls(float timeStep) {//TODODODO
-			Vector<float> displacement = timeStep*this.Velocity;
+			Vector<float> velocity = this.Velocity;
+			Vector<float> displacement = timeStep*velocity;
 			Vector<float> newP = this.Position + displacement;
 			bool result = false;
 			Vector<int>
-				lessThans = Vector.LessThan(newP, Parameters.LEFT_BOUND),
-				greaterThans = Vector.GreaterThanOrEqual(newP, Parameters.RIGHT_BOUND);
+				lessThans = Vector.LessThan(newP, Parameters.WORLD_LEFT),
+				greaterThans = Vector.ConditionalSelect(
+					VectorFunctions.DimensionSignals[Parameters.DIM],
+					Vector.GreaterThanOrEqual(newP, Parameters.WORLD_RIGHT),
+					Vector<int>.Zero);
 			if (Vector.LessThanAny(lessThans, Vector<int>.Zero) || Vector.LessThanAny(greaterThans, Vector<int>.Zero)) {
-				this.Velocity = Vector.ConditionalSelect(
+				result = true;
+				velocity = Vector.ConditionalSelect(
 					lessThans,
-					-this.Velocity,
+					-velocity,
 					Vector.ConditionalSelect(
 						greaterThans,
-						-this.Velocity,
-						this.Velocity));
-				this.Position += Vector.ConditionalSelect(//v is reversed already
+						-velocity,
+						velocity));
+				this.Position += Vector.ConditionalSelect(//original velocity
 					lessThans,
-					timeStep*this.Velocity - (this.Position - Parameters.LEFT_BOUND),
+					Parameters.WORLD_LEFT - this.Position - displacement,
 					Vector.ConditionalSelect(
 						greaterThans,
-						timeStep*this.Velocity + (this.Position - Parameters.RIGHT_BOUND),
+						this.Position - Parameters.WORLD_RIGHT + displacement,
 						Vector<float>.Zero));
+				this.Velocity = velocity;
 			}
-			
-			/*
-			float radius = Parameters.WORLD_BOUNCING_EXTENSION ? 0f : this.Radius;
-			float[] coords = new float[Parameters.DIM],
-				velocity = new float[Parameters.DIM];
-			for (int d = 0; d < Parameters.DIM; d++) {
-				coords[d] = this.Position[d];
-				velocity[d] = this.Velocity[d];
-				if (this.Position[d] - radius < -Parameters.WORLD_SCALE) {
-					coords[d] = radius - Parameters.WORLD_SCALE;//TODODODO
-					result = true;
-				}
-				if (this.Position[d] + radius > Parameters.WORLD_SCALE) {
-					coords[d] = Parameters.WORLD_SCALE - radius;//TODODODO
-					result = true;
-				}
-
-				if (this.Position[d] - radius + this.Velocity[d]*timeStep < -Parameters.WORLD_SCALE) {
-					velocity[d] = -this.Velocity[d];
-					coords[d] = radius - Parameters.WORLD_SCALE;
-					result = true;
-				} else if (this.Position[d] + radius + this.Velocity[d]*timeStep > Parameters.WORLD_SCALE) {
-					velocity[d] = -this.Velocity[d];
-					coords[d] = Parameters.WORLD_SCALE - radius;
-					result = true;
-				}
-			}
-
-			if (result) {
-				this.Position = VectorFunctions.New(coords);
-				this.Velocity = VectorFunctions.New(velocity);
-			}
-			*/
 			return result;
 		}
 	}
