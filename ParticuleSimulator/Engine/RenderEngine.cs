@@ -21,6 +21,28 @@ namespace ParticleSimulator.Engine {
 			this.Random = Parameters.DETERMINISTIC_RANDOM_SEED == -1
 				? new()
 				: new(Parameters.DETERMINISTIC_RANDOM_SEED);
+
+			this.KeyListeners = this.BuildKeyListeners().ToArray();
+
+			this.Evaluators = this.BuildEvaluators().ToArray();
+			this._stepsStartingPaused = this.Evaluators.ToDictionary(e => e.Id, e => e.IsPaused);
+
+			this.Simulator = new BaryonSimulator();
+
+			this.Rasterizer = new(
+				Parameters.WINDOW_WIDTH,
+				Parameters.WINDOW_HEIGHT * 2,
+				this.Random,
+				this._rankingsResource);
+
+			this.Scaling = new(this._scalingResource);
+
+			this.Renderer = new ConsoleRenderer(this);
+
+			this.Exporter = new BitmapGenerator(
+				Parameters.WINDOW_WIDTH,
+				Parameters.WINDOW_HEIGHT * 2,
+				Parameters.EXPORT_DIR);
 		}
 
 		~RenderEngine() => this.Dispose(false);
@@ -55,70 +77,41 @@ namespace ParticleSimulator.Engine {
 		private ProcessThread _stepEval_Rasterize;
 		private ProcessThread _stepEval_Render;
 		private ProcessThread _stepEval_Export;
-		private Dictionary<int, bool> _stepsStartingPaused;
+		private readonly Dictionary<int, bool> _stepsStartingPaused;
 		
-		private SynchronousBuffer<ParticleData[]> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
+		private readonly SynchronousBuffer<ParticleData[]> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
 		private IngestedResource<ParticleData[]> _particleResourceUse;
-		private SynchronousBuffer<float?[]> _rankingsResource = new("Ranks", 0);
-		private SynchronousBuffer<Pixel[]> _rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
-		private SynchronousBuffer<float[]> _scalingResource = new("Scaling", 0);
+		private readonly SynchronousBuffer<float?[]> _rankingsResource = new("Ranks", 0);
+		private readonly SynchronousBuffer<Pixel[]> _rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
+		private readonly SynchronousBuffer<float[]> _scalingResource = new("Scaling", 0);
 
-		public void Init() {
-			this.Simulator = new BaryonSimulator();
-
-			this.Rasterizer = new(
-				Parameters.WINDOW_WIDTH,
-				Parameters.WINDOW_HEIGHT * 2,
-				this.Random,
-				this._rankingsResource);
-
-			this.Scaling = new();
-			_scalingResource.Overwrite(this.Scaling.Values);
-
-			this.Renderer = new ConsoleRenderer(this);
-
-			this.Exporter = new BitmapGenerator(
-				Parameters.WINDOW_WIDTH,
-				Parameters.WINDOW_HEIGHT * 2,
-				Parameters.EXPORT_DIR);
-
-			this.Evaluators = this.BuildEvaluators().ToArray();
-
-			this.KeyListeners = this.BuildKeyListeners().ToArray();
-
-			this.Renderer.Init();
-			this.Simulator.Init();
-
-			this._stepsStartingPaused = this.Evaluators.ToDictionary(e => e.Id, e => e.IsPaused);
-		}
-
-		public void Start() {
+		public void Start(bool running = true) {
 			if (this.IsOpen) {
 				throw new InvalidOperationException("Already open");
 			} else {
-				this.Init();
-
 				this.IsOpen = true;
 				this.StartTimeUtc = DateTime.UtcNow;
-
-				this.Renderer.Startup();
-
+				
+				this._particleResourceUse.ReadType = ConsumptionType.Consume;
 				Thread keyReader = new(this.HandleInputs);
 				keyReader.Start();
 
 				for (int i = 0; i < this.Evaluators.Length; i++)
-					this.Evaluators[i].Start();
+					this.Evaluators[i].Start(
+						running
+						&& (this.Evaluators[i] != this._stepEval_Autoscale
+							|| (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth && Parameters.COLOR_METHOD != ParticleColoringMethod.Overlap)));
 			}
 		}
 
 		public void Pause() {
 			if (this.IsOpen) {
+				this.IsPaused = true;
 				for (int i = 0; i < this.Evaluators.Length; i++) {
 					this._stepsStartingPaused[this.Evaluators[i].Id] = this.Evaluators[i].IsPaused;
 					if (this.Evaluators[i] != this._stepEval_Render)
 						this.Evaluators[i].Pause();
 				}
-				this.IsPaused = true;
 			} else throw new InvalidOperationException("Not open");
 		}
 
@@ -131,8 +124,8 @@ namespace ParticleSimulator.Engine {
 			} else throw new InvalidOperationException("Not open");
 		}
 
-		public void SetRunningState(bool state) {
-			if (state) this.Resume();
+		public void SetRunningState(bool running) {
+			if (running) this.Resume();
 			else this.Pause();
 		}
 
@@ -141,13 +134,28 @@ namespace ParticleSimulator.Engine {
 				this.EndTimeUtc = DateTime.UtcNow;
 				for (int i = 0; i < this.Evaluators.Length; i++)
 					this.Evaluators[i].Stop();
+				this.IsOpen = false;
 			} else throw new InvalidOperationException("Not open");
 		}
 
 		public void Restart() {
 			if (this.IsOpen) {
-				for (int i = 0; i < this.Evaluators.Length; i++)
-					this.Evaluators[i].Restart();
+				this.Stop();
+				
+				this.Random = Parameters.DETERMINISTIC_RANDOM_SEED == -1
+					? new()
+					: new(Parameters.DETERMINISTIC_RANDOM_SEED);
+
+				this._particleResource.Reset();
+				this._rankingsResource.Reset();
+				this._rasterResource.Reset();
+				this._scalingResource.Reset();
+
+				this.Scaling.Reset();
+				this.Rasterizer.Camera.Reset();
+				this.Exporter.Reset();
+
+				this.Start();
 			} else throw new InvalidOperationException("Not open");
 		}
 
@@ -159,20 +167,23 @@ namespace ParticleSimulator.Engine {
 		}
 
 		private void HandleInputs() {
-			ConsoleKey key;
+			ConsoleKeyInfo keyInfo;
 			while (this.IsOpen) {
-				key = Console.ReadKey(true).Key;
+				keyInfo = Console.ReadKey(true);
 				for (int i = 0; i < this.KeyListeners.Length; i++)
-					if (key == this.KeyListeners[i].Key)
-						this.KeyListeners[i].Toggle();
+					if (keyInfo.Key == this.KeyListeners[i].Key)
+						if ((this.KeyListeners[i].Resetter is null) || (keyInfo.Modifiers & ConsoleModifiers.Control) == 0)
+							this.KeyListeners[i].Toggle();
+						else this.KeyListeners[i].Resetter();
 			}
 		}
 
 		private IEnumerable<ACalculationHandler> BuildEvaluators() {
 			this._stepEval_Simulate = ProcessThread.New(new() {
 				Name = "Simulate",
-				GeneratorFn = this.Simulator.RefreshSimulation,
-				CallbackFn = this.Renderer.UpdateSimTime,
+				InitFn = () => { this.Simulator.Init(); },
+				GeneratorFn = () => { return this.Simulator.RefreshSimulation(); },
+				CallbackFn = (r) => { this.Renderer.UpdateSimTime(r); },
 				OutputResource = this._particleResource,
 				IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
 				OutputSkips = Parameters.SIMULATION_SKIPS,
@@ -182,7 +193,7 @@ namespace ParticleSimulator.Engine {
 			this._particleResourceUse = new IngestedResource<ParticleData[]>(this._particleResource, ConsumptionType.Consume);
 			this._stepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterize",
-				CalculatorFn = this.Rasterizer.Rasterize,
+				CalculatorFn = (r, p) => { return this.Rasterizer.Rasterize(r, p); },
 				OutputResource = this._rasterResource,
 				InputResourceUses = new IIngestedResource[] {
 					this._particleResourceUse,
@@ -193,12 +204,13 @@ namespace ParticleSimulator.Engine {
 			
 			this._stepEval_Render = ProcessThread.New(new() {
 				Name = "Draw",
-				EvaluatorFn = this.Renderer.Draw,
-				CallbackFn = this.Renderer.UpdateFullTime,
+				InitFn = () => { this.Renderer.Init(); },
+				EvaluatorFn = (r, p) => { this.Renderer.Draw(r, p); },
+				CallbackFn = (r) => { this.Renderer.UpdateFullTime(r); },
 				Synchronizer = Parameters.TARGET_FPS > 0f
 					? new TimeSynchronizer(Parameters.TARGET_FPS, Parameters.VSYNC)
 					: null,
-				DataLoadingTimeout = TimeSpan.FromSeconds(1d),
+				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
 				InputResourceUses = new IIngestedResource[] {
 					new IngestedResource<Pixel[]>(this._rasterResource, Parameters.EXPORT_FRAMES ? ConsumptionType.ReadReady : ConsumptionType.Consume),
 					new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
@@ -206,9 +218,9 @@ namespace ParticleSimulator.Engine {
 			yield return this._stepEval_Render;
 			
 			if (Parameters.AUTOSCALER_ENABLE) {
-				this._stepEval_Autoscale = ProcessThread.New(Parameters.COLOR_METHOD != ParticleColoringMethod.Overlap, new() {
+				this._stepEval_Autoscale = ProcessThread.New(new() {
 					Name = "Autoscale",
-					CalculatorFn = this.Scaling.Update,
+					CalculatorFn = (r, p) => { return this.Scaling.Update(r, p); },
 					Synchronizer = Parameters.AUTOSCALE_INTERVAL_MS > 0
 						? new TimeSynchronizer(TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS), false)
 						: null,
@@ -224,7 +236,7 @@ namespace ParticleSimulator.Engine {
 			if (Parameters.EXPORT_FRAMES) {
 				this._stepEval_Export = ProcessThread.New(new() {
 					Name = "Exporter",
-					EvaluatorFn = this.Exporter.RenderOut,
+					EvaluatorFn = (r, p) => { this.Exporter.RenderOut(r, p); },
 					InputResourceUses = new IIngestedResource[] {
 						new IngestedResource<Pixel[]>(this._rasterResource, ConsumptionType.Consume),
 						new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
@@ -242,33 +254,40 @@ namespace ParticleSimulator.Engine {
 				},
 				new(ConsoleKey.F2, "Main",
 				() => { return !this.IsPaused; },
-				s => { this.SetRunningState(s); }) {
+				s => { this.SetRunningState(s); },
+				() => { this.Restart(); }) {
 				},
 				new(ConsoleKey.F3, "Sim",
 				() => { return !this._stepEval_Simulate.IsPaused; },
-				s => { this.SetSimulationState(s); }) {
+				s => { this.SetSimulationState(s); },
+				() => { this.ResetSimulation(); } ) {
 				},
 			};
 			KeyListener autoscale = new(ConsoleKey.F4, "Scale",
 				() => { return !this._stepEval_Autoscale.IsPaused; },
-				s => { this.SetAutoscaleState(s); }) {
+				s => { this.SetAutoscaleState(s); },
+				() => { this._stepEval_Autoscale.Pause(); this.Scaling.Reset(); }) {
 			};
 			KeyListener[] rotationFunctions = new KeyListener[] {
 				new(ConsoleKey.F5, "Rotate",
 				() => { return this.Rasterizer.Camera.IsAutoIncrementActive; },
-				s => { this.Rasterizer.Camera.IsAutoIncrementActive = s; }) {
+				s => { this.Rasterizer.Camera.IsAutoIncrementActive = s; },
+				() => { this.Rasterizer.Camera.Reset(); }) {
 				},
 				new(ConsoleKey.F6, "α",
 				() => { return this.Rasterizer.Camera.IsRollRotationActive; },
-				s => { this.Rasterizer.Camera.IsRollRotationActive = s; }) {
+				s => { this.Rasterizer.Camera.IsRollRotationActive = s; },
+				() => { this.Rasterizer.Camera.IsRollRotationActive = false; this.Rasterizer.Camera.RotationStepsRoll = 0; }) {
 				},
 				new(ConsoleKey.F7, "β",
 				() => { return this.Rasterizer.Camera.IsPitchRotationActive; },
-				s => { this.Rasterizer.Camera.IsPitchRotationActive = s; }) {
+				s => { this.Rasterizer.Camera.IsPitchRotationActive = s; },
+				() => { this.Rasterizer.Camera.IsPitchRotationActive = false; this.Rasterizer.Camera.RotationStepsPitch = 0; }) {
 				},
 				new(ConsoleKey.F8, "γ",
 				() => { return this.Rasterizer.Camera.IsYawRotationActive; },
-				s => { this.Rasterizer.Camera.IsYawRotationActive = s; }) {
+				s => { this.Rasterizer.Camera.IsYawRotationActive = s; },
+				() => { this.Rasterizer.Camera.IsYawRotationActive = false; this.Rasterizer.Camera.RotationStepsYaw = 0; }) {
 				},
 			};
 
@@ -293,6 +312,13 @@ namespace ParticleSimulator.Engine {
 					? ConsumptionType.Consume
 					: ConsumptionType.ReadImmediate;
 			}
+		}
+
+		private void ResetSimulation() {
+			bool paused = this.IsPaused;
+			if (!paused) this.Pause();
+			this._stepEval_Simulate.Restart();
+			if (!paused) this.Resume();
 		}
 	}
 }

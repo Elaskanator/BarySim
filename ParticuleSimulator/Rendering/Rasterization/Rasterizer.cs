@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using ParticleSimulator.Engine;
 using ParticleSimulator.Engine.Threading;
@@ -89,6 +88,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				}
 			}
 			
+			float densityScalar = 2f * Parameters.GRAVITY_RADIAL_DENSITY / this.InternalScaleFactor;
+
 			Pixel[] results = new Pixel[this.OutNumPixels];
 			float?[] ranks = new float?[this.OutNumPixels];
 			bool any = false;
@@ -120,7 +121,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 							}
 						}
 						if (any2) {
-							ranks[idx] = this.GetRank(scalings, bin, (float)totalCount / count, totalDensity / count);
+							ranks[idx] = this.GetRank(scalings, bin, (float)totalCount / count, densityScalar * totalDensity / count);
 							results[idx] = new(x, y, ranks[idx].Value);
 						}
 					}
@@ -129,7 +130,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				for (int i = 0; i < this.OutNumPixels; i++) {
 					if (counts[i] > 0) {
 						any = true;
-						ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densities[i]);
+						ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densityScalar * densities[i]);
 						results[i] = new(nearest[i].X, nearest[i].Y, ranks[i].Value);
 					}
 				}

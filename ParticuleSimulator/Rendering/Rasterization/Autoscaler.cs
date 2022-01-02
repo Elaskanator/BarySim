@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Models;
+using ParticleSimulator.Engine;
 using ParticleSimulator.Engine.Threading;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Autoscaler {
-		public Autoscaler() {
+		public Autoscaler(SynchronousBuffer<float[]> resource) {
+			this._resource = resource;
+
 			if (Parameters.COLOR_USE_FIXED_BANDS)
 				this.Values = Parameters.COLOR_FIXED_BANDS ?? new float[0];
 			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth) {
@@ -22,11 +25,27 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						Parameters.COLOR_ARRAY.Length)
 					.Select(i => (float)i)
 					.ToArray();
+
+			this._resource.Overwrite(this.Values);
+			this.ValuesInitial = (float[])this.Values.Clone();
 		}
 
+		public readonly float[] ValuesInitial;
 		public float[] Values { get; private set; }
+
 		private SimpleExponentialMovingAverage _min = new SimpleExponentialMovingAverage(Parameters.AUTOSCALE_STRENGTH);
 		private SimpleExponentialMovingAverage _max = new SimpleExponentialMovingAverage(Parameters.AUTOSCALE_STRENGTH);
+		private readonly SynchronousBuffer<float[]> _resource;
+		private readonly object _lock = new();
+
+		public void Reset() {
+			lock (this._lock) {
+				this.Values = (float[])this.ValuesInitial.Clone();
+				this._min.Reset();
+				this._max.Reset();
+				this._resource.Overwrite(this.Values);
+			}
+		}
 
 		public float[] Update(EvalResult prepResults, object[] parameters) {
 			float[] scalingValues = ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value).ToArray();
@@ -91,8 +110,10 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 					this.Values = results.ToArray();
 				} else {
-					this._min.Update(stats.GetPercentileValue(100d / (Parameters.COLOR_ARRAY.Length + 1)));
-					this._max.Update(stats.GetPercentileValue(100d * (1d - 1d / (Parameters.COLOR_ARRAY.Length + 1))));
+					lock (this._lock) {
+						this._min.Update(stats.GetPercentileValue(100d / (Parameters.COLOR_ARRAY.Length + 1)));
+						this._max.Update(stats.GetPercentileValue(100d * (1d - 1d / (Parameters.COLOR_ARRAY.Length + 1))));
+					}
 					float min, range;
 
 					if (Parameters.AUTOSCALE_FIXED_MIN >= 0 && Parameters.AUTOSCALE_FIXED_MAX >= 0) {
@@ -114,7 +135,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						max = (float)this._max.Current;
 					}
 					range = max - min;
-					int numSteps = (int)(range * 5D);
+					int numSteps = (int)(range * 10D);
 					numSteps = numSteps <= Parameters.COLOR_ARRAY.Length ? numSteps : Parameters.COLOR_ARRAY.Length;
 					if (numSteps > 0) {
 						float step = range / (numSteps + 1);

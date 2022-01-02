@@ -3,18 +3,20 @@ using Generic.Extensions;
 
 namespace ParticleSimulator.Engine {
 	public class KeyListener {
-		public KeyListener(ConsoleKey key, string label, Func<bool> getter, Action<bool> setter) {
+		public KeyListener(ConsoleKey key, string label, Func<bool> getter, Action<bool> setter, Action resetter = null) {
 			this.Key = key;
 			this.Label = label;
-			this._getter = getter;
-			this._setter = setter;
+			this.Getter = getter;
+			this.Setter = setter;
+			this.Resetter = resetter;
 		}
 
 		public ConsoleKey Key { get; private set; }
 		public string Label { get; private set; }
 
-		private readonly Func<bool> _getter;
-		private readonly Action<bool> _setter;
+		public readonly Func<bool> Getter;
+		public readonly Action<bool> Setter;
+		public readonly Action Resetter;
 
 		public ConsoleColor ForegroundActive = ConsoleColor.Black;
 		public ConsoleColor ForegroundInactive = ConsoleColor.Gray;
@@ -25,10 +27,10 @@ namespace ParticleSimulator.Engine {
 		public ConsoleColor BackgroundSuspended = ConsoleColor.DarkYellow;
 
 		public void Toggle() =>
-			this._setter(!this._getter());
+			this.Setter(!this.Getter());
 
 		public ConsoleExtensions.CharInfo[] ToConsoleCharString() {
-			bool state = this._getter();
+			bool state = this.Getter();
 			ConsoleColor foreground = state
 				? Program.Engine.IsPaused
 					? this.ForegroundSuspended

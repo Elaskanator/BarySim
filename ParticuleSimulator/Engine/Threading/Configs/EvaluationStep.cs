@@ -5,6 +5,7 @@ namespace ParticleSimulator.Engine.Threading {
 	public struct EvaluationStep {
 		public string Name;
 
+		public Action InitFn;
 		public Func<object> GeneratorFn;
 		public Action<EvalResult, object[]> EvaluatorFn;
 		public Func<EvalResult, object[], object> CalculatorFn;

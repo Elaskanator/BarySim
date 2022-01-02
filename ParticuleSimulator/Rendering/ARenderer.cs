@@ -41,8 +41,7 @@ namespace ParticleSimulator.Rendering {
 			}
 		}
 
-		public abstract void Init();
-		public abstract void Startup();
+		public virtual void Init() { }
 
 		protected abstract object PrepareBuffer(float[] scaling, Pixel[] buffer);
 		protected abstract void DrawOverlays(EvalResult prepResults, float[] scaling, object buffer);

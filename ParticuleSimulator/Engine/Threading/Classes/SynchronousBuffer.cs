@@ -16,10 +16,10 @@ namespace ParticleSimulator.Engine {
 			this.EnqueueTimings_Ticks = new(Parameters.PERF_SMA_ALPHA);
 			this.DequeueTimings_Ticks = new(Parameters.PERF_SMA_ALPHA);
 
-			this._latch_canReturnFromAdd = new(false);
 			//this.RefreshReleaseListeners = Array.Empty<AutoResetEvent>();
 			this.RefreshListeners = new();
 			this._queue = new T[this.BufferSize];
+			this._latch_canReturnFromAdd = new(size > 0);
 		}
 
 		~SynchronousBuffer() { this.Dispose(false); }
@@ -153,17 +153,21 @@ namespace ParticleSimulator.Engine {
 			}
 			return result;
 		}
-		
-		public void Dispose() { this.Dispose(true); GC.SuppressFinalize(this); }
-		private void Dispose(bool fromDispose) {
-			if (fromDispose) {
-				this._latch_hasAny.Dispose();
-				this._latch_canAdd.Dispose();
-				this._latch_canReturnFromAdd.Dispose();
-				this._latch_canPop.Dispose();
-				foreach (AutoResetEvent e in this.RefreshListeners)
-					e.Dispose();
-			}
+
+		public void Reset() {
+			this.Count = 0;
+			this.TotalEnqueues = 0;
+			this.TotalDequeues = 0;
+			
+			this._timerEnqueue.Reset();
+			this._timerDequeue.Reset();
+			
+			if (this.BufferSize > 0)
+				this._latch_canReturnFromAdd.Set();
+			else this._latch_canReturnFromAdd.Reset();
+			this._latch_canAdd.Set();
+			this._latch_canPop.Reset();
+			this._latch_hasAny.Reset();
 		}
 
 		// MUST lock and enforce size constraints before invoking either Pop or Add
@@ -193,6 +197,18 @@ namespace ParticleSimulator.Engine {
 			
 			foreach (AutoResetEvent e in this.RefreshListeners)
 				e.Set();
+		}
+		
+		public void Dispose() { this.Dispose(true); GC.SuppressFinalize(this); }
+		private void Dispose(bool fromDispose) {
+			if (fromDispose) {
+				this._latch_hasAny.Dispose();
+				this._latch_canAdd.Dispose();
+				this._latch_canReturnFromAdd.Dispose();
+				this._latch_canPop.Dispose();
+				foreach (AutoResetEvent e in this.RefreshListeners)
+					e.Dispose();
+			}
 		}
 	}
 }

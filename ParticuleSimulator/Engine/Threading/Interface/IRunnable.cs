@@ -10,9 +10,9 @@ namespace ParticleSimulator.Engine {
 		DateTime? StartTimeUtc { get; }
 		DateTime? EndTimeUtc { get; }
 
-		void Start();
+		void Start(bool running = true);
 		void Pause();
-		void SetRunningState(bool state);
+		void SetRunningState(bool running);
 		void Resume();
 		void Stop();
 		void Restart();

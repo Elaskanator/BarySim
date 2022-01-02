@@ -5,14 +5,14 @@ using ParticleSimulator.Engine.Threading;
 
 namespace ParticleSimulator.Engine {
 	public static class DataGatherer {
-		public static IDataGatherer New(IIngestedResource config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal) =>
+		public static IDataGatherer New(IIngestedResource config, AutoResetEvent readySignal, AutoResetEvent doneSignal, AutoResetEvent refreshSignal) =>
 			(IDataGatherer)Activator.CreateInstance(
 				typeof(DataGatherer<>).MakeGenericType(config.Resource.DataType),
 				config, readySignal, doneSignal, refreshSignal);
 	}
 
 	public class DataGatherer<T> : ACalculationHandler, IDataGatherer {
-		public DataGatherer(IngestedResource<T> config, EventWaitHandle readySignal, EventWaitHandle doneSignal, EventWaitHandle refreshSignal)
+		public DataGatherer(IngestedResource<T> config, AutoResetEvent readySignal, AutoResetEvent doneSignal, AutoResetEvent refreshSignal)
 		: base (readySignal, doneSignal) {
 			this.Config = config;
 			this._refreshSignal = refreshSignal;
@@ -29,8 +29,17 @@ namespace ParticleSimulator.Engine {
 		public override TimeSpan? SignalTimeout => null;
 		public override TimeSynchronizer Synchronizer => null;
 
-		private readonly EventWaitHandle _refreshSignal;
+		private readonly AutoResetEvent _refreshSignal;
 		private T _myValue;
+
+		protected override void Init(bool running) {
+			this.Skips = 0;
+			this.Reuses = 0;
+			this._myValue = default;
+
+			if (!(this._refreshSignal is null))
+				this._refreshSignal.Reset();
+		}
 
 		protected override void Process(EvalResult prepResult) {
 			bool allowAccess = true, allowReuse = false;

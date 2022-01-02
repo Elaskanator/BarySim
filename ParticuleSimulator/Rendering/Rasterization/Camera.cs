@@ -28,6 +28,20 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		public Vector<float>[] RotationMatrixColumns { get; private set; }
 		public bool IsRotationNonzero { get; private set; }
 
+		public int RotationStepsPitch = 0;
+		public int RotationStepsYaw = 0;
+		public int RotationStepsRoll = 0;
+
+		public void Reset() {
+			this.IsAutoIncrementActive = false;
+			//this.IsPitchRotationActive = false;
+			//this.IsYawRotationActive = false;
+			//this.IsRollRotationActive = false;
+			this.RotationStepsPitch = 0;
+			this.RotationStepsYaw = 0;
+			this.RotationStepsRoll = 0;
+		}
+
 		public void SetRange(Vector<float> left, Vector<float> right) {
 			this.Left = left;
 			this.Right = right;
@@ -74,21 +88,18 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			} else return offsetV + this.Center;
 		}
 
-		private int _rotationStepsPitch = 0;
-		private int _rotationStepsYaw = 0;
-		private int _rotationStepsRoll = 0;
 		internal void IncrementRotation() {
 			this.Set3DRotation(
-				Parameters.WORLD_ROTATION_RADS_PER_STEP * this._rotationStepsPitch,
-				Parameters.WORLD_ROTATION_RADS_PER_STEP * this._rotationStepsYaw,
-				Parameters.WORLD_ROTATION_RADS_PER_STEP * this._rotationStepsRoll);
+				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsPitch,
+				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsYaw,
+				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsRoll);
 			if (this.IsAutoIncrementActive) {
 				if (this.IsPitchRotationActive)
-					this._rotationStepsPitch++;
+					this.RotationStepsPitch++;
 				if (this.IsYawRotationActive)
-					this._rotationStepsYaw++;
+					this.RotationStepsYaw++;
 				if (this.IsRollRotationActive)
-					this._rotationStepsRoll++;
+					this.RotationStepsRoll++;
 			} 
 		}
 	}

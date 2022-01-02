@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Generic.Models;
 using ParticleSimulator.Engine.Threading;
@@ -9,12 +10,14 @@ namespace ParticleSimulator.Engine {
 		private const int _warn_interval_check_ms = 500;
 		private static int _globalId = 0;
 
-		public ACalculationHandler(EventWaitHandle[] signals, EventWaitHandle[] returns) {
-			this.ReadySignals = signals ?? Array.Empty<EventWaitHandle>();
-			this.DoneSignals = returns ?? Array.Empty<EventWaitHandle>();
+		public ACalculationHandler(AutoResetEvent[] signals, AutoResetEvent[] returns) {
+			this.ReadySignals = signals ?? Array.Empty<AutoResetEvent>();
+			this.DoneSignals = returns ?? Array.Empty<AutoResetEvent>();
+			
+			this._readySignalStartingStates = this.ReadySignals.Select(s => s.WaitOne(0)).ToArray();
 		}
-		public ACalculationHandler(EventWaitHandle readySignal, EventWaitHandle doneSignal)
-		: this(new EventWaitHandle[] { readySignal }, new EventWaitHandle[] { doneSignal }) { }
+		public ACalculationHandler(AutoResetEvent readySignal, AutoResetEvent doneSignal)
+		: this(new AutoResetEvent[] { readySignal }, new AutoResetEvent[] { doneSignal }) { }
 
 		~ACalculationHandler() { this.Dispose(false); }
 
@@ -25,8 +28,8 @@ namespace ParticleSimulator.Engine {
 		public bool IsOpen { get; private set; }
 		public DateTime? StartTimeUtc { get; private set; }
 		public DateTime? EndTimeUtc { get; private set; }
-		public EventWaitHandle[] ReadySignals { get; private set; }
-		public EventWaitHandle[] DoneSignals { get; private set; }
+		public AutoResetEvent[] ReadySignals { get; private set; }
+		public AutoResetEvent[] DoneSignals { get; private set; }
 
 		public bool IsActive { get; private set; }
 		public bool IsPaused { get; private set; }
@@ -50,19 +53,21 @@ namespace ParticleSimulator.Engine {
 		protected virtual int StopWarnTimeMs => 1000;
 
 		private Thread _thread;
-		private EventWaitHandle _pauseSignal = new ManualResetEvent(true);
+		private ManualResetEvent _pauseSignal = new ManualResetEvent(true);
 		private Stopwatch _timer = new Stopwatch();
 		private Stopwatch _timerFull = new Stopwatch();
 		private Stopwatch _timerFullPunctual = new Stopwatch();
+
+		private readonly bool[] _readySignalStartingStates;
 
 		protected virtual void PreProcess(EvalResult prepResult) { }
 		protected abstract void Process(EvalResult prepResult);
 		protected virtual void PostProcess(EvalResult result) { }
 
-		protected virtual void Init() { }
-		protected virtual void PostStop() { }
+		protected virtual void Init(bool running) { }
+		protected virtual void Shutdown() { }
 
-		public void Start() {
+		public void Start(bool running = true) {
 			if (this.IsOpen) {
 				throw new InvalidOperationException("Already open");
 			} else {
@@ -81,7 +86,15 @@ namespace ParticleSimulator.Engine {
 				this.IsOpen = true;
 				this.StartTimeUtc = DateTime.UtcNow;
 
-				this.Init();
+				this.Init(running);
+
+				for (int i = 0; i < this.ReadySignals.Length; i++)
+					if (this._readySignalStartingStates[i])
+						this.ReadySignals[i].Set();
+					else this.ReadySignals[i].Reset();
+
+				this.SetRunningState(running);
+
 				this._thread = new Thread(Runner);
 				this._thread.Start();
 			}
@@ -111,18 +124,19 @@ namespace ParticleSimulator.Engine {
 		public void Stop() {
 			if (this.IsOpen) {
 				this.IsOpen = false;
+				this.Shutdown();
+
 				this._thread.Interrupt();
 				DateTime startUtc = DateTime.UtcNow;
 				if (!this._thread.Join(this.StopWarnTimeMs))
 					this.PromptAbort(startUtc);
-				this.PostStop();
 				this.EndTimeUtc = DateTime.UtcNow;
 			} else throw new InvalidOperationException("Not open");
 		}
 
 		public void Restart() {
 			this.Stop();
-			this.Restart();
+			this.Start(!this.IsPaused);
 		}
 
 		public void Runner() {
@@ -180,12 +194,6 @@ namespace ParticleSimulator.Engine {
 						evalResult.ExclusiveTime = this._timer.Elapsed;
 						this.ExclusiveTime.Update(this._timer.Elapsed);
 
-						this.PostProcess(evalResult);
-
-						this.IterationCount++;
-						if (isPunctual)
-							this.FullIterationCount++;
-
 						this._timerFull.Stop();
 						this.FullTime.Update(this._timerFull.Elapsed);
 						evalResult.TotalTime = this._timerFull.Elapsed;
@@ -195,6 +203,12 @@ namespace ParticleSimulator.Engine {
 							evalResult.TotalTimePunctual = this._timerFullPunctual.Elapsed;
 							this._timerFullPunctual.Restart();
 						}
+
+						this.PostProcess(evalResult);
+
+						this.IterationCount++;
+						if (isPunctual)
+							this.FullIterationCount++;
 
 						if (!(this.Callback is null))
 							this.Callback(evalResult);

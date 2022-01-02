@@ -7,13 +7,13 @@ using ParticleSimulator.Engine.Threading;
 
 namespace ParticleSimulator.Engine {
 	public class ProcessThread : ACalculationHandler {
-		public ProcessThread(EvaluationStep config, IDataGatherer[] dataGatherers, EventWaitHandle[] readySignals, EventWaitHandle[] doneSignals)
+		public ProcessThread(EvaluationStep config, IDataGatherer[] dataGatherers, AutoResetEvent[] readySignals, AutoResetEvent[] doneSignals)
 		: base(readySignals, doneSignals) {
 			this.Config = config;
 			this._dataGatherers = dataGatherers ?? Array.Empty<IDataGatherer>();
 		}
 
-		public static ProcessThread New(bool startUnpaused, EvaluationStep config) {
+		public static ProcessThread New(EvaluationStep config) {
 			int numResources = config.InputResourceUses is null ? 0 : config.InputResourceUses.Length;
 			IDataGatherer[] dataReceivers = new IDataGatherer[numResources];
 			AutoResetEvent[] readySignals = new AutoResetEvent[numResources],
@@ -37,11 +37,9 @@ namespace ParticleSimulator.Engine {
 				dataReceivers.Without(s => s is null).ToArray(),
 				doneSignals.Without(s => s is null).ToArray(),
 				readySignals.Without(s => s is null).ToArray());
-			if (!startUnpaused)
-				result.Pause();
+
 			return result;
 		}
-		public static ProcessThread New(EvaluationStep config) => New(true, config);
 
 		public EvaluationStep Config { get; private set; }
 		
@@ -54,7 +52,10 @@ namespace ParticleSimulator.Engine {
 		private object[] _parameters;
 		private object _result;
 
-		protected override void Init() {
+		protected override void Init(bool running) {
+			if (!(this.Config.InitFn is null))
+				this.Config.InitFn();
+
 			if (!(this._dataGatherers is null))
 				for (int i = 0; i < this._dataGatherers.Length; i++)
 					this._dataGatherers[i].Start();
@@ -86,7 +87,7 @@ namespace ParticleSimulator.Engine {
 			//		WaitHandle.WaitAll(this.Config.OutputResource.RefreshReleaseListeners);
 		}
 
-		protected override void PostStop() {
+		protected override void Shutdown() {
 			if (!(this._dataGatherers is null))
 				for (int i = 0; i < this._dataGatherers.Length; i++)
 					this._dataGatherers[i].Stop();

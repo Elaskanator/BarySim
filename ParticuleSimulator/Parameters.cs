@@ -8,9 +8,11 @@ using ParticleSimulator.Rendering.SystemConsole;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited or to disable the feature
 	public static class Parameters {
-		public static readonly int WINDOW_WIDTH = 100;//Console.LargestWindowWidth;//WINDOW_HEIGHT * 2;
-		public static readonly int WINDOW_HEIGHT = 50;//Console.LargestWindowHeight;// - 1;
-		public const int SUPERSAMPLING = 1;
+		//public static readonly int WINDOW_WIDTH = 100;
+		public static readonly int WINDOW_WIDTH = 128;
+		//public static readonly int WINDOW_HEIGHT = 50;
+		public static readonly int WINDOW_HEIGHT = 64;
+		public const int SUPERSAMPLING = 3;
 		
 		public const int DIM = 3;
 		public const float WORLD_SCALE = 1f;
@@ -19,15 +21,15 @@ namespace ParticleSimulator {
 		public const float Z_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f;// / MathF.Sqrt(2f);
 
-		public const float TARGET_FPS = 30f;
+		public const float TIME_SCALE = 1;//can be any value, including negative
+		public const float TARGET_FPS = 15f;
 		public const bool VSYNC = false;
-		public const float TIME_SCALE = 1f;//can be any value, including negative
 
 		//using top and bottom halves of each character to get double the verticle resolution
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 20;
+		public const int PARTICLES_GROUP_MAX = 1 << 16;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const bool EXPORT_FRAMES = false;
@@ -54,6 +56,7 @@ namespace ParticleSimulator {
 		
 		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
 		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
+		//public static readonly ConsoleColor[] COLOR_ARRAY = new ConsoleColor[] { ConsoleColor.White };
 		public const float AUTOSCALE_FIXED_MIN = -1f;
 		public const float AUTOSCALE_FIXED_MAX = -1f;
 		public const bool AUTOSCALE_PERCENTILE = false;
@@ -78,8 +81,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 1f;
-		public const float GRAVITY_MAX_STARTING_MASS = 1f;
+		public const float GRAVITY_MIN_STARTING_MASS = 40f;
+		public const float GRAVITY_MAX_STARTING_MASS = 40f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
@@ -128,7 +131,6 @@ namespace ParticleSimulator {
 
 		public static readonly bool AUTOSCALER_ENABLE =
 			!COLOR_USE_FIXED_BANDS && COLOR_ARRAY.Length > 1
-			&& COLOR_METHOD != ParticleColoringMethod.Depth
 			&& COLOR_METHOD != ParticleColoringMethod.Group
 			&& COLOR_METHOD != ParticleColoringMethod.Random;
 		#endregion Aux

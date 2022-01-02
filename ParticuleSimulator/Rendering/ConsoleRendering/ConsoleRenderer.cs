@@ -12,6 +12,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			this.NumChars = Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT;
 			this._lastFrame = new ConsoleExtensions.CharInfo[NumChars];
 			this._perfMon = new PerfMon(this);
+			this._perfMon.Init();
 		}
 
 		public static ConsoleExtensions.CharInfo BuildChar(ConsoleColor bottomColor, ConsoleColor topColor) =>
@@ -39,10 +40,6 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			ConsoleExtensions.DisableResizing();//note this doesn't work to disable OS window snapping
 			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 
-			this._perfMon.Init();
-		}
-
-		public override void Startup() {
 			Thread titleMon = new(this.ConsoleTitleUpdate);
 			titleMon.Start();
 		}
@@ -136,8 +133,8 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		}
 
 		private void DrawLegend(float[] scaling, ConsoleExtensions.CharInfo[] buffer) {
-			int numColors = scaling.Length;
-			if (numColors > 0) {
+			if (!(scaling is null) && scaling.Length > 0) {
+				int numColors = scaling.Length;
 				bool isDiscrete = false;//Parameters.DIM < 3 && Parameters.SIM_TYPE == SimulationType.Boid;
 				string header = Parameters.COLOR_METHOD.ToString();
 

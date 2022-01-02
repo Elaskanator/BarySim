@@ -16,8 +16,8 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		private HeaderValue[] _statsHeaderValues;
 
 		public void Init() {
-			_statsHeaderValues = new HeaderValue[2 + this._engine.Evaluators.Length];
-			this.HeaderWidth = ((this._engine.Evaluators.Length + 1) * (1 + Parameters.NUMBER_SPACING)) + 8;
+			this._statsHeaderValues = new HeaderValue[1 + this._engine.Evaluators.Length];
+			this.HeaderWidth = (this._engine.Evaluators.Length * (1 + Parameters.NUMBER_SPACING)) + 8;
 			this.Graph = new PerfGraph(this.HeaderWidth);
 		}
 
@@ -46,27 +46,21 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					ChooseFrameIntervalColor(this._engine.Renderer.FpsTimings.LastUpdate.TotalMilliseconds),
 					ConsoleColor.Black);
 			else _statsHeaderValues[0] = new("FPS", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
-			if (this._engine.Renderer.FrameTimings.NumUpdates > 0)
-				_statsHeaderValues[1] = new("ms",
-					this._engine.Renderer.FrameTimings.Current.TotalMilliseconds,
-					ChooseFrameIntervalColor(this._engine.Renderer.FrameTimings.LastUpdate.TotalMilliseconds),
-					ConsoleColor.Black);
-			else _statsHeaderValues[1] = new("ms", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 
 			string label;
 			for (int i = 0; i < this._engine.Evaluators.Length; i++) {
 				label = this._engine.Evaluators[i].Name[0].ToString();
 				if (this._engine.Evaluators[i].IsComputing && (this._engine.Evaluators[i].FullTimePunctual.NumUpdates == 0 || this._engine.Evaluators[i].FullTimePunctual.Current.TotalMilliseconds >= Parameters.PERF_WARN_MS))
-					_statsHeaderValues[i + 2] = new(label,
+					_statsHeaderValues[i + 1] = new(label,
 						DateTime.UtcNow.Subtract(this._engine.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds,
 						ConsoleColor.White,
 						ConsoleColor.DarkRed);
 				else if (this._engine.Evaluators[i].ExclusiveTime.NumUpdates > 0)
-					_statsHeaderValues[i + 2] = new(label,
+					_statsHeaderValues[i + 1] = new(label,
 						this._engine.Evaluators[i].ExclusiveTime.LastUpdate.TotalMilliseconds,
 						ChooseFrameIntervalColor(this._engine.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds),
 						ConsoleColor.Black);
-				else _statsHeaderValues[i + 2] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
+				else _statsHeaderValues[i + 1] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 			}
 		}
 

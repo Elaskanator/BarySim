@@ -27,5 +27,8 @@ namespace ParticleSimulator.Rendering.Exporter {
 		private void Save(Bitmap render) {
 			throw null;
 		}
+
+		public void Reset() {
+		}
 	}
 }
