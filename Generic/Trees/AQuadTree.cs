@@ -11,6 +11,9 @@ namespace Generic.Models.Trees {
 			this.CornerLeft = cornerLeft;
 			this.CornerRight = cornerRight;
 			this.Center = this.Midpoint(cornerLeft, cornerRight);
+			this._limitReached =
+				this.EqualsAny(this.CornerLeft, this.Center)
+				|| this.EqualsAny(this.CornerRight, this.Center);
 		}
 
 		protected abstract AQuadTree<TItem, TCorner> NewNode(int directionMask, bool isExpansion);
@@ -23,9 +26,8 @@ namespace Generic.Models.Trees {
 		public TCorner Center { get; private set; }
 		public TCorner CornerRight { get; private set; }
 
-		public override bool LimitReached =>
-			this.EqualsAny(this.CornerLeft, this.Center)
-			|| this.EqualsAny(this.CornerRight, this.Center);
+		private readonly bool _limitReached;
+		public override bool LimitReached => this._limitReached;
 		
 		public override bool DoesEncompass(TItem item) =>//left-handed convention [a, b)
 			this.BitmaskLessThan(item.Position, this.CornerLeft) == 0

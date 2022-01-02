@@ -10,19 +10,33 @@ using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation {
 	public class BarnesHutTree : QuadTreeSIMD<Particle> {
+		public BarnesHutTree(int dim, Vector<float> size) : base(dim, size) {
+			this.DiagonalSize = (this.CornerRight - this.CornerLeft).Magnitude();
+		}
+		public BarnesHutTree(int dim) : base(dim, Vector<float>.One) {
+			this.DiagonalSize = (this.CornerRight - this.CornerLeft).Magnitude();
+		}
 		private BarnesHutTree(int dim, Vector<float> corner1, Vector<float> corner2, QuadTreeSIMD<Particle> parent)
-		: base(dim, corner1, corner2, parent) { }
-		public BarnesHutTree(int dim, Vector<float> size) : base(dim, size) { }
-		public BarnesHutTree(int dim) : base(dim, Vector<float>.One) { }
+		: base(dim, corner1, corner2, parent) {
+			this.DiagonalSize = (this.CornerRight - this.CornerLeft).Magnitude();
+		}
 
 		protected override BarnesHutTree NewNode(QuadTreeSIMD<Particle> parent, Vector<float> cornerLeft, Vector<float> cornerRight) =>
 			new BarnesHutTree(this.Dim, cornerLeft, cornerRight, parent);
 
+		public readonly float DiagonalSize;
+
 		public override int Capacity => Parameters.QUADTREE_NODE_CAPACITY;
-		public void Do() {
-			ATree<Particle> node = this;
-			while (!node.IsLeaf)
-				node = node.Children[0];
+		
+		public bool CanApproximateInteraction(BarnesHutTree other) {
+			float dist = Vector
+				.ConditionalSelect(
+					Vector.LessThan(this.Center, other.Center),
+					other.CornerLeft - this.CornerRight,
+					this.CornerLeft - other.CornerRight)
+				.Magnitude();
+			return Parameters.WORLD_EPSILON < dist
+				&& Parameters.BARYON_ACCURACY > this.DiagonalSize / dist;
 		}
 
 		//public bool[] CompleteChildren { get; private set; }

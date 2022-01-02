@@ -114,7 +114,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						max = (float)this._max.Current;
 					}
 					range = max - min;
-					int numSteps = (int)range;
+					int numSteps = (int)(range * 5D);
 					numSteps = numSteps <= Parameters.COLOR_ARRAY.Length ? numSteps : Parameters.COLOR_ARRAY.Length;
 					if (numSteps > 0) {
 						float step = range / (numSteps + 1);

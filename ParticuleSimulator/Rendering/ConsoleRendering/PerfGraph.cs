@@ -254,12 +254,12 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				else if (yIdx >= (int)yTime010Scaled && yIdx <= (int)yTime090Scaled)
 					colors[yIdx] = ConsoleColor.Gray;
 				
-				else if (yIdx >= (int)yFps000Scaled && yIdx <= (int)yFps100Scaled)
-					colors[yIdx] = ConsoleColor.DarkGray;
-				else if (yIdx >= (int)yTime000Scaled && yIdx <= (int)yTime100Scaled)
-					colors[yIdx] = ConsoleColor.DarkGray;
+				//else if (yIdx >= (int)yFps000Scaled && yIdx <= (int)yFps100Scaled)
+				//	colors[yIdx] = ConsoleColor.DarkGray;
+				//else if (yIdx >= (int)yTime000Scaled && yIdx <= (int)yTime100Scaled)
+				//	colors[yIdx] = ConsoleColor.DarkGray;
 
-				else if (fps > 0d && yIdx >= (int)yTargetTimeScaled && yIdx > (int)yTime100Scaled && yIdx < (int)yFps050Scaled) {
+				else if (fps > 0d && yIdx >= (int)yTargetTimeScaled && yIdx < (int)yFps050Scaled) {
 					if (yIdx <= (int)yFps010Scaled)
 						colors[yIdx] = ConsoleColor.Red;
 					else if (yIdx <= (int)yFps025Scaled)

@@ -56,7 +56,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			string label;
 			for (int i = 0; i < this._engine.Evaluators.Length; i++) {
 				label = this._engine.Evaluators[i].Name[0].ToString();
-				if (!prepResults.PrepPunctual && !this._engine.IsPaused && this._engine.Evaluators[i].IsComputing && this._engine.Evaluators[i].Name != "Draw")
+				if (this._engine.Evaluators[i].IsComputing && (this._engine.Evaluators[i].FullTimePunctual.NumUpdates == 0 || this._engine.Evaluators[i].FullTimePunctual.Current.TotalMilliseconds >= Parameters.PERF_WARN_MS))
 					_statsHeaderValues[i + 2] = new(label,
 						DateTime.UtcNow.Subtract(this._engine.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds,
 						ConsoleColor.White,

@@ -39,11 +39,27 @@ namespace ParticleSimulator {
 			set { this.Momentum = this.Mass * value; }}
 
 		public void ApplyTimeStep(Vector<float> acceleration, float timeStep) {
-			if (!Parameters.WORLD_BOUNCING || !this.BounceWalls(timeStep))
-				/*this.Velocity += acceleration
-					.Clamp(Parameters.PARTICLE_MAX_ACCELERATION / timeStep)
-					* timeStep;*/
-				this.Position += this.Velocity;// * timeStep;
+			Vector<float> velocity = this.Velocity;
+			Vector<float> displacement = timeStep*velocity;
+			Vector<float> newP = this.Position + displacement;
+
+			if (Parameters.WORLD_BOUNCING) {
+				Vector<int>
+					lesses = Vector.LessThan(newP, Parameters.WORLD_LEFT_INF),
+					greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_RIGHT_INF),
+					union = lesses | greaters;
+				if (Vector.LessThanAny(union, Vector<int>.Zero)) {
+					velocity = Vector.ConditionalSelect(union, -velocity, velocity);
+					newP = -newP + 2f
+						* Vector.ConditionalSelect(lesses,
+							Parameters.WORLD_LEFT,
+							Vector.ConditionalSelect(greaters,
+								Parameters.WORLD_RIGHT,
+								newP));
+					this.Velocity = velocity;
+				}
+			}
+			this.Position = newP;
 		}
 
 		//private void CheckOutOfBounds() {
@@ -122,37 +138,5 @@ namespace ParticleSimulator {
 		//		this.Position = VectorFunctions.New(coords);
 		//	return result;
 		//}
-
-		public bool BounceWalls(float timeStep) {//TODODODO
-			Vector<float> velocity = this.Velocity;
-			Vector<float> displacement = timeStep*velocity;
-			Vector<float> newP = this.Position + displacement;
-			bool result = false;
-			Vector<int>
-				lessThans = Vector.LessThan(newP, Parameters.WORLD_LEFT),
-				greaterThans = Vector.ConditionalSelect(
-					VectorFunctions.DimensionSignals[Parameters.DIM],
-					Vector.GreaterThanOrEqual(newP, Parameters.WORLD_RIGHT),
-					Vector<int>.Zero);
-			if (Vector.LessThanAny(lessThans, Vector<int>.Zero) || Vector.LessThanAny(greaterThans, Vector<int>.Zero)) {
-				result = true;
-				velocity = Vector.ConditionalSelect(
-					lessThans,
-					-velocity,
-					Vector.ConditionalSelect(
-						greaterThans,
-						-velocity,
-						velocity));
-				this.Position += Vector.ConditionalSelect(//original velocity
-					lessThans,
-					Parameters.WORLD_LEFT - this.Position - displacement,
-					Vector.ConditionalSelect(
-						greaterThans,
-						this.Position - Parameters.WORLD_RIGHT + displacement,
-						Vector<float>.Zero));
-				this.Velocity = velocity;
-			}
-			return result;
-		}
 	}
 }

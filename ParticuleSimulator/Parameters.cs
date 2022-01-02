@@ -8,32 +8,34 @@ using ParticleSimulator.Rendering.SystemConsole;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited or to disable the feature
 	public static class Parameters {
-		public const bool EXPORT_FRAMES = false;
-		public const string EXPORT_DIR = null;
-
-		public const int PARTICLES_GROUP_COUNT = 1 << 20;
-		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1;
-		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
-
-		public const int DIM = 3;
-		public const float TIME_SCALE = 5f;//can be any value, including negative
-		public const float WORLD_SCALE = 1f;
-		//using top and bottom halves of each character to get double the verticle resolution
 		public static readonly int WINDOW_WIDTH = 100;//Console.LargestWindowWidth;//WINDOW_HEIGHT * 2;
 		public static readonly int WINDOW_HEIGHT = 50;//Console.LargestWindowHeight;// - 1;
-
+		public const int SUPERSAMPLING = 1;
+		
+		public const int DIM = 3;
+		public const float WORLD_SCALE = 1f;
 		public const float X_SCALE = 1f;
 		public const float Y_SCALE = 1f;
 		public const float Z_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f;// / MathF.Sqrt(2f);
-		
-		public const float TARGET_FPS = 30;
-		public const float WORLD_ROTATION_RADS_PER_STEP = 0.004f;
 
+		public const float TARGET_FPS = 30f;
 		public const bool VSYNC = false;
-		public const int SUPERSAMPLING = 1;
-		public const int RASTERIZER_THREADS = 4;
+		public const float TIME_SCALE = 1f;//can be any value, including negative
+
+		//using top and bottom halves of each character to get double the verticle resolution
+
+		public const int PARTICLES_GROUP_COUNT = 1;
+		public const int PARTICLES_GROUP_MIN = 1;
+		public const int PARTICLES_GROUP_MAX = 1 << 20;
+		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
+
+		public const bool EXPORT_FRAMES = false;
+		public const string EXPORT_DIR = null;
+
+		public const float WORLD_ROTATION_RADS_PER_STEP = 0.004f;
+		public const float BARYON_ACCURACY = 0.5f;
+
 		public const float PIXEL_OVERLAP_THRESHOLD = 0.5f;
 		public const int DETERMINISTIC_RANDOM_SEED = 0;
 
@@ -50,7 +52,7 @@ namespace ParticleSimulator {
 		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
 		
-		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Overlap;
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
 		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
 		public const float AUTOSCALE_FIXED_MIN = -1f;
 		public const float AUTOSCALE_FIXED_MAX = -1f;
@@ -66,7 +68,7 @@ namespace ParticleSimulator {
 		public const bool SYNC_SIMULATION = true;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
 
 		#region Gravity
-		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 0.1f;
+		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 0f;
 
 		public const float GRAVITATIONAL_CONSTANT = 6E-10f;
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;
@@ -98,7 +100,9 @@ namespace ParticleSimulator {
 		#endregion Gravity
 		
 		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-X_SCALE * WORLD_SCALE / 2f, -Y_SCALE * WORLD_SCALE / 2f, -Z_SCALE * WORLD_SCALE / 2f);
+		public static readonly Vector<float> WORLD_LEFT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_LEFT, new Vector<float>(float.NegativeInfinity));
 		public static readonly Vector<float> WORLD_RIGHT = VectorFunctions.New(X_SCALE * WORLD_SCALE / 2f, Y_SCALE * WORLD_SCALE / 2f, Z_SCALE * WORLD_SCALE / 2f);
+		public static readonly Vector<float> WORLD_RIGHT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_RIGHT, new Vector<float>(float.PositiveInfinity));
 		public static readonly Vector<float> WORLD_SIZE = WORLD_RIGHT - WORLD_LEFT;
 
 		#region Aux
@@ -108,7 +112,6 @@ namespace ParticleSimulator {
 
 		public const float TARGET_FPS_DEFAULT = 30f;
 		public const int PERF_WARN_MS = 2000;
-		public const int CONSOLE_TITLE_INTERVAL_MS = 500;
 		public const int AUTOSCALE_INTERVAL_MS = 0;
 		public const float AUTOSCALE_STRENGTH = 0.25f;
 		public const float AUTOSCALE_DIFF_THRESH = 0f;
