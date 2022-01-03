@@ -18,9 +18,7 @@ namespace ParticleSimulator.Engine {
 		private readonly int _id = ++_globalId;
 
 		public RenderEngine() {
-			this.Random = Parameters.DETERMINISTIC_RANDOM_SEED == -1
-				? new()
-				: new(Parameters.DETERMINISTIC_RANDOM_SEED);
+			this.ResetRandon();
 
 			this.KeyListeners = this.BuildKeyListeners().ToArray();
 
@@ -32,6 +30,9 @@ namespace ParticleSimulator.Engine {
 			this.Rasterizer = new(
 				Parameters.WINDOW_WIDTH,
 				Parameters.WINDOW_HEIGHT * 2,
+				Parameters.WINDOW_WIDTH > Parameters.WINDOW_HEIGHT * 2
+					? Parameters.WINDOW_HEIGHT * 2
+					: Parameters.WINDOW_WIDTH,
 				this.Random,
 				this._rankingsResource);
 
@@ -64,6 +65,11 @@ namespace ParticleSimulator.Engine {
 		public KeyListener[] KeyListeners { get; private set; }
 
 		public Random Random { get; private set; }
+		public void ResetRandon() {
+			this.Random = Parameters.DETERMINISTIC_RANDOM_SEED == -1
+				? new()
+				: new(Parameters.DETERMINISTIC_RANDOM_SEED);
+		}
 		public ISimulator Simulator { get; private set; }
 		public ARenderer Renderer { get; private set; }
 		public Autoscaler Scaling { get; private set; }
@@ -142,9 +148,7 @@ namespace ParticleSimulator.Engine {
 			if (this.IsOpen) {
 				this.Stop();
 				
-				this.Random = Parameters.DETERMINISTIC_RANDOM_SEED == -1
-					? new()
-					: new(Parameters.DETERMINISTIC_RANDOM_SEED);
+				this.ResetRandon();
 
 				this._particleResource.Reset();
 				this._rankingsResource.Reset();
@@ -317,6 +321,7 @@ namespace ParticleSimulator.Engine {
 		private void ResetSimulation() {
 			bool paused = this.IsPaused;
 			if (!paused) this.Pause();
+			this.ResetRandon();
 			this._stepEval_Simulate.Restart();
 			if (!paused) this.Resume();
 		}

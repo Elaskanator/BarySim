@@ -29,7 +29,7 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 16;
+		public const int PARTICLES_GROUP_MAX = 3;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const bool EXPORT_FRAMES = false;
@@ -49,7 +49,7 @@ namespace ParticleSimulator {
 		//public const bool WORLD_BOUNDING = false;
 		//public const bool WORLD_TRUNCATION = true;
 		
-		public const bool WORLD_BOUNCING = true;
+		public const bool WORLD_BOUNCING = false;
 		public const float WORLD_EPSILON = 1E-4f;
 		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
@@ -81,8 +81,8 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 40f;
-		public const float GRAVITY_MAX_STARTING_MASS = 40f;
+		public const float GRAVITY_MIN_STARTING_MASS = 400f;
+		public const float GRAVITY_MAX_STARTING_MASS = 400f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;

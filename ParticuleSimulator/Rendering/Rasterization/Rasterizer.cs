@@ -7,7 +7,7 @@ using Generic.Extensions;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Rasterizer {
-		public Rasterizer(int width, int height, Random rand, SynchronousBuffer<float?[]> rawRankings) {
+		public Rasterizer(int width, int height, int depth, Random rand, SynchronousBuffer<float?[]> rawRankings) {
 			this.OutWidth = width;
 			this.OutHeight = height;
 			this.OutNumPixels = width * height;
@@ -16,16 +16,17 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				this.Supersampling = Parameters.SUPERSAMPLING;
 				this.InternalWidth= width * Parameters.SUPERSAMPLING;
 				this.InternalHeight = height * Parameters.SUPERSAMPLING;
+				this.InternalDepthF = depth * Parameters.SUPERSAMPLING;
 				this.InternalNumPixels = width * height * Parameters.SUPERSAMPLING * Parameters.SUPERSAMPLING;
 			} else {
 				this.Supersampling = 1;
 				this.InternalWidth= width;
 				this.InternalHeight = height;
+				this.InternalDepthF = depth;
 				this.InternalNumPixels = width * height;
 			}
 
 			this.InternalWidthF = this.InternalWidth;
-			this.NegInternalWidthF = -this.InternalWidth;
 			this.InternalHeightF = this.InternalHeight;
 
 			this._rawRankingsResource = rawRankings;
@@ -37,7 +38,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			float[] offset = new float[Vector<float>.Count];
 			offset[0] = this.InternalWidth / 2f;
 			offset[1] = this.InternalHeight / 2f;
-			this.InternalOffset = new Vector<float>(offset);
+			this.InternalOffset = new Vector<float>(offset);//make all values range from [0, size] instead of [-size/2, +size/2]
 			this.InternalScaleFactor = (this.InternalWidth > this.InternalHeight ? this.InternalHeight : this.InternalWidth) / 2f;
 		}
 
@@ -49,9 +50,9 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		public readonly int InternalNumPixels;
 		public readonly int InternalWidth;
 		private readonly float InternalWidthF;
-		private readonly float NegInternalWidthF;
 		public readonly int InternalHeight;
 		private readonly float InternalHeightF;
+		private readonly float InternalDepthF;
 		
 		public readonly Camera Camera;
 		public readonly Vector<float> InternalOffset;
@@ -170,7 +171,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				float radius = this.InternalScaleFactor * particle.Radius;
 
 				if (0f <= position[0] + radius && position[0] - radius < this.InternalWidthF
-				&& 0f <= position[1] + radius && position[1] - radius < this.InternalHeightF) {
+				&& 0f <= position[1] + radius && position[1] - radius < this.InternalHeightF
+				&& 0f <= position[2] + radius && position[2] - radius < this.InternalDepthF) {//visible
 					int xRounded = (int)position[0],
 						yRounded = (int)position[1];
 					result.Clear();
@@ -190,11 +192,11 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						float visibleRadius;
 						if (Parameters.DIM > 2) {
 							float dz;
-							if (position[2] < this.NegInternalWidthF) {//only the bottom is visible
-								dz = position[2] + this.InternalWidthF;
+							if (position[2] < 0f) {//only the bottom is visible
+								dz = position[2] + this.InternalDepthF;
 								visibleRadius = MathF.Sqrt(radius*radius - dz*dz);
-							} else if (position[2] > this.InternalWidthF) {//only the top is visible
-								dz = position[2] - this.InternalWidthF;
+							} else if (position[2] > this.InternalDepthF) {//only the top is visible
+								dz = position[2] - this.InternalDepthF;
 								visibleRadius = MathF.Sqrt(radius*radius - dz*dz);
 							} else visibleRadius = radius;
 						} else visibleRadius = radius;
@@ -206,25 +208,26 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 						int yMin, yMax;
 						float dx, dy, yRangeRemainder;//Allow height to exceed the visible maximum, to preserve top-down render order
-						float squareRemainingRadius;
+						float squareRemainingRadiusX, squareRemainingRadiusY;
 
 						//draw a vertical line at dx = 0
 						if (0 <= xRounded && xRounded < this.InternalWidth) {
 							yMin = (int)MathF.Floor(position[1] - visibleRadius + Parameters.PIXEL_OVERLAP_THRESHOLD);
-							yMin = yMin < 0 ? 0 : yMin;
 							yMax = (int)MathF.Floor(position[1] + visibleRadius - Parameters.PIXEL_OVERLAP_THRESHOLD);
-							yMax = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax;
+
 							//bottom half
-							for (int y = yMin; y < yRounded && y < this.InternalHeight; y++) {
+							for (int y = yMin < 0 ? 0 : yMin; y < yRounded && y < this.InternalHeight; y++) {
 								dy = position[1] - (y + 1);//near side
-								if (dy <= radius)
-									result.Enqueue(new(particle, xRounded, y, position[2], MathF.Sqrt(radius*radius - dy*dy)));
+								squareRemainingRadiusY = visibleRadius*visibleRadius - dy*dy;
+
+								result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 							//top half
-							for (int y = yMax; y > yRounded && y >= 0; y--) {
+							for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 								dy = y - position[1];
-								if (dy <= radius)
-									result.Enqueue(new(particle, xRounded, y, position[2], MathF.Sqrt(radius*radius - dy*dy)));
+								squareRemainingRadiusY = visibleRadius*visibleRadius - dy*dy;
+
+								result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 						}
 						
@@ -232,63 +235,53 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						//left half
 						for (int x = xMin; x < xRounded && x < this.InternalWidth; x++) {
 							dx = position[0] - (x + 1);//near side
-							yRangeRemainder = MathF.Sqrt(visibleRadius*visibleRadius - dx*dx);
-
+							squareRemainingRadiusX = visibleRadius*visibleRadius - dx*dx;
+							yRangeRemainder = MathF.Sqrt(squareRemainingRadiusX);
 							yMin = (int)MathF.Floor(position[1] - yRangeRemainder + Parameters.PIXEL_OVERLAP_THRESHOLD);
-							yMin = yMin < 0 ? 0 : yMin;
 							yMax = (int)MathF.Floor(position[1] + yRangeRemainder - Parameters.PIXEL_OVERLAP_THRESHOLD);
-							yMax = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax;
-					
+								
 							//y middle
-							if (0 <= yRounded && yRounded < this.InternalHeight) {
-								squareRemainingRadius = radius*radius - dx*dx;
-								if (squareRemainingRadius >= 0)
-									result.Enqueue(new(particle, x, yRounded, position[2], MathF.Sqrt(radius*radius - dx*dx)));
-							}
+							if (0 <= yRounded && yRounded < this.InternalHeight)
+								result.Enqueue(new(particle, x, yRounded, position[2], yRangeRemainder));
 							//bottom half
-							for (int y = yMin; y < yRounded && y < this.InternalHeight; y++) {
+							for (int y = yMin < 0 ? 0 : yMin; y < yRounded && y < this.InternalHeight; y++) {
 								dy = position[1] - (y + 1);//near side
-								squareRemainingRadius = radius*radius - dx*dx - dy*dy;
-								if (squareRemainingRadius >= 0)
-									result.Enqueue(new(particle, x, y, position[2], MathF.Sqrt(squareRemainingRadius)));
+								squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
+
+								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 							//top half
-							for (int y = yMax; y > yRounded && y >= 0; y--) {
+							for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 								dy = y - position[1];
-								squareRemainingRadius = radius*radius - dx*dx - dy*dy;
-								if (squareRemainingRadius >= 0)
-									result.Enqueue(new(particle, x, y, position[2], MathF.Sqrt(squareRemainingRadius)));
+								squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
+
+								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 						}
 						//right half
 						for (int x = xMax; x > xRounded && x >= 0; x--) {
 							dx = x - position[0];
-							yRangeRemainder = MathF.Sqrt(visibleRadius*visibleRadius - dx*dx);
-
+							squareRemainingRadiusX = visibleRadius*visibleRadius - dx*dx;
+							yRangeRemainder = MathF.Sqrt(squareRemainingRadiusX);
 							yMin = (int)MathF.Floor(position[1] - yRangeRemainder + Parameters.PIXEL_OVERLAP_THRESHOLD);
-							yMin = yMin < 0 ? 0 : yMin;
 							yMax = (int)MathF.Floor(position[1] + yRangeRemainder - Parameters.PIXEL_OVERLAP_THRESHOLD);
-							yMax = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax;
-					
+								
 							//y middle
-							if (0 <= yRounded && yRounded < this.InternalHeight) {
-								squareRemainingRadius = radius*radius - dx*dx;
-								if (squareRemainingRadius >= 0)
-									result.Enqueue(new(particle, x, yRounded, position[2], MathF.Sqrt(radius*radius - dx*dx)));
-							}
+							if (0 <= yRounded && yRounded < this.InternalHeight)
+								result.Enqueue(new(particle, x, yRounded, position[2], yRangeRemainder));
 							//bottom half
-							for (int y = yMin; y < yRounded && y < this.InternalHeight; y++) {
+							for (int y = yMin < 0 ? 0 : yMin; y < yRounded && y < this.InternalHeight; y++) {
 								dy = position[1] - (y + 1);//near side
-								squareRemainingRadius = radius*radius - dx*dx - dy*dy;
-								if (squareRemainingRadius >= 0)
-									result.Enqueue(new(particle, x, y, position[2], MathF.Sqrt(squareRemainingRadius)));
+								squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
+
+								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 							//top half
-							for (int y = yMax; y > yRounded && y >= 0; y--) {
+							for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 								dy = y - position[1];
-								squareRemainingRadius = radius*radius - dx*dx - dy*dy;
-								if (squareRemainingRadius >= 0)
-									result.Enqueue(new(particle, x, y, position[2], MathF.Sqrt(squareRemainingRadius)));
+								squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
+
+								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 						}
 					}
