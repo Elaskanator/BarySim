@@ -179,8 +179,7 @@ namespace ParticleSimulator.Engine {
 			if (this.BufferSize == 0) {
 				_latch_canReturnFromAdd.Set();
 				return this.Current;
-			}
-			else return this._queue[(this.TotalDequeues++ + --this.Count) % this.BufferSize];
+			} else return this._queue[(this.TotalDequeues++ + --this.Count) % this.BufferSize];
 		}
 
 		private void CommitAdd(T value) {

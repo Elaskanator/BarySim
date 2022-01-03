@@ -6,26 +6,28 @@ using Generic.Extensions;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Baryon {
-	public class Galaxy : AParticleGroup<MatterClump> {
+	public class Galaxy : AParticleGroup<Particle> {
 		public override float StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
 		public override float StartSpeedMax_Group_Rand => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND;
 		public override float StartSpeedMax_Particle_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP;
 		public override float StartSpeedMax_Particle_Min => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
 		public override float StartSpeedMax_Particle_Max => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
 
-		public override float ComputeInitialSeparationRadius(IEnumerable<MatterClump> particles) =>
+		public override float ComputeInitialSeparationRadius(IEnumerable<Particle> particles) =>
 			Parameters.GRAVITY_INITIAL_SEPARATION_SCALER
-			* MathF.Pow(particles.Sum(p => p.Mass) / Parameters.GRAVITY_RADIAL_DENSITY, 1f / Parameters.DIM);
+			* (float)VectorFunctions.HypersphereRadius(particles.Sum(p => p.Mass)
+			/ Parameters.GRAVITY_RADIAL_DENSITY, Parameters.DIM);
 
-		protected override MatterClump NewParticle(Vector<float> position, Vector<float> velocity) {
+		protected override Particle NewParticle(Vector<float> position, Vector<float> velocity) {
 			float massRange = Parameters.GRAVITY_MAX_STARTING_MASS - Parameters.GRAVITY_MIN_STARTING_MASS,
 				chargeRange = Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE;
-			return new MatterClump() {
+			return new Particle() {
 				GroupID = this.ID,
 				Mass = Parameters.GRAVITY_MIN_STARTING_MASS + massRange * (float)Program.Engine.Random.NextDouble(),
 				Charge = Parameters.ELECTROSTATIC_MIN_CHARGE + chargeRange * (float)Program.Engine.Random.NextDouble(),
 				Position = position,
 				Velocity = velocity,
+				Force = Vector<float>.Zero,
 			};
 		}
 

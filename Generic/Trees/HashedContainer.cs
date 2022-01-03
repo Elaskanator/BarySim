@@ -5,7 +5,7 @@ using System.Linq;
 using Generic.Extensions;
 
 namespace Generic.Models.Trees {
-	public class HashedContainer<T> : ICollection<T> {
+	public class HashedContainer<T> : ICollection<T>, IEnumerable<T>, IEnumerable {
 		public HashedContainer(int maxCapacity = 1) {
 			this.MaxCapacity = maxCapacity;
 			this._members = new T[maxCapacity];

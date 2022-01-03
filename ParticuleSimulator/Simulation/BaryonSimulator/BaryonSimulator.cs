@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Generic.Extensions;
 using Generic.Models;
+using Generic.Models.Trees;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Baryon {
@@ -11,11 +12,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public BaryonSimulator() { }
 
 		public Galaxy[] InitialParticleGroups { get; private set; }
-		//public BarnesHutTree ParticleTree { get; private set; }
-		public Particle[] Particles { get; private set; }
-		IEnumerable<Particle> ISimulator.Particles => this.Particles;
-
-		public int ParticleCount => this.Particles is null ? 0 : this.Particles.Length;//this.ParticleTree is null ? 0 : this.ParticleTree.Count;
+		public BarnesHutTree ParticleTree { get; private set; }
+		IEnumerable<Particle> ISimulator.Particles => this.ParticleTree.AsEnumerable();
+		public int ParticleCount => this.ParticleTree is null ? 0 : this.ParticleTree.Count;//this.ParticleTree is null ? 0 : this.ParticleTree.Count;
 
 		public virtual bool EnableCollisions => false;
 		public virtual float WorldBounceWeight => 0f;
@@ -26,38 +25,71 @@ namespace ParticleSimulator.Simulation.Baryon {
 				.Select(i => new Galaxy())
 				.ToArray();
 
-			this.Particles = this.InitialParticleGroups.SelectMany(g => g.InitialParticles).ToArray();
-			if (Parameters.WORLD_BOUNCING)
-				for (int i = 0; i < this.ParticleCount; i++)
-					this.Particles[i].WrapPosition();
-
-			//this.ParticleTree = (BarnesHutTree)new BarnesHutTree(Parameters.DIM)
-			//	.AddUpOrDown(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
-			//this.ParticleTree.Do();
+			this.ParticleTree = (BarnesHutTree)new BarnesHutTree(Parameters.DIM)
+				.AddUpOrDown(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
 		}
 
 		public ParticleData[] RefreshSimulation() {
-			ParticleData[] result = new	ParticleData[this.ParticleCount];
-			for (int i = 0; i < this.ParticleCount; i++) {
-				this.Particles[i].ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
-				result[i] = new(this.Particles[i]);
+			this.ProcessTree();
+
+			return this.ParticleTree.Select(p => new ParticleData(p)).ToArray();
+		}
+
+		private void ProcessTree() {
+			/// 1 - Compute barycenters
+			///		a - 
+			/// 2 - Update particles (leaf nodes)
+			///		a - 
+
+			Queue<ATree<Particle>> pendingNodes = new(), testNodes = new();
+			Stack<BarnesHutTree[]> levelStack = new();
+
+			pendingNodes.Enqueue(this.ParticleTree);
+			levelStack.Push(new BarnesHutTree[] { this.ParticleTree });
+
+			bool any = true;
+			ATree<Particle> node;
+			BarnesHutTree[] levelNodes;
+
+			while (any) {
+				any = false;
+				while (pendingNodes.TryDequeue(out node)) {
+					if (!node.IsLeaf) {
+						for (int cIdx = 0; cIdx < node.Children.Length; cIdx++) {
+							if (node.Children[cIdx].Count > 0) {
+								any = true;
+								testNodes.Enqueue(node.Children[cIdx]);
+							}
+						}
+					}
+				}
+				if (any) {
+					levelNodes = new BarnesHutTree[testNodes.Count];
+					testNodes.CopyTo(levelNodes, 0);//casting magic?
+					levelStack.Push(levelNodes);
+
+					(pendingNodes, testNodes) = (testNodes, pendingNodes);
+				}
 			}
 
-			/*
-			ParticleData pd;
-			//Queue<BaryonParticle> particles = this.ParticleTree.AsQueue();
-			//BaryonParticle particle;
-			//while (particles.TryDequeue(out particle)) {
-			int i = 0;
-			foreach (Particle particle in this.ParticleTree.AsEnumerable()) {
-				if (!Parameters.WORLD_BOUNCING || !particle.BounceWalls(Parameters.TIME_SCALE))
-					particle.ApplyTimeStep(Vector<float>.Zero, Parameters.TIME_SCALE);
-				//particle.HandleBounds(Parameters.TIME_SCALE);
-				pd = new ParticleData(particle);
-				result[i++] = pd;
+			Queue<BarnesHutTree> leaves = new(levelStack.Pop());
+
+			while (levelStack.TryPop(out levelNodes))
+				for (int i = 0; i < levelNodes.Length; i++)
+					if (levelNodes[i].IsLeaf)
+						leaves.Enqueue(levelNodes[i]);
+					else levelNodes[i].UpdateBarycenter();
+
+			foreach (BarnesHutTree leaf in leaves)
+				this.ProcessLeaf(leaf);
+		}
+
+		private void ProcessLeaf(BarnesHutTree leaf) {
+			// TODODODO
+
+			foreach (Particle p in leaf.Bin.AsEnumerable()) {
+				p.ApplyTimeStep(Parameters.TIME_SCALE);
 			}
-			*/
-			return result;
 		}
 	}
 }

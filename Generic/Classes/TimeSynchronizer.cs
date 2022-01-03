@@ -26,7 +26,7 @@ namespace Generic.Models {
 
 			this.LastSyncDuration = null;
 			//optional rounding down to nearest second:
-			this._targetTimeUtc ??= new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, nowUtc.Minute, nowUtc.Second, DateTimeKind.Utc);
+			this._targetTimeUtc ??= nowUtc;
 			TimeSpan waitDuration = TimeSpan.Zero;
 
 			if (this.VSync) {

@@ -10,8 +10,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 			this.RotationMatrixColumns = VectorFunctions.IdentityMatrixColumns;
 			this.SetRange(
-				-Vector<float>.One,
-				Vector<float>.One);
+				-Vector<float>.One * (1f / scaling),
+				Vector<float>.One * (1f / scaling));
 		}
 
 		public bool AutoZoomActive { get; set; }
@@ -82,7 +82,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			}
 		}
 
-		public Vector<float> OffsetAndRotate(Vector<float> v) {
+		public Vector<float> Rotate(Vector<float> v) {
 			Vector<float> offsetV = v - this.Center;
 			offsetV *= this.Scaling;
 

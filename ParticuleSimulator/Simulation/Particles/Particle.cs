@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Numerics;
 using Generic.Vectors;
+using ParticleSimulator.Simulation;
 
 namespace ParticleSimulator {
 	public interface IParticle : IPosition<Vector<float>>, IEquatable<IParticle> {
@@ -18,30 +19,43 @@ namespace ParticleSimulator {
 		private static int _globalID = 0;
 		private readonly int _id = ++_globalID;
 
-		public Particle() { this.IsEnabled = true; }
-
 		public override string ToString() => string.Format("Particle[<{0}> ID {1}]", this.ID, string.Join("", this.Position));
 
 		public int ID => this._id;
-		public int GroupID { get; set; }
-		public bool IsEnabled { get; set; }
+		public int GroupID { get; internal set; }
 
-		public virtual float Mass { get; set; }
-		public virtual float Charge { get; set; }
-		public virtual float Radius { get; set; }
-		//public virtual float Density { get; set; }
-		public virtual float Luminosity { get; set; }
+		public float Charge { get; set; }
+		public float Radius { get; protected set; }
+		public float Luminosity { get; protected set; }
+		public virtual float Density => Parameters.GRAVITY_RADIAL_DENSITY;
+
+		private float _mass = 0f;
+		public virtual float Mass {
+			get => this._mass;
+			set {
+				this._mass = value;
+				this.Radius = (float)VectorFunctions.HypersphereRadius(value / this.Density, Parameters.DIM);
+				this.Luminosity = MathF.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5f); }}
 		
 		public Vector<float> Position { get; set; }
-		public Vector<float> Momentum { get; set; }
-		public virtual Vector<float> Velocity {
-			get => this.Momentum * (1f / this.Mass);
-			set { this.Momentum = this.Mass * value; }}
+		public Vector<float> Velocity { get; set; }
+		public Vector<float> Force { get; set; }
 
-		public void ApplyTimeStep(Vector<float> acceleration, float timeStep) {
-			Vector<float> velocity = this.Velocity;
-			Vector<float> displacement = timeStep*velocity;
-			Vector<float> newP = this.Position + displacement;
+		public virtual Vector<float> Acceleration => this.Force * (1f / this.Mass);
+		public virtual Vector<float> Momentum {
+			get => this.Velocity * this.Mass;
+			set { this.Velocity = value * (1f / this.Mass); } }
+		
+		public bool CanApproximateInteraction(BarnesHutTree node) {
+			float dist = this.Position.Distance(node.Barycenter.Item1);
+			return Parameters.WORLD_EPSILON < dist
+				&& Parameters.BARYON_ACCURACY > node.Size[0] / dist;
+		}
+
+		public void ApplyTimeStep(float timeStep) {
+			Vector<float> velocity = this.Velocity + timeStep*this.Acceleration,
+				displacement = timeStep*velocity,
+				newP = this.Position + displacement;
 
 			if (Parameters.WORLD_BOUNCING) {
 				Vector<int>
@@ -56,18 +70,32 @@ namespace ParticleSimulator {
 							Vector.ConditionalSelect(greaters,
 								Parameters.WORLD_RIGHT,
 								newP));
-					this.Velocity = velocity;
 				}
 			}
 			this.Position = newP;
+			this.Velocity = velocity;
 		}
 
-		//private void CheckOutOfBounds() {
-		//	for (int d = 0; d < Parameters.DIM; d++)
-		//		if (this.Position[d] < -Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_SCALE
-		//		|| this.Position[d] > Parameters.WORLD_SCALE * (1f + Parameters.WORLD_DEATH_BOUND_CNT))
-		//			this.IsEnabled = false;
-		//}
+		public virtual bool TryMerge(Particle other) {
+			float largerRadius = this.Radius > other.Radius ? this.Radius : other.Radius,
+				dist = this.Position.Distance(other.Position);
+			
+			if (dist <= Parameters.WORLD_EPSILON || dist <= largerRadius) {
+				this.Incorporate(other);
+				return true;
+			} else return false;
+		}
+
+		public void Incorporate(Particle other) {
+			float mass = this.Mass + other.Mass;
+			Vector<float> position = ((this.Position*this.Mass) + (other.Position*other.Mass)) * (1f / mass),
+				momentum =  this.Momentum + other.Momentum,
+				force = this.Force + other.Force;
+			this.Mass = mass;
+			this.Position = position;
+			this.Momentum = momentum;
+			this.Force = force;
+		}
 
 		public void WrapPosition() {
 			Span<float> values = stackalloc float[Vector<float>.Count];
@@ -121,22 +149,5 @@ namespace ParticleSimulator {
 					: this.Position[7];
 			this.Position = new Vector<float>(values);
 		}
-
-		//private bool BoundPosition() {
-		//	bool result = false;
-		//	float[] coords = new float[Parameters.DIM];
-		//	for (int d = 0; d < Parameters.DIM; d++) 
-		//		if (this.Position[d] - this.Radius < 0f) {
-		//			coords[d] = this.Radius;
-		//			result = true;
-		//		} else if (this.Position[d] + this.Radius > Parameters.DOMAIN_SIZE[d]) {
-		//			coords[d] = Parameters.DOMAIN_SIZE[d] - this.Radius;
-		//			result = true;
-		//		} else coords[d] = this.Position[d];
-				
-		//	if (result)
-		//		this.Position = VectorFunctions.New(coords);
-		//	return result;
-		//}
 	}
 }

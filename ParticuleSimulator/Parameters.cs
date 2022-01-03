@@ -22,14 +22,14 @@ namespace ParticleSimulator {
 		public static readonly float ZOOM_SCALE = 1f;// / MathF.Sqrt(2f);
 
 		public const float TIME_SCALE = 1;//can be any value, including negative
-		public const float TARGET_FPS = 15f;
+		public const float TARGET_FPS = 30f;
 		public const bool VSYNC = false;
 
 		//using top and bottom halves of each character to get double the verticle resolution
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 15;
+		public const int PARTICLES_GROUP_MAX = 1 << 10;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const bool EXPORT_FRAMES = false;
@@ -71,18 +71,18 @@ namespace ParticleSimulator {
 		public const bool SYNC_SIMULATION = true;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
 
 		#region Gravity
-		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 0f;
+		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 1f;
 
 		public const float GRAVITATIONAL_CONSTANT = 6E-10f;
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;
 		public const float MASS_LUMINOSITY_SCALAR = 1E-1f;
-		public const float GRAVITY_RADIAL_DENSITY = 2E3f;
+		public const float GRAVITY_RADIAL_DENSITY = 1E4f;
 
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
-		public const float GRAVITY_MIN_STARTING_MASS = 50f;
-		public const float GRAVITY_MAX_STARTING_MASS = 50f;
+		public const float GRAVITY_MIN_STARTING_MASS = 0.001f;
+		public const float GRAVITY_MAX_STARTING_MASS = 0.001f;
 
 		public const float GRAVITY_CRITICAL_MASS = 1024f;
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;

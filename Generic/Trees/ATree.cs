@@ -24,7 +24,7 @@ namespace Generic.Models.Trees {
 		~ATree() {
 			this.Parent = null;
 			this.Children = null;
-			this._bin = null;
+			this.Bin = null;
 		}
 
 		public override string ToString() => string.Format("{0}Node[{1}]",
@@ -43,15 +43,12 @@ namespace Generic.Models.Trees {
 		public ATree<T>[] Children { get; protected set; }
 		ICollection<ITree<T>> ITree<T>.Children => this.Children;
 
-		private ICollection<T> _bin = null;
+		public ICollection<T> Bin { get; protected set; }
 
 		public abstract bool DoesEncompass(T item);
 
 		protected abstract IEnumerable<ATree<T>> FormSubnodes();
 		protected virtual ICollection<T> NewBin() => new HashedContainer<T>();
-
-		protected virtual void Incorporate(T item) { }
-		protected virtual void AfterRemove(T item) { }
 
 		protected virtual int GetIndex(T item) {
 			for (int i = 0; i < this.Children.Length; i++)
@@ -60,28 +57,26 @@ namespace Generic.Models.Trees {
 			throw new Exception("Element does not belong");
 		}
 
-		public void Add(T item) {
+		public virtual void Add(T item) {
 			ATree<T> node = this;
 			while (!node.IsLeaf) {
 				node.Count++;
-				node.Incorporate(item);
 				node = node.Children[node.GetIndex(item)];
 			}
 			node.Count++;
-			node.Incorporate(item);
 
 			if (node.Count <= node.Capacity || node.LimitReached)
-				(node._bin ??= node.NewBin()).Add(item);
+				(node.Bin ??= node.NewBin()).Add(item);
 			else node.AddLayer(item);
 		}
 
-		private void AddLayer(T item) {
+		protected void AddLayer(T item) {
 			this.Children = this.FormSubnodes().ToArray();
-			foreach (T subItem in this._bin)
+			foreach (T subItem in this.Bin)
 				this.Children
 					[this.GetIndex(subItem)]
 					.Add(subItem);
-			this._bin = null;
+			this.Bin = null;
 			this.Children
 				[this.GetIndex(item)]
 				.Add(item);
@@ -98,11 +93,10 @@ namespace Generic.Models.Trees {
 					encompasses = node.DoesEncompass(item);
 				}
 
-				if (encompasses && node.Count > 0 && node._bin.Remove(item)) {
+				if (encompasses && node.Count > 0 && node.Bin.Remove(item)) {
 					ATree<T> tempNode;
 					while (chain.TryDequeue(out tempNode)) {
 						tempNode.Count--;
-						tempNode.AfterRemove(item);
 					}
 					return true;
 				}
@@ -113,14 +107,12 @@ namespace Generic.Models.Trees {
 			ATree<T> node = this;
 
 			node.Count--;
-			node.AfterRemove(item);
 			while (!node.IsLeaf) {
 				node = node.Children[this.GetIndex(item)];
 				node.Count--;
-				node.AfterRemove(item);
 			}
 
-			node._bin.Remove(item);
+			node.Bin.Remove(item);
 		}
 
 		public ATree<T> Contract() {
@@ -140,8 +132,8 @@ namespace Generic.Models.Trees {
 		public void Clear() {
 			this.Count = 0;
 			this.Children = null;
-			if (!(this._bin is null))
-				this._bin.Clear();
+			if (!(this.Bin is null))
+				this.Bin.Clear();
 		}
 
 		public bool Contains(T item) {
@@ -153,7 +145,7 @@ namespace Generic.Models.Trees {
 			}
 
 			if (encompasses && node.Count > 0)
-				return node._bin.Contains(item);
+				return node.Bin.Contains(item);
 			else return false;
 		}
 
@@ -167,8 +159,8 @@ namespace Generic.Models.Trees {
 
 			while (remaining.TryPop(out ATree<T> node))
 				if (node.IsLeaf) {
-					if (!(node._bin is null))
-						foreach (T item in node._bin)
+					if (!(node.Bin is null))
+						foreach (T item in node.Bin)
 							yield return item;
 				} else for (int i = 0; i < node.Children.Length; i++)
 					remaining.Push(node.Children[i]);
@@ -182,8 +174,8 @@ namespace Generic.Models.Trees {
 
 			while (remaining.TryPop(out ATree<T> node))
 				if (node.IsLeaf) {
-					if (!(node._bin is null))
-						foreach (T item in node._bin)
+					if (!(node.Bin is null))
+						foreach (T item in node.Bin)
 							result.Enqueue(item);
 				} else for (int i = 0; i < node.Children.Length; i++)
 					remaining.Push(node.Children[i]);

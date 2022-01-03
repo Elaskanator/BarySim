@@ -39,7 +39,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			offset[0] = this.InternalWidth / 2f;
 			offset[1] = this.InternalHeight / 2f;
 			this.InternalOffset = new Vector<float>(offset);//make all values range from [0, size] instead of [-size/2, +size/2]
-			this.InternalScaleFactor = (this.InternalWidth > this.InternalHeight ? this.InternalHeight : this.InternalWidth) / 2f;
+			this.InternalScaleFactor = Parameters.ZOOM_SCALE * (this.InternalWidth > this.InternalHeight ? this.InternalHeight : this.InternalWidth) / 2f;
 		}
 
 		public readonly int Supersampling;
@@ -89,7 +89,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				}
 			}
 			
-			float densityScalar = 2f * Parameters.GRAVITY_RADIAL_DENSITY / this.InternalScaleFactor;
+			float densityScalar = MathF.Pow(Parameters.GRAVITY_RADIAL_DENSITY, 1f / Parameters.DIM) / this.InternalScaleFactor;
 
 			Pixel[] results = new Pixel[this.OutNumPixels];
 			float?[] ranks = new float?[this.OutNumPixels];
@@ -167,12 +167,12 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		private void Resample(ParticleData particle, Queue<Subsample> result) {
 			if (particle.Radius > 0) {//let invisible particles remain so
 				Vector<float> position = this.InternalOffset
-					+ this.InternalScaleFactor * this.Camera.OffsetAndRotate(particle.Position);
+					+ this.InternalScaleFactor * this.Camera.Rotate(particle.Position);
 				float radius = this.InternalScaleFactor * particle.Radius;
 
 				if (0f <= position[0] + radius && position[0] - radius < this.InternalWidthF
 				&& 0f <= position[1] + radius && position[1] - radius < this.InternalHeightF
-				&& 0f <= position[2] + radius && position[2] - radius < this.InternalDepthF) {//visible
+				/*&& 0f <= position[2] + radius && position[2] - radius < this.InternalDepthF*/) {//visible
 					int xRounded = (int)position[0],
 						yRounded = (int)position[1];
 					result.Clear();
@@ -189,7 +189,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						///	     r_visible^2 = dx^2 + dy^2
 						///      => r^2 - r_visible^2 = dz_truncated^2
 						///      => r_visible = sqrt(r^2 - dz_truncated^2)
-						float visibleRadius;
+						float visibleRadius/*;
 						if (Parameters.DIM > 2) {
 							float dz;
 							if (position[2] < 0f) {//only the bottom is visible
@@ -199,7 +199,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								dz = position[2] - this.InternalDepthF;
 								visibleRadius = MathF.Sqrt(radius*radius - dz*dz);
 							} else visibleRadius = radius;
-						} else visibleRadius = radius;
+						} else visibleRadius */= radius;
 
 						int xMin = (int)MathF.Floor(position[0] - visibleRadius + Parameters.PIXEL_OVERLAP_THRESHOLD),
 							xMax = (int)MathF.Floor(position[0] + visibleRadius - Parameters.PIXEL_OVERLAP_THRESHOLD);

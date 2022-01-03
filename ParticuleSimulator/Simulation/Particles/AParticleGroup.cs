@@ -41,6 +41,9 @@ namespace ParticleSimulator.Simulation {
 				if (this.NumParticles > 1)
 					this.InitialParticles[i].Position += this.NewParticleOffset(radius);
 				this.InitialParticles[i].Velocity += (min + (range * (float)Program.Engine.Random.NextDouble())) * VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
+
+				if (Parameters.WORLD_BOUNCING)
+					this.InitialParticles[i].WrapPosition();
 			}
 		}
 
