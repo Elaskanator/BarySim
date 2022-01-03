@@ -105,8 +105,8 @@ namespace ParticleSimulator.Engine {
 			this._pauseSignal.Reset();
 		}
 
-		public void SetRunningState(bool isUnpaused) {
-			if (isUnpaused) this.Resume();
+		public void SetRunningState(bool running) {
+			if (running) this.Resume();
 			else this.Pause();
 		}
 
@@ -134,9 +134,9 @@ namespace ParticleSimulator.Engine {
 			} else throw new InvalidOperationException("Not open");
 		}
 
-		public void Restart() {
+		public void Restart(bool running = true) {
 			this.Stop();
-			this.Start(!this.IsPaused);
+			this.Start(running);
 		}
 
 		public void Runner() {

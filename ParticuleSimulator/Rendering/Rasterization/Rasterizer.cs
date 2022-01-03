@@ -30,7 +30,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			this.InternalHeightF = this.InternalHeight;
 
 			this._rawRankingsResource = rawRankings;
-			this.Camera = new Camera(Parameters.ZOOM_SCALE * Parameters.WORLD_SCALE * 2f);
+			this.Camera = new Camera(Parameters.ZOOM_SCALE);
 
 			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random)
 				this._randOffset = (int)(100d * rand.NextDouble());
@@ -193,7 +193,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						if (Parameters.DIM > 2) {
 							float dz;
 							if (position[2] < 0f) {//only the bottom is visible
-								dz = position[2] + this.InternalDepthF;
+								dz = position[2];
 								visibleRadius = MathF.Sqrt(radius*radius - dz*dz);
 							} else if (position[2] > this.InternalDepthF) {//only the top is visible
 								dz = position[2] - this.InternalDepthF;
@@ -220,14 +220,14 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								dy = position[1] - (y + 1);//near side
 								squareRemainingRadiusY = visibleRadius*visibleRadius - dy*dy;
 
-								result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+								result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 							//top half
 							for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 								dy = y - position[1];
 								squareRemainingRadiusY = visibleRadius*visibleRadius - dy*dy;
 
-								result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+								result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 						}
 						
@@ -248,14 +248,14 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								dy = position[1] - (y + 1);//near side
 								squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 							//top half
 							for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 								dy = y - position[1];
 								squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 						}
 						//right half
@@ -274,14 +274,14 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								dy = position[1] - (y + 1);//near side
 								squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 							//top half
 							for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 								dy = y - position[1];
 								squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY < 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+								result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
 							}
 						}
 					}

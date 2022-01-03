@@ -41,7 +41,6 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		};
 		public static readonly ConsoleColor[] Radar = new ConsoleColor[] {
 			ConsoleColor.DarkGray,
-			ConsoleColor.Cyan,
 			ConsoleColor.DarkCyan,
 			ConsoleColor.Blue,
 			ConsoleColor.DarkGreen,

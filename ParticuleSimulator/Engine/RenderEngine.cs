@@ -77,13 +77,14 @@ namespace ParticleSimulator.Engine {
 		public BitmapGenerator Exporter { get; private set; }
 		
 		internal ACalculationHandler[] Evaluators { get; private set; }
+		private Thread _keyReader;
 
 		private ProcessThread _stepEval_Simulate;
 		private ProcessThread _stepEval_Autoscale;
 		private ProcessThread _stepEval_Rasterize;
 		private ProcessThread _stepEval_Render;
 		private ProcessThread _stepEval_Export;
-		private readonly Dictionary<int, bool> _stepsStartingPaused;
+		private Dictionary<int, bool> _stepsStartingPaused;
 		
 		private readonly SynchronousBuffer<ParticleData[]> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
 		private IngestedResource<ParticleData[]> _particleResourceUse;
@@ -96,17 +97,22 @@ namespace ParticleSimulator.Engine {
 				throw new InvalidOperationException("Already open");
 			} else {
 				this.IsOpen = true;
+				this.IsPaused = !running;
 				this.StartTimeUtc = DateTime.UtcNow;
 				
-				this._particleResourceUse.ReadType = ConsumptionType.Consume;
-				Thread keyReader = new(this.HandleInputs);
-				keyReader.Start();
+				this._particleResourceUse.ReadType = running ? ConsumptionType.Consume : ConsumptionType.ReadImmediate;
+				this._keyReader = new(this.HandleInputs);
+				this._keyReader.Start();
 
-				for (int i = 0; i < this.Evaluators.Length; i++)
+				for (int i = 0; i < this.Evaluators.Length; i++) {
 					this.Evaluators[i].Start(
-						running
+						(running || this.Evaluators[i] == this._stepEval_Render)
 						&& (this.Evaluators[i] != this._stepEval_Autoscale
 							|| (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth && Parameters.COLOR_METHOD != ParticleColoringMethod.Overlap)));
+					this._stepsStartingPaused[this.Evaluators[i].Id] = this.Evaluators[i].IsPaused;
+				}
+
+				this._particleResource.Overwrite(this.Simulator.Particles.Select(p => new ParticleData(p)).ToArray());
 			}
 		}
 
@@ -137,14 +143,15 @@ namespace ParticleSimulator.Engine {
 
 		public void Stop () {
 			if (this.IsOpen) {
-				this.EndTimeUtc = DateTime.UtcNow;
+				//this._keyReader.Interrupt();//why does this break stuff???!??!!
 				for (int i = 0; i < this.Evaluators.Length; i++)
 					this.Evaluators[i].Stop();
+				this.EndTimeUtc = DateTime.UtcNow;
 				this.IsOpen = false;
 			} else throw new InvalidOperationException("Not open");
 		}
 
-		public void Restart() {
+		public void Restart(bool running) {
 			if (this.IsOpen) {
 				this.Stop();
 				
@@ -158,8 +165,9 @@ namespace ParticleSimulator.Engine {
 				this.Scaling.Reset();
 				this.Rasterizer.Camera.Reset();
 				this.Exporter.Reset();
-
-				this.Start();
+				
+				this.Start(running);
+				this.Pause();
 			} else throw new InvalidOperationException("Not open");
 		}
 
@@ -168,18 +176,6 @@ namespace ParticleSimulator.Engine {
 			if (fromDispose)
 				for (int i = 0; i < this.Evaluators.Length; i++)
 					this.Evaluators[i].Dispose(fromDispose);
-		}
-
-		private void HandleInputs() {
-			ConsoleKeyInfo keyInfo;
-			while (this.IsOpen) {
-				keyInfo = Console.ReadKey(true);
-				for (int i = 0; i < this.KeyListeners.Length; i++)
-					if (keyInfo.Key == this.KeyListeners[i].Key)
-						if ((this.KeyListeners[i].Resetter is null) || (keyInfo.Modifiers & ConsoleModifiers.Control) == 0)
-							this.KeyListeners[i].Toggle();
-						else this.KeyListeners[i].Resetter();
-			}
 		}
 
 		private IEnumerable<ACalculationHandler> BuildEvaluators() {
@@ -253,52 +249,52 @@ namespace ParticleSimulator.Engine {
 		private IEnumerable<KeyListener> BuildKeyListeners() {
 			KeyListener[] standardFunctions = new KeyListener[] {
 				new(ConsoleKey.F1, "Stats",
-				() => { return this.OverlaysEnabled; },
-				s => { this.OverlaysEnabled = s; }) {
-				},
+					() => { return this.OverlaysEnabled; },
+					s => { this.OverlaysEnabled = s; }),
 				new(ConsoleKey.F2, "Main",
-				() => { return !this.IsPaused; },
-				s => { this.SetRunningState(s); },
-				() => { this.Restart(); }) {
-				},
+					() => { return !this.IsPaused; },
+					s => { this.SetRunningState(s); },
+					() => { this.Restart(false); }),
 				new(ConsoleKey.F3, "Sim",
-				() => { return !this._stepEval_Simulate.IsPaused; },
-				s => { this.SetSimulationState(s); },
-				() => { this.ResetSimulation(); } ) {
-				},
+					() => { return !this._stepEval_Simulate.IsPaused; },
+					s => { this.SetSimulationState(s); },
+					() => { this.ResetSimulation(); },
+					() => { return !this._stepsStartingPaused[this._stepEval_Simulate.Id]; }),
 			};
 			KeyListener autoscale = new(ConsoleKey.F4, "Scale",
 				() => { return !this._stepEval_Autoscale.IsPaused; },
 				s => { this.SetAutoscaleState(s); },
-				() => { this._stepEval_Autoscale.Pause(); this.Scaling.Reset(); }) {
-			};
+				() => { this._stepEval_Autoscale.Pause(); this.Scaling.Reset(); },
+				() => { return !this._stepsStartingPaused[this._stepEval_Autoscale.Id]; });
 			KeyListener[] rotationFunctions = new KeyListener[] {
 				new(ConsoleKey.F5, "Rotate",
-				() => { return this.Rasterizer.Camera.IsAutoIncrementActive; },
-				s => { this.Rasterizer.Camera.IsAutoIncrementActive = s; },
-				() => { this.Rasterizer.Camera.Reset(); }) {
-				},
+					() => { return this.Rasterizer.Camera.IsAutoIncrementActive; },
+					s => { this.Rasterizer.Camera.IsAutoIncrementActive = s; },
+					() => { this.Rasterizer.Camera.Reset(); }) ,
 				new(ConsoleKey.F6, "α",
-				() => { return this.Rasterizer.Camera.IsRollRotationActive; },
-				s => { this.Rasterizer.Camera.IsRollRotationActive = s; },
-				() => { this.Rasterizer.Camera.IsRollRotationActive = false; this.Rasterizer.Camera.RotationStepsRoll = 0; }) {
-				},
+					() => { return this.Rasterizer.Camera.IsRollRotationActive; },
+					s => { this.Rasterizer.Camera.IsRollRotationActive = s; },
+					() => { this.Rasterizer.Camera.IsRollRotationActive = false; this.Rasterizer.Camera.RotationStepsRoll = 0; }),
 				new(ConsoleKey.F7, "β",
-				() => { return this.Rasterizer.Camera.IsPitchRotationActive; },
-				s => { this.Rasterizer.Camera.IsPitchRotationActive = s; },
-				() => { this.Rasterizer.Camera.IsPitchRotationActive = false; this.Rasterizer.Camera.RotationStepsPitch = 0; }) {
-				},
+					() => { return this.Rasterizer.Camera.IsPitchRotationActive; },
+					s => { this.Rasterizer.Camera.IsPitchRotationActive = s; },
+					() => { this.Rasterizer.Camera.IsPitchRotationActive = false; this.Rasterizer.Camera.RotationStepsPitch = 0; }),
 				new(ConsoleKey.F8, "γ",
-				() => { return this.Rasterizer.Camera.IsYawRotationActive; },
-				s => { this.Rasterizer.Camera.IsYawRotationActive = s; },
-				() => { this.Rasterizer.Camera.IsYawRotationActive = false; this.Rasterizer.Camera.RotationStepsYaw = 0; }) {
-				},
+					() => { return this.Rasterizer.Camera.IsYawRotationActive; },
+					s => { this.Rasterizer.Camera.IsYawRotationActive = s; },
+					() => { this.Rasterizer.Camera.IsYawRotationActive = false; this.Rasterizer.Camera.RotationStepsYaw = 0; }),
+			};
+			KeyListener[] positionFunctions = new KeyListener[] {
+				new(ConsoleKey.F9, "Zoom",
+					() => { return this.Rasterizer.Camera.AutoZoomActive; },
+					s => { this.Rasterizer.Camera.AutoZoomActive = s; },
+					() => { this.Rasterizer.Camera.ResetZoom(); }),
 			};
 
 			IEnumerable<KeyListener> result = standardFunctions;
 			if (Parameters.AUTOSCALER_ENABLE)
 				result = result.Append(autoscale);
-			result = result.Concat(rotationFunctions);
+			result = result.Concat(rotationFunctions).Concat(positionFunctions);
 			return result;
 		}
 
@@ -322,8 +318,24 @@ namespace ParticleSimulator.Engine {
 			bool paused = this.IsPaused;
 			if (!paused) this.Pause();
 			this.ResetRandon();
-			this._stepEval_Simulate.Restart();
+			this._stepEval_Simulate.Restart(false);
+			this._stepsStartingPaused[this._stepEval_Simulate.Id] = true;
+			this._particleResource.Overwrite(this.Simulator.Particles.Select(p => new ParticleData(p)).ToArray());
 			if (!paused) this.Resume();
+		}
+
+		private void HandleInputs() {
+			ConsoleKeyInfo keyInfo;
+			try {
+				while (this.IsOpen) {
+					keyInfo = Console.ReadKey(true);
+					for (int i = 0; i < this.KeyListeners.Length; i++)
+						if (keyInfo.Key == this.KeyListeners[i].Key)
+							if ((this.KeyListeners[i].Resetter is null) || (keyInfo.Modifiers & ConsoleModifiers.Control) == 0)
+								this.KeyListeners[i].Toggle();
+							else this.KeyListeners[i].Resetter();
+				}
+			} catch (ThreadInterruptedException) { }//die
 		}
 	}
 }

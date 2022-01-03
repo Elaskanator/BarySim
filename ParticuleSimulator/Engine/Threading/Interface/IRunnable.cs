@@ -15,7 +15,7 @@ namespace ParticleSimulator.Engine {
 		void SetRunningState(bool running);
 		void Resume();
 		void Stop();
-		void Restart();
+		void Restart(bool running = true);
 
 		void Dispose(bool fromDispose);
 

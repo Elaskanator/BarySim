@@ -13,6 +13,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public Galaxy[] InitialParticleGroups { get; private set; }
 		//public BarnesHutTree ParticleTree { get; private set; }
 		public Particle[] Particles { get; private set; }
+		IEnumerable<Particle> ISimulator.Particles => this.Particles;
 
 		public int ParticleCount => this.Particles is null ? 0 : this.Particles.Length;//this.ParticleTree is null ? 0 : this.ParticleTree.Count;
 

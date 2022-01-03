@@ -6,13 +6,15 @@ using Generic.Vectors;
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Camera {
 		public Camera(float scaling = 1f) {
-			this.Scaling = scaling;
+			this.InitialScaling = this.Scaling = scaling * Parameters.WORLD_SCALE * 2f;
 
 			this.RotationMatrixColumns = VectorFunctions.IdentityMatrixColumns;
 			this.SetRange(
 				-Vector<float>.One,
 				Vector<float>.One);
 		}
+
+		public bool AutoZoomActive { get; set; }
 
 		public bool IsAutoIncrementActive { get; set; }
 		public bool IsPitchRotationActive { get; set; }
@@ -24,6 +26,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		public Vector<float> Right { get; private set; }
 		public Vector<float> Size { get; private set; }
 		public float Scaling { get; set; }
+		public readonly float InitialScaling;
 
 		public Vector<float>[] RotationMatrixColumns { get; private set; }
 		public bool IsRotationNonzero { get; private set; }
@@ -40,6 +43,12 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			this.RotationStepsPitch = 0;
 			this.RotationStepsYaw = 0;
 			this.RotationStepsRoll = 0;
+
+			this.ResetZoom();
+		}
+		public void ResetZoom() {
+			this.Scaling = this.InitialScaling;
+			this.AutoZoomActive = false;
 		}
 
 		public void SetRange(Vector<float> left, Vector<float> right) {
@@ -93,6 +102,12 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsPitch,
 				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsYaw,
 				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsRoll);
+			
+			if (this.AutoZoomActive) {
+				float maxLength = 1f / MathF.Sqrt(3f);//TODODO
+				this.Scaling = maxLength * Parameters.WORLD_SCALE * 2f;
+			}
+
 			if (this.IsAutoIncrementActive) {
 				if (this.IsPitchRotationActive)
 					this.RotationStepsPitch++;
