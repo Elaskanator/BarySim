@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
 using Generic.Models.Trees;
@@ -19,26 +18,7 @@ namespace ParticleSimulator.Simulation {
 
 		public Tuple<Vector<float>, float> Barycenter { get; private set; }
 
-		public override void Add(Particle item) {
-			Stack<BarnesHutTree> path = new();
-			BarnesHutTree node = this;
-			while (!node.IsLeaf) {
-				path.Push(node);
-				node = (BarnesHutTree)node.Children[node.GetIndex(item)];
-			}
-
-			if (node.Count == 0 || !node.TryMerge(item)) {
-				node.Count++;
-				if (node.Count <= node.Capacity || node.LimitReached)
-					(node.Bin ??= node.NewBin()).Add(item);
-				else node.AddLayer(item);
-
-				while (path.TryPop(out node))
-					node.Count++;
-			}
-		}
-
-		public bool TryMerge(Particle p1) {
+		protected override bool TryMerge(Particle p1) {
 			foreach (Particle p2 in this.Bin)
 				if (p2.TryMerge(p1))
 					return true;

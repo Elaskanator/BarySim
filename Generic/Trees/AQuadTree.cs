@@ -43,29 +43,11 @@ namespace Generic.Models.Trees {
 		protected abstract int BitmaskLessThan(TCorner first, TCorner second);
 		protected abstract int BitmaskGreaterThanOrEqual(TCorner first, TCorner second);
 
-		public AQuadTree<TItem, TCorner> AddUpOrDown(TItem item) {
-			AQuadTree<TItem, TCorner> node = this;
-			while (!node.DoesEncompass(item))
-				if (node.IsRoot)
-					node = node.Expand(item);
-				else node = (AQuadTree<TItem, TCorner>)node.Parent;
-
-			node.Add(item);
-			return node;
-		}
-
-		public AQuadTree<TItem, TCorner> AddUpOrDown(IEnumerable<TItem> items) {
-			AQuadTree<TItem, TCorner> root = this;
-			foreach (TItem item in items)
-				root = root.AddUpOrDown(item);
-			return root;
-		}
-
 		protected override IEnumerable<AQuadTree<TItem, TCorner>> FormSubnodes() =>
 			Enumerable.Range(0, 1 << this.Dim)
 				.Select(i => this.NewNode(i, false));
 
-		private AQuadTree<TItem, TCorner> Expand(TItem item) {
+		protected override AQuadTree<TItem, TCorner> Expand(TItem item) {
 			int quadrantMask = this.GetIndex(item);
 			int inverseQuadrantMask = this.InverseIndex(quadrantMask);
 

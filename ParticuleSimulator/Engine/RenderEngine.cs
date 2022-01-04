@@ -86,8 +86,8 @@ namespace ParticleSimulator.Engine {
 		private ProcessThread _stepEval_Export;
 		private Dictionary<int, bool> _stepsStartingPaused;
 		
-		private readonly SynchronousBuffer<ParticleData[]> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
-		private IngestedResource<ParticleData[]> _particleResourceUse;
+		private readonly SynchronousBuffer<Queue<ParticleData>> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
+		private IngestedResource<Queue<ParticleData>> _particleResourceUse;
 		private readonly SynchronousBuffer<float?[]> _rankingsResource = new("Ranks", 0);
 		private readonly SynchronousBuffer<Pixel[]> _rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 		private readonly SynchronousBuffer<float[]> _scalingResource = new("Scaling", 0);
@@ -112,7 +112,7 @@ namespace ParticleSimulator.Engine {
 					this._stepsStartingPaused[this.Evaluators[i].Id] = this.Evaluators[i].IsPaused;
 				}
 
-				this._particleResource.Overwrite(this.Simulator.Particles.Select(p => new ParticleData(p)).ToArray());
+				this._particleResource.Overwrite(new(this.Simulator.Particles.Select(p => new ParticleData(p))));
 			}
 		}
 
@@ -190,7 +190,7 @@ namespace ParticleSimulator.Engine {
 			});
 			yield return this._stepEval_Simulate;
 
-			this._particleResourceUse = new IngestedResource<ParticleData[]>(this._particleResource, ConsumptionType.Consume);
+			this._particleResourceUse = new IngestedResource<Queue<ParticleData>>(this._particleResource, ConsumptionType.Consume);
 			this._stepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterize",
 				CalculatorFn = (r, p) => { return this.Rasterizer.Rasterize(r, p); },
@@ -320,7 +320,7 @@ namespace ParticleSimulator.Engine {
 			this.ResetRandon();
 			this._stepEval_Simulate.Restart(false);
 			this._stepsStartingPaused[this._stepEval_Simulate.Id] = true;
-			this._particleResource.Overwrite(this.Simulator.Particles.Select(p => new ParticleData(p)).ToArray());
+			this._particleResource.Overwrite(new(this.Simulator.Particles.Select(p => new ParticleData(p))));
 			if (!paused) this.Resume();
 		}
 

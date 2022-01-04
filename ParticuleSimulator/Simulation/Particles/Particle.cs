@@ -18,10 +18,15 @@ namespace ParticleSimulator {
 		private static int _globalID = 0;
 		private readonly int _id = ++_globalID;
 
+		public Particle() {
+			this.Enabled = true;
+		}
+
 		public override string ToString() => string.Format("Particle[<{0}> ID {1}]", this.ID, string.Join("", this.Position));
 
 		public int ID => this._id;
 		public int GroupID { get; internal set; }
+		public bool Enabled { get; set; }
 
 		public float Charge { get; set; }
 		public float Radius { get; protected set; }
@@ -91,6 +96,7 @@ namespace ParticleSimulator {
 			this.Position = position;
 			this.Momentum = this.Momentum + other.Momentum;
 			this.Force = this.Force + other.Force;
+			other.Enabled = false;
 		}
 
 		public void WrapPosition() {

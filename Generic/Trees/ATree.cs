@@ -13,18 +13,13 @@ namespace Generic.Models.Trees {
 		bool IsLeaf { get; }
 		bool ICollection<T>.IsReadOnly => false;
 
-		void AddRange(IEnumerable<T> items) {
-			foreach (T item in items) this.Add(item); }
 		void ICollection<T>.CopyTo(T[] array, int arrayIndex) {
 			int i = 0; foreach (T item in this) array[i++ + arrayIndex] = item; }
 	}
 
 	public abstract class ATree<T> : ITree<T> {
-		public ATree(ATree<T> parent = null) { this.Parent = parent; }
-		~ATree() {
-			this.Parent = null;
-			this.Children = null;
-			this.Bin = null;
+		public ATree(ATree<T> parent = null) {
+			this.Parent = parent;
 		}
 
 		public override string ToString() => string.Format("{0}Node[{1}]",
@@ -48,6 +43,7 @@ namespace Generic.Models.Trees {
 		public abstract bool DoesEncompass(T item);
 
 		protected abstract IEnumerable<ATree<T>> FormSubnodes();
+		protected abstract ATree<T> Expand(T item);
 		protected virtual ICollection<T> NewBin() => new HashedContainer<T>();
 
 		protected virtual int GetIndex(T item) {
@@ -57,25 +53,60 @@ namespace Generic.Models.Trees {
 			throw new Exception("Element does not belong");
 		}
 
-		public virtual void Add(T item) {
+		public void Add(T item) {
+			ATree<T> node = this;
+			while (!node.DoesEncompass(item))
+				if (node.IsRoot)
+					node = node.Expand(item);
+				else node = node.Parent;
+
+			node.AddContained(item);
+		}
+		public void AddRange(IEnumerable<T> items) {
+			foreach (T item in items)
+				this.Add(item);
+		}
+
+		protected void AddContained(T item) {
+			Stack<ATree<T>> path = new();
 			ATree<T> node = this;
 			while (!node.IsLeaf) {
-				node.Count++;
+				path.Push(node);
 				node = node.Children[node.GetIndex(item)];
 			}
-			node.Count++;
 
-			if (node.Count <= node.Capacity || node.LimitReached)
-				(node.Bin ??= node.NewBin()).Add(item);
-			else node.AddLayer(item);
+			if (node.Count == 0 || !node.TryMerge(item)) {
+				node.Count++;
+				if (node.Count <= node.Capacity || node.LimitReached)
+					(node.Bin ??= node.NewBin()).Add(item);
+				else node.AddLayer(item);
+
+				while (path.TryPop(out node))
+					node.Count++;
+			}
+		}
+		protected virtual bool TryMerge(T p1) => false;
+
+		public void Move(T item) {
+			if (!this.DoesEncompass(item)) {
+				this.Count--;
+				this.Bin.Remove(item);
+				
+				ATree<T> targetNode = null, node = this;
+				while (!node.IsRoot && targetNode is null) {
+					node = node.Parent;
+					node.Count--;
+					if (node.DoesEncompass(item))
+						targetNode = node;
+				}
+				(targetNode ?? node).AddContained(item);
+			}
 		}
 
 		protected void AddLayer(T item) {
 			this.Children = this.FormSubnodes().ToArray();
 			foreach (T subItem in this.Bin)
-				this.Children
-					[this.GetIndex(subItem)]
-					.Add(subItem);
+				this.Add(subItem);
 			this.Bin = null;
 			this.Children
 				[this.GetIndex(item)]
@@ -95,24 +126,12 @@ namespace Generic.Models.Trees {
 
 				if (encompasses && node.Count > 0 && node.Bin.Remove(item)) {
 					ATree<T> tempNode;
-					while (chain.TryDequeue(out tempNode)) {
+					while (chain.TryDequeue(out tempNode))
 						tempNode.Count--;
-					}
 					return true;
 				}
 			}
 			return false;
-		}
-		public void UncheckedRemove(T item) {
-			ATree<T> node = this;
-
-			node.Count--;
-			while (!node.IsLeaf) {
-				node = node.Children[this.GetIndex(item)];
-				node.Count--;
-			}
-
-			node.Bin.Remove(item);
 		}
 
 		public ATree<T> Contract() {
@@ -182,22 +201,5 @@ namespace Generic.Models.Trees {
 
 			return result;
 		}
-
-		//public Stack<T> AsStack() {
-		//	Stack<T> result = new Stack<T>();
-
-		//	Stack<ATree<T>> remaining = new Stack<ATree<T>>();
-		//	remaining.Push(this);
-
-		//	while (remaining.TryPop(out ATree<T> node))
-		//		if (node.IsLeaf) {
-		//			if (!(node._bin is null))
-		//				foreach (T item in node._bin)
-		//					result.Push(item);
-		//		} else for (int i = 0; i < node.Children.Length; i++)
-		//			remaining.Push(node.Children[i]);
-
-		//	return result;
-		//}
 	}
 }
