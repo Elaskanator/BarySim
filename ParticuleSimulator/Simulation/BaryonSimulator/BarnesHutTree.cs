@@ -4,7 +4,7 @@ using System.Linq;
 using Generic.Models.Trees;
 using Generic.Vectors;
 
-namespace ParticleSimulator.Simulation {
+namespace ParticleSimulator.Simulation.Baryon {
 	public class BarnesHutTree : QuadTreeSIMD<Particle> {
 		public BarnesHutTree(int dim, Vector<float> size) : base(dim, size) { }
 		public BarnesHutTree(int dim) : base(dim, Vector<float>.One) { }
@@ -19,14 +19,15 @@ namespace ParticleSimulator.Simulation {
 		public Tuple<Vector<float>, float> Barycenter { get; private set; }
 
 		protected override bool TryMerge(Particle p1) {
-			foreach (Particle p2 in this.Bin)
-				if (p2.TryMerge(p1))
-					return true;
+			if (Parameters.GRAVITY_COLLISION_COMBINE)
+				foreach (Particle p2 in this.Bin)
+					if (p2.TryMerge(p1))
+						return true;
 			return false;
 		}
 
 		public void UpdateBarycenter() {
-			Tuple<Vector<float>, float> total = new(Vector<float>.Zero, 0f), agg;
+			Tuple<Vector<float>, float> total = new(Vector<float>.Zero, 0f);
 			BarnesHutTree child;
 			Particle particle;
 			if (this.IsLeaf) {
@@ -47,12 +48,9 @@ namespace ParticleSimulator.Simulation {
 					if (this.Children[i].Count > 0) {
 						child = (BarnesHutTree)this.Children[i];
 						if (child.Barycenter.Item2 > 0f) {
-							agg = new(
-								child.Barycenter.Item1 * child.Barycenter.Item2,
-								child.Barycenter.Item2);
 							total = new(
-								total.Item1 + (agg.Item1 * agg.Item2),
-								total.Item2 + agg.Item2);
+								total.Item1 + (child.Barycenter.Item1 * child.Barycenter.Item2),
+								total.Item2 + child.Barycenter.Item2);
 						}
 					}
 				}
@@ -65,7 +63,7 @@ namespace ParticleSimulator.Simulation {
 		public bool CanApproximate(BarnesHutTree node) {
 			float dist = this.Barycenter.Item1.Distance(node.Barycenter.Item1);
 			return Parameters.WORLD_EPSILON < dist
-				&& Parameters.BARYON_ACCURACY > node.Size[0] / dist;
+				&& Parameters.INACCURCY > node.Size[0] / dist;
 		}
 	}
 }

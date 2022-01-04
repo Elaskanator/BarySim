@@ -154,6 +154,7 @@ namespace Generic.Models.Trees {
 				this.Count = 0;
 				this.Children = this.FormSubnodes().ToArray();
 
+				bool unmerged;
 				Stack<ATree<T>> path = new();
 				ATree<T> parentNode;
 				T item;
@@ -161,23 +162,33 @@ namespace Generic.Models.Trees {
 					if (this.DoesEncompass(item)) {
 						node = this.Children[this.ChildIndex(item)];
 						path.Clear();
-						while (node.Count >= node.Capacity && (node.IsLeaf || !node.LimitReached)) {
+						unmerged = true;
+						while (node.Count >= node.Capacity) {
 							path.Push(node);
 							if (node.IsLeaf) {
-								parentNode = node;
-								while (!ReferenceEquals(this, parentNode)) {
-									parentNode = parentNode.Parent;
-									parentNode.Count -= node.Count;
+								if (node.TryMerge(item)) {
+									unmerged = false;
+									break;
+								} else {
+									parentNode = node;
+									while (!ReferenceEquals(this, parentNode)) {
+										parentNode = parentNode.Parent;
+										parentNode.Count -= node.Count;
+									}
+									if (node.LimitReached) {
+										break;
+									} else {
+										node.Count = 0;
+										foreach (T item2 in node.Bin)
+											additions.Enqueue(item2);
+										node.Bin = null;
+										node.Children = node.FormSubnodes().ToArray();
+									}
 								}
-								node.Count = 0;
-								foreach (T item2 in node.Bin)
-									additions.Enqueue(item2);
-								node.Bin = null;
-								node.Children = node.FormSubnodes().ToArray();
 							}
 							node = node.Children[node.ChildIndex(item)];
 						}
-						if (node.Count == 0 || !node.TryMerge(item)) {
+						if (unmerged) {
 							node.Bin ??= node.NewBin();
 							node.Bin.Add(item);
 							node.Count++;

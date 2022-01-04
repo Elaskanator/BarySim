@@ -45,9 +45,6 @@ namespace ParticleSimulator {
 		public Vector<float> Velocity { get; set; }
 		public Vector<float> Acceleration { get; set; }
 
-		internal bool Test1;
-		internal bool Test2;
-
 		public virtual Vector<float> Force {
 			get => this.Acceleration * this.Mass;
 			set { this.Acceleration = value * (1f / this.Mass); } }
@@ -55,28 +52,40 @@ namespace ParticleSimulator {
 			get => this.Velocity * this.Mass;
 			set { this.Velocity = value * (1f / this.Mass); } }
 
-		public void ApplyTimeStep(float timeStep) {
+		public void ApplyTimeStep(float timeStep, Tuple<Vector<float>, float> baryCenter) {
 			Vector<float> velocity = this.Velocity + timeStep*this.Acceleration,
 				displacement = timeStep*velocity,
 				newP = this.Position + displacement;
 
-			if (Parameters.WORLD_BOUNCING || Parameters.WORLD_WRAPPING) {
-				Vector<int>
-					lesses = Vector.LessThan(newP, Parameters.WORLD_LEFT_INF),
-					greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_RIGHT_INF),
-					union = lesses | greaters;
+			Vector<int>
+				lesses = Vector.LessThan(newP, Parameters.WORLD_LEFT_INF),
+				greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_RIGHT_INF),
+				union = lesses | greaters;
+
+			if (Parameters.WORLD_BOUNCING || Parameters.WORLD_WRAPPING || Parameters.WORLD_DEATH_BOUND_CNT >= 1f) {
 				if (Vector.LessThanAny(union, Vector<int>.Zero)) {
-					velocity = Vector.ConditionalSelect(union, -velocity, velocity);
-					if (Parameters.WORLD_BOUNCING)
+					if (Parameters.WORLD_BOUNCING) {
+						velocity = Vector.ConditionalSelect(union, -velocity, velocity);
 						newP = -newP + 2f
 							* Vector.ConditionalSelect(lesses,
 								Parameters.WORLD_LEFT,
 								Vector.ConditionalSelect(greaters,
 									Parameters.WORLD_RIGHT,
 									newP));
-					else newP = WrapPosition(newP);
+					} else if (Parameters.WORLD_WRAPPING) {
+						newP = WrapPosition(newP);
+					} else {//Parameters.WORLD_DEATH_BOUND_CNT >= 1f
+						lesses = Vector.LessThan(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_LEFT_INF);
+						greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_RIGHT_INF);
+						union = lesses | greaters;
+						this.Enabled = Vector.EqualsAll(union, Vector<int>.Zero)
+							|| Vector.Dot(this.Velocity, this.Velocity)
+								< 2f * Parameters.GRAVITATIONAL_CONSTANT * baryCenter.Item2
+									/ this.Position.Distance(baryCenter.Item1);
+					}
 				}
 			}
+
 			this.Position = newP;
 			this.Velocity = velocity;
 		}

@@ -77,7 +77,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 					node = leaves[i].Item1;
 					while (!node.IsLeaf)
 						node = node.Children[node.ChildIndex(leaves[i].Item2[p])];
-					leaves[i].Item2[p].ApplyTimeStep(Parameters.TIME_SCALE);
+					leaves[i].Item2[p].ApplyTimeStep(Parameters.TIME_SCALE, this.ParticleTree.Barycenter);
 					node.MoveFromLeaf(leaves[i].Item2[p]);
 					if (leaves[i].Item2[p].Enabled)
 						result.Enqueue(new(leaves[i].Item2[p]));
@@ -102,16 +102,23 @@ namespace ParticleSimulator.Simulation.Baryon {
 					if (node.Children[i].Count > 0)
 						if (!ReferenceEquals(lastNode, node.Children[i])) {
 							child = (BarnesHutTree)node.Children[i];
-							if (leafData.Item1.CanApproximate(child))
-								farField.Enqueue(child);
-							else remaining.Enqueue(child);
+							//if (child.Barycenter.Item2 > 0f) {
+								if (leafData.Item1.CanApproximate(child))
+									farField.Enqueue(child);
+								else remaining.Enqueue(child);
+							//}
 						}
 				}
 				while (remaining.TryDequeue(out other)) {
+					//foreach (Particle p in other)
+					//	if (p.Mass > 0f)
+					//		nearField.Add(p);
 					if (other.IsLeaf) {
 						if (leafData.Item1.CanApproximate(other))
 							farField.Enqueue(other);
-						else nearField.AddRange(other.Bin);
+						else foreach (Particle p in other.Bin)
+							//if (p.Mass > 0f)
+								nearField.Add(p);
 					} else {
 						for (int i = 0; i < other.Children.Length; i++)
 							if (other.Children[i].Count > 0) {
@@ -128,7 +135,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 			float distSq;
 			Vector<float> toOther;
-			while (farField.TryDequeue(out other) && leafData.Item1.Barycenter.Item2 > 0f) {
+			while (farField.TryDequeue(out other)) {
 				toOther = other.Barycenter.Item1 - leafData.Item1.Barycenter.Item1;
 				distSq = Vector.Dot(toOther, toOther);
 				if (distSq > Parameters.WORLD_EPSILON)
@@ -136,24 +143,28 @@ namespace ParticleSimulator.Simulation.Baryon {
 			}
 
 			for (int i = 0; i < leafData.Item2.Length; i++) {
-				//binParticles[i].Test1 = true;
-				leafData.Item2[i].Acceleration = farFieldContribution;
-				for (int j = i + 1; j < leafData.Item2.Length; j++) {
-					toOther = leafData.Item2[j].Position - leafData.Item2[i].Position;
-					distSq = Vector.Dot(toOther, toOther);
-					if (distSq > Parameters.WORLD_EPSILON) {
-						leafData.Item2[i].Acceleration += toOther * (leafData.Item2[j].Mass / distSq);
-						leafData.Item2[j].Acceleration -= toOther * (leafData.Item2[i].Mass / distSq);
+				//if (leafData.Item2[i].Mass == 0f) {
+				//	leafData.Item2[i].Acceleration = Vector<float>.Zero;
+				//} else {
+					leafData.Item2[i].Acceleration = farFieldContribution;
+					for (int j = i + 1; j < leafData.Item2.Length; j++) {
+						if (leafData.Item2[j].Mass > 0f) {
+							toOther = leafData.Item2[j].Position - leafData.Item2[i].Position;
+							distSq = Vector.Dot(toOther, toOther);
+							if (distSq > Parameters.WORLD_EPSILON) {
+								leafData.Item2[i].Acceleration += toOther * (leafData.Item2[j].Mass / distSq);
+								leafData.Item2[j].Acceleration -= toOther * (leafData.Item2[i].Mass / distSq);
+							}
+						}
 					}
-				}
-				for (int n = 0; n < nearField.Count; n++) {
-					//nearField[n].Test2 = true;
-					toOther = nearField[n].Position - leafData.Item2[i].Position;
-					distSq = Vector.Dot(toOther, toOther);
-					if (distSq > Parameters.WORLD_EPSILON)
-						leafData.Item2[i].Acceleration += toOther * (nearField[n].Mass / distSq);
-				}
-				leafData.Item2[i].Acceleration *= Parameters.GRAVITATIONAL_CONSTANT;
+					for (int n = 0; n < nearField.Count; n++) {
+						toOther = nearField[n].Position - leafData.Item2[i].Position;
+						distSq = Vector.Dot(toOther, toOther);
+						if (distSq > Parameters.WORLD_EPSILON)
+							leafData.Item2[i].Acceleration += toOther * (nearField[n].Mass / distSq);
+					}
+					leafData.Item2[i].Acceleration *= Parameters.GRAVITATIONAL_CONSTANT;
+				//}
 			}
 		}
 	}

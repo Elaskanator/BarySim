@@ -13,6 +13,7 @@ namespace ParticleSimulator {
 		//public static readonly int WINDOW_HEIGHT = 50;
 		public static readonly int WINDOW_HEIGHT = 64;
 		public const int SUPERSAMPLING = 3;
+		public const float INACCURCY = 0.5f;
 		
 		public const int DIM = 3;
 		public const float WORLD_SCALE = 1f;
@@ -27,7 +28,7 @@ namespace ParticleSimulator {
 
 		//using top and bottom halves of each character to get double the verticle resolution
 
-		public const int PARTICLES_GROUP_COUNT = 10;
+		public const int PARTICLES_GROUP_COUNT = 100;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 10;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
@@ -36,7 +37,6 @@ namespace ParticleSimulator {
 		public const string EXPORT_DIR = null;
 
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.004f;
-		public const float BARYON_ACCURACY = 0.5f;
 
 		public const float PIXEL_OVERLAP_THRESHOLD = 0.5f;
 		public const int DETERMINISTIC_RANDOM_SEED = 0;
@@ -49,20 +49,20 @@ namespace ParticleSimulator {
 		//public const bool WORLD_BOUNDING = false;
 		//public const bool WORLD_TRUNCATION = true;
 		
-		public const bool WORLD_BOUNCING = true;
-		public const bool WORLD_WRAPPING = true;
+		public const bool WORLD_BOUNCING = false;
+		public const bool WORLD_WRAPPING = false;
 		public const float WORLD_EPSILON = 1E-4f;
 		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
 		
-		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Luminosity;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
 		//public static readonly ConsoleColor[] COLOR_ARRAY = new ConsoleColor[] { ConsoleColor.White };
 		public const float AUTOSCALE_FIXED_MIN = -1f;
 		public const float AUTOSCALE_FIXED_MAX = -1f;
 		public const bool AUTOSCALE_PERCENTILE = false;
-		public const bool COLOR_USE_FIXED_BANDS = false;
-		public static readonly float[] COLOR_FIXED_BANDS = new float[] { 0f };//Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
+		public const bool COLOR_USE_FIXED_BANDS = true;
+		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
 
 		public const float AUTOSCALE_CUTOFF_PCT = 0f;
 		public const float AUTOSCALE_MIN_STEP = 1f;
@@ -74,10 +74,10 @@ namespace ParticleSimulator {
 		#region Gravity
 		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 10f;
 
-		public const float GRAVITATIONAL_CONSTANT = 2E-7f;
+		public const float GRAVITATIONAL_CONSTANT = 1E-7f;
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;
-		public const float MASS_LUMINOSITY_SCALAR = 1E-1f;
-		public const float GRAVITY_RADIAL_DENSITY = 2E5f;
+		public const float MASS_LUMINOSITY_SCALAR = 1E0f;
+		public const float GRAVITY_RADIAL_DENSITY = 1E6f;
 
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
@@ -85,19 +85,19 @@ namespace ParticleSimulator {
 		public const float GRAVITY_MIN_STARTING_MASS = 1f;
 		public const float GRAVITY_MAX_STARTING_MASS = 1f;
 
-		public const float GRAVITY_CRITICAL_MASS = 1024f;
-		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
-		public const float GRAVITY_EJECTA_SPEED = 0.002f;
+		//public const float GRAVITY_CRITICAL_MASS = 1024f;
+		//public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
+		//public const float GRAVITY_EJECTA_SPEED = 0.002f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP = 2E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 1E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 4E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 1E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 2E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 1E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 4E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 1E-3f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
 
 		public const bool GRAVITY_COLLISION_COMBINE = true;
-		public const float GRAVITY_COMBINE_OVERLAP_CUTOFF_BARYON_ERROR = 0.2f;//1 means merely touching
+		//public const float GRAVITY_COMBINE_OVERLAP_CUTOFF_BARYON_ERROR = 0.2f;//1 means merely touching
 		//public const float GRAVITY_COLLISION_DRAG_STRENGTH = 0f;//1 means instant stop
 		
 		public const int QUADTREE_NODE_CAPACITY = 1;
