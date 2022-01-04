@@ -21,10 +21,8 @@ namespace ParticleSimulator.Simulation.Baryon {
 				.ToArray();
 
 			ATree<Particle> node = new BarnesHutTree(Parameters.DIM);
-			node.AddRange(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
-			while (!node.IsRoot)
-				node = node.Parent;
-			this.ParticleTree = (BarnesHutTree)node;
+			node.Add(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
+			this.ParticleTree = (BarnesHutTree)node.Root;
 		}
 
 		public Queue<ParticleData> RefreshSimulation() {
@@ -76,16 +74,16 @@ namespace ParticleSimulator.Simulation.Baryon {
 			Queue<ParticleData> result = new(this.ParticleTree.Count);
 			for (int i = 0; i < lIdx; i++)
 				for (int p = 0; p < leaves[i].Item2.Length; p++) {
+					node = leaves[i].Item1;
+					while (!node.IsLeaf)
+						node = node.Children[node.ChildIndex(leaves[i].Item2[p])];
 					leaves[i].Item2[p].ApplyTimeStep(Parameters.TIME_SCALE);
-					leaves[i].Item1.Move(leaves[i].Item2[p]);
+					node.MoveFromLeaf(leaves[i].Item2[p]);
 					if (leaves[i].Item2[p].Enabled)
 						result.Enqueue(new(leaves[i].Item2[p]));
 				}
 
-			ATree<Particle> root = this.ParticleTree;
-			while (!root.IsRoot)
-				root = root.Parent;
-			this.ParticleTree = (BarnesHutTree)root;
+			this.ParticleTree = (BarnesHutTree)this.ParticleTree.Root;
 
 			return result;
 		}
@@ -95,14 +93,14 @@ namespace ParticleSimulator.Simulation.Baryon {
 				farField = new();
 			List<Particle> nearField = new();
 
-			ATree<Particle> node = leafData.Item1;
+			ATree<Particle> node = leafData.Item1, lastNode;
 			BarnesHutTree other, child;
-			bool notFirst = false;
 			while (!node.IsRoot) {
+				lastNode = node;
 				node = node.Parent;
 				for (int i = 0; i < node.Children.Length; i++) {
 					if (node.Children[i].Count > 0)
-						if (notFirst || !ReferenceEquals(leafData.Item1, node.Children[i])) {
+						if (!ReferenceEquals(lastNode, node.Children[i])) {
 							child = (BarnesHutTree)node.Children[i];
 							if (leafData.Item1.CanApproximate(child))
 								farField.Enqueue(child);
@@ -124,7 +122,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 							}
 					}
 				}
-				notFirst = true;
 			}
 
 			Vector<float> farFieldContribution = Vector<float>.Zero;

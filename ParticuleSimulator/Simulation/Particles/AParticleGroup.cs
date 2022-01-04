@@ -38,12 +38,20 @@ namespace ParticleSimulator.Simulation {
 			Vector<float> max = new Vector<float>(this.StartSpeedMax_Particle_Max);
 			Vector<float> range = max - min;
 			for (int i = 0; i < this.NumParticles; i++) {
-				if (this.NumParticles > 1)
+				if (this.NumParticles > 1) {
 					this.InitialParticles[i].Position += this.NewParticleOffset(radius);
-				this.InitialParticles[i].Velocity += (min + (range * (float)Program.Engine.Random.NextDouble())) * VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
+					this.InitialParticles[i].Velocity +=
+						this.StartSpeedMax_Particle_Angular
+						* this.NewInitialDirection(this.SpawnCenter, this.InitialParticles[i].Position);
+				}
+				this.InitialParticles[i].Velocity +=
+					(min + (range * (float)Program.Engine.Random.NextDouble()))
+					* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
 
 				if (Parameters.WORLD_BOUNCING)
-					this.InitialParticles[i].WrapPosition();
+					if (Parameters.WORLD_WRAPPING)
+						this.InitialParticles[i].WrapPosition();
+					else this.InitialParticles[i].BoundPosition();
 			}
 		}
 

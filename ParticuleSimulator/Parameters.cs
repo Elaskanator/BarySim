@@ -27,9 +27,9 @@ namespace ParticleSimulator {
 
 		//using top and bottom halves of each character to get double the verticle resolution
 
-		public const int PARTICLES_GROUP_COUNT = 100;
+		public const int PARTICLES_GROUP_COUNT = 10;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1;
+		public const int PARTICLES_GROUP_MAX = 10;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const bool EXPORT_FRAMES = false;
@@ -49,7 +49,8 @@ namespace ParticleSimulator {
 		//public const bool WORLD_BOUNDING = false;
 		//public const bool WORLD_TRUNCATION = true;
 		
-		public const bool WORLD_BOUNCING = false;
+		public const bool WORLD_BOUNCING = true;
+		public const bool WORLD_WRAPPING = true;
 		public const float WORLD_EPSILON = 1E-4f;
 		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
@@ -71,12 +72,12 @@ namespace ParticleSimulator {
 		public const bool SYNC_SIMULATION = true;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
 
 		#region Gravity
-		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 1f;
+		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 10f;
 
-		public const float GRAVITATIONAL_CONSTANT = 1E-6f;
+		public const float GRAVITATIONAL_CONSTANT = 2E-7f;
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;
 		public const float MASS_LUMINOSITY_SCALAR = 1E-1f;
-		public const float GRAVITY_RADIAL_DENSITY = 1000E4f;
+		public const float GRAVITY_RADIAL_DENSITY = 2E5f;
 
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
@@ -88,10 +89,10 @@ namespace ParticleSimulator {
 		public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
 		public const float GRAVITY_EJECTA_SPEED = 0.002f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 0E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP = 2E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 1E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 4E-4f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 1E-3f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
 

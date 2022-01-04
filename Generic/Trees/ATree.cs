@@ -37,16 +37,22 @@ namespace Generic.Models.Trees {
 		ITree<T> ITree<T>.Parent => this.Parent;
 		public ATree<T>[] Children { get; protected set; }
 		ICollection<ITree<T>> ITree<T>.Children => this.Children;
+		public ATree<T> Root { get {
+			ATree<T> node = this;
+			while (!node.IsRoot)
+				node = node.Parent;
+			return node; } }
 
 		public ICollection<T> Bin { get; protected set; }
 
 		public abstract bool DoesEncompass(T item);
-
 		protected abstract IEnumerable<ATree<T>> FormSubnodes();
 		protected abstract ATree<T> Expand(T item);
-		protected virtual ICollection<T> NewBin() => new HashedContainer<T>();
 
-		protected virtual int GetIndex(T item) {
+		protected virtual ICollection<T> NewBin() => new HashedContainer<T>();
+		protected virtual bool TryMerge(T item1) => false;
+
+		public virtual int ChildIndex(T item) {
 			for (int i = 0; i < this.Children.Length; i++)
 				if (this.Children[i].DoesEncompass(item))
 					return i;
@@ -55,62 +61,27 @@ namespace Generic.Models.Trees {
 
 		public void Add(T item) {
 			ATree<T> node = this;
-			while (!node.DoesEncompass(item))
-				if (node.IsRoot)
-					node = node.Expand(item);
-				else node = node.Parent;
-
-			node.AddContained(item);
-		}
-		public void AddRange(IEnumerable<T> items) {
-			foreach (T item in items)
-				this.Add(item);
-		}
-
-		protected void AddContained(T item) {
-			Stack<ATree<T>> path = new();
-			ATree<T> node = this;
-			while (!node.IsLeaf) {
-				path.Push(node);
-				node = node.Children[node.GetIndex(item)];
-			}
-
-			if (node.Count == 0 || !node.TryMerge(item)) {
-				node.Count++;
-				if (node.Count <= node.Capacity || node.LimitReached)
-					(node.Bin ??= node.NewBin()).Add(item);
-				else node.AddLayer(item);
-
-				while (path.TryPop(out node))
-					node.Count++;
-			}
-		}
-		protected virtual bool TryMerge(T p1) => false;
-
-		public void Move(T item) {
-			if (!this.DoesEncompass(item)) {
-				this.Count--;
-				this.Bin.Remove(item);
-				
-				ATree<T> targetNode = null, node = this;
-				while (!node.IsRoot && targetNode is null) {
-					node = node.Parent;
-					node.Count--;
-					if (node.DoesEncompass(item))
-						targetNode = node;
+			bool includes = node.DoesEncompass(item);
+			if (!includes) {
+				while (!includes) {
+					if (node.IsRoot)
+						node = node.Expand(item);
+					else node = node.Parent;
+					includes = node.DoesEncompass(item);
 				}
-				(targetNode ?? node).AddContained(item);
 			}
+			while (!node.IsLeaf)
+				node = node.Children[node.ChildIndex(item)];
+			node.AddToLeaf(item);
 		}
 
-		protected void AddLayer(T item) {
-			this.Children = this.FormSubnodes().ToArray();
-			foreach (T subItem in this.Bin)
-				this.Add(subItem);
-			this.Bin = null;
-			this.Children
-				[this.GetIndex(item)]
-				.Add(item);
+		public void Add(IEnumerable<T> items) {
+			ATree<T> parent = this;
+			foreach (T item in items) {
+				parent.Add(item);
+				while (!parent.IsRoot)
+					parent = parent.Parent;
+			}
 		}
 
 		public bool Remove(T item) {
@@ -120,7 +91,7 @@ namespace Generic.Models.Trees {
 				bool encompasses = node.DoesEncompass(item);
 				while (encompasses && !node.IsLeaf) {
 					chain.Enqueue(node);
-					node = node.Children[this.GetIndex(item)];
+					node = node.Children[this.ChildIndex(item)];
 					encompasses = node.DoesEncompass(item);
 				}
 
@@ -134,18 +105,97 @@ namespace Generic.Models.Trees {
 			return false;
 		}
 
-		public ATree<T> Contract() {
-			ATree<T> node = this, subNode;
-			while (!(node.Children is null)) {
-				subNode = null;
-				for (int i = 0; i < node.Children.Length; i++)
-					if (node.Children[i].Count > 0)
-						if (subNode is null)
-							subNode = node.Children[i];
-						else return node;
-				node = subNode;
+		public void MoveFromLeaf(T item) {
+			if (!this.DoesEncompass(item)) {
+				this.Count--;
+				this.Bin.Remove(item);
+
+				ATree<T> targetNode = null, node = this;
+				while (!node.IsRoot) {
+					if (node.Count == 0)
+						node.Children = null;
+					node = node.Parent;
+					node.Count--;
+					if (node.DoesEncompass(item)) {
+						targetNode = node;
+						break;
+					}
+				}
+				if (targetNode is null) {
+					node.Add(item);
+				} else {
+					while (!node.IsRoot) {
+						node = node.Parent;
+						node.Count--;
+					}
+					while (!targetNode.IsLeaf)
+						targetNode = targetNode.Children[targetNode.ChildIndex(item)];
+					targetNode.AddToLeaf(item);
+				}
 			}
-			return node;
+		}
+
+		public void AddToLeaf(T addition) {
+			ATree<T> node;
+			if (this.Count < this.Capacity || this.LimitReached) {
+				(this.Bin ??= this.NewBin()).Add(addition);
+				this.Count++;
+				node = this;
+				while (!node.IsRoot) {
+					node = node.Parent;
+					node.Count++;
+				}
+			} else {
+				Queue<T> additions = new(this.Bin);
+				additions.Enqueue(addition);
+				this.Bin = null;
+
+				int startingCount = this.Count;
+				this.Count = 0;
+				this.Children = this.FormSubnodes().ToArray();
+
+				Stack<ATree<T>> path = new();
+				ATree<T> parentNode;
+				T item;
+				while (additions.TryDequeue(out item)) {
+					if (this.DoesEncompass(item)) {
+						node = this.Children[this.ChildIndex(item)];
+						path.Clear();
+						while (node.Count >= node.Capacity && (node.IsLeaf || !node.LimitReached)) {
+							path.Push(node);
+							if (node.IsLeaf) {
+								parentNode = node;
+								while (!ReferenceEquals(this, parentNode)) {
+									parentNode = parentNode.Parent;
+									parentNode.Count -= node.Count;
+								}
+								node.Count = 0;
+								foreach (T item2 in node.Bin)
+									additions.Enqueue(item2);
+								node.Bin = null;
+								node.Children = node.FormSubnodes().ToArray();
+							}
+							node = node.Children[node.ChildIndex(item)];
+						}
+						if (node.Count == 0 || !node.TryMerge(item)) {
+							node.Bin ??= node.NewBin();
+							node.Bin.Add(item);
+							node.Count++;
+							while (path.TryPop(out node))
+								node.Count++;
+							this.Count++;
+						}
+					} else this.Add(item);
+				}
+				if (startingCount != this.Count) {
+					int diff = this.Count - startingCount;
+					node = this;
+					while (!node.IsRoot) {
+						node = node.Parent;
+						node.Count += diff;
+					}
+				}
+			}
 		}
 
 		public void Clear() {
@@ -159,7 +209,7 @@ namespace Generic.Models.Trees {
 			ATree<T> node = this;
 			bool encompasses = node.DoesEncompass(item);
 			while (encompasses && !node.IsLeaf) {
-				node = node.Children[this.GetIndex(item)];
+				node = node.Children[this.ChildIndex(item)];
 				encompasses = node.DoesEncompass(item);
 			}
 

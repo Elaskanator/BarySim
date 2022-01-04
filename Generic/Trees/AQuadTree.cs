@@ -33,7 +33,7 @@ namespace Generic.Models.Trees {
 			this.BitmaskLessThan(item.Position, this.CornerLeft) == 0
 			&& this.BitmaskGreaterThanOrEqual(item.Position, this.CornerRight) == 0;
 
-		protected override int GetIndex(TItem item) =>
+		public override int ChildIndex(TItem item) =>
 			this.BitmaskGreaterThanOrEqual(item.Position, this.Center);//left-handed convention [a, b)
 		protected int InverseIndex(int idx) =>
 			(1 << this.Dim) - idx - 1;
@@ -48,7 +48,7 @@ namespace Generic.Models.Trees {
 				.Select(i => this.NewNode(i, false));
 
 		protected override AQuadTree<TItem, TCorner> Expand(TItem item) {
-			int quadrantMask = this.GetIndex(item);
+			int quadrantMask = this.ChildIndex(item);
 			int inverseQuadrantMask = this.InverseIndex(quadrantMask);
 
 			AQuadTree<TItem, TCorner> newParent = this.NewNode(quadrantMask, true);

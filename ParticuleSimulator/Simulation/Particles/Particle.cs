@@ -60,19 +60,21 @@ namespace ParticleSimulator {
 				displacement = timeStep*velocity,
 				newP = this.Position + displacement;
 
-			if (Parameters.WORLD_BOUNCING) {
+			if (Parameters.WORLD_BOUNCING || Parameters.WORLD_WRAPPING) {
 				Vector<int>
 					lesses = Vector.LessThan(newP, Parameters.WORLD_LEFT_INF),
 					greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_RIGHT_INF),
 					union = lesses | greaters;
 				if (Vector.LessThanAny(union, Vector<int>.Zero)) {
 					velocity = Vector.ConditionalSelect(union, -velocity, velocity);
-					newP = -newP + 2f
-						* Vector.ConditionalSelect(lesses,
-							Parameters.WORLD_LEFT,
-							Vector.ConditionalSelect(greaters,
-								Parameters.WORLD_RIGHT,
-								newP));
+					if (Parameters.WORLD_BOUNCING)
+						newP = -newP + 2f
+							* Vector.ConditionalSelect(lesses,
+								Parameters.WORLD_LEFT,
+								Vector.ConditionalSelect(greaters,
+									Parameters.WORLD_RIGHT,
+									newP));
+					else newP = WrapPosition(newP);
 				}
 			}
 			this.Position = newP;
@@ -100,56 +102,117 @@ namespace ParticleSimulator {
 		}
 
 		public void WrapPosition() {
+			this.Position = WrapPosition(this.Position);
+		}
+
+		public void BoundPosition() {
+			this.Position = BoundPosition(this.Position);
+		}
+
+		public static Vector<float> WrapPosition(Vector<float> p) {
 			Span<float> values = stackalloc float[Vector<float>.Count];
 			values[0] = Parameters.DIM < 1 ? 0f :
-				this.Position[0] < Parameters.WORLD_LEFT[0]
-				? Parameters.WORLD_LEFT[0] + Parameters.WORLD_SIZE[0] + ((this.Position[0] - Parameters.WORLD_LEFT[0]) % Parameters.WORLD_SIZE[0])
-				: this.Position[0] >= Parameters.WORLD_RIGHT[0]
-					? Parameters.WORLD_LEFT[0] + ((this.Position[0] - Parameters.WORLD_LEFT[0]) % Parameters.WORLD_SIZE[0])
-					: this.Position[0];
+				p[0] < Parameters.WORLD_LEFT[0]
+				? Parameters.WORLD_LEFT[0] + Parameters.WORLD_SIZE[0] + ((p[0] - Parameters.WORLD_LEFT[0]) % Parameters.WORLD_SIZE[0])
+				: p[0] >= Parameters.WORLD_RIGHT[0]
+					? Parameters.WORLD_LEFT[0] + ((p[0] - Parameters.WORLD_LEFT[0]) % Parameters.WORLD_SIZE[0])
+					: p[0];
 			values[1] = Parameters.DIM < 2 ? 0f :
-				this.Position[1] < Parameters.WORLD_LEFT[1]
-				? Parameters.WORLD_LEFT[1] + Parameters.WORLD_SIZE[1] + ((this.Position[1] - Parameters.WORLD_LEFT[1]) % Parameters.WORLD_SIZE[1])
-				: this.Position[1] >= Parameters.WORLD_RIGHT[1]
-					? Parameters.WORLD_LEFT[1] + ((this.Position[1] - Parameters.WORLD_LEFT[1]) % Parameters.WORLD_SIZE[1])
-					: this.Position[1];
+				p[1] < Parameters.WORLD_LEFT[1]
+				? Parameters.WORLD_LEFT[1] + Parameters.WORLD_SIZE[1] + ((p[1] - Parameters.WORLD_LEFT[1]) % Parameters.WORLD_SIZE[1])
+				: p[1] >= Parameters.WORLD_RIGHT[1]
+					? Parameters.WORLD_LEFT[1] + ((p[1] - Parameters.WORLD_LEFT[1]) % Parameters.WORLD_SIZE[1])
+					: p[1];
 			values[2] = Parameters.DIM < 3 ? 0f :
-				this.Position[2] < Parameters.WORLD_LEFT[2]
-				? Parameters.WORLD_LEFT[2] + Parameters.WORLD_SIZE[2] + ((this.Position[2] - Parameters.WORLD_LEFT[2]) % Parameters.WORLD_SIZE[2])
-				: this.Position[2] >= Parameters.WORLD_RIGHT[2]
-					? Parameters.WORLD_LEFT[2] + ((this.Position[2] - Parameters.WORLD_LEFT[2]) % Parameters.WORLD_SIZE[2])
-					: this.Position[2];
+				p[2] < Parameters.WORLD_LEFT[2]
+				? Parameters.WORLD_LEFT[2] + Parameters.WORLD_SIZE[2] + ((p[2] - Parameters.WORLD_LEFT[2]) % Parameters.WORLD_SIZE[2])
+				: p[2] >= Parameters.WORLD_RIGHT[2]
+					? Parameters.WORLD_LEFT[2] + ((p[2] - Parameters.WORLD_LEFT[2]) % Parameters.WORLD_SIZE[2])
+					: p[2];
 			values[3] = Parameters.DIM < 4 ? 0f :
-				this.Position[3] < Parameters.WORLD_LEFT[3]
-				? Parameters.WORLD_LEFT[3] + Parameters.WORLD_SIZE[3] + ((this.Position[3] - Parameters.WORLD_LEFT[3]) % Parameters.WORLD_SIZE[3])
-				: this.Position[3] >= Parameters.WORLD_RIGHT[3]
-					? Parameters.WORLD_LEFT[3] + ((this.Position[3] - Parameters.WORLD_LEFT[3]) % Parameters.WORLD_SIZE[3])
-					: this.Position[3];
+				p[3] < Parameters.WORLD_LEFT[3]
+				? Parameters.WORLD_LEFT[3] + Parameters.WORLD_SIZE[3] + ((p[3] - Parameters.WORLD_LEFT[3]) % Parameters.WORLD_SIZE[3])
+				: p[3] >= Parameters.WORLD_RIGHT[3]
+					? Parameters.WORLD_LEFT[3] + ((p[3] - Parameters.WORLD_LEFT[3]) % Parameters.WORLD_SIZE[3])
+					: p[3];
 			values[4] = Parameters.DIM < 5 ? 0f :
-				this.Position[4] < Parameters.WORLD_LEFT[4]
-				? Parameters.WORLD_LEFT[4] + Parameters.WORLD_SIZE[4] + ((this.Position[4] - Parameters.WORLD_LEFT[4]) % Parameters.WORLD_SIZE[4])
-				: this.Position[4] >= Parameters.WORLD_RIGHT[4]
-					? Parameters.WORLD_LEFT[4] + ((this.Position[4] - Parameters.WORLD_LEFT[4]) % Parameters.WORLD_SIZE[4])
-					: this.Position[4];
+				p[4] < Parameters.WORLD_LEFT[4]
+				? Parameters.WORLD_LEFT[4] + Parameters.WORLD_SIZE[4] + ((p[4] - Parameters.WORLD_LEFT[4]) % Parameters.WORLD_SIZE[4])
+				: p[4] >= Parameters.WORLD_RIGHT[4]
+					? Parameters.WORLD_LEFT[4] + ((p[4] - Parameters.WORLD_LEFT[4]) % Parameters.WORLD_SIZE[4])
+					: p[4];
 			values[5] = Parameters.DIM < 6 ? 0f :
-				this.Position[5] < Parameters.WORLD_LEFT[5]
-				? Parameters.WORLD_LEFT[5] + Parameters.WORLD_SIZE[5] + ((this.Position[5] - Parameters.WORLD_LEFT[5]) % Parameters.WORLD_SIZE[5])
-				: this.Position[5] >= Parameters.WORLD_RIGHT[5]
-					? Parameters.WORLD_LEFT[5] + ((this.Position[5] - Parameters.WORLD_LEFT[5]) % Parameters.WORLD_SIZE[5])
-					: this.Position[5];
+				p[5] < Parameters.WORLD_LEFT[5]
+				? Parameters.WORLD_LEFT[5] + Parameters.WORLD_SIZE[5] + ((p[5] - Parameters.WORLD_LEFT[5]) % Parameters.WORLD_SIZE[5])
+				: p[5] >= Parameters.WORLD_RIGHT[5]
+					? Parameters.WORLD_LEFT[5] + ((p[5] - Parameters.WORLD_LEFT[5]) % Parameters.WORLD_SIZE[5])
+					: p[5];
 			values[6] = Parameters.DIM < 7 ? 0f :
-				this.Position[6] < Parameters.WORLD_LEFT[6]
-				? Parameters.WORLD_LEFT[6] + Parameters.WORLD_SIZE[6] + ((this.Position[6] - Parameters.WORLD_LEFT[6]) % Parameters.WORLD_SIZE[6])
-				: this.Position[6] >= Parameters.WORLD_RIGHT[6]
-					? Parameters.WORLD_LEFT[6] + ((this.Position[6] - Parameters.WORLD_LEFT[6]) % Parameters.WORLD_SIZE[6])
-					: this.Position[6];
+				p[6] < Parameters.WORLD_LEFT[6]
+				? Parameters.WORLD_LEFT[6] + Parameters.WORLD_SIZE[6] + ((p[6] - Parameters.WORLD_LEFT[6]) % Parameters.WORLD_SIZE[6])
+				: p[6] >= Parameters.WORLD_RIGHT[6]
+					? Parameters.WORLD_LEFT[6] + ((p[6] - Parameters.WORLD_LEFT[6]) % Parameters.WORLD_SIZE[6])
+					: p[6];
 			values[7] = Parameters.DIM < 8 ? 0f :
-				this.Position[7] < Parameters.WORLD_LEFT[7]
-				? Parameters.WORLD_LEFT[7] + Parameters.WORLD_SIZE[7] + ((this.Position[7] - Parameters.WORLD_LEFT[7]) % Parameters.WORLD_SIZE[7])
-				: this.Position[7] >= Parameters.WORLD_RIGHT[7]
-					? Parameters.WORLD_LEFT[7] + ((this.Position[7] - Parameters.WORLD_LEFT[7]) % Parameters.WORLD_SIZE[7])
-					: this.Position[7];
-			this.Position = new Vector<float>(values);
+				p[7] < Parameters.WORLD_LEFT[7]
+				? Parameters.WORLD_LEFT[7] + Parameters.WORLD_SIZE[7] + ((p[7] - Parameters.WORLD_LEFT[7]) % Parameters.WORLD_SIZE[7])
+				: p[7] >= Parameters.WORLD_RIGHT[7]
+					? Parameters.WORLD_LEFT[7] + ((p[7] - Parameters.WORLD_LEFT[7]) % Parameters.WORLD_SIZE[7])
+					: p[7];
+			return new Vector<float>(values);
+		}
+
+		public static Vector<float> BoundPosition(Vector<float> p) {
+			Span<float> values = stackalloc float[Vector<float>.Count];
+			values[0] = Parameters.DIM < 1 ? 0f :
+				p[0] < Parameters.WORLD_LEFT[0]
+				? Parameters.WORLD_LEFT[0]
+				: p[0] >= Parameters.WORLD_RIGHT[0]
+					? Parameters.WORLD_RIGHT[0] - Parameters.WORLD_EPSILON
+					: p[0];
+			values[1] = Parameters.DIM < 1 ? 0f :
+				p[1] < Parameters.WORLD_LEFT[1]
+				? Parameters.WORLD_LEFT[1]
+				: p[1] >= Parameters.WORLD_RIGHT[1]
+					? Parameters.WORLD_RIGHT[1] - Parameters.WORLD_EPSILON
+					: p[1];
+			values[2] = Parameters.DIM < 1 ? 0f :
+				p[2] < Parameters.WORLD_LEFT[2]
+				? Parameters.WORLD_LEFT[2]
+				: p[2] >= Parameters.WORLD_RIGHT[2]
+					? Parameters.WORLD_RIGHT[2] - Parameters.WORLD_EPSILON
+					: p[2];
+			values[3] = Parameters.DIM < 1 ? 0f :
+				p[3] < Parameters.WORLD_LEFT[3]
+				? Parameters.WORLD_LEFT[3]
+				: p[3] >= Parameters.WORLD_RIGHT[3]
+					? Parameters.WORLD_RIGHT[3] - Parameters.WORLD_EPSILON
+					: p[3];
+			values[4] = Parameters.DIM < 1 ? 0f :
+				p[4] < Parameters.WORLD_LEFT[4]
+				? Parameters.WORLD_LEFT[4]
+				: p[4] >= Parameters.WORLD_RIGHT[4]
+					? Parameters.WORLD_RIGHT[4] - Parameters.WORLD_EPSILON
+					: p[4];
+			values[5] = Parameters.DIM < 1 ? 0f :
+				p[5] < Parameters.WORLD_LEFT[5]
+				? Parameters.WORLD_LEFT[5]
+				: p[5] >= Parameters.WORLD_RIGHT[5]
+					? Parameters.WORLD_RIGHT[5] - Parameters.WORLD_EPSILON
+					: p[5];
+			values[6] = Parameters.DIM < 1 ? 0f :
+				p[6] < Parameters.WORLD_LEFT[6]
+				? Parameters.WORLD_LEFT[6]
+				: p[6] >= Parameters.WORLD_RIGHT[6]
+					? Parameters.WORLD_RIGHT[6] - Parameters.WORLD_EPSILON
+					: p[6];
+			values[7] = Parameters.DIM < 1 ? 0f :
+				p[7] < Parameters.WORLD_LEFT[7]
+				? Parameters.WORLD_LEFT[7]
+				: p[7] >= Parameters.WORLD_RIGHT[7]
+					? Parameters.WORLD_RIGHT[7] - Parameters.WORLD_EPSILON
+					: p[7];
+			return new Vector<float>(values);
 		}
 	}
 }
