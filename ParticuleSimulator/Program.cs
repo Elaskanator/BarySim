@@ -31,7 +31,7 @@ namespace ParticleSimulator {
 			Engine.Start();
 		}
 
-		private static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+c and alt+f4 etc
+		public static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+c and alt+f4 etc
 			//keep master thread alive for results output (if enabled)
 			//also necessary to cleanup the application, otherwise any threading calls would immediately kill this thread
 			if (!(args is null))
@@ -40,6 +40,8 @@ namespace ParticleSimulator {
 			Engine.Stop();
 			Engine.Dispose();
 
+			Console.CursorLeft = 0;
+			Console.CursorTop = Engine.OverlaysEnabled ? 1 + Parameters.GRAPH_HEIGHT : 0;
 			ConsoleExtensions.WaitForEnter("Press enter to exit");
 			Environment.Exit(0);
 		}

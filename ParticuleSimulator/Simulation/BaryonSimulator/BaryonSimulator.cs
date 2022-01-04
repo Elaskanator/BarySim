@@ -25,10 +25,16 @@ namespace ParticleSimulator.Simulation.Baryon {
 			this.ParticleTree = (BarnesHutTree)node.Root;
 		}
 
-		public Queue<ParticleData> RefreshSimulation() {
-			if (this.ParticleTree.Count > 0)
-				return this.ProcessTree();
-			else return new(0);
+		public ParticleData[] RefreshSimulation() {
+			if (this.ParticleTree.Count > 0) {
+				Queue<ParticleData> updatedParticles = this.ProcessTree();
+				ParticleData[] result = new ParticleData[updatedParticles.Count];
+				updatedParticles.CopyTo(result, 0);
+				return result;
+			} else {
+				Program.CancelAction(null, null);
+				return Array.Empty<ParticleData>();
+			}
 		}
 
 		private Queue<ParticleData> ProcessTree() {

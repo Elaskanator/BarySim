@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using Generic.Extensions;
-using Generic.Models;
 
 namespace ParticleSimulator.Engine {
 	public class SynchronousBuffer<T> : ISynchronousConsumedResource {
@@ -13,8 +11,6 @@ namespace ParticleSimulator.Engine {
 			if (size < 0) throw new ArgumentOutOfRangeException(nameof(size), "Must be nonzero");
 			this.Name = name;
 			this.BufferSize = size;
-			this.EnqueueTimings_Ticks = new(Parameters.PERF_SMA_ALPHA);
-			this.DequeueTimings_Ticks = new(Parameters.PERF_SMA_ALPHA);
 
 			//this.RefreshReleaseListeners = Array.Empty<AutoResetEvent>();
 			this.RefreshListeners = new();
@@ -46,14 +42,6 @@ namespace ParticleSimulator.Engine {
 		private ManualResetEvent _latch_hasAny = new(false);
 		private object _lock = new();
 		private T[] _queue;
-		private Stopwatch _timerEnqueue = new(), _timerDequeue = new();
-		
-		private bool _trackLatency = false;
-		public bool DoTrackLatency {
-			get { return this._trackLatency; }
-			set { this._trackLatency = value; this._timerEnqueue.Reset(); this._timerDequeue.Reset(); } }
-		public SimpleExponentialMovingAverage EnqueueTimings_Ticks { get; private set; }
-		public SimpleExponentialMovingAverage DequeueTimings_Ticks { get; private set; }
 
 		public AutoResetEvent AddRefreshListener() {
 			AutoResetEvent signal = new(false);
@@ -95,13 +83,7 @@ namespace ParticleSimulator.Engine {
 		}
 
 		public void Enqueue(T value) {
-			if (this.DoTrackLatency) this._timerEnqueue.Start();
 			this._latch_canAdd.WaitOne();
-			if (this.DoTrackLatency) {
-				this._timerEnqueue.Stop();
-				this.EnqueueTimings_Ticks.Update(this._timerEnqueue.ElapsedTicks);
-				this._timerEnqueue.Reset();
-			}
 
 			lock (this._lock)
 				this.CommitAdd(value);
@@ -129,13 +111,7 @@ namespace ParticleSimulator.Engine {
 		public void Overwrite(object item) => this.Overwrite((T)item);
 		
 		public T Dequeue() {
-			if (this.DoTrackLatency) this._timerDequeue.Start();
 			this._latch_canPop.WaitOne();
-			if (this.DoTrackLatency) {
-				this._timerDequeue.Stop();
-				this.DequeueTimings_Ticks.Update(this._timerDequeue.ElapsedTicks);
-				this._timerDequeue.Reset();
-			}
 
 			T result;
 			lock (this._lock)
@@ -159,9 +135,6 @@ namespace ParticleSimulator.Engine {
 			this.TotalEnqueues = 0;
 			this.TotalDequeues = 0;
 			
-			this._timerEnqueue.Reset();
-			this._timerDequeue.Reset();
-			
 			if (this.BufferSize > 0)
 				this._latch_canReturnFromAdd.Set();
 			else this._latch_canReturnFromAdd.Reset();
@@ -173,7 +146,7 @@ namespace ParticleSimulator.Engine {
 		// MUST lock and enforce size constraints before invoking either Pop or Add
 		private T CommitPop() {
 			this._latch_canAdd.Set();
-			if (this.Count > 0)
+			if (this.Count > 1)
 				this._latch_canPop.Set();
 
 			if (this.BufferSize == 0) {

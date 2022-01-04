@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
-using Generic.Extensions;
 using Generic.Models;
 using ParticleSimulator.Engine.Threading;
 
@@ -34,9 +33,9 @@ namespace ParticleSimulator.Engine {
 			}
 			ProcessThread result = new ProcessThread(
 				config,
-				dataReceivers.Without(s => s is null).ToArray(),
-				doneSignals.Without(s => s is null).ToArray(),
-				readySignals.Without(s => s is null).ToArray());
+				dataReceivers,
+				doneSignals,
+				readySignals);
 
 			return result;
 		}

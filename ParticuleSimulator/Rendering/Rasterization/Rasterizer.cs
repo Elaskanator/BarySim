@@ -62,85 +62,88 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		private readonly int _randOffset = 0;
 		
 		public Pixel[] Rasterize(EvalResult prepResults, object[] parameters) {//top down view (smaller Z values = closer)
-			Queue<ParticleData> particles = (Queue<ParticleData>)parameters[0];
-			float[] scalings = (float[])parameters[1];
+			ParticleData[] particles = (ParticleData[])parameters[0];
+			if (particles is null) {
+				return Array.Empty<Pixel>();
+			} else {
+				float[] scalings = (float[])parameters[1];
+				Pixel[] results = new Pixel[this.OutNumPixels];
+				float?[] ranks = new float?[this.OutNumPixels];
 
-			this.Camera.IncrementRotation();
+				this.Camera.IncrementRotation();
 
-			int[] counts = new int[this.InternalNumPixels];
-			float[] densities = new float[this.InternalNumPixels];
-			Subsample[] nearest = new Subsample[this.InternalNumPixels];
+				int[] counts = new int[this.InternalNumPixels];
+				float[] densities = new float[this.InternalNumPixels];
+				Subsample[] nearest = new Subsample[this.InternalNumPixels];
 
-			Queue<Subsample> resamplings = new();
-			Subsample resampling;
-			int idx;
-			ParticleData particle;
-			while (particles.TryDequeue(out particle)) {
-				this.Resample(particle, resamplings);
-				while (resamplings.TryDequeue(out resampling)) {
-					idx = resampling.X + this.InternalWidth * resampling.Y;
-					densities[idx] += resampling.H;
-					counts[idx]++;
+				Queue<Subsample> resamplings = new();
+				Subsample resampling;
+				int idx;
+				for (int i = 0; i < particles.Length; i++) {
+					this.Resample(particles[i], resamplings);
+					while (resamplings.TryDequeue(out resampling)) {
+						idx = resampling.X + this.InternalWidth * resampling.Y;
+						densities[idx] += resampling.H;
+						counts[idx]++;
 
-					if (counts[idx] == 1
-					|| nearest[idx].Z > resampling.Z//extend up out of the screen (height)
-					|| (nearest[idx].Z == resampling.Z && nearest[idx].Particle.ID > resampling.Particle.ID)) {
-						nearest[idx] = resampling;
+						if (counts[idx] == 1
+						|| nearest[idx].Z > resampling.Z//extend up out of the screen (height)
+						|| (nearest[idx].Z == resampling.Z && nearest[idx].Particle.ID > resampling.Particle.ID)) {
+							nearest[idx] = resampling;
+						}
 					}
 				}
-			}
 			
-			float densityScalar = MathF.Pow(Parameters.GRAVITY_RADIAL_DENSITY, 1f / Parameters.DIM) / this.InternalScaleFactor;
+				float densityScalar = MathF.Pow(Parameters.GRAVITY_RADIAL_DENSITY, 1f / Parameters.DIM) / this.InternalScaleFactor;
 
-			Pixel[] results = new Pixel[this.OutNumPixels];
-			float?[] ranks = new float?[this.OutNumPixels];
-			bool any = false;
-			if (this.Supersampling > 1) {
-				bool any2;
-				int idx2, count, totalCount, y2, x2, y3;
-				float totalDensity;
-				Queue<Subsample> bin = new();
-				for (int x = 0; x < this.OutWidth; x++) {
-					x2 = x * this.Supersampling;
-					for (int y = 0; y < this.OutHeight; y++) {
-						bin.Clear();
-						y3 = y * this.Supersampling;
-						any2 = false;
-						idx = x + y *this.OutWidth;
-						count = totalCount = 0;
-						totalDensity = 0f;
-						for (int sy = 0; sy < this.Supersampling; sy++) {
-							y2 = (sy + y3) * this.InternalWidth;
-							for (int sx = 0; sx < this.Supersampling; sx++) {
-								idx2 = (sx + x2) + y2;
-								if (counts[idx2] > 0) {
-									count++;
-									bin.Enqueue(nearest[idx2]);
-									any = any2 = true;
-									totalCount += counts[idx2];
-									totalDensity += densities[idx2];
+				bool any = false;
+				if (this.Supersampling > 1) {
+					bool any2;
+					int idx2, count, totalCount, y2, x2, y3;
+					float totalDensity;
+					Queue<Subsample> bin = new();
+					for (int x = 0; x < this.OutWidth; x++) {
+						x2 = x * this.Supersampling;
+						for (int y = 0; y < this.OutHeight; y++) {
+							bin.Clear();
+							y3 = y * this.Supersampling;
+							any2 = false;
+							idx = x + y *this.OutWidth;
+							count = totalCount = 0;
+							totalDensity = 0f;
+							for (int sy = 0; sy < this.Supersampling; sy++) {
+								y2 = (sy + y3) * this.InternalWidth;
+								for (int sx = 0; sx < this.Supersampling; sx++) {
+									idx2 = (sx + x2) + y2;
+									if (counts[idx2] > 0) {
+										count++;
+										bin.Enqueue(nearest[idx2]);
+										any = any2 = true;
+										totalCount += counts[idx2];
+										totalDensity += densities[idx2];
+									}
 								}
 							}
+							if (any2) {
+								ranks[idx] = this.GetRank(scalings, bin, (float)totalCount / count, densityScalar * totalDensity / count);
+								results[idx] = new(x, y, ranks[idx].Value);
+							}
 						}
-						if (any2) {
-							ranks[idx] = this.GetRank(scalings, bin, (float)totalCount / count, densityScalar * totalDensity / count);
-							results[idx] = new(x, y, ranks[idx].Value);
+					}
+				} else {
+					for (int i = 0; i < this.OutNumPixels; i++) {
+						if (counts[i] > 0) {
+							any = true;
+							ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densityScalar * densities[i]);
+							results[i] = new(nearest[i].X, nearest[i].Y, ranks[i].Value);
 						}
 					}
 				}
-			} else {
-				for (int i = 0; i < this.OutNumPixels; i++) {
-					if (counts[i] > 0) {
-						any = true;
-						ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densityScalar * densities[i]);
-						results[i] = new(nearest[i].X, nearest[i].Y, ranks[i].Value);
-					}
-				}
+
+				if (any) this._rawRankingsResource.Overwrite(ranks);
+
+				return results;
 			}
-
-			if (any) this._rawRankingsResource.Overwrite(ranks);
-
-			return results;
 		}
 
 		private float GetRank(float[] scaling, Subsample resampling, float count, float density) {

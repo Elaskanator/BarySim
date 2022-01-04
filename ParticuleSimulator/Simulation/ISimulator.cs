@@ -7,6 +7,6 @@ namespace ParticleSimulator.Simulation {
 
 		void Init();
 
-		Queue<ParticleData> RefreshSimulation();
+		ParticleData[] RefreshSimulation();
 	}
 }

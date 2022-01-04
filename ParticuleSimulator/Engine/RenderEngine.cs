@@ -86,8 +86,8 @@ namespace ParticleSimulator.Engine {
 		private ProcessThread _stepEval_Export;
 		private Dictionary<int, bool> _stepsStartingPaused;
 		
-		private readonly SynchronousBuffer<Queue<ParticleData>> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
-		private IngestedResource<Queue<ParticleData>> _particleResourceUse;
+		private readonly SynchronousBuffer<ParticleData[]> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
+		private IngestedResource<ParticleData[]> _particleResourceUse;
 		private readonly SynchronousBuffer<float?[]> _rankingsResource = new("Ranks", 0);
 		private readonly SynchronousBuffer<Pixel[]> _rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 		private readonly SynchronousBuffer<float[]> _scalingResource = new("Scaling", 0);
@@ -112,7 +112,7 @@ namespace ParticleSimulator.Engine {
 					this._stepsStartingPaused[this.Evaluators[i].Id] = this.Evaluators[i].IsPaused;
 				}
 
-				this._particleResource.Overwrite(new(this.Simulator.Particles.Select(p => new ParticleData(p))));
+				this._particleResource.Overwrite(this.Simulator.Particles.Select(p => new ParticleData(p)).ToArray());
 			}
 		}
 
@@ -190,7 +190,7 @@ namespace ParticleSimulator.Engine {
 			});
 			yield return this._stepEval_Simulate;
 
-			this._particleResourceUse = new IngestedResource<Queue<ParticleData>>(this._particleResource, ConsumptionType.Consume);
+			this._particleResourceUse = new(this._particleResource, ConsumptionType.Consume);
 			this._stepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterize",
 				CalculatorFn = (r, p) => { return this.Rasterizer.Rasterize(r, p); },
@@ -294,18 +294,18 @@ namespace ParticleSimulator.Engine {
 			IEnumerable<KeyListener> result = standardFunctions;
 			if (Parameters.AUTOSCALER_ENABLE)
 				result = result.Append(autoscale);
-			result = result.Concat(rotationFunctions).Concat(positionFunctions);
+			result = result.Concat(rotationFunctions);//.Concat(positionFunctions);
 			return result;
 		}
 
 		private void SetAutoscaleState(bool enable) {
-			this._stepsStartingPaused[this._stepEval_Autoscale.Id] = !enable;
+			this._stepsStartingPaused[this._stepEval_Autoscale.Id] |= !enable;
 			if (!enable || !this.IsPaused)
 				this._stepEval_Autoscale.SetRunningState(enable);
 		}
 
 		private void SetSimulationState(bool enable) {
-			this._stepsStartingPaused[this._stepEval_Simulate.Id] = !enable;
+			this._stepsStartingPaused[this._stepEval_Simulate.Id] |= !enable;
 			if (!enable || !this.IsPaused) {
 				this._stepEval_Simulate.SetRunningState(enable);
 				this._particleResourceUse.ReadType = enable
@@ -315,13 +315,13 @@ namespace ParticleSimulator.Engine {
 		}
 
 		private void ResetSimulation() {
-			bool paused = this.IsPaused;
-			if (!paused) this.Pause();
+			bool paused = this._stepEval_Simulate.IsPaused;
 			this.ResetRandon();
 			this._stepEval_Simulate.Restart(false);
-			this._stepsStartingPaused[this._stepEval_Simulate.Id] = true;
-			this._particleResource.Overwrite(new(this.Simulator.Particles.Select(p => new ParticleData(p))));
-			if (!paused) this.Resume();
+			this._stepsStartingPaused[this._stepEval_Simulate.Id] = !paused;
+			this._particleResource.Overwrite(this.Simulator.Particles.Select(p => new ParticleData(p)).ToArray());
+			if (!paused)
+				this._stepEval_Simulate.Resume();
 		}
 
 		private void HandleInputs() {

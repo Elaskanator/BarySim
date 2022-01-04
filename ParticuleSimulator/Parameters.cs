@@ -74,16 +74,16 @@ namespace ParticleSimulator {
 		#region Gravity
 		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 10f;
 
-		public const float GRAVITATIONAL_CONSTANT = 1E-7f;
+		public const float GRAVITATIONAL_CONSTANT = 1E-8f;
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;
 		public const float MASS_LUMINOSITY_SCALAR = 1E0f;
-		public const float GRAVITY_RADIAL_DENSITY = 1E6f;
+		public const float GRAVITY_RADIAL_DENSITY = 2E6f;
 
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
 
 		public const float GRAVITY_MIN_STARTING_MASS = 1f;
-		public const float GRAVITY_MAX_STARTING_MASS = 1f;
+		public const float GRAVITY_MAX_STARTING_MASS = 4f;
 
 		//public const float GRAVITY_CRITICAL_MASS = 1024f;
 		//public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
