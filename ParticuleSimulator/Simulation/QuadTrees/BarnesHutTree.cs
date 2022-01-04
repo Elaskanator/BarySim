@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
-using Generic.Extensions;
-using Generic.Models;
 using Generic.Models.Trees;
 using Generic.Vectors;
 
@@ -21,31 +18,6 @@ namespace ParticleSimulator.Simulation {
 		public override int Capacity => Parameters.QUADTREE_NODE_CAPACITY;
 
 		public Tuple<Vector<float>, float> Barycenter { get; private set; }
-		public void UpdateBarycenter() {
-			Tuple<Vector<float>, float> total = new(Vector<float>.Zero, 0f), agg;
-			BarnesHutTree child;
-			for (int i = 0; i < this.Children.Length; i++) {
-				if (this.Children[i].Count > 0) {
-					if (this.Children[i].IsLeaf) {
-						agg = new(Vector<float>.Zero, 0f);
-						foreach (Particle p in this.Children[i].Bin.Where(p => p.Mass > 0f)) {
-							agg = new(
-								agg.Item1 + (p.Position * p.Mass),
-								agg.Item2 + p.Mass);
-						}
-					} else {
-						child = (BarnesHutTree)this.Children[i];
-						agg = new(
-							child.Barycenter.Item1 * child.Barycenter.Item2,
-							child.Barycenter.Item2);
-					}
-					total = new(
-						total.Item1 + (agg.Item1 * agg.Item2),
-						total.Item2 + agg.Item2);
-				}
-			}
-			this.Barycenter = new(total.Item1 * (1f / total.Item2), total.Item2);
-		}
 
 		public override void Add(Particle item) {
 			Stack<BarnesHutTree> path = new();
@@ -73,39 +45,47 @@ namespace ParticleSimulator.Simulation {
 			return false;
 		}
 
-		//public bool[] CompleteChildren { get; private set; }
-
-		//public readonly BaryonCenter BaryCenter_Position = new();
-		//public readonly BaryonCenter BaryCenter_Mass = new();
-		//public readonly BaryonCenter BaryCenter_Charge = new();
-		//
-		//protected override void Incorporate(T item) {
-		//	this.BaryCenter_Position.Update(item.Position, 1d);
-		//	this.BaryCenter_Mass.Update(item.Position, item.Mass);
-		//	this.BaryCenter_Charge.Update(item.Position, item.Charge);
-		//}
-		//
-		//protected override void AfterRemove(T item) {
-		//	this.BaryCenter_Position.Update(item.Position, -1d);
-		//	this.BaryCenter_Mass.Update(item.Position, -item.Mass);
-		//	this.BaryCenter_Charge.Update(item.Position, -item.Charge);
-		//}
-		//
-		//private List<BarnesHutTree<T>> _siblings = new();
-		//private List<BarnesHutTree<T>> _cousins = new();
-		//
-		//private const float _neighborDist = 0.1f;
-		//private bool IsNeighbor(BarnesHutTree<T> other) => this.Center.Distance(other.Center) <= _neighborDist;
-		//
-		//
-		//	//Stack<ATree<T>> stack = new();
-		//
-		//	//int inverse = this.InverseIndex(i);
-		//	//ATree<T> node = this;
-		//	//while (!node.IsLeaf) {
-		//	//	for (int i = 0; i < node.Children.Length; i++) {
-		//	//	}
-		//	//}
-		//}
+		public void UpdateBarycenter() {
+			Tuple<Vector<float>, float> total = new(Vector<float>.Zero, 0f), agg;
+			BarnesHutTree child;
+			Particle particle;
+			if (this.IsLeaf) {
+				if (this.Bin.Count == 1) {
+					particle = this.Bin.First();
+					this.Barycenter = new(particle.Position, particle.Mass);
+				} else {
+					foreach (Particle p in this.Bin.Where(p => p.Mass > 0f))
+						total = new(
+							total.Item1 + (p.Position * p.Mass),
+							total.Item2 + p.Mass);
+					if (total.Item2 > 0f)
+						this.Barycenter = new(total.Item1 * (1f / total.Item2), total.Item2);
+					else this.Barycenter = new(this.Center, 0f);
+				}
+			} else {
+				for (int i = 0; i < this.Children.Length; i++) {
+					if (this.Children[i].Count > 0) {
+						child = (BarnesHutTree)this.Children[i];
+						if (child.Barycenter.Item2 > 0f) {
+							agg = new(
+								child.Barycenter.Item1 * child.Barycenter.Item2,
+								child.Barycenter.Item2);
+							total = new(
+								total.Item1 + (agg.Item1 * agg.Item2),
+								total.Item2 + agg.Item2);
+						}
+					}
+				}
+				if (total.Item2 > 0f)
+					this.Barycenter = new(total.Item1 * (1f / total.Item2), total.Item2);
+				else this.Barycenter = new(this.Center, 0f);
+			}
+		}
+		
+		public bool CanApproximate(BarnesHutTree node) {
+			float dist = this.Barycenter.Item1.Distance(node.Barycenter.Item1);
+			return Parameters.WORLD_EPSILON < dist
+				&& Parameters.BARYON_ACCURACY > node.Size[0] / dist;
+		}
 	}
 }

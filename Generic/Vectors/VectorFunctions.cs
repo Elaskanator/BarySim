@@ -103,7 +103,7 @@ namespace Generic.Vectors {
 			return new Vector<float>(values);
 		}
 
-		public static float Magnitude(this Vector<float> v) =>  MathF.Sqrt(Vector.Dot(Vector.Multiply(v, v), Vector<float>.One));
+		public static float Magnitude(this Vector<float> v) =>  MathF.Sqrt(Vector.Dot(v, v));
 			//return MathF.Sqrt(
 			//	Enumerable.Range(0, dim)
 			//		.Select(d => v[d] * v[d])

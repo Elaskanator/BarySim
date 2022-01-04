@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Numerics;
 using Generic.Vectors;
-using ParticleSimulator.Simulation;
 
 namespace ParticleSimulator {
 	public interface IParticle : IPosition<Vector<float>>, IEquatable<IParticle> {
@@ -39,18 +38,17 @@ namespace ParticleSimulator {
 		
 		public Vector<float> Position { get; set; }
 		public Vector<float> Velocity { get; set; }
-		public Vector<float> Force { get; set; }
+		public Vector<float> Acceleration { get; set; }
 
-		public virtual Vector<float> Acceleration => this.Force * (1f / this.Mass);
+		internal bool Test1;
+		internal bool Test2;
+
+		public virtual Vector<float> Force {
+			get => this.Acceleration * this.Mass;
+			set { this.Acceleration = value * (1f / this.Mass); } }
 		public virtual Vector<float> Momentum {
 			get => this.Velocity * this.Mass;
 			set { this.Velocity = value * (1f / this.Mass); } }
-		
-		public bool CanApproximateInteraction(BarnesHutTree node) {
-			float dist = this.Position.Distance(node.Barycenter.Item1);
-			return Parameters.WORLD_EPSILON < dist
-				&& Parameters.BARYON_ACCURACY > node.Size[0] / dist;
-		}
 
 		public void ApplyTimeStep(float timeStep) {
 			Vector<float> velocity = this.Velocity + timeStep*this.Acceleration,
@@ -88,13 +86,11 @@ namespace ParticleSimulator {
 
 		public void Incorporate(Particle other) {
 			float mass = this.Mass + other.Mass;
-			Vector<float> position = ((this.Position*this.Mass) + (other.Position*other.Mass)) * (1f / mass),
-				momentum =  this.Momentum + other.Momentum,
-				force = this.Force + other.Force;
+			Vector<float> position = ((this.Position*this.Mass) + (other.Position*other.Mass)) * (1f / mass);
 			this.Mass = mass;
 			this.Position = position;
-			this.Momentum = momentum;
-			this.Force = force;
+			this.Momentum = this.Momentum + other.Momentum;
+			this.Force = this.Force + other.Force;
 		}
 
 		public void WrapPosition() {

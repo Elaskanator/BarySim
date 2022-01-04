@@ -27,9 +27,9 @@ namespace ParticleSimulator {
 
 		//using top and bottom halves of each character to get double the verticle resolution
 
-		public const int PARTICLES_GROUP_COUNT = 1;
+		public const int PARTICLES_GROUP_COUNT = 10;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 10;
+		public const int PARTICLES_GROUP_MAX = 1;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const bool EXPORT_FRAMES = false;
@@ -49,7 +49,7 @@ namespace ParticleSimulator {
 		//public const bool WORLD_BOUNDING = false;
 		//public const bool WORLD_TRUNCATION = true;
 		
-		public const bool WORLD_BOUNCING = true;
+		public const bool WORLD_BOUNCING = false;
 		public const float WORLD_EPSILON = 1E-4f;
 		public const float WORLD_DEATH_BOUND_CNT = 100f;
 		public const float WORLD_PADDING_PCT = 25f;
@@ -73,7 +73,7 @@ namespace ParticleSimulator {
 		#region Gravity
 		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 1f;
 
-		public const float GRAVITATIONAL_CONSTANT = 6E-10f;
+		public const float GRAVITATIONAL_CONSTANT = 1E-3f;
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;
 		public const float MASS_LUMINOSITY_SCALAR = 1E-1f;
 		public const float GRAVITY_RADIAL_DENSITY = 1E4f;
@@ -91,7 +91,7 @@ namespace ParticleSimulator {
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP = 0E-4f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND = 0E-4f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP = 0E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 5E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND = 0E-3f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
 
