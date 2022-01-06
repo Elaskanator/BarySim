@@ -4,14 +4,14 @@ using System.Linq;
 using System.Numerics;
 using Generic.Vectors;
 
-namespace ParticleSimulator.Simulation {
+namespace ParticleSimulator.Simulation.Particles {
 	public interface IParticleGroup : IEquatable<IParticleGroup>, IEqualityComparer<IParticleGroup> {
 		int ID { get; }
 		IParticle[] InitialParticles { get; }
 	}
 
 	public abstract class AParticleGroup<TParticle> : IParticleGroup
-	where TParticle : Particle {
+	where TParticle : AParticle<TParticle> {
 		public AParticleGroup() {
 			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Engine.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_SKEW_POWER) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
 

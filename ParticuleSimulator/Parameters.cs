@@ -8,112 +8,86 @@ using ParticleSimulator.Rendering.SystemConsole;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited or to disable the feature
 	public static class Parameters {
-		//public static readonly int WINDOW_WIDTH = 100;
-		public static readonly int WINDOW_WIDTH = 128;
-		//public static readonly int WINDOW_HEIGHT = 50;
-		public static readonly int WINDOW_HEIGHT = 64;
-		public const int SUPERSAMPLING = 3;
-		public const float INACCURCY = 0.5f;
-		
-		public const int DIM = 3;
-		public const float WORLD_SCALE = 1f;
-		public const float X_SCALE = 1f;
-		public const float Y_SCALE = 1f;
-		public const float Z_SCALE = 1f;
-		public static readonly float ZOOM_SCALE = 1f;// / MathF.Sqrt(2f);
+		//using top and bottom halves of each character to get double the verticle resolution
+		public static readonly int WINDOW_WIDTH = Console.LargestWindowWidth;
+		public static readonly int WINDOW_HEIGHT = Console.LargestWindowHeight;
 
-		public const float TIME_SCALE = 1;//can be any value, including negative
 		public const float TARGET_FPS = 30f;
 		public const bool VSYNC = false;
+		public const int SUPERSAMPLING = 3;
 
-		//using top and bottom halves of each character to get double the verticle resolution
+		public const int DIM = 3;
+		public const float TIME_SCALE = 1;
+		public const float WORLD_SCALE = 2f;
 
-		public const int PARTICLES_GROUP_COUNT = 100;
+		public const int PARTICLES_GROUP_COUNT = 1 << 14;
+		public const float INITIAL_SEPARATION_SCALER = 5f;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 10;
+		public const int PARTICLES_GROUP_MAX = 1;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
-		public const bool EXPORT_FRAMES = false;
-		public const string EXPORT_DIR = null;
-
-		public const float WORLD_ROTATION_RADS_PER_STEP = 0.004f;
-
-		public const float PIXEL_OVERLAP_THRESHOLD = 0.5f;
+		public const float INACCURCY = 1f;
 		public const int DETERMINISTIC_RANDOM_SEED = 0;
-
-		//public const float ADAPTIVE_TIME_GRANULARITY = 0.01f;//subdivide time steps as necessary for very close interactions
-		//public const float ADAPTIVE_TIME_CRITERION = 0.01f;//a weighted value based on range and velocity to other particles in the nearfield group
-		//public const float PARTICLE_MAX_ACCELERATION = 0.0025f;
-		//public const bool WORLD_BOUNCING_EXTENSION = true;
-		//public const bool WORLD_WRAPPING = false;
-		//public const bool WORLD_BOUNDING = false;
-		//public const bool WORLD_TRUNCATION = true;
 		
-		public const bool WORLD_BOUNCING = false;
 		public const bool WORLD_WRAPPING = false;
-		public const float WORLD_EPSILON = 1E-4f;
-		public const float WORLD_DEATH_BOUND_CNT = 100f;
-		public const float WORLD_PADDING_PCT = 25f;
+		public const bool MERGE_ENABLE = true;
+		public const bool WORLD_BOUNCING = false;
+		public const float X_BOUNCE_ASPECT = 1f;
+		public const float Y_BOUNCE_ASPECT = 1f;
+		public const float Z_BOUNCE_ASPECT = 1f;
 		
-		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Luminosity;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
-		//public static readonly ConsoleColor[] COLOR_ARRAY = new ConsoleColor[] { ConsoleColor.White };
-		public const float AUTOSCALE_FIXED_MIN = -1f;
-		public const float AUTOSCALE_FIXED_MAX = -1f;
-		public const bool AUTOSCALE_PERCENTILE = false;
-		public const bool COLOR_USE_FIXED_BANDS = true;
-		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
+		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
+		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
-		public const float AUTOSCALE_CUTOFF_PCT = 0f;
-		public const float AUTOSCALE_MIN_STEP = 1f;
+		public const float WORLD_PADDING_PCT = 0f;
+		public const float WORLD_EPSILON = 1E-8f;
+		public const float WORLD_DEATH_BOUND_CNT = 10f;
+		public const float RENDER_PIXEL_OVERLAP_THRESHOLD = 1f;//non-negative
 		
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
 		public const bool SYNC_SIMULATION = true;//synchronizes simulation to not start until rendering finishes (with precalculation limit still)
+		public const int QUADTREE_NODE_CAPACITY = 1;//untested above 1
+		
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Luminosity;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
+		//public static readonly ConsoleColor[] COLOR_ARRAY = new ConsoleColor[] { ConsoleColor.White };
+		public const bool COLOR_USE_FIXED_BANDS = true;
+		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
+		public const bool AUTOSCALE_PERCENTILE = false;
+		public const float AUTOSCALE_FIXED_MIN = -1f;
+		public const float AUTOSCALE_FIXED_MAX = -1f;
+		public const float AUTOSCALE_CUTOFF_PCT = 0f;
+		public const float AUTOSCALE_MIN_STEP = 1f;
+
+		public const bool EXPORT_FRAMES = false;//TODO
+		public const string EXPORT_DIR = null;	//TODO
 
 		#region Gravity
-		public const float GRAVITY_INITIAL_SEPARATION_SCALER = 10f;
-
-		public const float GRAVITATIONAL_CONSTANT = 1E-8f;
-		public const float ELECTROSTATIC_CONSTANT = 1E-9f;
-		public const float MASS_LUMINOSITY_SCALAR = 1E0f;
-		public const float GRAVITY_RADIAL_DENSITY = 2E6f;
-
-		public const float ELECTROSTATIC_MIN_CHARGE = 0f;
-		public const float ELECTROSTATIC_MAX_CHARGE = 0f;
-
+		public const float GRAVITATIONAL_CONSTANT = 1E-9f;
+		public const float GRAVITY_RADIAL_DENSITY = 1E6f;
 		public const float GRAVITY_MIN_STARTING_MASS = 1f;
-		public const float GRAVITY_MAX_STARTING_MASS = 4f;
+		public const float GRAVITY_MAX_STARTING_MASS = 1f;
 
-		//public const float GRAVITY_CRITICAL_MASS = 1024f;
-		//public const int GRAVITY_EJECTA_NUM_PARTICLES = 16;
-		//public const float GRAVITY_EJECTA_SPEED = 0.002f;
+		public const float MASS_LUMINOSITY_SCALAR = 1E-1f;
+		
+		public const float ELECTROSTATIC_CONSTANT = 1E-9f;//TODO
+		public const float ELECTROSTATIC_MIN_CHARGE = 0f;//TODO
+		public const float ELECTROSTATIC_MAX_CHARGE = 0f;//TODO
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 2E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 1E-4f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 4E-4f;
+		public const float GRAVITY_CRITICAL_MASS = 1337f;
+		public const float GRAVITY_EJECTA_PARTICLE_MASS = 1f;
+		public const float GRAVITY_EJECTA_SPEED = 7E-3f;
+
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 1E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 1E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 1E-3f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 1E-3f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
-
-		public const bool GRAVITY_COLLISION_COMBINE = true;
-		//public const float GRAVITY_COMBINE_OVERLAP_CUTOFF_BARYON_ERROR = 0.2f;//1 means merely touching
-		//public const float GRAVITY_COLLISION_DRAG_STRENGTH = 0f;//1 means instant stop
-		
-		public const int QUADTREE_NODE_CAPACITY = 1;
 		#endregion Gravity
-		
-		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-X_SCALE * WORLD_SCALE / 2f, -Y_SCALE * WORLD_SCALE / 2f, -Z_SCALE * WORLD_SCALE / 2f);
-		public static readonly Vector<float> WORLD_LEFT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_LEFT, new Vector<float>(float.NegativeInfinity));
-		public static readonly Vector<float> WORLD_RIGHT = VectorFunctions.New(X_SCALE * WORLD_SCALE / 2f, Y_SCALE * WORLD_SCALE / 2f, Z_SCALE * WORLD_SCALE / 2f);
-		public static readonly Vector<float> WORLD_RIGHT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_RIGHT, new Vector<float>(float.PositiveInfinity));
-		public static readonly Vector<float> WORLD_SIZE = WORLD_RIGHT - WORLD_LEFT;
 
 		#region Aux
-		public const char CHAR_LOW  = '\u2584';//▄
-		public const char CHAR_BOTH = '\u2588';//█
-		public const char CHAR_TOP  = '\u2580';//▀
-
 		public const float TARGET_FPS_DEFAULT = 30f;
 		public const int PERF_WARN_MS = 2000;
 		public const int AUTOSCALE_INTERVAL_MS = 0;
@@ -129,11 +103,19 @@ namespace ParticleSimulator {
 		public const int PERF_GRAPH_DEFAULT_WIDTH = 32;
 		public const int PERF_GRAPH_FRAMES_PER_COLUMN = 30;
 		public const float PERF_GRAPH_PERCENTILE_CUTOFF = 25f;
+		#endregion Aux
 
+		#region
 		public static readonly bool AUTOSCALER_ENABLE =
 			!COLOR_USE_FIXED_BANDS && COLOR_ARRAY.Length > 1
 			&& COLOR_METHOD != ParticleColoringMethod.Group
 			&& COLOR_METHOD != ParticleColoringMethod.Random;
-		#endregion Aux
+
+		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-X_BOUNCE_ASPECT * WORLD_SCALE / 2f, -Y_BOUNCE_ASPECT * WORLD_SCALE / 2f, -Z_BOUNCE_ASPECT * WORLD_SCALE / 2f);
+		public static readonly Vector<float> WORLD_LEFT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_LEFT, new Vector<float>(float.NegativeInfinity));
+		public static readonly Vector<float> WORLD_RIGHT = VectorFunctions.New(X_BOUNCE_ASPECT * WORLD_SCALE / 2f, Y_BOUNCE_ASPECT * WORLD_SCALE / 2f, Z_BOUNCE_ASPECT * WORLD_SCALE / 2f);
+		public static readonly Vector<float> WORLD_RIGHT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_RIGHT, new Vector<float>(float.PositiveInfinity));
+		public static readonly Vector<float> WORLD_SIZE = WORLD_RIGHT - WORLD_LEFT;
+		#endregion
 	}
 }

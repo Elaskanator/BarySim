@@ -8,6 +8,7 @@ using ParticleSimulator.Rendering.Rasterization;
 using ParticleSimulator.Rendering.SystemConsole;
 using ParticleSimulator.Simulation;
 using ParticleSimulator.Simulation.Baryon;
+using ParticleSimulator.Simulation.Particles;
 using ParticleSimulator.Rendering.Exporter;
 using ParticleSimulator.Engine.Threading;
 using System.Collections.Generic;
@@ -111,8 +112,6 @@ namespace ParticleSimulator.Engine {
 							|| (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth && Parameters.COLOR_METHOD != ParticleColoringMethod.Overlap)));
 					this._stepsStartingPaused[this.Evaluators[i].Id] = this.Evaluators[i].IsPaused;
 				}
-
-				this._particleResource.Overwrite(this.Simulator.Particles.Select(p => new ParticleData(p)).ToArray());
 			}
 		}
 
@@ -319,7 +318,6 @@ namespace ParticleSimulator.Engine {
 			this.ResetRandon();
 			this._stepEval_Simulate.Restart(false);
 			this._stepsStartingPaused[this._stepEval_Simulate.Id] = !paused;
-			this._particleResource.Overwrite(this.Simulator.Particles.Select(p => new ParticleData(p)).ToArray());
 			if (!paused)
 				this._stepEval_Simulate.Resume();
 		}

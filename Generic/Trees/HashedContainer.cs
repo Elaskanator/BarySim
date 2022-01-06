@@ -12,6 +12,8 @@ namespace Generic.Models.Trees {
 			this.Items = Enumerable.Empty<T>();
 		}
 
+		public override string ToString() => string.Format("HashedContainer[{0}]", this.Count.Pluralize("item"));
+
 		public int MaxCapacity { get; private set; }
 		public int Count { get; private set; }
 		public IEnumerable<T> Items { get; private set; }

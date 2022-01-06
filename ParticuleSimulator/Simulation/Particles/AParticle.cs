@@ -1,59 +1,50 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
-using Generic.Vectors;
+using Generic.Models.Trees;
 
-namespace ParticleSimulator {
-	public interface IParticle : IPosition<Vector<float>>, IEquatable<IParticle> {
-		int ID { get; }
-		int GroupID { get; }
-		float Radius { get; }
-		float Luminosity { get; }
-		
-		bool Equals(object other) => (other is IParticle data) && this.ID == data.ID;
-		bool IEquatable<IParticle>.Equals(IParticle other) => this.ID == other.ID;
-		int GetHashCode() => this.ID;
-	}
-
-	public class Particle : IParticle {
+namespace ParticleSimulator.Simulation.Particles {
+	public abstract class AParticle<TSelf> : IParticle
+	where TSelf : AParticle<TSelf>{
 		private static int _globalID = 0;
 		private readonly int _id = ++_globalID;
 
-		public Particle() {
+		protected AParticle(int groupId, Vector<float> position, Vector<float> velocity) {
+			this.GroupId = groupId;
+			this.Position = position;
+			this.Velocity = velocity;
+			this.Acceleration = Vector<float>.Zero;
 			this.Enabled = true;
 		}
 
-		public override string ToString() => string.Format("Particle[<{0}> ID {1}]", this.ID, string.Join("", this.Position));
+		public override string ToString() => string.Format("Particle[<{0}> ID {1}]", this.Id, string.Join("", this.Position));
 
-		public int ID => this._id;
-		public int GroupID { get; internal set; }
+		public int Id => this._id;
+		public int GroupId { get; private set; }
 		public bool Enabled { get; set; }
-
+		private bool _isInRange = true;
+		public bool IsInRange {
+			get => this._isInRange;
+			set { this._isInRange = value; this.Enabled &= value; } }
+		
 		public float Charge { get; set; }
-		public float Radius { get; protected set; }
-		public float Luminosity { get; protected set; }
-		public virtual float Density => Parameters.GRAVITY_RADIAL_DENSITY;
+		public float Luminosity { get; set; }
 
-		private float _mass = 0f;
-		public virtual float Mass {
-			get => this._mass;
-			set {
-				this._mass = value;
-				this.Radius = (float)VectorFunctions.HypersphereRadius(value / this.Density, Parameters.DIM);
-				this.Luminosity = MathF.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5f); }}
+		private float _radius;
+		public float Radius {
+			get => this._radius;
+			set { this._radius = value; this.RadiusSquared = value * value; } }
+		public float RadiusSquared { get; private set; }
 		
 		public Vector<float> Position { get; set; }
 		public Vector<float> Velocity { get; set; }
 		public Vector<float> Acceleration { get; set; }
 
-		public virtual Vector<float> Force {
-			get => this.Acceleration * this.Mass;
-			set { this.Acceleration = value * (1f / this.Mass); } }
-		public virtual Vector<float> Momentum {
-			get => this.Velocity * this.Mass;
-			set { this.Velocity = value * (1f / this.Mass); } }
+		public readonly Queue<TSelf> Mergers = new();
+		public readonly Queue<TSelf> NewParticles = new();
 
-		public void ApplyTimeStep(float timeStep, Tuple<Vector<float>, float> baryCenter) {
-			Vector<float> velocity = this.Velocity + timeStep*this.Acceleration,
+		public void ApplyTimeStep(float timeStep, ATree<TSelf> world) {
+			Vector<float> velocity = this.Velocity + (timeStep * this.Acceleration),
 				displacement = timeStep*velocity,
 				newP = this.Position + displacement;
 
@@ -78,10 +69,7 @@ namespace ParticleSimulator {
 						lesses = Vector.LessThan(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_LEFT_INF);
 						greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_RIGHT_INF);
 						union = lesses | greaters;
-						this.Enabled = Vector.EqualsAll(union, Vector<int>.Zero)
-							|| Vector.Dot(this.Velocity, this.Velocity)
-								< 2f * Parameters.GRAVITATIONAL_CONSTANT * baryCenter.Item2
-									/ this.Position.Distance(baryCenter.Item1);
+						this.IsInRange = Vector.EqualsAll(union, Vector<int>.Zero) || this.TestInRange(world);
 					}
 				}
 			}
@@ -90,25 +78,9 @@ namespace ParticleSimulator {
 			this.Velocity = velocity;
 		}
 
-		public virtual bool TryMerge(Particle other) {
-			float largerRadius = this.Radius > other.Radius ? this.Radius : other.Radius,
-				dist = this.Position.Distance(other.Position);
-			
-			if (dist <= Parameters.WORLD_EPSILON || dist <= largerRadius) {
-				this.Incorporate(other);
-				return true;
-			} else return false;
-		}
-
-		public void Incorporate(Particle other) {
-			float mass = this.Mass + other.Mass;
-			Vector<float> position = ((this.Position*this.Mass) + (other.Position*other.Mass)) * (1f / mass);
-			this.Mass = mass;
-			this.Position = position;
-			this.Momentum = this.Momentum + other.Momentum;
-			this.Force = this.Force + other.Force;
-			other.Enabled = false;
-		}
+		public abstract Vector<float> ComputeInfluence(TSelf other);
+		public abstract void Incorporate(TSelf other);
+		protected abstract bool TestInRange(ATree<TSelf> world);
 
 		public void WrapPosition() {
 			this.Position = WrapPosition(this.Position);

@@ -2,60 +2,34 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using Generic.Extensions;
 using Generic.Vectors;
+using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Simulation.Baryon {
-	public class Galaxy : AParticleGroup<Particle> {
+	public class Galaxy : AParticleGroup<MatterClump> {
 		public override float StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
 		public override float StartSpeedMax_Group_Rand => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND;
 		public override float StartSpeedMax_Particle_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP;
 		public override float StartSpeedMax_Particle_Min => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
 		public override float StartSpeedMax_Particle_Max => Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND;
 
-		public override float ComputeInitialSeparationRadius(IEnumerable<Particle> particles) =>
-			Parameters.GRAVITY_INITIAL_SEPARATION_SCALER
+		public override float ComputeInitialSeparationRadius(IEnumerable<MatterClump> particles) =>
+			Parameters.INITIAL_SEPARATION_SCALER
 			* (float)VectorFunctions.HypersphereRadius(particles.Sum(p => p.Mass)
 			/ Parameters.GRAVITY_RADIAL_DENSITY, Parameters.DIM);
 
-		protected override Particle NewParticle(Vector<float> position, Vector<float> velocity) {
+		protected override MatterClump NewParticle(Vector<float> position, Vector<float> velocity) {
 			float massRange = Parameters.GRAVITY_MAX_STARTING_MASS - Parameters.GRAVITY_MIN_STARTING_MASS,
 				chargeRange = Parameters.ELECTROSTATIC_MAX_CHARGE - Parameters.ELECTROSTATIC_MIN_CHARGE;
-			return new Particle() {
-				GroupID = this.ID,
+			return new MatterClump(this.ID, position, velocity) {
 				Mass = Parameters.GRAVITY_MIN_STARTING_MASS + massRange * (float)Program.Engine.Random.NextDouble(),
 				Charge = Parameters.ELECTROSTATIC_MIN_CHARGE + chargeRange * (float)Program.Engine.Random.NextDouble(),
-				Position = position,
-				Velocity = velocity,
-				Force = Vector<float>.Zero,
 			};
 		}
 
-		//protected override Vector<float> NewParticlePosition(Vector<float> center, float radius) {
-		//	Vector<float> result = base.NewParticlePosition(new float[Parameters.DIM].Take(2).ToArray(), radius)
-		//		.Concat(new float[2])
-		//		.Take(Parameters.DIM)
-		//		.ToArray()
-		//		.Add(center);
-
-		//	if (Parameters.DIM > 2) {
-		//		float height =
-		//			this.NumParticles
-		//			* this.InitialSeparationRadius
-		//			* MathF.Pow((float)Program.Random.NextDouble(), 2f)
-		//			/ MathF.Pow(2f, Parameters.DIM - 1f);
-				
-		//		result = result.Add(
-		//			new float[2].Concat(
-		//				HyperspaceFunctions.RandomCoordinate_Spherical(height, Parameters.DIM - 2, Program.Random).Select(x => (float)x))
-		//			.ToArray());
-		//	}
-
-		//	return result;
-		//}
 		protected override Vector<float> NewInitialDirection(Vector<float> center, Vector<float> position) {
 			if (Parameters.DIM == 1) {
-				return Vector<float>.Zero;
+				return VectorFunctions.New(Program.Engine.Random.NextDouble() < 0.5f ? -1f : 1f);
 			} else {
 				float angle = MathF.Atan2(position[1] - center[1], position[0] - center[0]);
 				angle += 2f * MathF.PI

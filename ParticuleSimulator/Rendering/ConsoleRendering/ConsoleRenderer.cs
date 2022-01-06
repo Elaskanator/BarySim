@@ -8,6 +8,10 @@ using ParticleSimulator.Rendering.Rasterization;
 
 namespace ParticleSimulator.Rendering.SystemConsole {
 	public class ConsoleRenderer : ARenderer {
+		public const char CHAR_LOW  = '\u2584';//▄
+		public const char CHAR_BOTH = '\u2588';//█
+		public const char CHAR_TOP  = '\u2580';//▀
+
 		public ConsoleRenderer(RenderEngine engine) : base(engine) {
 			this.NumChars = Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT;
 			this._lastFrame = new ConsoleExtensions.CharInfo[NumChars];
@@ -18,7 +22,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		public static ConsoleExtensions.CharInfo BuildChar(ConsoleColor bottomColor, ConsoleColor topColor) =>
 			topColor == bottomColor
 				? new ConsoleExtensions.CharInfo(0, 0, bottomColor)
-				: new ConsoleExtensions.CharInfo(Parameters.CHAR_LOW, bottomColor, topColor);
+				: new ConsoleExtensions.CharInfo(CHAR_LOW, bottomColor, topColor);
 
 		public readonly int NumChars;
 
@@ -147,7 +151,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					pixelIdx += Parameters.WINDOW_WIDTH;
 
 					buffer[pixelIdx] = new ConsoleExtensions.CharInfo(
-						Parameters.CHAR_BOTH,
+						CHAR_BOTH,
 						Parameters.COLOR_ARRAY[cIdx]);
 
 					rowStringData = 

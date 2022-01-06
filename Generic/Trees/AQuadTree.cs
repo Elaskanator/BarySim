@@ -27,13 +27,13 @@ namespace Generic.Models.Trees {
 		public TCorner CornerRight { get; private set; }
 
 		private readonly bool _limitReached;
-		public override bool LimitReached => this._limitReached;
+		public override bool MaxDepthReached => this._limitReached;
 		
 		public override bool DoesEncompass(TItem item) =>//left-handed convention [a, b)
 			this.BitmaskLessThan(item.Position, this.CornerLeft) == 0
 			&& this.BitmaskGreaterThanOrEqual(item.Position, this.CornerRight) == 0;
 
-		public override int ChildIndex(TItem item) =>
+		protected override int ChildIndex(TItem item) =>
 			this.BitmaskGreaterThanOrEqual(item.Position, this.Center);//left-handed convention [a, b)
 		protected int InverseIndex(int idx) =>
 			(1 << this.Dim) - idx - 1;

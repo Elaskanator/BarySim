@@ -10,12 +10,12 @@ namespace Generic.Models {
 			this.Target = value;
 			this.VSync = vSync;
 		}
-		public TimeSynchronizer (double fps, bool vSync) {
+		public TimeSynchronizer(double fps, bool vSync) {
 			this.Target = TimeSpan.FromSeconds(1d / fps);
 			this.VSync = vSync;
 		}
 		
-		private DateTime? _targetTimeUtc = null;
+		private DateTime _targetTimeUtc = DateTime.UtcNow;
 		public readonly TimeSpan Target;
 		public readonly bool VSync;
 
@@ -25,21 +25,19 @@ namespace Generic.Models {
 			DateTime nowUtc = DateTime.UtcNow;
 
 			this.LastSyncDuration = null;
-			//optional rounding down to nearest second:
-			this._targetTimeUtc ??= nowUtc;
-			TimeSpan waitDuration = TimeSpan.Zero;
 
+			TimeSpan waitDuration;
 			if (this.VSync) {
-				waitDuration = this._targetTimeUtc.Value - nowUtc;
+				waitDuration = this._targetTimeUtc - nowUtc;
 				if (waitDuration.Ticks >= 0L) {
 					this._targetTimeUtc += this.Target;
 				} else {
 					int slip = (int)Math.Ceiling(-waitDuration / this.Target);
 					this._targetTimeUtc += this.Target * slip;
-					waitDuration = this._targetTimeUtc.Value - nowUtc;
+					waitDuration = this._targetTimeUtc - nowUtc;
 				}
 			} else {
-				waitDuration = this._targetTimeUtc.Value - nowUtc;
+				waitDuration = this._targetTimeUtc - nowUtc;
 				if (waitDuration.Ticks > 0L)
 					this._targetTimeUtc += this.Target;
 				else this._targetTimeUtc = nowUtc + this.Target;//missed it (this does not preserve absolute synchronization and can de-phase from metered interval times)

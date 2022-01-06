@@ -8,7 +8,7 @@ namespace ParticleSimulator.Engine {
 			this.Label = label;
 			this.Getter = getter;
 			this.Setter = setter;
-			this.Resetter = resetter;
+			this.Resetter = resetter;//bugged still
 			this.SuspendStateGetter = suspendStateGetter;
 		}
 
