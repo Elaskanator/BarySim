@@ -7,7 +7,7 @@ using ParticleSimulator.Simulation.Baryon;
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Camera {
 		public Camera(float scaling = 1f) {
-			this.InitialScaling = this.Scaling = scaling * Parameters.WORLD_SCALE * 2f;
+			this.InitialScaling = this.Scaling = scaling;
 
 			this.RotationMatrixColumns = VectorFunctions.IdentityMatrixColumns;
 			this.SetRange(
@@ -42,7 +42,6 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 		public void Reset() {
 			this.IsAutoIncrementActive = false;
-			this.AutoCentering = false;
 			//this.IsPitchRotationActive = false;
 			//this.IsYawRotationActive = false;
 			//this.IsRollRotationActive = false;
@@ -50,9 +49,9 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			this.RotationStepsYaw = 0;
 			this.RotationStepsRoll = 0;
 
-			this.ResetZoom();
+			this.ResetFocus();
 		}
-		public void ResetZoom() {
+		public void ResetFocus() {
 			this.Scaling = this.InitialScaling;
 			this.Center = this.InitialCenter;
 			this.AutoCentering = false;
@@ -100,8 +99,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 					values[2] = Vector.Dot(offsetV, this.RotationMatrixColumns[2]);
 				//for (int i = 3; i < Vector<float>.Count; i++)
 				//	values[i] = offsetV[i];
-				return new Vector<float>(values) + this.Center;
-			} else return offsetV + this.Center;
+				return new Vector<float>(values);
+			} else return offsetV;
 		}
 
 		public void Increment() {
@@ -112,11 +111,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			
 			if (this.AutoCentering && Program.Engine.Simulator.ParticleCount > 0 && !(Program.Engine.Simulator.ParticleTree is null)) {
 				BarnesHutTree tree = (BarnesHutTree)Program.Engine.Simulator.ParticleTree;
-				if (tree.MassBaryCenter.Weight > 0f) {
-					this.Center = 2f*tree.MassBaryCenter.Position;
-					float maxLength = 1f;//TODODO
-					this.Scaling = maxLength * Parameters.WORLD_SCALE * 2f;
-				}
+				if (tree.MassBaryCenter.Weight > 0f)
+					this.Center = tree.MassBaryCenter.Position;
 			}
 
 			if (this.IsAutoIncrementActive) {

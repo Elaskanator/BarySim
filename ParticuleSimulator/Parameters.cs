@@ -19,12 +19,12 @@ namespace ParticleSimulator {
 
 		public const int DIM = 3;
 		public const float TIME_SCALE = 1f;
-		public const float WORLD_SCALE = 1f;
+		public const float WORLD_SCALE = 2f;
 		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
 		public const int PARTICLES_GROUP_COUNT = 2;
-		public const float INITIAL_SEPARATION_SCALER = 15f;
+		public const float INITIAL_SEPARATION_SCALER = 20f;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 1 << 14;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
@@ -42,7 +42,7 @@ namespace ParticleSimulator {
 		public const float Y_BOUNCE_ASPECT = 1f;
 		public const float Z_BOUNCE_ASPECT = 1f;
 
-		public const float WORLD_PADDING_PCT = 10f;
+		public const float WORLD_PADDING_PCT = 0f;
 		public const float WORLD_DEATH_BOUND_CNT = 4f;
 		public const float WORLD_EPSILON = 1E-5f;
 		
@@ -81,7 +81,7 @@ namespace ParticleSimulator {
 		public const float GRAVITY_EJECTA_PARTICLE_MASS = 1f;
 		public const float GRAVITY_EJECTA_SPEED = 2E-2f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 2.5E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 1.5E-3f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.0E-3f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 2.0E-3f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.0E-3f;

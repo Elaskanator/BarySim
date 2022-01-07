@@ -287,7 +287,7 @@ namespace ParticleSimulator.Engine {
 				new(ConsoleKey.F9, "Focus",
 					() => { return this.Rasterizer.Camera.AutoCentering; },
 					s => { this.Rasterizer.Camera.AutoCentering = s; },
-					() => { this.Rasterizer.Camera.ResetZoom(); }),
+					() => { this.Rasterizer.Camera.ResetFocus(); }),
 			};
 
 			IEnumerable<KeyListener> result = standardFunctions;

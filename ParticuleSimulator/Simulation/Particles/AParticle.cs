@@ -43,6 +43,8 @@ namespace ParticleSimulator.Simulation.Particles {
 		public readonly Queue<TSelf> Mergers = new();
 		public readonly Queue<TSelf> NewParticles = new();
 
+		//public SortedDictionary<int, int> NearfieldInteractionCounts = new();
+
 		public void ApplyTimeStep(float timeStep, ATree<TSelf> world) {
 			Vector<float> velocity = this.Velocity + (timeStep * this.Acceleration),
 				displacement = timeStep*velocity,

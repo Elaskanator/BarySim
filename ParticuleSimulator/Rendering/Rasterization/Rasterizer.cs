@@ -38,7 +38,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			offset[0] = this.InternalWidth / 2f;
 			offset[1] = this.InternalHeight / 2f;
 			this.InternalOffset = new Vector<float>(offset);//make all values range from [0, size] instead of [-size/2, +size/2]
-			this.InternalScaleFactor = Parameters.ZOOM_SCALE * (this.InternalWidth > this.InternalHeight ? this.InternalHeight : this.InternalWidth) / 2f;
+			this.InternalScaleFactor = this.InternalWidthF <= this.InternalHeight ? this.InternalWidthF : this.InternalHeight;
 		}
 
 		public readonly int Supersampling;
@@ -92,7 +92,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 					}
 				}
 			
-				float densityScalar = MathF.Pow(Parameters.GRAVITY_RADIAL_DENSITY, 1f / Parameters.DIM) / this.InternalScaleFactor;
+				float densityScalar = 1f;//TODO
 
 				bool any = false;
 				if (this.Supersampling > 1) {
@@ -167,9 +167,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 		//TODO rewrite to not use Sqrt
 		private void Resample(ParticleData particle, Queue<Subsample> result) {
-			Vector<float> position = this.InternalOffset
-				+ this.InternalScaleFactor * this.Camera.Rotate(particle.Position);
-			float radius = this.InternalScaleFactor * particle.Radius * 2f;
+			Vector<float> position = this.InternalOffset + (this.InternalScaleFactor * this.Camera.Rotate(particle.Position));
+			float radius = this.InternalScaleFactor * this.Camera.Scaling * particle.Radius;
 
 			if (0f <= position[0] + radius && position[0] - radius < this.InternalWidthF
 			&& 0f <= position[1] + radius && position[1] - radius < this.InternalHeightF) {//visible

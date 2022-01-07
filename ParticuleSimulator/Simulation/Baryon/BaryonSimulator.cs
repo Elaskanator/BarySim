@@ -36,7 +36,21 @@ namespace ParticleSimulator.Simulation.Baryon {
 					this.ComputeAcceleration(Parameters.TIME_SCALE);
 					if (Parameters.MERGE_ENABLE)
 						this.HandleMergers();
-					this.ParticleTree = (BarnesHutTree)this.ParticleTree.Root;
+					//trim top of tree
+					ATree<MatterClump> root = this.ParticleTree.Root;
+					int count, idx;
+					while (!root.IsLeaf) {
+						count = idx = 0;
+						for (int i = 0; i < root.Children.Length; i++)
+							if (root.Children[i].Count > 0)
+								if (++count > 1) break;
+								else idx = i;
+						if (count == 1)
+							root = root.Children[idx];
+						else break;
+					}
+					root.Parent = null;
+					this.ParticleTree = (BarnesHutTree)root;
 				}
 				return this.ParticleTree.Select(p => new ParticleData(p)).ToArray();
 			} else {
@@ -85,11 +99,35 @@ namespace ParticleSimulator.Simulation.Baryon {
 			for (int i = 0; i < lIdx; i++)
 				this.ProcessLeaf(leaves[i]);
 
+			//var crap1 =
+			//	this.ParticleTree
+			//	.Where(p => p.NearfieldInteractionCounts.Count > 0)
+			//	.Select(p =>
+			//		new { Id = p.Id,
+			//			Groups = 
+			//				p.NearfieldInteractionCounts
+			//				.GroupBy(kvp => kvp.Value)
+			//				.OrderByDescending(g => g.Key) })
+			//	.OrderByDescending(pg => pg.Groups.First().Key)
+			//	.ThenBy(pg => pg.Id)
+			//	.Select(pg => string.Format("{0} => {1}",
+			//		pg.Id,
+			//		string.Join(" ", 
+			//			pg.Groups
+			//				.Select(g => string.Format("[{0}:{1}]",
+			//					g.Key,
+			//					g.Count()))
+			//				.ToArray())))
+			//	.ToArray();
+
 			for (int i = 0; i < lIdx; i++)
 				for (int p = 0; p < leaves[i].Item2.Length; p++) {
 					if (leaves[i].Item2[p].Enabled) {
 						node = leaves[i].Item1.GetContainingLeaf(leaves[i].Item2[p]);
 						leaves[i].Item2[p].ApplyTimeStep(timeStep, this.ParticleTree);
+
+						//leaves[i].Item2[p].NearfieldInteractionCounts.Clear();///////////////
+
 						node.MoveFromLeaf(leaves[i].Item2[p]);
 					}
 				}
@@ -116,6 +154,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 							}
 						}
 				}
+
+				//nearField.AddRange(remaining.SelectMany(f => f));
+				
 				while (remaining.TryDequeue(out other))
 					if (other.IsLeaf) {
 						if (leafData.Item1.CanApproximate(other))
@@ -129,6 +170,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 								farField.Enqueue(child);
 							else remaining.Enqueue(child);
 						}
+				
 			}
 
 			Vector<float> farFieldContribution = Vector<float>.Zero;
@@ -154,6 +196,11 @@ namespace ParticleSimulator.Simulation.Baryon {
 					}
 				}
 				for (int n = 0; n < nearField.Count; n++) {
+					//leafData.Item2[i].NearfieldInteractionCounts.TryAdd(nearField[n].Id, 0);////////////
+					//leafData.Item2[i].NearfieldInteractionCounts[nearField[n].Id]++;////////////////
+					//nearField[n].NearfieldInteractionCounts.TryAdd(leafData.Item2[i].Id, 0);////////////
+					//nearField[n].NearfieldInteractionCounts[leafData.Item2[i].Id]++;////////////////
+
 					influence = leafData.Item2[i].ComputeInfluence(nearField[n]);
 					leafData.Item2[i].Acceleration += nearField[n].Mass*influence.Item1 + influence.Item2*(1f/leafData.Item2[i].Mass);
 				}

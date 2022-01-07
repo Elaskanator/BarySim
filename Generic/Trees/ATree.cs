@@ -35,7 +35,7 @@ namespace Generic.Models.Trees {
 		private bool? _isMaxDepth = null;
 		protected bool _isReceiving => this.Count < this.Capacity || (this._isMaxDepth ??= this.MaxDepthReached);
 
-		public ATree<T> Parent { get; protected set; }
+		public ATree<T> Parent { get; set; }
 		ITree ITree.Parent => throw new NotImplementedException();
 		public ATree<T>[] Children { get; protected set; }
 		ICollection<ITree> ITree.Children => throw new NotImplementedException();
