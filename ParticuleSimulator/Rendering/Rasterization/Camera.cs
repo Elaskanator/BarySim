@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Numerics;
 using Generic.Vectors;
+using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Camera {
@@ -12,9 +13,12 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			this.SetRange(
 				-Vector<float>.One * (1f / scaling),
 				Vector<float>.One * (1f / scaling));
+			this.InitialCenter = this.Center;
+
+			this.AutoCentering = true;
 		}
 
-		public bool AutoZoomActive { get; set; }
+		public bool AutoCentering { get; set; }
 
 		public bool IsAutoIncrementActive { get; set; }
 		public bool IsPitchRotationActive { get; set; }
@@ -23,6 +27,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 		public Vector<float> Left { get; private set; }
 		public Vector<float> Center { get; private set; }
+		public Vector<float> InitialCenter { get; private set; }
 		public Vector<float> Right { get; private set; }
 		public Vector<float> Size { get; private set; }
 		public float Scaling { get; set; }
@@ -37,6 +42,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 		public void Reset() {
 			this.IsAutoIncrementActive = false;
+			this.AutoCentering = false;
 			//this.IsPitchRotationActive = false;
 			//this.IsYawRotationActive = false;
 			//this.IsRollRotationActive = false;
@@ -48,7 +54,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		}
 		public void ResetZoom() {
 			this.Scaling = this.InitialScaling;
-			this.AutoZoomActive = false;
+			this.Center = this.InitialCenter;
+			this.AutoCentering = false;
 		}
 
 		public void SetRange(Vector<float> left, Vector<float> right) {
@@ -97,15 +104,19 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			} else return offsetV + this.Center;
 		}
 
-		internal void IncrementRotation() {
+		public void Increment() {
 			this.Set3DRotation(
 				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsPitch,
 				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsYaw,
 				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsRoll);
 			
-			if (this.AutoZoomActive) {
-				float maxLength = 1f / MathF.Sqrt(3f);//TODODO
-				this.Scaling = maxLength * Parameters.WORLD_SCALE * 2f;
+			if (this.AutoCentering && Program.Engine.Simulator.ParticleCount > 0 && !(Program.Engine.Simulator.ParticleTree is null)) {
+				BarnesHutTree tree = (BarnesHutTree)Program.Engine.Simulator.ParticleTree;
+				if (tree.MassBaryCenter.Weight > 0f) {
+					this.Center = 2f*tree.MassBaryCenter.Position;
+					float maxLength = 1f;//TODODO
+					this.Scaling = maxLength * Parameters.WORLD_SCALE * 2f;
+				}
 			}
 
 			if (this.IsAutoIncrementActive) {

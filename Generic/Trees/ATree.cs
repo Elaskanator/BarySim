@@ -5,19 +5,17 @@ using System.Linq;
 using Generic.Extensions;
 
 namespace Generic.Models.Trees {
-	public interface ITree<T> : ICollection<T>, IEnumerable<T> {
-		ITree<T> Parent { get; }
-		ICollection<ITree<T>> Children { get; }
+	public interface ITree : ICollection, IEnumerable {
+		ITree Parent { get; }
+		ICollection<ITree> Children { get; }
 		
 		bool IsRoot { get; }
 		bool IsLeaf { get; }
-		bool ICollection<T>.IsReadOnly => false;
-
-		void ICollection<T>.CopyTo(T[] array, int arrayIndex) {
-			int i = 0; foreach (T item in this) array[i++ + arrayIndex] = item; }
+		IEnumerable AsEnumerable();
+		IEnumerator IEnumerable.GetEnumerator() => this.AsEnumerable().GetEnumerator();
 	}
 
-	public abstract class ATree<T> : ITree<T> {
+	public abstract class ATree<T> : ITree, ICollection<T>, IEnumerable<T> {
 		public ATree(ATree<T> parent = null) {
 			this.Parent = parent;
 		}
@@ -27,6 +25,7 @@ namespace Generic.Models.Trees {
 			this.Count.Pluralize("item"));
 		
 		public int Count { get; protected set; }
+		public bool IsReadOnly => false;
 
 		public abstract bool MaxDepthReached { get; }
 		public virtual int Capacity => 1;
@@ -37,9 +36,9 @@ namespace Generic.Models.Trees {
 		protected bool _isReceiving => this.Count < this.Capacity || (this._isMaxDepth ??= this.MaxDepthReached);
 
 		public ATree<T> Parent { get; protected set; }
-		ITree<T> ITree<T>.Parent => this.Parent;
+		ITree ITree.Parent => throw new NotImplementedException();
 		public ATree<T>[] Children { get; protected set; }
-		ICollection<ITree<T>> ITree<T>.Children => this.Children;
+		ICollection<ITree> ITree.Children => throw new NotImplementedException();
 		public ATree<T> Root { get {
 			ATree<T> node = this;
 			while (!node.IsRoot)
@@ -47,6 +46,9 @@ namespace Generic.Models.Trees {
 			return node; } }
 
 		public ICollection<T> Bin { get; protected set; }
+
+		public object SyncRoot => throw new NotImplementedException();
+		public bool IsSynchronized => false;
 
 		public abstract bool DoesEncompass(T item);
 		protected abstract IEnumerable<ATree<T>> FormSubnodes();
@@ -81,7 +83,7 @@ namespace Generic.Models.Trees {
 				++node.Count;
 				node = node.Children[node.ChildIndex(item)];
 			}
-			node.AddToLeaf(item);
+			node.AddToLeaf(item);//increments the count
 			while (!startingNode.IsRoot) {
 				startingNode = startingNode.Parent;
 				++startingNode.Count;
@@ -143,11 +145,11 @@ namespace Generic.Models.Trees {
 					++node.Count;
 					node = node.Children[node.ChildIndex(item)];
 				}
-				node.AddToLeaf(item);
+				node.AddToLeaf(item);//increments the count
 			}
 		}
 
-		protected void AddToLeaf(T addition) {
+		protected void AddToLeaf(T addition) {//increments the count
 			ATree<T> node = this;
 			while (!node._isReceiving) {
 				++node.Count;
@@ -192,7 +194,9 @@ namespace Generic.Models.Trees {
 		}
 
 		public IEnumerator<T> GetEnumerator() => this.AsEnumerable().GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator() => this.AsEnumerable().GetEnumerator();
+
+		public void CopyTo(T[] array, int arrayIndex) {
+			int i = 0; foreach (T item in this) array[i++ + arrayIndex] = item; }
 
 		public IEnumerable<T> AsEnumerable() {
 			Stack<ATree<T>> remaining = new Stack<ATree<T>>();
@@ -226,6 +230,14 @@ namespace Generic.Models.Trees {
 						remaining.Push(node.Children[i]);
 
 			return result;
+		}
+
+		IEnumerable ITree.AsEnumerable() {
+			throw new NotImplementedException();
+		}
+
+		public void CopyTo(Array array, int index) {
+			throw new NotImplementedException();
 		}
 	}
 }

@@ -271,29 +271,29 @@ namespace ParticleSimulator.Engine {
 					s => { this.Rasterizer.Camera.IsAutoIncrementActive = s; },
 					() => { this.Rasterizer.Camera.Reset(); }) ,
 				new(ConsoleKey.F6, "α",
-					() => { return this.Rasterizer.Camera.IsRollRotationActive; },
-					s => { this.Rasterizer.Camera.IsRollRotationActive = s; },
-					() => { this.Rasterizer.Camera.IsRollRotationActive = false; this.Rasterizer.Camera.RotationStepsRoll = 0; }),
-				new(ConsoleKey.F7, "β",
 					() => { return this.Rasterizer.Camera.IsPitchRotationActive; },
 					s => { this.Rasterizer.Camera.IsPitchRotationActive = s; },
 					() => { this.Rasterizer.Camera.IsPitchRotationActive = false; this.Rasterizer.Camera.RotationStepsPitch = 0; }),
-				new(ConsoleKey.F8, "γ",
+				new(ConsoleKey.F7, "β",
 					() => { return this.Rasterizer.Camera.IsYawRotationActive; },
 					s => { this.Rasterizer.Camera.IsYawRotationActive = s; },
 					() => { this.Rasterizer.Camera.IsYawRotationActive = false; this.Rasterizer.Camera.RotationStepsYaw = 0; }),
+				new(ConsoleKey.F8, "γ",
+					() => { return this.Rasterizer.Camera.IsRollRotationActive; },
+					s => { this.Rasterizer.Camera.IsRollRotationActive = s; },
+					() => { this.Rasterizer.Camera.IsRollRotationActive = false; this.Rasterizer.Camera.RotationStepsRoll = 0; }),
 			};
 			KeyListener[] positionFunctions = new KeyListener[] {
-				new(ConsoleKey.F9, "Zoom",
-					() => { return this.Rasterizer.Camera.AutoZoomActive; },
-					s => { this.Rasterizer.Camera.AutoZoomActive = s; },
+				new(ConsoleKey.F9, "Focus",
+					() => { return this.Rasterizer.Camera.AutoCentering; },
+					s => { this.Rasterizer.Camera.AutoCentering = s; },
 					() => { this.Rasterizer.Camera.ResetZoom(); }),
 			};
 
 			IEnumerable<KeyListener> result = standardFunctions;
 			if (Parameters.AUTOSCALER_ENABLE)
 				result = result.Append(autoscale);
-			result = result.Concat(rotationFunctions);//.Concat(positionFunctions);
+			result = result.Concat(rotationFunctions).Concat(positionFunctions);
 			return result;
 		}
 

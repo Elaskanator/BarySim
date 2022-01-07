@@ -78,7 +78,8 @@ namespace ParticleSimulator.Simulation.Particles {
 			this.Velocity = velocity;
 		}
 
-		public abstract Vector<float> ComputeInfluence(TSelf other);
+		//Tuple<Gravity, Drag>
+		public abstract Tuple<Vector<float>, Vector<float>> ComputeInfluence(TSelf other);
 		public abstract void Incorporate(TSelf other);
 		protected abstract bool TestInRange(ATree<TSelf> world);
 

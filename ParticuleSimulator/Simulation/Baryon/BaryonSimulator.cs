@@ -13,6 +13,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public int IterationCount { get; private set; }
 		public Galaxy[] InitialParticleGroups { get; private set; }
 		public BarnesHutTree ParticleTree { get; private set; }
+		ITree ISimulator.ParticleTree => this.ParticleTree;
 		IEnumerable<IParticle> ISimulator.Particles => this.ParticleTree.AsEnumerable();
 		public int ParticleCount => this.ParticleTree is null ? 0 : this.ParticleTree.Count;//this.ParticleTree is null ? 0 : this.ParticleTree.Count;
 
@@ -140,22 +141,22 @@ namespace ParticleSimulator.Simulation.Baryon {
 				if (distSq > Parameters.WORLD_EPSILON)
 					farFieldContribution += toOther * (other.MassBaryCenter.Weight / distSq);
 			}
+			farFieldContribution *= Parameters.GRAVITATIONAL_CONSTANT;
 
-			Vector<float> influence;
+			Tuple<Vector<float>, Vector<float>> influence;
 			for (int i = 0; i < leafData.Item2.Length; i++) {
 				leafData.Item2[i].Acceleration = farFieldContribution;
 				for (int j = i + 1; j < leafData.Item2.Length; j++) {
 					if (leafData.Item2[j].Mass > 0f) {
 						influence = leafData.Item2[i].ComputeInfluence(leafData.Item2[j]);
-						leafData.Item2[i].Acceleration += influence * leafData.Item2[j].Mass;
-						leafData.Item2[j].Acceleration -= influence * leafData.Item2[i].Mass;
+						leafData.Item2[i].Acceleration += leafData.Item2[j].Mass*influence.Item1 + influence.Item2*(1f/leafData.Item2[i].Mass);
+						leafData.Item2[j].Acceleration -= leafData.Item2[i].Mass*influence.Item1 + influence.Item2*(1f/leafData.Item2[j].Mass);
 					}
 				}
 				for (int n = 0; n < nearField.Count; n++) {
 					influence = leafData.Item2[i].ComputeInfluence(nearField[n]);
-					leafData.Item2[i].Acceleration += influence * nearField[n].Mass;
+					leafData.Item2[i].Acceleration += nearField[n].Mass*influence.Item1 + influence.Item2*(1f/leafData.Item2[i].Mass);
 				}
-				leafData.Item2[i].Acceleration *= Parameters.GRAVITATIONAL_CONSTANT;
 			}
 		}
 

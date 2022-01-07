@@ -17,13 +17,11 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				this.Supersampling = Parameters.SUPERSAMPLING;
 				this.InternalWidth= width * Parameters.SUPERSAMPLING;
 				this.InternalHeight = height * Parameters.SUPERSAMPLING;
-				this.InternalDepthF = depth * Parameters.SUPERSAMPLING;
 				this.InternalNumPixels = width * height * Parameters.SUPERSAMPLING * Parameters.SUPERSAMPLING;
 			} else {
 				this.Supersampling = 1;
 				this.InternalWidth= width;
 				this.InternalHeight = height;
-				this.InternalDepthF = depth;
 				this.InternalNumPixels = width * height;
 			}
 
@@ -53,7 +51,6 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		private readonly float InternalWidthF;
 		public readonly int InternalHeight;
 		private readonly float InternalHeightF;
-		private readonly float InternalDepthF;
 		
 		public readonly Camera Camera;
 		public readonly Vector<float> InternalOffset;
@@ -71,7 +68,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				Pixel[] results = new Pixel[this.OutNumPixels];
 				float?[] ranks = new float?[this.OutNumPixels];
 
-				this.Camera.IncrementRotation();
+				this.Camera.Increment();
 
 				int[] counts = new int[this.InternalNumPixels];
 				float[] densities = new float[this.InternalNumPixels];
@@ -172,7 +169,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		private void Resample(ParticleData particle, Queue<Subsample> result) {
 			Vector<float> position = this.InternalOffset
 				+ this.InternalScaleFactor * this.Camera.Rotate(particle.Position);
-			float radius = this.InternalScaleFactor * particle.Radius;
+			float radius = this.InternalScaleFactor * particle.Radius * 2f;
 
 			if (0f <= position[0] + radius && position[0] - radius < this.InternalWidthF
 			&& 0f <= position[1] + radius && position[1] - radius < this.InternalHeightF) {//visible
@@ -185,11 +182,11 @@ namespace ParticleSimulator.Rendering.Rasterization {
 					result.Enqueue(new(particle, xRounded, yRounded, position[2], radius));
 				
 				//draw verticle lines inward toward center
-				if (radius > Parameters.RENDER_PIXEL_OVERLAP_THRESHOLD) {
+				if (radius > Parameters.PIXEL_ROUNDOFF) {
 					float radiusSquared = radius * radius;
 
-					int xMin = (int)MathF.Floor(position[0] - radius + Parameters.RENDER_PIXEL_OVERLAP_THRESHOLD),
-						xMax = (int)MathF.Floor(position[0] + radius - Parameters.RENDER_PIXEL_OVERLAP_THRESHOLD);
+					int xMin = (int)MathF.Floor(position[0] - radius + Parameters.PIXEL_ROUNDOFF),
+						xMax = (int)MathF.Floor(position[0] + radius - Parameters.PIXEL_ROUNDOFF);
 					xMin = xMin < 0 ? 0 : xMin;
 					xMax = xMax >= this.InternalWidth ? this.InternalWidth - 1 : xMax;
 
@@ -199,8 +196,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 					//centerline
 					if (0 <= xRounded && xRounded < this.InternalWidth) {
-						yMin = (int)MathF.Floor(position[1] - radius + Parameters.RENDER_PIXEL_OVERLAP_THRESHOLD);
-						yMax = (int)MathF.Floor(position[1] + radius - Parameters.RENDER_PIXEL_OVERLAP_THRESHOLD);
+						yMin = (int)MathF.Floor(position[1] - radius + Parameters.PIXEL_ROUNDOFF);
+						yMax = (int)MathF.Floor(position[1] + radius - Parameters.PIXEL_ROUNDOFF);
 
 						//bottom half
 						for (int y = yMin < 0 ? 0 : yMin; y < yRounded && y < this.InternalHeight; y++) {
@@ -222,8 +219,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						dx = position[0] - (x + 1);//near side
 						squareRemainingRadiusX = radiusSquared - dx*dx;
 						yRangeRemainder = MathF.Sqrt(squareRemainingRadiusX);
-						yMin = (int)MathF.Floor(position[1] - yRangeRemainder + Parameters.RENDER_PIXEL_OVERLAP_THRESHOLD);
-						yMax = (int)MathF.Floor(position[1] + yRangeRemainder - Parameters.RENDER_PIXEL_OVERLAP_THRESHOLD);
+						yMin = (int)MathF.Floor(position[1] - yRangeRemainder + Parameters.PIXEL_ROUNDOFF);
+						yMax = (int)MathF.Floor(position[1] + yRangeRemainder - Parameters.PIXEL_ROUNDOFF);
 								
 						//y middle
 						if (0 <= yRounded && yRounded < this.InternalHeight)
@@ -248,8 +245,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						dx = x - position[0];
 						squareRemainingRadiusX = radiusSquared - dx*dx;
 						yRangeRemainder = MathF.Sqrt(squareRemainingRadiusX);
-						yMin = (int)MathF.Floor(position[1] - yRangeRemainder + Parameters.RENDER_PIXEL_OVERLAP_THRESHOLD);
-						yMax = (int)MathF.Floor(position[1] + yRangeRemainder - Parameters.RENDER_PIXEL_OVERLAP_THRESHOLD);
+						yMin = (int)MathF.Floor(position[1] - yRangeRemainder + Parameters.PIXEL_ROUNDOFF);
+						yMax = (int)MathF.Floor(position[1] + yRangeRemainder - Parameters.PIXEL_ROUNDOFF);
 								
 						//y middle
 						if (0 <= yRounded && yRounded < this.InternalHeight)
