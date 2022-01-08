@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 using Generic.Extensions;
 using Generic.Models.Trees;
 using ParticleSimulator.Simulation.Particles;
@@ -81,15 +82,12 @@ namespace ParticleSimulator.Simulation.Baryon {
 				for (int i = 0; i < levelNodes.Length; i++)
 					levelNodes[i].UpdateBarycenter();
 
-			List<MatterClump> nearField = new();
-			Queue<BarnesHutTree> farField = new(), remaining = new();
-			for (int i = 0; i < leafCount; i++)
-				this.ProcessNode(
-					(BarnesHutTree)leaves[i].Item1,
-					leaves[i].Item2,
-					nearField,
-					farField,
-					remaining);
+			//for (int i = 0; i < leafCount; i++)
+			Parallel.ForEach(
+				Enumerable.Range(0, leafCount).Select(i => leaves[i]),
+				leaf => this.ProcessNode(
+					(BarnesHutTree)leaf.Item1,
+					leaf.Item2));
 			for (int i = 0; i < leafCount; i++)
 				for (int j = 0; j < leaves[i].Item2.Length; j++)
 					if (leaves[i].Item2[j].Enabled) {
@@ -99,12 +97,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 					}
 		}
 
-		private void ProcessNode(BarnesHutTree evalNode, MatterClump[] directParticles, List<MatterClump> nearField, Queue<BarnesHutTree> farField, Queue<BarnesHutTree> remaining) {
-			//List<MatterClump> nearField = new();
-			//Queue<BarnesHutTree> farField = new(), remaining = new();
-			nearField.Clear();
-			farField.Clear();
-			remaining.Clear();
+		private void ProcessNode(BarnesHutTree evalNode, MatterClump[] directParticles) {
+			List<MatterClump> nearField = new();
+			Queue<BarnesHutTree> farField = new(), remaining = new();
 
 			ATree<MatterClump> node = evalNode, lastNode;
 			BarnesHutTree other, child;
@@ -155,7 +150,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 			Tuple<Vector<float>, Vector<float>> influence;
 			for (int i = 0; i < directParticles.Length; i++) {
-				directParticles[i].Acceleration = farFieldContribution;
+				directParticles[i].Acceleration = Vector<float>.Zero;
 				for (int j = i + 1; j < directParticles.Length; j++) {
 					if (directParticles[j].Mass > 0f) {
 						influence = directParticles[i].ComputeInfluence(directParticles[j]);
@@ -172,6 +167,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 					influence = directParticles[i].ComputeInfluence(nearField[n]);
 					directParticles[i].Acceleration += nearField[n].Mass*influence.Item1 + influence.Item2*(1f/directParticles[i].Mass);
 				}
+				directParticles[i].Acceleration += farFieldContribution;
 			}
 		}
 

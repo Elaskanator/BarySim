@@ -18,7 +18,7 @@ namespace ParticleSimulator {
 		public const float PIXEL_ROUNDOFF = 0.5f;
 
 		public const int DIM = 3;
-		public const float WORLD_SCALE = 2f;
+		public const float WORLD_SCALE = 4f;
 		public const float TIME_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
@@ -26,11 +26,10 @@ namespace ParticleSimulator {
 		public const int PARTICLES_GROUP_COUNT = 2;
 		public const float INITIAL_SEPARATION_SCALER = 25f;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 15;
+		public const int PARTICLES_GROUP_MAX = 1 << 16;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float INACCURCY = 1f;
-		public const int DIRECT_NODE_SIZE = 1;
 		public const int DETERMINISTIC_RANDOM_SEED = 0;
 		
 		public const bool MERGE_ENABLE = true;
@@ -66,18 +65,18 @@ namespace ParticleSimulator {
 		public const string EXPORT_DIR = null;	//TODO
 
 		#region Gravity
-		public const float GRAVITATIONAL_CONSTANT = 1E-8f;
+		public const float GRAVITATIONAL_CONSTANT = 1E-9f;
 		public const float GRAVITY_RADIAL_DENSITY = 5E7f;
 		public const float GRAVITY_MIN_STARTING_MASS = 0.1f;
-		public const float GRAVITY_MAX_STARTING_MASS = 0.1f;
+		public const float GRAVITY_MAX_STARTING_MASS = 1f;
 
-		public const float MASS_LUMINOSITY_SCALAR = 4E-2f;
+		public const float MASS_LUMINOSITY_SCALAR = 5E-2f;
 		
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;//TODO
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;//TODO
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;//TODO
 
-		public const float GRAVITY_CRITICAL_MASS = 2000f;
+		public const float GRAVITY_CRITICAL_MASS = 2500f;
 		public const float GRAVITY_EJECTA_PARTICLE_MASS = 1f;
 		public const float GRAVITY_EJECTA_SPEED = 2E-2f;
 
