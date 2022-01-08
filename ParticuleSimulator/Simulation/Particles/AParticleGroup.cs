@@ -77,7 +77,9 @@ namespace ParticleSimulator.Simulation.Particles {
 		protected abstract TParticle NewParticle(Vector<float> position, Vector<float> velocity);
 
 		protected virtual Vector<float> NewParticleOffset(float radius) {
-			return ((float)Program.Engine.Random.NextDouble()) * VectorFunctions.New(VectorFunctions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
+			return
+				((float)Program.Engine.Random.NextDouble()) *
+				VectorFunctions.New(VectorFunctions.RandomCoordinate_Spherical(radius, Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
 		}
 
 		protected virtual Vector<float> NewInitialDirection(Vector<float> center, Vector<float> position) {

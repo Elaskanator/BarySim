@@ -162,7 +162,7 @@ namespace ParticleSimulator.Engine {
 				this._scalingResource.Reset();
 
 				this.Scaling.Reset();
-				this.Rasterizer.Camera.Reset();
+				this.Rasterizer.Camera.ResetRotation();
 				this.Exporter.Reset();
 				
 				this.Start(running);
@@ -269,7 +269,7 @@ namespace ParticleSimulator.Engine {
 				new(ConsoleKey.F5, "Rotate",
 					() => { return this.Rasterizer.Camera.IsAutoIncrementActive; },
 					s => { this.Rasterizer.Camera.IsAutoIncrementActive = s; },
-					() => { this.Rasterizer.Camera.Reset(); }) ,
+					() => { this.Rasterizer.Camera.ResetRotation(); }) ,
 				new(ConsoleKey.F6, "α",
 					() => { return this.Rasterizer.Camera.IsPitchRotationActive; },
 					s => { this.Rasterizer.Camera.IsPitchRotationActive = s; },

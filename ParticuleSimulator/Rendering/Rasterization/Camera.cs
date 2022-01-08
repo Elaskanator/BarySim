@@ -6,7 +6,7 @@ using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Camera {
-		public const float AUTO_CENTER_UPDATE_ALPHA = 0.01f;
+		public const float AUTO_CENTER_UPDATE_ALPHA = 0.05f;
 
 		public Camera(float scaling = 1f) {
 			this.InitialScaling = this.Scaling = scaling;
@@ -45,7 +45,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		public int RotationStepsYaw = 0;
 		public int RotationStepsRoll = 0;
 
-		public void Reset() {
+		public void ResetRotation() {
 			this.IsAutoIncrementActive = false;
 			//this.IsPitchRotationActive = false;
 			//this.IsYawRotationActive = false;
@@ -53,8 +53,6 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			this.RotationStepsPitch = 0;
 			this.RotationStepsYaw = 0;
 			this.RotationStepsRoll = 0;
-
-			this.ResetFocus();
 		}
 		public void ResetFocus() {
 			this.Scaling = this.InitialScaling;

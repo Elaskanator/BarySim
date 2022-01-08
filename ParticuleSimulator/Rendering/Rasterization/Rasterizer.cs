@@ -91,7 +91,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 					}
 				}
 			
-				float densityScalar = 1f;//TODO
+				float densityScalar = 0.5f;//TODO
 
 				bool any = false;
 				if (this.Supersampling > 1) {
@@ -122,7 +122,9 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								}
 							}
 							if (any2) {
-								ranks[idx] = bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, densityScalar * totalDensity / count));
+								if (Parameters.RANK_AGG_IS_SUMMATION)
+									ranks[idx] = bin.Sum(sample => this.GetRank(scalings, sample, (float)totalCount / count, densityScalar * totalDensity / count));
+								else ranks[idx] = bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, densityScalar * totalDensity / count));
 								results[idx] = new(x, y, ranks[idx].Value);
 							}
 						}

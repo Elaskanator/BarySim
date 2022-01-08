@@ -82,12 +82,12 @@ namespace ParticleSimulator.Simulation.Baryon {
 				for (int i = 0; i < levelNodes.Length; i++)
 					levelNodes[i].UpdateBarycenter();
 
-			//for (int i = 0; i < leafCount; i++)
 			Parallel.ForEach(
 				Enumerable.Range(0, leafCount).Select(i => leaves[i]),
 				leaf => this.ProcessNode(
 					(BarnesHutTree)leaf.Item1,
 					leaf.Item2));
+
 			for (int i = 0; i < leafCount; i++)
 				for (int j = 0; j < leaves[i].Item2.Length; j++)
 					if (leaves[i].Item2[j].Enabled) {

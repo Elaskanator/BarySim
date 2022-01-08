@@ -14,17 +14,17 @@ namespace ParticleSimulator {
 
 		public const float TARGET_FPS = 15f;
 		public const bool VSYNC = false;
-		public const int SUPERSAMPLING = 2;
+		public const int SUPERSAMPLING = 4;
 		public const float PIXEL_ROUNDOFF = 0.5f;
 
 		public const int DIM = 3;
-		public const float WORLD_SCALE = 4f;
+		public const float WORLD_SCALE = 1f;
 		public const float TIME_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
-		public const int PARTICLES_GROUP_COUNT = 2;
-		public const float INITIAL_SEPARATION_SCALER = 25f;
+		public const int PARTICLES_GROUP_COUNT = 1;
+		public const float INITIAL_SEPARATION_SCALER = 10f;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 1 << 16;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
@@ -67,23 +67,23 @@ namespace ParticleSimulator {
 		#region Gravity
 		public const float GRAVITATIONAL_CONSTANT = 1E-9f;
 		public const float GRAVITY_RADIAL_DENSITY = 5E7f;
-		public const float GRAVITY_MIN_STARTING_MASS = 0.1f;
+		public const float GRAVITY_MIN_STARTING_MASS = 0.4f;
 		public const float GRAVITY_MAX_STARTING_MASS = 1f;
 
-		public const float MASS_LUMINOSITY_SCALAR = 5E-2f;
+		public const float MASS_LUMINOSITY_SCALAR = 6E-2f;
 		
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;//TODO
 		public const float ELECTROSTATIC_MIN_CHARGE = 0f;//TODO
 		public const float ELECTROSTATIC_MAX_CHARGE = 0f;//TODO
 
-		public const float GRAVITY_CRITICAL_MASS = 2500f;
+		public const float GRAVITY_CRITICAL_MASS = 3200f;
 		public const float GRAVITY_EJECTA_PARTICLE_MASS = 1f;
 		public const float GRAVITY_EJECTA_SPEED = 2E-2f;
 
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 1.0E-3f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.0E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 1.5E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 4.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 2.0E-3f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
 		#endregion Gravity
@@ -111,6 +111,7 @@ namespace ParticleSimulator {
 			!COLOR_USE_FIXED_BANDS && COLOR_ARRAY.Length > 1
 			&& COLOR_METHOD != ParticleColoringMethod.Group
 			&& COLOR_METHOD != ParticleColoringMethod.Random;
+		public static readonly bool RANK_AGG_IS_SUMMATION = COLOR_METHOD == ParticleColoringMethod.Density || COLOR_METHOD == ParticleColoringMethod.Overlap;
 
 		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-X_BOUNCE_ASPECT * WORLD_SCALE / 2f, -Y_BOUNCE_ASPECT * WORLD_SCALE / 2f, -Z_BOUNCE_ASPECT * WORLD_SCALE / 2f);
 		public static readonly Vector<float> WORLD_LEFT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_LEFT, new Vector<float>(float.NegativeInfinity));
