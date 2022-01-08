@@ -8,7 +8,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		public PerfGraph(int width) {
 			this.Width = width;
 
-			_columnFrameTimeStatsMs = new StatsInfo[this.Width];
+			_columnSimTimeStatsMs = new StatsInfo[this.Width];
 			_columnFpsStatsMs = new StatsInfo[this.Width];
 			_graphColumns = new ConsoleExtensions.CharInfo[this.Width][];
 		}
@@ -16,7 +16,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		public readonly int Width;
 		private readonly object _columnStatsLock = new object();
 		
-		private StatsInfo[] _columnFrameTimeStatsMs;
+		private StatsInfo[] _columnSimTimeStatsMs;
 		private StatsInfo[] _columnFpsStatsMs;
 		private double[] _currentColumnFrameTimeDataMs;
 		private double[] _currentColumnFpsDataMs;
@@ -33,21 +33,21 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					_currentColumnFrameTimeDataMs = new double[Parameters.PERF_GRAPH_FRAMES_PER_COLUMN];
 					_graphColumns = _graphColumns.RotateRight();
 					_columnFpsStatsMs = _columnFpsStatsMs.RotateRight();
-					_columnFrameTimeStatsMs = _columnFrameTimeStatsMs.RotateRight();
+					_columnSimTimeStatsMs = _columnSimTimeStatsMs.RotateRight();
 				}
 
 				_currentColumnFpsDataMs[frameIdx] = fpsTime.TotalMilliseconds;
 				_columnFpsStatsMs[0] = new StatsInfo(_currentColumnFpsDataMs.Take(frameIdx + 1));
 
 				_currentColumnFrameTimeDataMs[frameIdx] = frameTime.TotalMilliseconds;
-				_columnFrameTimeStatsMs[0] = new StatsInfo(_currentColumnFrameTimeDataMs.Take(frameIdx + 1));
+				_columnSimTimeStatsMs[0] = new StatsInfo(_currentColumnFrameTimeDataMs.Take(frameIdx + 1));
 			}
 		}
 
 		public void DrawFpsGraph(ConsoleExtensions.CharInfo[] frameBuffer, AIncrementalAverage<TimeSpan> frameTimings, AIncrementalAverage<TimeSpan> fpsTimings) {
 			ConsoleExtensions.CharInfo[][] graphColumnsCopy;
 			lock (_columnStatsLock) {
-				if (_columnFrameTimeStatsMs[0] is null)
+				if (_columnSimTimeStatsMs[0] is null)
 					return;
 				else if (_graphColumns[0] is null || DateTime.UtcNow.Subtract(_lastGraphRenderFrameUtc).TotalMilliseconds >= Parameters.PERF_GRAPH_REFRESH_MS)
 					RerenderGraph();
@@ -137,7 +137,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 		private void RerenderGraph() {
 			StatsInfo[]
-				frameTimeStats = _columnFrameTimeStatsMs.Without(s => s is null).ToArray(),
+				frameTimeStats = _columnSimTimeStatsMs.Without(s => s is null).ToArray(),
 				fpsStats = _columnFpsStatsMs.Without(s => s is null).ToArray();
 			if (frameTimeStats.Length + fpsStats.Length > 0) {
 				StatsInfo rangeStats = new(frameTimeStats.Concat(fpsStats).SelectMany(s => s.Data_asc));
@@ -169,7 +169,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				_graphMax = max;
 
 				for (int i = 0; i < frameTimeStats.Length || i < fpsStats.Length; i++)
-					_graphColumns[i] = RenderGraphColumn(_columnFpsStatsMs[i], _columnFrameTimeStatsMs[i]);
+					_graphColumns[i] = RenderGraphColumn(_columnFpsStatsMs[i], _columnSimTimeStatsMs[i]);
 
 			}
 			_lastGraphRenderFrameUtc = DateTime.UtcNow;

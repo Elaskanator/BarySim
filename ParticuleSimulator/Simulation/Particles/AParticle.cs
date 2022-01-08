@@ -45,6 +45,11 @@ namespace ParticleSimulator.Simulation.Particles {
 
 		//public SortedDictionary<int, int> NearfieldInteractionCounts = new();
 
+		//Tuple<Gravity, Drag>
+		public abstract Tuple<Vector<float>, Vector<float>> ComputeInfluence(TSelf other);
+		public abstract void Incorporate(TSelf other);
+		protected abstract bool TestInRange(ATree<TSelf> world);
+
 		public void ApplyTimeStep(float timeStep, ATree<TSelf> world) {
 			Vector<float> velocity = this.Velocity + (timeStep * this.Acceleration),
 				displacement = timeStep*velocity,
@@ -79,11 +84,6 @@ namespace ParticleSimulator.Simulation.Particles {
 			this.Position = newP;
 			this.Velocity = velocity;
 		}
-
-		//Tuple<Gravity, Drag>
-		public abstract Tuple<Vector<float>, Vector<float>> ComputeInfluence(TSelf other);
-		public abstract void Incorporate(TSelf other);
-		protected abstract bool TestInRange(ATree<TSelf> world);
 
 		public void WrapPosition() {
 			this.Position = WrapPosition(this.Position);

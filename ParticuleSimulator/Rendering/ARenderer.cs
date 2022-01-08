@@ -12,7 +12,7 @@ namespace ParticleSimulator.Rendering {
 		
 		public readonly RenderEngine Engine;
 
-		public readonly AIncrementalAverage<TimeSpan> FrameTimings = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
+		public readonly AIncrementalAverage<TimeSpan> SimTimings = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 		public readonly AIncrementalAverage<TimeSpan> FpsTimings = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 		public int FramesCompleted { get; private set; }
 
@@ -27,7 +27,7 @@ namespace ParticleSimulator.Rendering {
 		}
 
 		public void UpdateSimTime(EvalResult prepResults) {
-			this.FrameTimings.Update(prepResults.ExclusiveTime);
+			this.SimTimings.Update(prepResults.ExclusiveTime);
 		}
 
 		public void UpdateFullTime(EvalResult prepResults) {
@@ -35,7 +35,7 @@ namespace ParticleSimulator.Rendering {
 				this.FpsTimings.Update(prepResults.TotalTimePunctual.Value);
 				this.UpdateMonitor(
 					this.FramesCompleted,
-					this.FrameTimings.LastUpdate,
+					this.SimTimings.LastUpdate,
 					this.FpsTimings.LastUpdate);
 				this.FramesCompleted++;
 			}

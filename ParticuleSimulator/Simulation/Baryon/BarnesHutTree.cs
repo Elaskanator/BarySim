@@ -2,7 +2,6 @@
 using System.Numerics;
 using System.Linq;
 using Generic.Models.Trees;
-using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Baryon {
 	public class BarnesHutTree : QuadTreeSIMD<MatterClump> {
@@ -13,8 +12,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		protected override BarnesHutTree NewNode(QuadTreeSIMD<MatterClump> parent, Vector<float> cornerLeft, Vector<float> cornerRight) =>
 			new BarnesHutTree(this.Dim, cornerLeft, cornerRight, parent);
-
-		public override int Capacity => Parameters.QUADTREE_NODE_CAPACITY;
 
 		public BaryCenter MassBaryCenter { get; private set; }
 
@@ -39,9 +36,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 						total = new(
 							total.Item1 + (p.Position * p.Mass),
 							total.Item2 + p.Mass);
-					if (total.Item2 > 0f)
-						this.MassBaryCenter = new(total.Item1 * (1f / total.Item2), total.Item2);
-					else this.MassBaryCenter = new(this.Center, 0f);
+					this.MassBaryCenter = total.Item2 > 0f
+						? new(total.Item1 * (1f / total.Item2), total.Item2)
+						: new(this.Center, 0f);
 				}
 			} else {
 				for (int i = 0; i < this.Children.Length; i++) {
@@ -54,16 +51,22 @@ namespace ParticleSimulator.Simulation.Baryon {
 						}
 					}
 				}
-				if (total.Item2 > 0f)
-					this.MassBaryCenter = new(total.Item1 * (1f / total.Item2), total.Item2);
-				else this.MassBaryCenter = new(this.Center, 0f);
+				this.MassBaryCenter = total.Item2 > 0f
+					? new(total.Item1 * (1f / total.Item2), total.Item2)
+					: new(this.Center, 0f);
 			}
 		}
-		
+
+		//public bool CanApproximate(BarnesHutTree node) {
+		//	float dist = Generic.Vectors.VectorFunctions.Distance(this.MassBaryCenter.Position, node.MassBaryCenter.Position);
+		//	return Parameters.WORLD_EPSILON < dist
+		//		&& Parameters.INACCURCY > node.Size[0] / dist;
+		//}
+
 		public bool CanApproximate(BarnesHutTree node) {
-			float dist = this.MassBaryCenter.Position.Distance(node.MassBaryCenter.Position);
-			return Parameters.WORLD_EPSILON < dist
-				&& Parameters.INACCURCY > node.Size[0] / dist;
+			Vector<float> pointingVector = node.MassBaryCenter.Position - this.MassBaryCenter.Position;
+			float dot = Vector.Dot(pointingVector, pointingVector);
+			return Parameters.INACCURCY > node.SizeSquared / dot;
 		}
 	}
 }

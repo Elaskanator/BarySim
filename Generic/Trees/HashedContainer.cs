@@ -1,4 +1,78 @@
-﻿using System;
+﻿using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using Generic.Extensions;
+
+namespace Generic.Models.Trees {
+	public class HashedContainer<T> : ICollection<T>, IEnumerable<T>, IEnumerable {
+		public HashedContainer() {
+			this.Items = Enumerable.Empty<T>();
+		}
+
+		public override string ToString() => string.Format("HashedContainer[{0}]", this.Count.Pluralize("item"));
+
+		public int Count { get; private set; }
+		public IEnumerable<T> Items { get; private set; }
+		public bool IsReadOnly => false;
+
+		private T _item;
+		private HashSet<T> _leftovers = null;
+
+		public void Add(T item) {
+			if (this.Count == 0 && this._leftovers is null) {
+				this._item = item;
+				this.Items = new T[] { item };
+			} else {
+				if (this._leftovers is null) {
+					this._leftovers = new HashSet<T>();
+					this._leftovers.Add(this._item);
+					this.Items = this._leftovers;
+				}
+				this._leftovers.Add(item);
+			}
+			this.Count++;
+		}
+		public void Add(object item) { this.Add((T)item); }
+
+		public bool Remove(T item) {
+			//if (this.Count > 0)
+				if (this._leftovers is null) {
+					//if (this._item.Equals(item)) {
+						this.Count = 0;
+						this.Items = Enumerable.Empty<T>();
+						return true;
+					//} else return false;
+				} else if (this._leftovers.Remove(item)) {
+					this.Count--;
+					return true;
+				} else return false;
+			//return false;
+		}
+
+		public void Clear() {
+			this.Count = 0;
+			if (!(this._leftovers is null))
+				this._leftovers.Clear();
+		}
+
+		public bool Contains(T item) =>
+			(this._leftovers is null)
+				? this._item.Equals(item)
+				: this._leftovers.Contains(item);
+
+		public void CopyTo(T[] array, int outOffset = 0) {
+			if (this.Count > 0)
+				if (this._leftovers is null)
+					array[outOffset] = this._item;
+				else this._leftovers.CopyTo(array, outOffset);
+		}
+
+		public IEnumerator<T> GetEnumerator() => this.Items.GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator() => this.Items.GetEnumerator();
+	}
+}
+/*
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -92,4 +166,4 @@ namespace Generic.Models.Trees {
 		//	return this.Count == 0;
 		//}
 	}
-}
+}*/

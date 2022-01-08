@@ -1,4 +1,5 @@
-﻿using ParticleSimulator.Simulation.Particles;
+﻿using System;
+using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public struct Subsample {
@@ -8,12 +9,15 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		public float Z;
 		public float H;
 
-		public Subsample(ParticleData particle, int x, int y, float z, float h) {
+		public Subsample(ParticleData particle, int x, int y, float z, float h2) {
+			float h = h2 > 0f ? MathF.Sqrt(h2) : 0f;
+
 			this.Particle = particle;
+
 			this.X = x;
 			this.Y = y;
+			this.H = h; 
 			this.Z = z - h;
-			this.H = h;
 		}
 	}
 }

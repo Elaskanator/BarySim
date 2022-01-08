@@ -38,7 +38,6 @@ namespace ParticleSimulator.Engine {
 		public int FullIterationCount { get; private set; }
 		public bool IsWaiting { get; private set; }
 		public bool IsComputing { get; private set; }
-		public DateTime? LastComputeStartUtc { get; private set; }
 
 		public SimpleExponentialMovingTimeAverage WaitTime { get; private set; }
 		public SimpleExponentialMovingTimeAverage SyncTime { get; private set; }
@@ -77,7 +76,6 @@ namespace ParticleSimulator.Engine {
 				this.IterationCount = 0;
 				this.FullIterationCount = 0;
 				this.IsComputing = false;
-				this.LastComputeStartUtc = null;
 
 				this.WaitTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
 				this.SyncTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
@@ -191,7 +189,6 @@ namespace ParticleSimulator.Engine {
 					}
 						
 					if (this.IsOpen) {
-						this.LastComputeStartUtc = DateTime.UtcNow;
 						this._timer.Restart();
 
 						this.IsComputing = true;

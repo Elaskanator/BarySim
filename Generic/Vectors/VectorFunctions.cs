@@ -11,6 +11,7 @@ namespace Generic.Vectors {
 	// https://www.av8n.com/physics/clifford-intro.htm
 	// http://scipp.ucsc.edu/~haber/archives/physics251_11/Clifford_Slides.pdf
 	public static partial class VectorFunctions {
+		public static readonly Vector<int> NegativeOne = -Vector<int>.One;
 		public static readonly Vector<int> PowersOfTwo = new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(i => 1 << i).ToArray());
 		public static readonly Vector<int>[] DimensionFilters = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : 1).ToArray())).ToArray();
 		public static readonly Vector<int>[] DimensionSignals = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : -1).ToArray())).ToArray();
@@ -18,12 +19,12 @@ namespace Generic.Vectors {
 		public static readonly Vector<int>[] DimensionSignalsInverted = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? -1 : 0).ToArray())).ToArray();
 
 		public static bool EqualsAny(this Vector<float> first, Vector<float> second, int? dim = null) =>
-			!Vector.EqualsAny(
-				Vector<int>.Zero,
+			Vector.EqualsAny(
+				NegativeOne,
 				Vector.ConditionalSelect(
 					DimensionSignals[dim ?? Vector<int>.Count],
 					Vector.Equals(first, second),
-					Vector<int>.One));
+					Vector<int>.Zero));
 
 		public static int BitmaskEqual(this Vector<float> first, Vector<float> second, int? dim = null) =>
 			Vector.Dot(

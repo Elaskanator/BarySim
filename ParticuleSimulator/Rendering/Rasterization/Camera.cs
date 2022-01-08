@@ -6,6 +6,8 @@ using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Camera {
+		public const float AUTO_CENTER_UPDATE_ALPHA = 0.01f;
+
 		public Camera(float scaling = 1f) {
 			this.InitialScaling = this.Scaling = scaling;
 
@@ -26,7 +28,10 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		public bool IsRollRotationActive { get; set; }
 
 		public Vector<float> Left { get; private set; }
-		public Vector<float> Center { get; private set; }
+		private VectorSmoothedIncrementalAverage _center = new(AUTO_CENTER_UPDATE_ALPHA);
+		public Vector<float> Center {
+			get => this._center.Current;
+			set { this._center.Reset(); this._center.Update(value); } }
 		public Vector<float> InitialCenter { get; private set; }
 		public Vector<float> Right { get; private set; }
 		public Vector<float> Size { get; private set; }
@@ -112,7 +117,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			if (this.AutoCentering && Program.Engine.Simulator.ParticleCount > 0 && !(Program.Engine.Simulator.ParticleTree is null)) {
 				BarnesHutTree tree = (BarnesHutTree)Program.Engine.Simulator.ParticleTree;
 				if (tree.MassBaryCenter.Weight > 0f)
-					this.Center = tree.MassBaryCenter.Position;
+					this._center.Update(tree.MassBaryCenter.Position, this._center.NumUpdates > 1 ? null : 1f);
 			}
 
 			if (this.IsAutoIncrementActive) {

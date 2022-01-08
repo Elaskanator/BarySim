@@ -8,10 +8,12 @@ namespace Generic.Models.Trees {
 		protected QuadTreeSIMD(int dim, Vector<float> corner1, Vector<float> corner2, QuadTreeSIMD<TItem> parent = null) 
 		: base(dim, corner1, corner2, parent) {//caller needs to ensure all values in x1 are smaller than x2 (the corners of a cubic volume)
 			this.Size = this.CornerRight - this.CornerLeft;
+			this.SizeSquared = this.Size[0] * this.Size[0];
 		}
 		public QuadTreeSIMD(int dim, Vector<float> startingLength)
 		: base(dim, Vector<float>.Zero, Vector.ConditionalSelect(VectorFunctions.DimensionSignals[dim], startingLength, Vector<float>.Zero)) {
 			this.Size = this.CornerRight - this.CornerLeft;
+			this.SizeSquared = this.Size[0] * this.Size[0];
 		}
 		public QuadTreeSIMD(int dim) : this(dim, Vector<float>.One) { }
 		protected virtual QuadTreeSIMD<TItem> NewNode(QuadTreeSIMD<TItem> parent, Vector<float> cornerLeft, Vector<float> cornerRight) =>
@@ -27,6 +29,7 @@ namespace Generic.Models.Trees {
 			first.BitmaskGreaterThanOrEqual(second, this.Dim);
 
 		public Vector<float> Size { get; private set; }
+		public float SizeSquared { get; private set; }
 		
 		private Vector<int> NewLeftBitmask(int directionMask) {
 			Span<int> values = stackalloc int[Vector<int>.Count];

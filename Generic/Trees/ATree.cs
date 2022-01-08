@@ -5,7 +5,7 @@ using System.Linq;
 using Generic.Extensions;
 
 namespace Generic.Models.Trees {
-	public interface ITree : ICollection, IEnumerable {
+	public interface ITree : IEnumerable {
 		ITree Parent { get; }
 		ICollection<ITree> Children { get; }
 		
@@ -28,17 +28,15 @@ namespace Generic.Models.Trees {
 		public bool IsReadOnly => false;
 
 		public abstract bool MaxDepthReached { get; }
-		public virtual int Capacity => 1;
 
 		public bool IsRoot => this.Parent is null;
 		public bool IsLeaf => this.Children is null;
-		private bool? _isMaxDepth = null;
-		protected bool _isReceiving => this.Count < this.Capacity || (this._isMaxDepth ??= this.MaxDepthReached);
+		protected bool _isReceiving => this.Count == 0 || this.MaxDepthReached;
 
 		public ATree<T> Parent { get; set; }
-		ITree ITree.Parent => throw new NotImplementedException();
+		ITree ITree.Parent => this.Parent;
 		public ATree<T>[] Children { get; protected set; }
-		ICollection<ITree> ITree.Children => throw new NotImplementedException();
+		ICollection<ITree> ITree.Children => this.Children;
 		public ATree<T> Root { get {
 			ATree<T> node = this;
 			while (!node.IsRoot)
@@ -46,9 +44,6 @@ namespace Generic.Models.Trees {
 			return node; } }
 
 		public ICollection<T> Bin { get; protected set; }
-
-		public object SyncRoot => throw new NotImplementedException();
-		public bool IsSynchronized => false;
 
 		public abstract bool DoesEncompass(T item);
 		protected abstract IEnumerable<ATree<T>> FormSubnodes();
@@ -65,9 +60,8 @@ namespace Generic.Models.Trees {
 
 		public ATree<T> GetContainingLeaf(T item) {
 			ATree<T> node = this;
-			while (!node.IsLeaf) {
+			while (!node.IsLeaf)
 				node = node.Children[node.ChildIndex(item)];
-			}
 			return node;
 		}
 
@@ -149,28 +143,54 @@ namespace Generic.Models.Trees {
 			}
 		}
 
-		protected void AddToLeaf(T addition) {//increments the count
+		protected void AddToLeaf(T item) {//increments the count
 			ATree<T> node = this;
 			while (!node._isReceiving) {
-				++node.Count;
 				node.Refine();
-				node = node.Children[node.ChildIndex(addition)];
+				++node.Count;
+				node = node.Children[node.ChildIndex(item)];
 			}
-			++node.Count;
 			node.Bin ??= this.NewBin();
-			node.Bin.Add(addition);
+			node.Bin.Add(item);
+			++node.Count;
 		}
 
 		private void Refine() {
 			this.Children = this.FormSubnodes().ToArray();
 			ATree<T> node;
-			foreach (T item in this.Bin) {
-				node = this.Children[this.ChildIndex(item)];
+			if (this.Count == 1) {
+				node = this.Children[this.ChildIndex(this.Bin.First())];
 				++node.Count;
-				node.Bin ??= node.NewBin();
-				node.Bin.Add(item);
-			}
+				node.Bin = this.Bin;
+			} else if (this.Count > 1) {
+				foreach (T item in this.Bin) {
+					node = this.Children[this.ChildIndex(item)];
+					++node.Count;
+					node.Bin ??= node.NewBin();
+					node.Bin.Add(item);
+				}
+			} else ;
 			this.Bin = null;
+		}
+		
+		//finds the first sub node with more than one child
+		public ATree<T> Prune() {
+			ATree<T> node = this.Root;
+
+			int count, idx;
+			while (!node.IsLeaf) {
+				count = idx = 0;
+				for (int i = 0; i < node.Children.Length; i++)
+					if (node.Children[i].Count > 0)
+						if (++count > 1) break;
+						else idx = i;
+				if (count == 1)
+					node = node.Children[idx];
+				else break;
+			}
+			node.Parent = null;
+
+			return node;
 		}
 
 		public void Clear() {
@@ -212,32 +232,26 @@ namespace Generic.Models.Trees {
 					if (node.Children[i].Count > 0)
 						remaining.Push(node.Children[i]);
 		}
+		IEnumerable ITree.AsEnumerable() => this.AsEnumerable();
 
 		public T[] AsArray() {
-			T[] result = new T[this.Count];
+			if (this.Count > 0) {
+				T[] result = new T[this.Count];
+				Stack<ATree<T>> remaining = new Stack<ATree<T>>();
+				remaining.Push(this);
 
-			Stack<ATree<T>> remaining = new Stack<ATree<T>>();
-			remaining.Push(this);
+				int idx = 0;
+				while (remaining.TryPop(out ATree<T> node))
+					if (node.IsLeaf) {
+						if (!(node.Bin is null))
+							foreach (T item in node.Bin)
+								result[idx++] = item;
+					} else for (int i = 0; i < node.Children.Length; i++)
+						if (node.Children[i].Count > 0)
+							remaining.Push(node.Children[i]);
 
-			int idx = 0;
-			while (remaining.TryPop(out ATree<T> node))
-				if (node.IsLeaf) {
-					if (!(node.Bin is null))
-						foreach (T item in node.Bin)
-							result[idx++] = item;
-				} else for (int i = 0; i < node.Children.Length; i++)
-					if (node.Children[i].Count > 0)
-						remaining.Push(node.Children[i]);
-
-			return result;
-		}
-
-		IEnumerable ITree.AsEnumerable() {
-			throw new NotImplementedException();
-		}
-
-		public void CopyTo(Array array, int index) {
-			throw new NotImplementedException();
+				return result;
+			} else return Array.Empty<T>();
 		}
 	}
 }

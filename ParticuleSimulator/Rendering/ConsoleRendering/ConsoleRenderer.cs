@@ -126,7 +126,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				string result = string.Format("Baryon Simulator {0}D - {1}",
 					Parameters.DIM,
 					this.Engine.Simulator.ParticleCount.Pluralize("Particle"));
-				if (this.FpsTimings.NumUpdates > 0)
+				if (this.FpsTimings.NumUpdates > 1)
 					result += string.Format(" ({0} FPS)", (1d / this.FpsTimings.Current.TotalSeconds).ToStringBetter(2));
 				if (this.Engine.IsPaused)
 					result += " (paused)";

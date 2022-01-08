@@ -36,7 +36,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				position += numberStr.Length;
 			}
 
-			this.Graph.DrawFpsGraph(frameBuffer, this._engine.Renderer.FrameTimings, this._engine.Renderer.FpsTimings);
+			this.Graph.DrawFpsGraph(frameBuffer, this._engine.Renderer.SimTimings, this._engine.Renderer.FpsTimings);
 		}
 
 		private void RefreshStatsHeader(EvalResult prepResults) {
@@ -48,19 +48,23 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			else _statsHeaderValues[0] = new("FPS", 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 
 			string label;
+			TimeSpan duration;
 			for (int i = 0; i < this._engine.Evaluators.Length; i++) {
 				label = this._engine.Evaluators[i].Name[0].ToString();
-				if (this._engine.Evaluators[i].IsComputing && (this._engine.Evaluators[i].FullTimePunctual.NumUpdates == 0 || this._engine.Evaluators[i].FullTimePunctual.Current.TotalMilliseconds >= Parameters.PERF_WARN_MS))
-					_statsHeaderValues[i + 1] = new(label,
-						DateTime.UtcNow.Subtract(this._engine.Evaluators[i].LastComputeStartUtc.Value).TotalMilliseconds,
-						ConsoleColor.White,
-						ConsoleColor.DarkRed);
-				else if (this._engine.Evaluators[i].ExclusiveTime.NumUpdates > 0)
-					_statsHeaderValues[i + 1] = new(label,
-						this._engine.Evaluators[i].ExclusiveTime.LastUpdate.TotalMilliseconds,
-						ChooseFrameIntervalColor(this._engine.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds),
-						ConsoleColor.Black);
-				else _statsHeaderValues[i + 1] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
+				if (this._engine.Evaluators[i].ExclusiveTime.NumUpdates == 0) {
+					_statsHeaderValues[i + 1] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
+				} else {
+					duration = this._engine.Evaluators[i].ExclusiveTime.LastUpdate;
+					if (duration.TotalMilliseconds >= Parameters.PERF_WARN_MS)
+						_statsHeaderValues[i + 1] = new(label,
+							duration.TotalMilliseconds,
+							ConsoleColor.White,
+							ConsoleColor.DarkRed);
+					else _statsHeaderValues[i + 1] = new(label,
+							duration.TotalMilliseconds,
+							ChooseFrameIntervalColor(this._engine.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds),
+							ConsoleColor.Black);
+				}
 			}
 		}
 

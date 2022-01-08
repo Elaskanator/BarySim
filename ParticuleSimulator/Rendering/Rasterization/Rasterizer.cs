@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using ParticleSimulator.Engine;
 using ParticleSimulator.Engine.Threading;
@@ -82,13 +83,11 @@ namespace ParticleSimulator.Rendering.Rasterization {
 					while (resamplings.TryDequeue(out resampling)) {
 						idx = resampling.X + this.InternalWidth * resampling.Y;
 						densities[idx] += resampling.H;
-						counts[idx]++;
 
-						if (counts[idx] == 1
-						|| nearest[idx].Z > resampling.Z//extend up out of the screen (height)
-						|| (nearest[idx].Z == resampling.Z && nearest[idx].Particle.Id > resampling.Particle.Id)) {
+						if (counts[idx] == 0 || nearest[idx].Z > resampling.Z)
 							nearest[idx] = resampling;
-						}
+
+						counts[idx]++;
 					}
 				}
 			
@@ -123,20 +122,17 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								}
 							}
 							if (any2) {
-								ranks[idx] = this.GetRank(scalings, bin, (float)totalCount / count, densityScalar * totalDensity / count);
+								ranks[idx] = bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, densityScalar * totalDensity / count));
 								results[idx] = new(x, y, ranks[idx].Value);
 							}
 						}
 					}
-				} else {
-					for (int i = 0; i < this.OutNumPixels; i++) {
-						if (counts[i] > 0) {
-							any = true;
-							ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densityScalar * densities[i]);
-							results[i] = new(nearest[i].X, nearest[i].Y, ranks[i].Value);
-						}
+				} else for (int i = 0; i < this.OutNumPixels; i++)
+					if (counts[i] > 0) {
+						any = true;
+						ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densityScalar * densities[i]);
+						results[i] = new(nearest[i].X, nearest[i].Y, ranks[i].Value);
 					}
-				}
 
 				if (any) this._rawRankingsResource.Overwrite(ranks);
 
@@ -162,8 +158,6 @@ namespace ParticleSimulator.Rendering.Rasterization {
 					return 0f;
 			}
 		}
-		private float GetRank(float[] scaling, IEnumerable<Subsample> resampling, float count, float density) =>
-			this.GetRank(scaling, resampling.MaxBy(p => p.Z), count, density);
 
 		//TODO rewrite to not use Sqrt
 		private void Resample(ParticleData particle, Queue<Subsample> result) {
@@ -172,18 +166,17 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 			if (0f <= position[0] + radius && position[0] - radius < this.InternalWidthF
 			&& 0f <= position[1] + radius && position[1] - radius < this.InternalHeightF) {//visible
+				result.Clear();
 				int xRounded = (int)position[0],
 					yRounded = (int)position[1];
-				result.Clear();
+				float radiusSquared = radius * radius;
 
 				if (0 <= xRounded && xRounded < this.InternalWidth
-					&& 0 <= yRounded && yRounded < this.InternalHeight)
-					result.Enqueue(new(particle, xRounded, yRounded, position[2], radius));
+				&& 0 <= yRounded && yRounded < this.InternalHeight)
+					result.Enqueue(new(particle, xRounded, yRounded, position[2], radiusSquared));
 				
 				//draw verticle lines inward toward center
 				if (radius > Parameters.PIXEL_ROUNDOFF) {
-					float radiusSquared = radius * radius;
-
 					int xMin = (int)MathF.Floor(position[0] - radius + Parameters.PIXEL_ROUNDOFF),
 						xMax = (int)MathF.Floor(position[0] + radius - Parameters.PIXEL_ROUNDOFF);
 					xMin = xMin < 0 ? 0 : xMin;
@@ -203,14 +196,14 @@ namespace ParticleSimulator.Rendering.Rasterization {
 							dy = position[1] - (y + 1);//near side
 							squareRemainingRadiusY = radiusSquared - dy*dy;
 
-							result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+							result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY));
 						}
 						//top half
 						for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 							dy = y - position[1];
 							squareRemainingRadiusY = radiusSquared - dy*dy;
 
-							result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+							result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY));
 						}
 					}
 					//left half
@@ -229,14 +222,14 @@ namespace ParticleSimulator.Rendering.Rasterization {
 							dy = position[1] - (y + 1);//near side
 							squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-							result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+							result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY));
 						}
 						//top half
 						for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 							dy = y - position[1];
 							squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-							result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+							result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY));
 						}
 					}
 					//right half
@@ -249,20 +242,20 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								
 						//y middle
 						if (0 <= yRounded && yRounded < this.InternalHeight)
-							result.Enqueue(new(particle, x, yRounded, position[2], yRangeRemainder));
+							result.Enqueue(new(particle, x, yRounded, position[2], squareRemainingRadiusX));
 						//bottom half
 						for (int y = yMin < 0 ? 0 : yMin; y < yRounded && y < this.InternalHeight; y++) {
 							dy = position[1] - (y + 1);//near side
 							squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-							result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+							result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY));
 						}
 						//top half
 						for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 							dy = y - position[1];
 							squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-							result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY <= 0f ? 0f : MathF.Sqrt(squareRemainingRadiusY)));
+							result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY));
 						}
 					}
 				}
