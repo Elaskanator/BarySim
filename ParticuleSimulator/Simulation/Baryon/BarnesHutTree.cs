@@ -13,15 +13,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 		protected override BarnesHutTree NewNode(QuadTreeSIMD<MatterClump> parent, Vector<float> cornerLeft, Vector<float> cornerRight) =>
 			new BarnesHutTree(this.Dim, cornerLeft, cornerRight, parent);
 
-		public BaryCenter MassBaryCenter { get; private set; }
-
-		//protected override bool TryMerge(Particle p1) {
-		//	if (Parameters.GRAVITY_COLLISION_COMBINE)
-		//		foreach (Particle p2 in this.Bin)
-		//			if (p2.TryMerge(p1))
-		//				return true;
-		//	return false;
-		//}
+		public BaryCenter MassBaryCenter;
 
 		public void UpdateBarycenter() {
 			Tuple<Vector<float>, float> total = new(Vector<float>.Zero, 0f);
@@ -42,7 +34,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 				}
 			} else {
 				for (int i = 0; i < this.Children.Length; i++) {
-					if (this.Children[i].Count > 0) {
+					if (this.Children[i].ItemCount > 0) {
 						child = (BarnesHutTree)this.Children[i];
 						if (child.MassBaryCenter.Weight > 0f) {
 							total = new(
@@ -57,16 +49,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 			}
 		}
 
-		//public bool CanApproximate(BarnesHutTree node) {
-		//	float dist = Generic.Vectors.VectorFunctions.Distance(this.MassBaryCenter.Position, node.MassBaryCenter.Position);
-		//	return Parameters.WORLD_EPSILON < dist
-		//		&& Parameters.INACCURCY > node.Size[0] / dist;
-		//}
-
 		public bool CanApproximate(BarnesHutTree node) {
 			Vector<float> pointingVector = node.MassBaryCenter.Position - this.MassBaryCenter.Position;
-			float dot = Vector.Dot(pointingVector, pointingVector);
-			return Parameters.INACCURCY > node.SizeSquared / dot;
+			return Parameters.INACCURCY_SQUARED > node.SizeSquared / Vector.Dot(pointingVector, pointingVector);
 		}
 	}
 }

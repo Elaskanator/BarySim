@@ -28,8 +28,8 @@ namespace Generic.Models.Trees {
 		protected override int BitmaskGreaterThanOrEqual(Vector<float> first, Vector<float> second) =>
 			first.BitmaskGreaterThanOrEqual(second, this.Dim);
 
-		public Vector<float> Size { get; private set; }
-		public float SizeSquared { get; private set; }
+		public readonly Vector<float> Size;
+		public readonly float SizeSquared;
 		
 		private Vector<int> NewLeftBitmask(int directionMask) {
 			Span<int> values = stackalloc int[Vector<int>.Count];

@@ -22,20 +22,21 @@ namespace Generic.Models.Trees {
 
 		public override string ToString() => string.Format("{0}Node[{1}]",
 			this.IsRoot && this.IsLeaf ? "Sole" : this.IsRoot ? "Root" : this.IsLeaf ? "Leaf" : "Inner",
-			this.Count.Pluralize("item"));
+			this.ItemCount.Pluralize("item"));
 		
-		public int Count { get; protected set; }
+		public int Count => this.ItemCount;
+		public int ItemCount;
 		public bool IsReadOnly => false;
 
 		public abstract bool MaxDepthReached { get; }
 
 		public bool IsRoot => this.Parent is null;
 		public bool IsLeaf => this.Children is null;
-		protected bool _isReceiving => this.Count == 0 || this.MaxDepthReached;
+		protected bool _isReceiving => this.ItemCount == 0 || this.MaxDepthReached;
 
-		public ATree<T> Parent { get; set; }
+		public ATree<T> Parent;
 		ITree ITree.Parent => this.Parent;
-		public ATree<T>[] Children { get; protected set; }
+		public ATree<T>[] Children;//srsly why does making this a FIELD instead of a PROEPRTY improve performance by 25%?
 		ICollection<ITree> ITree.Children => this.Children;
 		public ATree<T> Root { get {
 			ATree<T> node = this;
@@ -43,7 +44,7 @@ namespace Generic.Models.Trees {
 				node = node.Parent;
 			return node; } }
 
-		public ICollection<T> Bin { get; protected set; }
+		public ICollection<T> Bin;
 
 		public abstract bool DoesEncompass(T item);
 		protected abstract IEnumerable<ATree<T>> FormSubnodes();
@@ -74,13 +75,13 @@ namespace Generic.Models.Trees {
 			}
 			ATree<T> startingNode = node;
 			while (!node.IsLeaf) {
-				++node.Count;
+				++node.ItemCount;
 				node = node.Children[node.ChildIndex(item)];
 			}
 			node.AddToLeaf(item);//increments the count
 			while (!startingNode.IsRoot) {
 				startingNode = startingNode.Parent;
-				++startingNode.Count;
+				++startingNode.ItemCount;
 			}
 		}
 
@@ -104,10 +105,10 @@ namespace Generic.Models.Trees {
 				node = node.Children[node.ChildIndex(item)];
 
 			if (node.Bin.Remove(item)) {
-				--node.Count;
+				--node.ItemCount;
 				while (!node.IsRoot) {
 					node = node.Parent;
-					if (--node.Count == 0)
+					if (--node.ItemCount == 0)
 						node.Children = null;
 				}
 				return true;
@@ -117,7 +118,7 @@ namespace Generic.Models.Trees {
 		public void MoveFromLeaf(T item) {
 			if (!this.DoesEncompass(item)) {
 				this.Bin.Remove(item);
-				--this.Count;
+				--this.ItemCount;
 
 				ATree<T> node = this;
 				bool encompasses;
@@ -126,17 +127,17 @@ namespace Generic.Models.Trees {
 						node = node.Expand(item);
 					} else {
 						node = node.Parent;
-						--node.Count;
+						--node.ItemCount;
 					}
 
-					if (node.Count == 0)
+					if (node.ItemCount == 0)
 						node.Children = null;
 
 					encompasses = node.DoesEncompass(item);
 				} while (!encompasses);
 				
 				while (!node.IsLeaf) {
-					++node.Count;
+					++node.ItemCount;
 					node = node.Children[node.ChildIndex(item)];
 				}
 				node.AddToLeaf(item);//increments the count
@@ -147,25 +148,25 @@ namespace Generic.Models.Trees {
 			ATree<T> node = this;
 			while (!node._isReceiving) {
 				node.Refine();
-				++node.Count;
+				++node.ItemCount;
 				node = node.Children[node.ChildIndex(item)];
 			}
 			node.Bin ??= this.NewBin();
 			node.Bin.Add(item);
-			++node.Count;
+			++node.ItemCount;
 		}
 
 		private void Refine() {
 			this.Children = this.FormSubnodes().ToArray();
 			ATree<T> node;
-			if (this.Count == 1) {
+			if (this.ItemCount == 1) {
 				node = this.Children[this.ChildIndex(this.Bin.First())];
-				++node.Count;
+				++node.ItemCount;
 				node.Bin = this.Bin;
-			} else if (this.Count > 1) {
+			} else if (this.ItemCount > 1) {
 				foreach (T item in this.Bin) {
 					node = this.Children[this.ChildIndex(item)];
-					++node.Count;
+					++node.ItemCount;
 					node.Bin ??= node.NewBin();
 					node.Bin.Add(item);
 				}
@@ -181,7 +182,7 @@ namespace Generic.Models.Trees {
 			while (!node.IsLeaf) {
 				count = idx = 0;
 				for (int i = 0; i < node.Children.Length; i++)
-					if (node.Children[i].Count > 0)
+					if (node.Children[i].ItemCount > 0)
 						if (++count > 1) break;
 						else idx = i;
 				if (count == 1)
@@ -194,7 +195,7 @@ namespace Generic.Models.Trees {
 		}
 
 		public void Clear() {
-			this.Count = 0;
+			this.ItemCount = 0;
 			this.Children = null;
 			if (!(this.Bin is null))
 				this.Bin.Clear();
@@ -208,7 +209,7 @@ namespace Generic.Models.Trees {
 				encompasses = node.DoesEncompass(item);
 			}
 
-			if (encompasses && node.Count > 0)
+			if (encompasses && node.ItemCount > 0)
 				return node.Bin.Contains(item);
 			else return false;
 		}
@@ -229,14 +230,14 @@ namespace Generic.Models.Trees {
 						foreach (T item in node.Bin)
 							yield return item;
 				} else for (int i = 0; i < node.Children.Length; i++)
-					if (node.Children[i].Count > 0)
+					if (node.Children[i].ItemCount > 0)
 						remaining.Push(node.Children[i]);
 		}
 		IEnumerable ITree.AsEnumerable() => this.AsEnumerable();
 
 		public T[] AsArray() {
-			if (this.Count > 0) {
-				T[] result = new T[this.Count];
+			if (this.ItemCount > 0) {
+				T[] result = new T[this.ItemCount];
 				Stack<ATree<T>> remaining = new Stack<ATree<T>>();
 				remaining.Push(this);
 
@@ -247,7 +248,7 @@ namespace Generic.Models.Trees {
 							foreach (T item in node.Bin)
 								result[idx++] = item;
 					} else for (int i = 0; i < node.Children.Length; i++)
-						if (node.Children[i].Count > 0)
+						if (node.Children[i].ItemCount > 0)
 							remaining.Push(node.Children[i]);
 
 				return result;

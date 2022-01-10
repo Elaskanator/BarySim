@@ -21,10 +21,10 @@ namespace Generic.Models.Trees {
 		public override string ToString() =>
 			string.Format("{0}[{1} thru {2}]", base.ToString(), string.Join("", this.CornerLeft), string.Join("", this.CornerRight));
 		
-		public int Dim { get; private set; }
-		public TCorner CornerLeft { get; private set; }
-		public TCorner Center { get; private set; }
-		public TCorner CornerRight { get; private set; }
+		public readonly int Dim;
+		public readonly TCorner CornerLeft;
+		public readonly TCorner Center;
+		public readonly TCorner CornerRight;
 
 		private readonly bool _limitReached;
 		public override bool MaxDepthReached => this._limitReached;
@@ -55,7 +55,7 @@ namespace Generic.Models.Trees {
 			this.Parent = newParent;
 
 			int i = 0;
-			newParent.Count = this.Count;
+			newParent.ItemCount = this.ItemCount;
 			newParent.Children = new AQuadTree<TItem, TCorner>[1u << this.Dim];
 			foreach (AQuadTree<TItem, TCorner> node in newParent.FormSubnodes()) {
 				if (i == inverseQuadrantMask)

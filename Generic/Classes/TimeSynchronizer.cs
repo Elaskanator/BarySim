@@ -42,7 +42,6 @@ namespace Generic.Models {
 					this._targetTimeUtc += this.Target;
 				else this._targetTimeUtc = nowUtc + this.Target;//missed it (this does not preserve absolute synchronization and can de-phase from metered interval times)
 			}
-
 			if (waitDuration.TotalMilliseconds > THREAD_PULSE_MS/2d) {
 				DateTime startUtc = DateTime.UtcNow;
 				Thread.Sleep(waitDuration.Subtract(TimeSpan.FromMilliseconds(THREAD_PULSE_MS/2d)));

@@ -28,7 +28,7 @@ namespace ParticleSimulator {
 		public const int PARTICLES_GROUP_MAX = 1 << 12;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
-		public const float INACCURCY = 1f;
+		public const float INACCURCY_SQUARED = 1f;
 		public const int DETERMINISTIC_RANDOM_SEED = 0;
 		
 		public const bool COLLISION_ENABLE = true;
