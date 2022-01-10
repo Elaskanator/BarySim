@@ -3,6 +3,7 @@
 		ReadImmediate,
 		ReadReady,
 		Consume,
+		ConsumeReady,
 		ReadOnChange,
 	}
 }

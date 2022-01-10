@@ -6,7 +6,7 @@ using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Camera {
-		public const float AUTO_CENTER_UPDATE_ALPHA = 0.05f;
+		public const float AUTO_CENTER_UPDATE_ALPHA = 0.2f;
 
 		public Camera(float scaling = 1f) {
 			this.InitialScaling = this.Scaling = scaling;

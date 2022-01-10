@@ -57,6 +57,12 @@ namespace ParticleSimulator.Engine {
 
 			if (allowAccess) {
 				switch (this.Config.ReadType) {
+					case ConsumptionType.ConsumeReady:
+						if (this.Config.Resource.TryDequeue(ref this._myValue, TimeSpan.Zero)) {
+							this.Skips = 0;
+							this.Reuses = 0;
+						} else this._myValue = this.Config.Resource.Peek();
+						break;
 					case ConsumptionType.Consume:
 						if (allowReuse) {
 							if (this.Config.Resource.TryDequeue(ref this._myValue, TimeSpan.Zero)) {

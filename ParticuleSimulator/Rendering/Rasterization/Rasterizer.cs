@@ -5,7 +5,6 @@ using System.Numerics;
 using ParticleSimulator.Engine;
 using ParticleSimulator.Engine.Threading;
 using ParticleSimulator.Simulation.Particles;
-using Generic.Extensions;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Rasterizer {
@@ -90,8 +89,6 @@ namespace ParticleSimulator.Rendering.Rasterization {
 						counts[idx]++;
 					}
 				}
-			
-				float densityScalar = 0.5f;//TODO
 
 				bool any = false;
 				if (this.Supersampling > 1) {
@@ -123,8 +120,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 							}
 							if (any2) {
 								if (Parameters.RANK_AGG_IS_SUMMATION)
-									ranks[idx] = bin.Sum(sample => this.GetRank(scalings, sample, (float)totalCount / count, densityScalar * totalDensity / count));
-								else ranks[idx] = bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, densityScalar * totalDensity / count));
+									ranks[idx] = bin.Sum(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
+								else ranks[idx] = bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
 								results[idx] = new(x, y, ranks[idx].Value);
 							}
 						}
@@ -132,7 +129,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				} else for (int i = 0; i < this.OutNumPixels; i++)
 					if (counts[i] > 0) {
 						any = true;
-						ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densityScalar * densities[i]);
+						ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densities[i]);
 						results[i] = new(nearest[i].X, nearest[i].Y, ranks[i].Value);
 					}
 
@@ -142,7 +139,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			}
 		}
 
-		private float GetRank(float[] scaling, Subsample resampling, float count, float density) {
+		private float GetRank(float[] scaling, Subsample resampling, float count, float halfHeight) {
 			switch (Parameters.COLOR_METHOD) {
 				case ParticleColoringMethod.Random:
 					return (resampling.Particle.Id + this._randOffset) % scaling.Length;
@@ -155,7 +152,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				case ParticleColoringMethod.Overlap:
 					return count;
 				case ParticleColoringMethod.Density:
-					return density;
+					return halfHeight * 2f* resampling.Particle.Density;
 				default:
 					return 0f;
 			}
@@ -218,7 +215,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								
 						//y middle
 						if (0 <= yRounded && yRounded < this.InternalHeight)
-							result.Enqueue(new(particle, x, yRounded, position[2], yRangeRemainder));
+							result.Enqueue(new(particle, x, yRounded, position[2], squareRemainingRadiusX));
 						//bottom half
 						for (int y = yMin < 0 ? 0 : yMin; y < yRounded && y < this.InternalHeight; y++) {
 							dy = position[1] - (y + 1);//near side

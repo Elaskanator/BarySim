@@ -31,7 +31,9 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		private DateTime _lastPunctualWrite = DateTime.UtcNow;
 
 		public static ConsoleColor GetRankColor(float rank, float[] scaling) =>
-			Parameters.COLOR_ARRAY[scaling.Drop(1).TakeWhile(ds => ds < rank).Count()];
+			rank <= 0f
+				? ConsoleColor.Green
+				: Parameters.COLOR_ARRAY[scaling.Drop(1).TakeWhile(ds => ds < rank).Count()];
 
 		public override void Init() {
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)

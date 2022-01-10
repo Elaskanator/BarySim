@@ -7,6 +7,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		int Id { get; }
 		int GroupId { get; }
 		float Radius { get; }
+		float Density { get; }
 		float Luminosity { get; }
 		
 		bool Equals(object other) => (other is IParticle data) && this.Id == data.Id;

@@ -22,8 +22,10 @@ namespace ParticleSimulator.Simulation.Baryon {
 			this.IterationCount = -1;
 			this.InitialParticleGroups = Enumerable
 				.Range(0, Parameters.PARTICLES_GROUP_COUNT)
-				.Select(i => new Galaxy())
+				.Select(i => new Galaxy(Parameters.GALAXY_RADIUS, Parameters.GALAXY_SOFTENING))
 				.ToArray();
+			for (int i = 0; i < this.InitialParticleGroups.Length; i++)
+				this.InitialParticleGroups[i].Init();
 
 			ATree<MatterClump> node = new BarnesHutTree(Parameters.DIM);
 			node.Add(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));

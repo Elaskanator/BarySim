@@ -7,6 +7,7 @@ namespace ParticleSimulator.Simulation.Particles {
 			this.GroupId = particle.GroupId;
 			this.Position = particle.Position;
 			this.Radius = particle.Radius;
+			this.Density = particle.Density;
 			this.Luminosity = particle.Luminosity;
 		}
 
@@ -16,6 +17,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		public int GroupId { get; private set; }
 		public Vector<float> Position { get; private set; }
 		public float Radius { get; private set; }
+		public float Density { get; private set; }
 		public float Luminosity { get; private set; }
 	}
 }

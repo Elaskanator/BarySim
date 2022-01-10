@@ -29,6 +29,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		
 		public float Charge { get; set; }
 		public float Luminosity { get; set; }
+		public float Density => Parameters.GRAVITY_RADIAL_DENSITY;
 
 		private float _radius;
 		public float Radius {
@@ -50,7 +51,11 @@ namespace ParticleSimulator.Simulation.Particles {
 		public abstract void Incorporate(TSelf other);
 		protected abstract bool TestInRange(ATree<TSelf> world);
 
+		protected virtual void RefreshSelf() { }
+
 		public void ApplyTimeStep(float timeStep, ATree<TSelf> world) {
+			this.RefreshSelf();
+
 			Vector<float> velocity = this.Velocity + (timeStep * this.Acceleration),
 				displacement = timeStep*velocity,
 				newP = this.Position + displacement;

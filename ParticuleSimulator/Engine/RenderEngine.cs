@@ -88,26 +88,27 @@ namespace ParticleSimulator.Engine {
 		private Dictionary<int, bool> _stepsStartingPaused;
 		
 		private readonly SynchronousBuffer<ParticleData[]> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
+		private readonly ConsumptionType _particleResourceReadType = Parameters.SYNC_SIMULATION ? ConsumptionType.Consume : ConsumptionType.ConsumeReady;
 		private IngestedResource<ParticleData[]> _particleResourceUse;
 		private readonly SynchronousBuffer<float?[]> _rankingsResource = new("Ranks", 0);
 		private readonly SynchronousBuffer<Pixel[]> _rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 		private readonly SynchronousBuffer<float[]> _scalingResource = new("Scaling", 0);
 
-		public void Start(bool running = true) {
+		public void Start(bool enable = true) {
 			if (this.IsOpen) {
 				throw new InvalidOperationException("Already open");
 			} else {
 				this.IsOpen = true;
-				this.IsPaused = !running;
+				this.IsPaused = !enable;
 				this.StartTimeUtc = DateTime.UtcNow;
 				
-				this._particleResourceUse.ReadType = running ? ConsumptionType.Consume : ConsumptionType.ReadImmediate;
+				this._particleResourceUse.ReadType = enable ? this._particleResourceReadType : ConsumptionType.ConsumeReady;
 				this._keyReader = new(this.HandleInputs);
 				this._keyReader.Start();
 
 				for (int i = 0; i < this.Evaluators.Length; i++) {
 					this.Evaluators[i].Start(
-						(running || this.Evaluators[i] == this._stepEval_Render)
+						(enable || this.Evaluators[i] == this._stepEval_Render)
 						&& (this.Evaluators[i] != this._stepEval_Autoscale
 							|| (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth && Parameters.COLOR_METHOD != ParticleColoringMethod.Overlap)));
 					this._stepsStartingPaused[this.Evaluators[i].Id] = this.Evaluators[i].IsPaused;
@@ -184,12 +185,11 @@ namespace ParticleSimulator.Engine {
 				GeneratorFn = () => { return this.Simulator.RefreshSimulation(); },
 				CallbackFn = (r) => { this.Renderer.UpdateSimTime(r); },
 				OutputResource = this._particleResource,
-				IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
 				OutputSkips = Parameters.SIMULATION_SKIPS,
 			});
 			yield return this._stepEval_Simulate;
 
-			this._particleResourceUse = new(this._particleResource, ConsumptionType.Consume);
+			this._particleResourceUse = new(this._particleResource, this._particleResourceReadType);
 			this._stepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterize",
 				CalculatorFn = (r, p) => { return this.Rasterizer.Rasterize(r, p); },
@@ -307,9 +307,7 @@ namespace ParticleSimulator.Engine {
 			this._stepsStartingPaused[this._stepEval_Simulate.Id] |= !enable;
 			if (!enable || !this.IsPaused) {
 				this._stepEval_Simulate.SetRunningState(enable);
-				this._particleResourceUse.ReadType = enable
-					? ConsumptionType.Consume
-					: ConsumptionType.ReadImmediate;
+				this._particleResourceUse.ReadType = enable ? this._particleResourceReadType : ConsumptionType.ConsumeReady;
 			}
 		}
 
