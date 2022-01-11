@@ -14,11 +14,11 @@ namespace ParticleSimulator {
 
 		public const float TARGET_FPS = 30f;
 		public const bool VSYNC = false;
-		public const int SUPERSAMPLING = 2;
+		public const int SUPERSAMPLING = 1;
 		public const float PIXEL_ROUNDOFF = 0.5f;
 
 		public const int DIM = 3;
-		public const float WORLD_SCALE = 4f;
+		public const float WORLD_SCALE = 5f;
 		public const float TIME_SCALE = 0.001f;
 		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
@@ -50,10 +50,10 @@ namespace ParticleSimulator {
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
 		public const bool SYNC_SIMULATION = true;//controls synchronization of rendering to simulation (e.g. faster rotation)
 		
-		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Luminosity;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
 		//public static readonly ConsoleColor[] COLOR_ARRAY = new ConsoleColor[] { ConsoleColor.White };
-		public const bool COLOR_USE_FIXED_BANDS = true;
+		public const bool COLOR_USE_FIXED_BANDS = false;
 		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
 		public const bool AUTOSCALE_PERCENTILE = false;
 		public const float AUTOSCALE_FIXED_MIN = -1f;
@@ -80,7 +80,7 @@ namespace ParticleSimulator {
 		public const float GRAVITY_EJECTA_PARTICLE_MASS = 0.001f;
 		public const float GRAVITY_EJECTA_SPEED = 2E-2f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 2.0E-0f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 4.0E-0f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.0E-0f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 0.0E-0f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.0E-0f;

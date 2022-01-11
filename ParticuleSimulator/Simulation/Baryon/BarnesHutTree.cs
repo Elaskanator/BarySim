@@ -1,6 +1,4 @@
-﻿using System;
-using System.Numerics;
-using System.Linq;
+﻿using System.Numerics;
 using Generic.Models.Trees;
 
 namespace ParticleSimulator.Simulation.Baryon {
@@ -15,38 +13,46 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		public BaryCenter MassBaryCenter;
 
-		public void UpdateBarycenter() {
-			Tuple<Vector<float>, float> total = new(Vector<float>.Zero, 0f);
-			BarnesHutTree child;
-			MatterClump particle;
-			if (this.IsLeaf) {
-				if (this.Bin.Count == 1) {
-					particle = this.Bin.First();
-					this.MassBaryCenter = new(particle.Position, particle.Mass);
-				} else {
-					foreach (MatterClump p in this.Bin.Where(p => p.Mass > 0f))
-						total = new(
-							total.Item1 + (p.Position * p.Mass),
-							total.Item2 + p.Mass);
-					this.MassBaryCenter = total.Item2 > 0f
-						? new(total.Item1 * (1f / total.Item2), total.Item2)
-						: new(this.Center, 0f);
-				}
+		public void InitBaryCenter(MatterClump[] particles) {
+			if (particles.Length == 1) {
+				this.MassBaryCenter = new(particles[0].Position, particles[0].Mass);
 			} else {
-				for (int i = 0; i < this.Children.Length; i++) {
-					if (this.Children[i].ItemCount > 0) {
-						child = (BarnesHutTree)this.Children[i];
-						if (child.MassBaryCenter.Weight > 0f) {
-							total = new(
-								total.Item1 + (child.MassBaryCenter.Position * child.MassBaryCenter.Weight),
-								total.Item2 + child.MassBaryCenter.Weight);
-						}
-					}
-				}
-				this.MassBaryCenter = total.Item2 > 0f
-					? new(total.Item1 * (1f / total.Item2), total.Item2)
-					: new(this.Center, 0f);
+				BaryCenter total = new();
+				for (int i = 1; i < particles.Length; i++)
+					total = new(
+						total.Position + particles[i].Mass*particles[i].Position,
+						total.Weight + particles[i].Mass);
+				this.MassBaryCenter = new((1f / total.Weight) * total.Position, total.Weight);
 			}
+		}
+
+		public void UpdateBaryCenter() {
+			BaryCenter total = new();
+			BarnesHutTree child;
+			int found = 0;
+			for (int i = 0; i < this.Children.Length; i++)
+				if (this.Children[i].ItemCount > 0) {
+					child = (BarnesHutTree)this.Children[i];
+					switch (found) {
+						case 0:
+							total = new(child.MassBaryCenter.Position, child.MassBaryCenter.Weight);
+							break;
+						case 1:
+							total = new(
+								total.Weight*total.Position + child.MassBaryCenter.Weight*child.MassBaryCenter.Position,
+								total.Weight + child.MassBaryCenter.Weight);
+							break;
+						default:
+							total = new(
+								total.Position + child.MassBaryCenter.Weight*child.MassBaryCenter.Position,
+								total.Weight + child.MassBaryCenter.Weight);
+							break;
+					}
+					found++;
+				}
+			this.MassBaryCenter = found == 1
+				? total
+				: new(total.Position * (1f / total.Weight), total.Weight);
 		}
 
 		public bool CanApproximate(BarnesHutTree node) {

@@ -16,9 +16,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 		IEnumerable<IParticle> ISimulator.Particles => this.ParticleTree.AsEnumerable();
 		public int ParticleCount => this.ParticleTree is null ? 0 : this.ParticleTree.ItemCount;//this.ParticleTree is null ? 0 : this.ParticleTree.Count;
 
-		private Stack<ATree<MatterClump>> _pendingNodes = new(), _testNodes = new();
-		private Stack<BarnesHutTree[]> _levelStack = new();
-
 		public void Init() {
 			this.IterationCount = -1;
 			this.InitialParticleGroups = Enumerable
@@ -35,70 +32,77 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		public ParticleData[] RefreshSimulation() {
 			this.IterationCount++;
-			if (this.ParticleTree.ItemCount > 0) {
-				if (this.IterationCount > 0) {//show starting data on first result
-					this.ComputeAcceleration(Parameters.TIME_SCALE);
-					if (Parameters.MERGE_ENABLE)
-						this.HandleMergers();
-					//trim top of tree
-					this.ParticleTree = (BarnesHutTree)this.ParticleTree.Prune();
-				}
-				return this.ParticleTree.Select(p => new ParticleData(p)).ToArray();
-			} else {
-				Program.CancelAction(null, null);
-				return Array.Empty<ParticleData>();
-			}
+			if (this.IterationCount > 0)//show starting data on first result
+				if (this.ParticleTree.ItemCount == 0) {
+					Program.CancelAction(null, null);
+				} else this.Refresh(Parameters.TIME_SCALE);
+
+			return this.ParticleTree.Select(p => new ParticleData(p)).ToArray();
 		}
 
-		private void ComputeAcceleration(float timeStep) {
-			this._pendingNodes.Clear();
-			this._testNodes.Clear();
-			this._levelStack.Clear();
+		private void Refresh(float timeStep) {
 			Tuple<ATree<MatterClump>, MatterClump[]>[] leaves = new Tuple<ATree<MatterClump>, MatterClump[]>[this.ParticleTree.ItemCount];
+			int numLeaves = 0;
 
-			_pendingNodes.Push(this.ParticleTree);
-			_levelStack.Push(new BarnesHutTree[] { this.ParticleTree });
+			if (this.ParticleTree.IsLeaf) {
+				leaves[numLeaves++] = new(this.ParticleTree, this.ParticleTree.Bin.ToArray());
+			} else {
+				Stack<BarnesHutTree> pendingNodes = new(), testNodes = new();
+				Stack<BarnesHutTree[]> levelStack = new();
+				pendingNodes.Push(this.ParticleTree);
+				levelStack.Push(new BarnesHutTree[] { this.ParticleTree });
 
-			BarnesHutTree[] levelNodes;
-			ATree<MatterClump> node;
-			bool any = true;
-			int leafCount = 0;
-			while (any) {
-				any = false;
-				while (_pendingNodes.TryPop(out node))
-					if (node.IsLeaf)
-						leaves[leafCount++] = new(node, node.Bin.ToArray());
-					else for (int cIdx = 0; cIdx < node.Children.Length; cIdx++)
-						if (node.Children[cIdx].ItemCount > 0) {
-							any = true;
-							_testNodes.Push(node.Children[cIdx]);
-						}
-				if (any) {
-					levelNodes = new BarnesHutTree[_testNodes.Count];
-					_testNodes.CopyTo(levelNodes, 0);//casting magic?
-					_levelStack.Push(levelNodes);
+				BarnesHutTree[] levelNodes;
+				BarnesHutTree child, node;
+				MatterClump[] particles;
+				bool any = true;
+				while (any) {
+					any = false;
+					while (pendingNodes.TryPop(out node))
+						for (int cIdx = 0; cIdx < node.Children.Length; cIdx++)
+							if (node.Children[cIdx].ItemCount > 0) {
+								child = (BarnesHutTree)node.Children[cIdx];
+								if (node.Children[cIdx].IsLeaf) {
+									particles = child.Bin.ToArray();
+									child.InitBaryCenter(particles);
+									leaves[numLeaves++] = new(child, particles);
+								} else testNodes.Push(child);
+								any = true;
+							}
 
-					(_pendingNodes, _testNodes) = (_testNodes, _pendingNodes);
+					if (any) {
+						levelNodes = new BarnesHutTree[testNodes.Count];
+						testNodes.CopyTo(levelNodes, 0);//casting magic?
+						levelStack.Push(levelNodes);
+
+						(pendingNodes, testNodes) = (testNodes, pendingNodes);
+					}
 				}
+
+				while (levelStack.TryPop(out levelNodes))
+					for (int i = 0; i < levelNodes.Length; i++)
+						levelNodes[i].UpdateBaryCenter();
 			}
 
-			while (_levelStack.TryPop(out levelNodes))
-				for (int i = 0; i < levelNodes.Length; i++)
-					levelNodes[i].UpdateBarycenter();
-
 			Parallel.ForEach(
-				Enumerable.Range(0, leafCount).Select(i => leaves[i]),
+				Enumerable.Range(0, numLeaves).Select(i => leaves[i]),
 				leaf => this.ProcessNode(
 					(BarnesHutTree)leaf.Item1,
 					leaf.Item2));
-
-			for (int i = 0; i < leafCount; i++)
+			
+			ATree<MatterClump> node2;
+			for (int i = 0; i < numLeaves; i++)
 				for (int j = 0; j < leaves[i].Item2.Length; j++)
 					if (leaves[i].Item2[j].Enabled) {
-						node = leaves[i].Item1.GetContainingLeaf(leaves[i].Item2[j]);
+						node2 = leaves[i].Item1.GetContainingLeaf(leaves[i].Item2[j]);
 						leaves[i].Item2[j].ApplyTimeStep(timeStep, this.ParticleTree);
-						node.MoveFromLeaf(leaves[i].Item2[j]);
+						node2.MoveFromLeaf(leaves[i].Item2[j]);
 					}
+
+			if (Parameters.MERGE_ENABLE)
+				this.HandleMergers();
+			//trim top of tree
+			this.ParticleTree = (BarnesHutTree)this.ParticleTree.Prune();
 		}
 
 		private void ProcessNode(BarnesHutTree evalNode, MatterClump[] directParticles) {
@@ -110,27 +114,21 @@ namespace ParticleSimulator.Simulation.Baryon {
 			while (!node.IsRoot) {
 				lastNode = node;
 				node = node.Parent;
-				for (int i = 0; i < node.Children.Length; i++) {
-					if (node.Children[i].ItemCount > 0) {
+				for (int i = 0; i < node.Children.Length; i++)
+					if (node.Children[i].ItemCount > 0)
 						if (!ReferenceEquals(lastNode, node.Children[i])) {
 							child = (BarnesHutTree)node.Children[i];
-							if (evalNode.CanApproximate(child)) {
+							if (evalNode.CanApproximate(child))
 								farField.Enqueue(child);
-							} else {
-								remaining.Enqueue(child);
-							}
+							else remaining.Enqueue(child);
 						}
-					}
-				}
-
-				//nearField.AddRange(remaining.SelectMany(f => f));
 
 				while (remaining.TryDequeue(out other))
-					if (other.IsLeaf) {
+					if (other.IsLeaf)
 						if (evalNode.CanApproximate(other))
 							farField.Enqueue(other);
 						else nearField.AddRange(other.Bin);
-					} else for (int i = 0; i < other.Children.Length; i++)
+					else for (int i = 0; i < other.Children.Length; i++)
 						if (other.Children[i].ItemCount > 0) {
 							child = (BarnesHutTree)other.Children[i];
 							if (evalNode.CanApproximate(child))
@@ -155,18 +153,11 @@ namespace ParticleSimulator.Simulation.Baryon {
 			for (int i = 0; i < directParticles.Length; i++) {
 				directParticles[i].Acceleration = farFieldContribution;
 				for (int j = i + 1; j < directParticles.Length; j++) {
-					if (directParticles[j].Mass > 0f) {
-						influence = directParticles[i].ComputeInfluence(directParticles[j]);
-						directParticles[i].Acceleration += directParticles[j].Mass*influence.Item1 + influence.Item2*(1f/directParticles[i].Mass);
-						directParticles[j].Acceleration -= directParticles[i].Mass*influence.Item1 + influence.Item2*(1f/directParticles[j].Mass);
-					}
+					influence = directParticles[i].ComputeInfluence(directParticles[j]);
+					directParticles[i].Acceleration += directParticles[j].Mass*influence.Item1 + influence.Item2*(1f/directParticles[i].Mass);
+					directParticles[j].Acceleration -= directParticles[i].Mass*influence.Item1 + influence.Item2*(1f/directParticles[j].Mass);
 				}
 				for (int n = 0; n < nearField.Count; n++) {
-					//directParticles[i].NearfieldInteractionCounts.TryAdd(nearField[n].Id, 0);////////////
-					//directParticles[i].NearfieldInteractionCounts[nearField[n].Id]++;////////////////
-					//nearField[n].NearfieldInteractionCounts.TryAdd(directParticles[i].Id, 0);////////////
-					//nearField[n].NearfieldInteractionCounts[directParticles[i].Id]++;////////////////
-
 					influence = directParticles[i].ComputeInfluence(nearField[n]);
 					directParticles[i].Acceleration += nearField[n].Mass*influence.Item1 + influence.Item2*(1f/directParticles[i].Mass);
 				}

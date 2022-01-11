@@ -44,8 +44,6 @@ namespace ParticleSimulator.Simulation.Particles {
 		public readonly Queue<TSelf> Mergers = new();
 		public readonly Queue<TSelf> NewParticles = new();
 
-		//public SortedDictionary<int, int> NearfieldInteractionCounts = new();
-
 		//Tuple<Gravity, Drag>
 		public abstract Tuple<Vector<float>, Vector<float>> ComputeInfluence(TSelf other);
 		public abstract void Incorporate(TSelf other);
@@ -64,25 +62,22 @@ namespace ParticleSimulator.Simulation.Particles {
 				lesses = Vector.LessThan(newP, Parameters.WORLD_LEFT_INF),
 				greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_RIGHT_INF),
 				union = lesses | greaters;
-
-			if (Parameters.WORLD_BOUNCING || Parameters.WORLD_WRAPPING || Parameters.WORLD_DEATH_BOUND_CNT >= 1f) {
-				if (Vector.LessThanAny(union, Vector<int>.Zero)) {
-					if (Parameters.WORLD_BOUNCING) {
-						velocity = Vector.ConditionalSelect(union, -velocity, velocity);
-						newP = -newP + 2f
-							* Vector.ConditionalSelect(lesses,
-								Parameters.WORLD_LEFT,
-								Vector.ConditionalSelect(greaters,
-									Parameters.WORLD_RIGHT,
-									newP));
-					} else if (Parameters.WORLD_WRAPPING) {
-						newP = WrapPosition(newP);
-					} else {//Parameters.WORLD_DEATH_BOUND_CNT >= 1f
-						lesses = Vector.LessThan(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_LEFT_INF);
-						greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_RIGHT_INF);
-						union = lesses | greaters;
-						this.IsInRange = Vector.EqualsAll(union, Vector<int>.Zero) || this.TestInRange(world);
-					}
+			if (Vector.LessThanAny(union, Vector<int>.Zero)) {
+				if (Parameters.WORLD_BOUNCING) {
+					newP = -newP + 2f
+						* Vector.ConditionalSelect(lesses,
+							Parameters.WORLD_LEFT,
+							Vector.ConditionalSelect(greaters,
+								Parameters.WORLD_RIGHT,
+								newP));
+					velocity = Vector.ConditionalSelect(union, -velocity, velocity);
+				} else if (Parameters.WORLD_WRAPPING) {
+					newP = WrapPosition(newP);
+				} else {//Parameters.WORLD_DEATH_BOUND_CNT >= 1f
+					lesses = Vector.LessThan(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_LEFT_INF);
+					greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_RIGHT_INF);
+					union = lesses | greaters;
+					this.IsInRange = Vector.EqualsAll(union, Vector<int>.Zero) || this.TestInRange(world);
 				}
 			}
 
