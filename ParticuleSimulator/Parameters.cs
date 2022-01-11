@@ -18,12 +18,12 @@ namespace ParticleSimulator {
 		public const float PIXEL_ROUNDOFF = 0.5f;
 
 		public const int DIM = 3;
-		public const float WORLD_SCALE = 10f;
-		public const float TIME_SCALE = 0.005f;
+		public const float WORLD_SCALE = 4f;
+		public const float TIME_SCALE = 0.001f;
 		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
-		public const int PARTICLES_GROUP_COUNT = 2;
+		public const int PARTICLES_GROUP_COUNT = 1 << 4;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 1 << 12;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
@@ -68,19 +68,19 @@ namespace ParticleSimulator {
 		public const float GRAVITATIONAL_CONSTANT = 1f;
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;//TODO
 
-		public const float MASS_LUMINOSITY_SCALAR = 50f;
-		public const float GRAVITY_RADIAL_DENSITY = 8f;
+		public const float MASS_LUMINOSITY_SCALAR = 1000f;
+		public const float GRAVITY_RADIAL_DENSITY = 1E6f;
 
-		public const float GALAXY_RADIUS		= 1.0f;
-		public const float GALAXY_SOFTENING		= 1.0f;
+		public const float GALAXY_RADIUS		= 0.8f;
+		public const float GALAXY_SOFTENING		= 0.4f;
 
 		public const bool GRAVITY_SUPERNOVA_ENABLE = true;
-		public const float GRAVITY_CRITICAL_MASS = 1f;
+		public const float GRAVITY_CRITICAL_MASS = 0.1f;
 		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.5f;
 		public const float GRAVITY_EJECTA_PARTICLE_MASS = 0.001f;
 		public const float GRAVITY_EJECTA_SPEED = 2E-2f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 0.1E-0f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 2.0E-0f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.0E-0f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 0.0E-0f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.0E-0f;
