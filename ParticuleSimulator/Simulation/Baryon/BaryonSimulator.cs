@@ -107,36 +107,59 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		private void ProcessNode(BarnesHutTree evalNode, MatterClump[] directParticles) {
 			List<MatterClump> nearField = new();
-			Queue<BarnesHutTree> farField = new(), remaining = new();
+			Queue<BarnesHutTree> farField = new();
+			BarnesHutTree other;
+			/*
+			{//top down approach
+				Queue<BarnesHutTree> remaining = new();
+				remaining.Enqueue(this.ParticleTree);
 
-			ATree<MatterClump> node = evalNode, lastNode;
-			BarnesHutTree other, child;
-			while (!node.IsRoot) {
-				lastNode = node;
-				node = node.Parent;
-				for (int i = 0; i < node.Children.Length; i++)
-					if (node.Children[i].ItemCount > 0)
-						if (!ReferenceEquals(lastNode, node.Children[i])) {
-							child = (BarnesHutTree)node.Children[i];
-							if (evalNode.CanApproximate(child))
-								farField.Enqueue(child);
-							else remaining.Enqueue(child);
-						}
-
-				while (remaining.TryDequeue(out other))
-					if (other.IsLeaf)
-						if (evalNode.CanApproximate(other))
-							farField.Enqueue(other);
-						else nearField.AddRange(other.Bin);
-					else for (int i = 0; i < other.Children.Length; i++)
-						if (other.Children[i].ItemCount > 0) {
-							child = (BarnesHutTree)other.Children[i];
-							if (evalNode.CanApproximate(child))
-								farField.Enqueue(child);
-							else remaining.Enqueue(child);
+				BarnesHutTree node;
+				while (remaining.TryDequeue(out node))
+					if (node.IsLeaf) {
+						if (!ReferenceEquals(evalNode, node))
+							nearField.AddRange(node.Bin);
+					} else for (int c = 0; c < node.Children.Length; c++)
+						if (node.Children[c].ItemCount > 0) {
+							other = (BarnesHutTree)node.Children[c];
+							if (evalNode.CanApproximate(other))//how are we guaranteed to not approximate a parent node? I don't like this
+								farField.Enqueue(other);
+							else remaining.Enqueue(other);
 						}
 			}
+			*/
+			
+			{//bottom up approach
+				Queue<BarnesHutTree> remaining = new();
+				ATree<MatterClump> node = evalNode, lastNode;
+				BarnesHutTree child;
+				while (!node.IsRoot) {
+					lastNode = node;
+					node = node.Parent;
+					for (int i = 0; i < node.Children.Length; i++)
+						if (node.Children[i].ItemCount > 0)
+							if (!ReferenceEquals(lastNode, node.Children[i])) {
+								child = (BarnesHutTree)node.Children[i];
+								if (evalNode.CanApproximate(child))
+									farField.Enqueue(child);
+								else remaining.Enqueue(child);
+							}
 
+					while (remaining.TryDequeue(out other))
+						if (other.IsLeaf)
+							if (evalNode.CanApproximate(other))
+								farField.Enqueue(other);
+							else nearField.AddRange(other.Bin);
+						else for (int i = 0; i < other.Children.Length; i++)
+							if (other.Children[i].ItemCount > 0) {
+								child = (BarnesHutTree)other.Children[i];
+								if (evalNode.CanApproximate(child))
+									farField.Enqueue(child);
+								else remaining.Enqueue(child);
+							}
+				}
+			}
+			
 			Vector<float> farFieldContribution = Vector<float>.Zero;
 
 			float distSq;

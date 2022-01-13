@@ -18,12 +18,12 @@ namespace ParticleSimulator {
 		public const float PIXEL_ROUNDOFF = 0.5f;
 
 		public const int DIM = 3;
-		public const float WORLD_SCALE = 5f;
+		public const float WORLD_SCALE = 4f;
 		public const float TIME_SCALE = 0.001f;
 		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
-		public const int PARTICLES_GROUP_COUNT = 1 << 4;
+		public const int PARTICLES_GROUP_COUNT = 4;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 1 << 12;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
@@ -50,8 +50,8 @@ namespace ParticleSimulator {
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
 		public const bool SYNC_SIMULATION = true;//controls synchronization of rendering to simulation (e.g. faster rotation)
 		
-		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Density;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.Radar;
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Group;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.DEFAULT_CONSOLE_COLORS;
 		//public static readonly ConsoleColor[] COLOR_ARRAY = new ConsoleColor[] { ConsoleColor.White };
 		public const bool COLOR_USE_FIXED_BANDS = false;
 		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
@@ -69,18 +69,19 @@ namespace ParticleSimulator {
 		public const float ELECTROSTATIC_CONSTANT = 1E-9f;//TODO
 
 		public const float MASS_LUMINOSITY_SCALAR = 1000f;
-		public const float GRAVITY_RADIAL_DENSITY = 1E6f;
+		public const float GRAVITY_RADIAL_DENSITY = 1E4f;
 
-		public const float GALAXY_RADIUS		= 0.8f;
-		public const float GALAXY_SOFTENING		= 0.4f;
+		public const float GALAXY_RADIUS		= 0.4f;
+		public const float GALAXY_SOFTENING		= 0.1f;
 
 		public const bool GRAVITY_SUPERNOVA_ENABLE = true;
 		public const float GRAVITY_CRITICAL_MASS = 0.1f;
+		public const bool GRAVITY_BLACK_HOLE_ENABLE = false;
 		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.5f;
-		public const float GRAVITY_EJECTA_PARTICLE_MASS = 0.001f;
-		public const float GRAVITY_EJECTA_SPEED = 2E-2f;
+		public const float GRAVITY_EJECTA_PARTICLE_MASS = 0.0001f;
+		public const float GRAVITY_EJECTA_SPEED = 10f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 4.0E-0f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 0.1E-0f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.0E-0f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 0.0E-0f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.0E-0f;

@@ -89,7 +89,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 			if (!this.IsCollapsed)
 				this.Luminosity = (this.Luminosity*this.Mass + other.Luminosity*other.Mass) / totalMass;
-			else this.Luminosity = 0f;
+			else this.Luminosity = -1f;
 
 			this.Mass = totalMass;
 			this.Charge = totalCharge;
@@ -103,9 +103,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		private void EvaluateExplosion() {
 			if (Parameters.GRAVITY_SUPERNOVA_ENABLE && this.Mass >= Parameters.GRAVITY_CRITICAL_MASS) {//supernova!
-				if (this.Mass >= Parameters.GRAVITY_BLACKHOLE_THRESHOLD_RATIO * Parameters.GRAVITY_CRITICAL_MASS) {
+				if (Parameters.GRAVITY_BLACK_HOLE_ENABLE && this.Mass >= Parameters.GRAVITY_BLACKHOLE_THRESHOLD_RATIO * Parameters.GRAVITY_CRITICAL_MASS) {
 					this.IsCollapsed = true;
-					this.Luminosity = 0f;
+					this.Luminosity = -1f;
 				} else {
 					int numParticles = (int)(Parameters.GRAVITY_EJECTA_PARTICLE_MASS > 0
 						? this.Mass / Parameters.GRAVITY_EJECTA_PARTICLE_MASS
