@@ -9,24 +9,24 @@ namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited or to disable the feature
 	public static class Parameters {
 		//using top and bottom halves of each character to get double the verticle resolution
-		public static readonly int WINDOW_WIDTH = Console.LargestWindowWidth;
-		public static readonly int WINDOW_HEIGHT = Console.LargestWindowHeight;
+		public static readonly int WINDOW_WIDTH = 150;//Console.LargestWindowWidth;
+		public static readonly int WINDOW_HEIGHT = 75;//Console.LargestWindowHeight;
 
-		public const float TARGET_FPS = 10f;
+		public const float TARGET_FPS = 20f;
 		public const bool VSYNC = false;
 		public const int SUPERSAMPLING = 2;
 		public const float PIXEL_ROUNDOFF = 0.5f;
 		public const int DETERMINISTIC_RANDOM_SEED = 0;
 
 		public const int DIM = 3;
-		public const float WORLD_SCALE = 1f;
+		public const float WORLD_SCALE = 2f;
 		public const float TIME_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
 		public const int PARTICLES_GROUP_COUNT = 1 << 0;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 18;
+		public const int PARTICLES_GROUP_MAX = 1 << 16;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float INACCURCY_SQUARED = 1f;
@@ -65,7 +65,7 @@ namespace ParticleSimulator {
 		public const string EXPORT_DIR = null;	//TODO
 
 		#region Gravity
-		public const float GRAVITATIONAL_CONSTANT	= 2E-10f;
+		public const float GRAVITATIONAL_CONSTANT	= 10E-10f;
 		//TODO add electrostatic forces
 
 		public const float MASS_SCALAR				= 1f;
@@ -79,7 +79,7 @@ namespace ParticleSimulator {
 		public const bool GRAVITY_SUPERNOVA_ENABLE = true;
 		public const float GRAVITY_CRITICAL_MASS = 4000f;
 		public const float GRAVITY_EJECTA_PARTICLE_MASS = 0.1f;
-		public const float GRAVITY_EJECTA_SPEED = 2.0E-2f;
+		public const float GRAVITY_EJECTA_SPEED = 1.0E-2f;
 		public const float GRAVITY_EJECTA_RADIUS_SCALAR = 1f;
 		public const bool GRAVITY_BLACK_HOLE_ENABLE = false;
 		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.5f;

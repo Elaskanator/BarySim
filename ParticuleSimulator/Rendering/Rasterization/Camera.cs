@@ -17,7 +17,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				Vector<float>.One * (1f / scaling));
 			this.InitialCenter = this.Center;
 
-			this.AutoCentering = false;
+			this.AutoCentering = true;
 		}
 
 		public bool AutoCentering { get; set; }

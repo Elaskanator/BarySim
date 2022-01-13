@@ -16,16 +16,20 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public BaryCenter MassBaryCenter;
 
 		public void InitBaryCenter(MatterClump[] particles) {
-			if (particles.Length == 1) {
-				this.MassBaryCenter = new(particles[0].Position, particles[0].Mass);
-			} else {
-				BaryCenter total = new();
+			if (particles.Length > 1) {
+				BaryCenter total = new(
+					particles[0].Mass*particles[0].Position,
+					particles[0].Mass);
 				for (int i = 1; i < particles.Length; i++)
 					total = new(
 						total.Position + particles[i].Mass*particles[i].Position,
 						total.Weight + particles[i].Mass);
-				this.MassBaryCenter = new((1f / total.Weight) * total.Position, total.Weight);
-			}
+				this.MassBaryCenter = new(
+					(1f / total.Weight)*total.Position,
+					total.Weight);
+			} else this.MassBaryCenter = new(
+				particles[0].Position,
+				particles[0].Mass);
 		}
 
 		public void UpdateBaryCenter() {
@@ -35,7 +39,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 			for (int i = 0; i < this.Children.Length; i++)
 				if (this.Children[i].ItemCount > 0) {
 					child = (BarnesHutTree)this.Children[i];
-					switch (found) {
+					switch (found++) {
 						case 0:
 							total = new(child.MassBaryCenter.Position, child.MassBaryCenter.Weight);
 							break;
@@ -50,7 +54,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 								total.Weight + child.MassBaryCenter.Weight);
 							break;
 					}
-					found++;
 				}
 			this.MassBaryCenter = found == 1
 				? total
