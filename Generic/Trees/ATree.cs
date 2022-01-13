@@ -19,10 +19,11 @@ namespace Generic.Trees {
 		public bool IsReadOnly => false;
 
 		public abstract bool MaxDepthReached { get; }
+		public virtual int LeafCapacity => 1;
 
 		public bool IsRoot => this.Parent is null;
 		public bool IsLeaf => this.Children is null;
-		protected bool _isReceiving => this.ItemCount == 0 || this.MaxDepthReached;
+		protected bool _isReceiving => this.ItemCount < this.LeafCapacity || this.MaxDepthReached;
 
 		public ATree<T> Parent;
 		ITree ITree.Parent => this.Parent;
@@ -161,7 +162,7 @@ namespace Generic.Trees {
 					node.Bin ??= node.NewBin();
 					node.Bin.Add(item);
 				}
-			} else ;
+			}
 			this.Bin = null;
 		}
 		

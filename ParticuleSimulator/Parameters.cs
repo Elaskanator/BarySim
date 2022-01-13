@@ -16,20 +16,24 @@ namespace ParticleSimulator {
 		public const bool VSYNC = false;
 		public const int SUPERSAMPLING = 2;
 		public const float PIXEL_ROUNDOFF = 0.5f;
+		public const int DETERMINISTIC_RANDOM_SEED = 0;
 
 		public const int DIM = 3;
-		public const float WORLD_SCALE = 4f;
+		public const float WORLD_SCALE = 10f;
 		public const float TIME_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
-		public const int PARTICLES_GROUP_COUNT = 4;
+		public const int PARTICLES_GROUP_COUNT = 1 << 3;
 		public const int PARTICLES_GROUP_MIN = 1;
 		public const int PARTICLES_GROUP_MAX = 1 << 15;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float INACCURCY_SQUARED = 1f;
-		public const int DETERMINISTIC_RANDOM_SEED = 4;
+		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
+		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
+		public const bool SYNC_SIMULATION = true;//controls synchronization of rendering to simulation (e.g. faster rotation)
+		public const int QUADTREE_LEAF_CAPACITY = 8;
 		
 		public const bool COLLISION_ENABLE = true;
 		public const bool MERGE_ENABLE = true;
@@ -45,10 +49,6 @@ namespace ParticleSimulator {
 		public const float WORLD_PADDING_PCT = 0f;
 		public const float WORLD_DEATH_BOUND_CNT = 4f;
 		public const float WORLD_EPSILON = 1E-5f;
-		
-		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
-		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
-		public const bool SYNC_SIMULATION = true;//controls synchronization of rendering to simulation (e.g. faster rotation)
 		
 		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Luminosity;
 		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
@@ -66,6 +66,7 @@ namespace ParticleSimulator {
 
 		#region Gravity
 		public const float GRAVITATIONAL_CONSTANT	= 1E-9f;
+		//TODO add electrostatic forces
 
 		public const float MASS_SCALAR				= 1f;
 		public const float MASS_LUMINOSITY_SCALAR	= 6E-2f;
@@ -85,8 +86,8 @@ namespace ParticleSimulator {
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 1.0E-3f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 2.0E-1f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 4.0E-3f;
-		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
-		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
+		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;//WIP
+		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;//WIP
 		#endregion Gravity
 
 		#region Aux

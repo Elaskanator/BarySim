@@ -94,7 +94,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 					leaf.Item2));
 			
 			ATree<MatterClump> node2;
-			for (int i = 0; i < leaves.Length; i++)
+			for (int i = 0; i < numLeaves; i++)
 				for (int j = 0; j < leaves[i].Item2.Length; j++) {
 					node2 = leaves[i].Item1.GetContainingLeaf(leaves[i].Item2[j]);
 					if (leaves[i].Item2[j].Enabled) {
