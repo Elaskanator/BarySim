@@ -10,23 +10,26 @@ namespace ParticleSimulator.Simulation {
 	where TParticle : AParticle<TParticle> {
 		public SpinningDisk(Func<Vector<float>, Vector<float>, TParticle> initializer, float radius)
 		: base(initializer, radius) { }
-		
-		public virtual float StartSpeedMax_Group_Angular => Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP;
 
 		protected override void InitPositionVelocity() {
 			base.InitPositionVelocity();
-			this.Velocity +=
-				this.StartSpeedMax_Group_Angular
-				* this.DirectionUnitVector(this.Position);
+			if (Parameters.PARTICLES_GROUP_COUNT > 1)
+				this.Velocity +=
+					Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP
+					* this.DirectionUnitVector(this.Position);
 		}
 
 		protected override void ParticleAddPositionVelocity(TParticle particle) {
-			Vector<float> offset = VectorFunctions.New(VectorFunctions.RandomCoordinate_Spherical(this.Radius, Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
+			float rand = (float)Program.Engine.Random.NextDouble();
+			float radiusRange = this.Radius * MathF.Pow(rand, Parameters.GALAXY_CONCENTRATION);
+			Vector<float> offset = radiusRange * VectorFunctions.New(VectorFunctions.RandomCoordinate_Spherical(radiusRange, Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
+			float offsetGalaxySizeFraction = offset.Magnitude() / this.Radius;
 			particle.Position += offset;
 			Vector<float> velocityDirection = this.DirectionUnitVector(offset);
 			particle.Velocity +=
 				(float)Program.Engine.Random.NextDouble()
-				* this.StartSpeedMax_Group_Angular
+				* Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP
+				* offsetGalaxySizeFraction
 				* velocityDirection;
 		}
 

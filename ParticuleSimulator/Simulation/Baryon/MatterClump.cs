@@ -9,22 +9,21 @@ namespace ParticleSimulator.Simulation.Baryon {
 	public class MatterClump : AParticle<MatterClump> {
 		public MatterClump(Vector<float> position, Vector<float> velocity)
 		: base(position, velocity) {
-			this.Mass = Parameters.MASS_SCALAR;
+			this.SetMass(Parameters.MASS_SCALAR);
+		}
+
+		private void SetMass(float value) {
+			this.Mass = value;
+			this.Luminosity = this.IsCollapsed
+				? -1f
+				: MathF.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5f);
+			this.Radius = (float)VectorFunctions.HypersphereRadius(value / this.Density, 3);
 		}
 
 		public override float Density => Parameters.GRAVITY_RADIAL_DENSITY;
 		public bool IsCollapsed { get; private set; }
 
-		private float _mass = 0f;
-		public float Mass {
-			get => this._mass;
-			set {
-				this._mass = value;
-				this.Luminosity = this.IsCollapsed
-					? -1f
-					: MathF.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5f);
-				this.Radius = (float)VectorFunctions.HypersphereRadius(value / this.Density, 3);
-		}}
+		public float Mass;
 
 		public Vector<float> Impulse {
 			get => this.Acceleration * this.Mass;
@@ -78,7 +77,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		public override void Incorporate(MatterClump other) {
 			float totalMass = this.Mass + other.Mass;
-			float totalCharge = this.Charge + other.Charge;
 
 			Vector<float> totalImpulse = this.Impulse + other.Impulse;
 			Vector<float> totalMomentum = this.Momentum + other.Momentum;
@@ -86,8 +84,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 			this.IsCollapsed |= other.IsCollapsed;
 
-			this.Mass = totalMass;
-			this.Charge = totalCharge;
+			this.SetMass(totalMass);
 
 			this.Position = weightedPosition;
 			this.Momentum = totalMomentum;
@@ -97,8 +94,8 @@ namespace ParticleSimulator.Simulation.Baryon {
 		}
 
 		private void EvaluateExplosion() {
-			if (Parameters.GRAVITY_SUPERNOVA_ENABLE && this.Mass >= Parameters.GRAVITY_CRITICAL_MASS) {//supernova!
-				if (Parameters.GRAVITY_BLACK_HOLE_ENABLE && this.Mass >= Parameters.GRAVITY_BLACKHOLE_THRESHOLD_RATIO * Parameters.GRAVITY_CRITICAL_MASS) {
+			if (Parameters.GRAVITY_SUPERNOVA_ENABLE && this.Mass > Parameters.GRAVITY_CRITICAL_MASS) {//supernova!
+				if (Parameters.GRAVITY_BLACK_HOLE_ENABLE && this.Mass > Parameters.GRAVITY_BLACKHOLE_THRESHOLD_RATIO * Parameters.GRAVITY_CRITICAL_MASS) {
 					this.IsCollapsed = true;
 					this.Luminosity = -1f;
 				} else {
@@ -109,13 +106,11 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 					float ratio = (1f / numParticles);
 					float avgMass = ratio * this.Mass;
-					float avgCharge = ratio * this.Charge;
 					Vector<float> avgImpulse = ratio * this.Impulse;
 				
-					float radiusRange = this.Radius;
+					float radiusRange = this.Radius * Parameters.GRAVITY_EJECTA_RADIUS_SCALAR;
 
-					this.Mass = avgMass;
-					this.Charge = avgCharge;
+					this.SetMass(avgMass);
 					this.Impulse = avgImpulse;
 
 					Vector<float> direction;
@@ -128,13 +123,12 @@ namespace ParticleSimulator.Simulation.Baryon {
 						rand = (float)Program.Engine.Random.NextDouble();
 
 						newParticle = new(
-							this.Position + (((1f - rand*rand) * radiusRange) * direction),
+							this.Position + (((1f - rand*rand*rand) * radiusRange) * direction),
 							this.Velocity + ((rand * Parameters.GRAVITY_EJECTA_SPEED) * direction))
 						{
 							GroupId = this.GroupId
 						};
-						newParticle.Mass = avgMass;
-						newParticle.Charge = avgCharge;
+						newParticle.SetMass(avgMass);
 						newParticle.Impulse += avgImpulse;
 
 						this.NewParticles.Enqueue(newParticle);

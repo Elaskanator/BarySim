@@ -96,11 +96,11 @@ namespace ParticleSimulator.Simulation.Baryon {
 			ATree<MatterClump> node2;
 			for (int i = 0; i < numLeaves; i++)
 				for (int j = 0; j < leaves[i].Item2.Length; j++) {
-					node2 = leaves[i].Item1.GetContainingLeaf(leaves[i].Item2[j]);
 					if (leaves[i].Item2[j].Enabled) {
+						node2 = leaves[i].Item1.GetContainingLeaf(leaves[i].Item2[j]);
 						leaves[i].Item2[j].ApplyTimeStep(timeStep, this.ParticleTree);
 						node2.MoveFromLeaf(leaves[i].Item2[j]);
-					} else node2.Remove(leaves[i].Item2[j]);
+					} else leaves[i].Item1.Remove(leaves[i].Item2[j]);
 				}
 
 
@@ -210,8 +210,8 @@ namespace ParticleSimulator.Simulation.Baryon {
 						if (evaluated.Add(other)) {
 							leaf = this.ParticleTree.GetContainingLeaf(originalParticles[i]);
 							originalParticles[i].Incorporate(other);
-							leaf.MoveFromLeaf(originalParticles[i]);
 							this.ParticleTree.Remove(other);
+							leaf.MoveFromLeaf(originalParticles[i]);
 							while (other.Mergers.TryDequeue(out tail))
 								if (tail.Enabled)
 									pending.Enqueue(tail);

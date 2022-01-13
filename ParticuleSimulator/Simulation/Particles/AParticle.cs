@@ -22,7 +22,6 @@ namespace ParticleSimulator.Simulation.Particles {
 		public int GroupId { get; set; }
 		public bool Enabled { get; set; }
 		
-		public float Charge { get; set; }
 		public float Luminosity { get; set; }
 		public virtual float Density => 1f;
 
