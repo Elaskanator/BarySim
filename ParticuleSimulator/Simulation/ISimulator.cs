@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Generic.Models.Trees;
+using Generic.Trees;
 using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Simulation {

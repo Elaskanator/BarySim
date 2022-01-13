@@ -1,5 +1,5 @@
 ﻿using System.Numerics;
-using Generic.Models.Trees;
+using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Baryon {
 	public class BarnesHutTree : QuadTreeSIMD<MatterClump> {

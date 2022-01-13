@@ -1,16 +1,18 @@
 ﻿using System;
 using System.Linq;
 using System.Numerics;
-using Generic.Models.Trees;
+using Generic.Trees;
 using Generic.Vectors;
 using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Simulation.Baryon {
 	public class MatterClump : AParticle<MatterClump> {
-		public MatterClump(int groupId, Vector<float> position, Vector<float> velocity)
-		: base(groupId, position, velocity) { }
+		public MatterClump(Vector<float> position, Vector<float> velocity)
+		: base(position, velocity) {
+			this.Mass = Parameters.MASS_SCALAR;
+		}
 
-		public float Density => Parameters.GRAVITY_RADIAL_DENSITY;
+		public override float Density => Parameters.GRAVITY_RADIAL_DENSITY;
 		public bool IsCollapsed { get; private set; }
 
 		private float _mass = 0f;
@@ -18,6 +20,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 			get => this._mass;
 			set {
 				this._mass = value;
+				this.Luminosity = this.IsCollapsed
+					? -1f
+					: MathF.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5f);
 				this.Radius = (float)VectorFunctions.HypersphereRadius(value / this.Density, 3);
 		}}
 
@@ -58,7 +63,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 							Vector<float> dV = other.Velocity - this.Velocity;
 							return new(
 								gravitationalInfluence,
-								dV * ((1f - relativeDistance) * Parameters.DRAG_CONSTANT * dV.Magnitude() * smaller.Mass));
+								dV * ((1f - relativeDistance) * Parameters.DRAG_CONSTANT * smaller.Mass));
 						}
 					}
 				}
@@ -66,15 +71,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 			return new(Vector<float>.Zero, Vector<float>.Zero);
 		}
 
-		protected override void RefreshSelf() {
-			if (!this.IsCollapsed) {
+		protected override void ApplyTimeStep_Specific() {
+			if (!this.IsCollapsed)
 				this.EvaluateExplosion();
-				if (!this.IsCollapsed) {
-					float targetLuminosity = MathF.Pow(this.Mass * Parameters.MASS_LUMINOSITY_SCALAR, 3.5f);
-					float alpha = this.Mass < 1f ? 1f : 1f/this.Mass;
-					this.Luminosity = (alpha * targetLuminosity) + ((1f - alpha) * this.Luminosity);
-				}
-			}
 		}
 
 		public override void Incorporate(MatterClump other) {
@@ -86,10 +85,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 			Vector<float> weightedPosition = ((this.Position*this.Mass) + (other.Position*other.Mass)) * (1f / totalMass);
 
 			this.IsCollapsed |= other.IsCollapsed;
-
-			if (!this.IsCollapsed)
-				this.Luminosity = (this.Luminosity*this.Mass + other.Luminosity*other.Mass) / totalMass;
-			else this.Luminosity = -1f;
 
 			this.Mass = totalMass;
 			this.Charge = totalCharge;
@@ -133,13 +128,14 @@ namespace ParticleSimulator.Simulation.Baryon {
 						rand = (float)Program.Engine.Random.NextDouble();
 
 						newParticle = new(
-							this.GroupId,
 							this.Position + (((1f - rand*rand) * radiusRange) * direction),
-							this.Velocity + ((rand * Parameters.GRAVITY_EJECTA_SPEED) * direction));
+							this.Velocity + ((rand * Parameters.GRAVITY_EJECTA_SPEED) * direction))
+						{
+							GroupId = this.GroupId
+						};
 						newParticle.Mass = avgMass;
 						newParticle.Charge = avgCharge;
 						newParticle.Impulse += avgImpulse;
-						newParticle.Luminosity = this.Luminosity / (1f - rand*rand);
 
 						this.NewParticles.Enqueue(newParticle);
 					}

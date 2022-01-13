@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 
-namespace Generic.Models.Trees {
+namespace Generic.Trees {
 	public class HashedContainer<T> : ICollection<T>, IEnumerable<T>, IEnumerable {
 		public HashedContainer() {
 			this.Items = Enumerable.Empty<T>();

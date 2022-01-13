@@ -2,10 +2,11 @@
 using System.Linq;
 using Generic.Vectors;
 
-namespace Generic.Models.Trees {
-	public abstract class AQuadTree<TItem, TCorner> : ATree<TItem>
+namespace Generic.Trees {
+	//n-dimensional binary tree
+	public abstract class ABinaryTree<TItem, TCorner> : ATree<TItem>
 	where TItem : IPosition<TCorner> {
-		protected AQuadTree(int dim, TCorner cornerLeft, TCorner cornerRight, AQuadTree<TItem, TCorner> parent = null)
+		protected ABinaryTree(int dim, TCorner cornerLeft, TCorner cornerRight, ABinaryTree<TItem, TCorner> parent = null)
 		: base (parent) {
 			this.Dim = dim;
 			this.CornerLeft = cornerLeft;
@@ -16,7 +17,7 @@ namespace Generic.Models.Trees {
 				|| this.EqualsAny(this.CornerRight, this.Center);
 		}
 
-		protected abstract AQuadTree<TItem, TCorner> NewNode(int directionMask, bool isExpansion);
+		protected abstract ABinaryTree<TItem, TCorner> NewNode(int directionMask, bool isExpansion);
 
 		public override string ToString() =>
 			string.Format("{0}[{1} thru {2}]", base.ToString(), string.Join("", this.CornerLeft), string.Join("", this.CornerRight));
@@ -43,26 +44,22 @@ namespace Generic.Models.Trees {
 		protected abstract int BitmaskLessThan(TCorner first, TCorner second);
 		protected abstract int BitmaskGreaterThanOrEqual(TCorner first, TCorner second);
 
-		protected override IEnumerable<AQuadTree<TItem, TCorner>> FormSubnodes() =>
+		protected override IEnumerable<ABinaryTree<TItem, TCorner>> FormSubnodes() =>
 			Enumerable.Range(0, 1 << this.Dim)
 				.Select(i => this.NewNode(i, false));
 
-		protected override AQuadTree<TItem, TCorner> Expand(TItem item) {
+		protected override ABinaryTree<TItem, TCorner> Expand(TItem item) {
 			int quadrantMask = this.ChildIndex(item);
 			int inverseQuadrantMask = this.InverseIndex(quadrantMask);
 
-			AQuadTree<TItem, TCorner> newParent = this.NewNode(quadrantMask, true);
+			ABinaryTree<TItem, TCorner> newParent = this.NewNode(quadrantMask, true);
 			this.Parent = newParent;
 
 			int i = 0;
 			newParent.ItemCount = this.ItemCount;
-			newParent.Children = new AQuadTree<TItem, TCorner>[1u << this.Dim];
-			foreach (AQuadTree<TItem, TCorner> node in newParent.FormSubnodes()) {
-				if (i == inverseQuadrantMask)
-					newParent.Children[i] = this;
-				else newParent.Children[i] = node;
-				i++;
-			}
+			newParent.Children = new ABinaryTree<TItem, TCorner>[1u << this.Dim];
+			foreach (ABinaryTree<TItem, TCorner> node in newParent.FormSubnodes())
+				newParent.Children[i] = inverseQuadrantMask == i++ ? this : node;
 
 			return newParent;
 		}

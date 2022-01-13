@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Generic.Models.Trees;
+using Generic.Trees;
 
 namespace ParticleSimulator.Simulation.Particles {
 	public abstract class AParticle<TSelf> : IParticle
@@ -9,8 +9,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		private static int _globalID = 0;
 		private readonly int _id = ++_globalID;
 
-		protected AParticle(int groupId, Vector<float> position, Vector<float> velocity) {
-			this.GroupId = groupId;
+		protected AParticle(Vector<float> position, Vector<float> velocity) {
 			this.Position = position;
 			this.Velocity = velocity;
 			this.Acceleration = Vector<float>.Zero;
@@ -20,16 +19,12 @@ namespace ParticleSimulator.Simulation.Particles {
 		public override string ToString() => string.Format("Particle[<{0}> ID {1}]", this.Id, string.Join("", this.Position));
 
 		public int Id => this._id;
-		public int GroupId { get; private set; }
+		public int GroupId { get; set; }
 		public bool Enabled { get; set; }
-		private bool _isInRange = true;
-		public bool IsInRange {
-			get => this._isInRange;
-			set { this._isInRange = value; this.Enabled &= value; } }
 		
 		public float Charge { get; set; }
 		public float Luminosity { get; set; }
-		public float Density => Parameters.GRAVITY_RADIAL_DENSITY;
+		public virtual float Density => 1f;
 
 		private float _radius;
 		public float Radius {
@@ -49,10 +44,10 @@ namespace ParticleSimulator.Simulation.Particles {
 		public abstract void Incorporate(TSelf other);
 		protected abstract bool TestInRange(ATree<TSelf> world);
 
-		protected virtual void RefreshSelf() { }
+		protected virtual void ApplyTimeStep_Specific() { }
 
 		public void ApplyTimeStep(float timeStep, ATree<TSelf> world) {
-			this.RefreshSelf();
+			this.ApplyTimeStep_Specific();
 
 			Vector<float> velocity = this.Velocity + (timeStep * this.Acceleration),
 				displacement = timeStep*velocity,
@@ -77,7 +72,7 @@ namespace ParticleSimulator.Simulation.Particles {
 					lesses = Vector.LessThan(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_LEFT_INF);
 					greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_RIGHT_INF);
 					union = lesses | greaters;
-					this.IsInRange = Vector.EqualsAll(union, Vector<int>.Zero) || this.TestInRange(world);
+					this.Enabled = Vector.EqualsAll(union, Vector<int>.Zero) || this.TestInRange(world);
 				}
 			}
 

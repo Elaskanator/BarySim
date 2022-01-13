@@ -13,9 +13,6 @@ namespace ParticleSimulator.Engine {
 		public ACalculationHandler(AutoResetEvent[] signals, AutoResetEvent[] returns) {
 			this.ReadySignals = signals ?? Array.Empty<AutoResetEvent>();
 			this.DoneSignals = returns ?? Array.Empty<AutoResetEvent>();
-			
-			this._readySignalStartingStates = this.ReadySignals.Select(s => s.WaitOne(0)).ToArray();
-			//this._doneSignalStartingStates = this.DoneSignals.Select(s => s.WaitOne(0)).ToArray();
 		}
 		public ACalculationHandler(AutoResetEvent readySignal, AutoResetEvent doneSignal)
 		: this(new AutoResetEvent[] { readySignal }, new AutoResetEvent[] { doneSignal }) { }
@@ -58,9 +55,6 @@ namespace ParticleSimulator.Engine {
 		private Stopwatch _timerFull = new Stopwatch();
 		private Stopwatch _timerFullPunctual = new Stopwatch();
 
-		private readonly bool[] _readySignalStartingStates;
-		//private readonly bool[] _doneSignalStartingStates;
-
 		protected virtual void PreProcess(EvalResult prepResult) { }
 		protected abstract void Process(EvalResult prepResult);
 		protected virtual void PostProcess(EvalResult result) { }
@@ -87,17 +81,6 @@ namespace ParticleSimulator.Engine {
 				this.StartTimeUtc = DateTime.UtcNow;
 
 				this.Init(running);
-
-				for (int i = 0; i < this.ReadySignals.Length; i++)
-					if (this._readySignalStartingStates[i])
-						this.ReadySignals[i].Set();
-					else this.ReadySignals[i].Reset();
-
-				/// how does this affect anything?! breaks EVERYTHING
-				//for (int i = 0; i < this.DoneSignals.Length; i++)
-				//	if (this._doneSignalStartingStates[i])
-				//		this.DoneSignals[i].Set();
-				//	else this.DoneSignals[i].Reset();
 
 				this.SetRunningState(running);
 

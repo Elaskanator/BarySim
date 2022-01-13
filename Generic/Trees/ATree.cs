@@ -4,17 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 
-namespace Generic.Models.Trees {
-	public interface ITree : IEnumerable {
-		ITree Parent { get; }
-		ICollection<ITree> Children { get; }
-		
-		bool IsRoot { get; }
-		bool IsLeaf { get; }
-		IEnumerable AsEnumerable();
-		IEnumerator IEnumerable.GetEnumerator() => this.AsEnumerable().GetEnumerator();
-	}
-
+namespace Generic.Trees {
 	public abstract class ATree<T> : ITree, ICollection<T>, IEnumerable<T> {
 		public ATree(ATree<T> parent = null) {
 			this.Parent = parent;
@@ -37,7 +27,7 @@ namespace Generic.Models.Trees {
 		public ATree<T> Parent;
 		ITree ITree.Parent => this.Parent;
 		public ATree<T>[] Children;//srsly why does making this a FIELD instead of a PROEPRTY improve performance by 25%?
-		ICollection<ITree> ITree.Children => this.Children;
+		IEnumerable<ITree> ITree.Children => this.Children;
 		public ATree<T> Root { get {
 			ATree<T> node = this;
 			while (!node.IsRoot)
@@ -68,11 +58,11 @@ namespace Generic.Models.Trees {
 
 		public void Add(T item) {
 			ATree<T> node = this;
-			while (!node.DoesEncompass(item)) {
-				if (node.IsRoot) 
-					node = node.Expand(item);
-				else node = node.Parent;
-			}
+			while (!node.DoesEncompass(item))
+				node = node.IsRoot
+					? node.Expand(item)
+					: node.Parent;
+
 			ATree<T> startingNode = node;
 			while (!node.IsLeaf) {
 				++node.ItemCount;
@@ -115,12 +105,12 @@ namespace Generic.Models.Trees {
 			} else return false;
 		}
 
-		public void MoveFromLeaf(T item) {
+		public ATree<T> MoveFromLeaf(T item) {
+			ATree<T> node = this;
 			if (!this.DoesEncompass(item)) {
 				this.Bin.Remove(item);
 				--this.ItemCount;
 
-				ATree<T> node = this;
 				bool encompasses;
 				do {
 					if (node.IsRoot) {
@@ -142,6 +132,7 @@ namespace Generic.Models.Trees {
 				}
 				node.AddToLeaf(item);//increments the count
 			}
+			return node;
 		}
 
 		protected void AddToLeaf(T item) {//increments the count

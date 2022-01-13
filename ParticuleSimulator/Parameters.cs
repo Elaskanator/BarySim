@@ -12,24 +12,24 @@ namespace ParticleSimulator {
 		public static readonly int WINDOW_WIDTH = Console.LargestWindowWidth;
 		public static readonly int WINDOW_HEIGHT = Console.LargestWindowHeight;
 
-		public const float TARGET_FPS = 30f;
+		public const float TARGET_FPS = 10f;
 		public const bool VSYNC = false;
-		public const int SUPERSAMPLING = 1;
+		public const int SUPERSAMPLING = 2;
 		public const float PIXEL_ROUNDOFF = 0.5f;
 
 		public const int DIM = 3;
 		public const float WORLD_SCALE = 4f;
-		public const float TIME_SCALE = 0.001f;
+		public const float TIME_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
 		public const int PARTICLES_GROUP_COUNT = 4;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 12;
+		public const int PARTICLES_GROUP_MAX = 1 << 15;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float INACCURCY_SQUARED = 1f;
-		public const int DETERMINISTIC_RANDOM_SEED = 0;
+		public const int DETERMINISTIC_RANDOM_SEED = 4;
 		
 		public const bool COLLISION_ENABLE = true;
 		public const bool MERGE_ENABLE = true;
@@ -50,10 +50,10 @@ namespace ParticleSimulator {
 		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
 		public const bool SYNC_SIMULATION = true;//controls synchronization of rendering to simulation (e.g. faster rotation)
 		
-		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Group;
-		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.DEFAULT_CONSOLE_COLORS;
+		public const ParticleColoringMethod COLOR_METHOD = ParticleColoringMethod.Luminosity;
+		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
 		//public static readonly ConsoleColor[] COLOR_ARRAY = new ConsoleColor[] { ConsoleColor.White };
-		public const bool COLOR_USE_FIXED_BANDS = false;
+		public const bool COLOR_USE_FIXED_BANDS = true;
 		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
 		public const bool AUTOSCALE_PERCENTILE = false;
 		public const float AUTOSCALE_FIXED_MIN = -1f;
@@ -65,31 +65,28 @@ namespace ParticleSimulator {
 		public const string EXPORT_DIR = null;	//TODO
 
 		#region Gravity
-		public const float GRAVITATIONAL_CONSTANT = 1f;
-		public const float ELECTROSTATIC_CONSTANT = 1E-9f;//TODO
+		public const float GRAVITATIONAL_CONSTANT	= 1E-9f;
 
-		public const float MASS_LUMINOSITY_SCALAR = 1000f;
-		public const float GRAVITY_RADIAL_DENSITY = 1E4f;
+		public const float MASS_SCALAR				= 1f;
+		public const float MASS_LUMINOSITY_SCALAR	= 6E-2f;
+		public const float GRAVITY_RADIAL_DENSITY	= 8E8f;
 
-		public const float GALAXY_RADIUS		= 0.4f;
-		public const float GALAXY_SOFTENING		= 0.1f;
+		public const float GALAXY_RADIUS			= 0.4f;
+		public const float GALAXY_PLUMMER_SOFTENING	= 0.1f;
 
 		public const bool GRAVITY_SUPERNOVA_ENABLE = true;
-		public const float GRAVITY_CRITICAL_MASS = 0.1f;
+		public const float GRAVITY_CRITICAL_MASS = 4000f;
+		public const float GRAVITY_EJECTA_PARTICLE_MASS = 1f;
+		public const float GRAVITY_EJECTA_SPEED = 2.0E-2f;
 		public const bool GRAVITY_BLACK_HOLE_ENABLE = false;
 		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.5f;
-		public const float GRAVITY_EJECTA_PARTICLE_MASS = 0.0001f;
-		public const float GRAVITY_EJECTA_SPEED = 10f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 0.1E-0f;
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.0E-0f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 0.0E-0f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.0E-0f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 2.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 1.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 2.0E-1f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 4.0E-3f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;
-		
-		public const float ELECTROSTATIC_MIN_CHARGE = 0f;//TODO
-		public const float ELECTROSTATIC_MAX_CHARGE = 0f;//TODO
 		#endregion Gravity
 
 		#region Aux

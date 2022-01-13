@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Numerics;
-using Generic.Vectors;
+using Generic.Trees;
 
-namespace Generic.Models.Trees {
-	public class QuadTreeSIMD<TItem> : AQuadTree<TItem, Vector<float>>
+namespace Generic.Vectors {
+	public class QuadTreeSIMD<TItem> : ABinaryTree<TItem, Vector<float>>
 	where TItem : IPosition<Vector<float>> {
 		protected QuadTreeSIMD(int dim, Vector<float> corner1, Vector<float> corner2, QuadTreeSIMD<TItem> parent = null) 
 		: base(dim, corner1, corner2, parent) {//caller needs to ensure all values in x1 are smaller than x2 (the corners of a cubic volume)
