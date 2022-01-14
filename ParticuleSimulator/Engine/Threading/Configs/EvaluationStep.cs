@@ -1,5 +1,5 @@
 ﻿using System;
-using Generic.Models;
+using Generic.Classes;
 
 namespace ParticleSimulator.Engine.Threading {
 	public struct EvaluationStep {

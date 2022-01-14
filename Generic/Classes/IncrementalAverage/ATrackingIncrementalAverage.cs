@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Generic.Models {
+namespace Generic.Classes {
 	public abstract class ATrackingIncrementalAverage<T> : AIncrementalAverage<T>
 	where T : struct {
 		public ATrackingIncrementalAverage(int historyLength) { this._history = new T[historyLength]; }

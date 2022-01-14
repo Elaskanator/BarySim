@@ -80,13 +80,14 @@ namespace Generic.Trees {
 			}
 		}
 
-		public void Add(IEnumerable<T> items) {
+		public ATree<T> Add(IEnumerable<T> items) {
 			ATree<T> parent = this;
 			foreach (T item in items) {
 				parent.Add(item);
 				while (!parent.IsRoot)
 					parent = parent.Parent;
 			}
+			return parent;
 		}
 
 		public bool Remove(T item, bool prune) {
@@ -105,9 +106,9 @@ namespace Generic.Trees {
 
 		public ATree<T> MoveFromLeaf(T item, bool prune = true) {
 			ATree<T> node = this;
-			if (!this.DoesEncompass(item)) {
-				this.Bin.Remove(item);
-				--this.ItemCount;
+			if (!node.DoesEncompass(item)) {
+				node.Bin.Remove(item);
+				--node.ItemCount;
 
 				bool encompasses;
 				do {
@@ -178,7 +179,7 @@ namespace Generic.Trees {
 		}
 		
 		//finds the first sub node with more than one child
-		public ATree<T> Prune() {
+		public virtual ATree<T> Prune() {
 			ATree<T> node = this.Root;
 
 			int count, idx;

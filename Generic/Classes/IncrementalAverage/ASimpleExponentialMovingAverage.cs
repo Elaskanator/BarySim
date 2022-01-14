@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Generic.Models {
+namespace Generic.Classes {
 	public abstract class ASimpleExponentialMovingAverage<T> : AIncrementalAverage<T>
 	where T : struct {
 		public ASimpleExponentialMovingAverage(double weighting) { this.Alpha = weighting; }

@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Generic.Models {
+namespace Generic.Classes {
 	/// <summary>
 	/// Represents a rational number
 	/// </summary>

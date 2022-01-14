@@ -12,9 +12,9 @@ namespace ParticleSimulator.Simulation.Particles {
 
 	public abstract class AParticleGroup<TParticle> : IParticleGroup
 	where TParticle : AParticle<TParticle> {
-		public AParticleGroup(Func<Vector<float>, Vector<float>, TParticle> initializer, float r) {
+		public AParticleGroup(Func<Vector<float>, Vector<float>, TParticle> initializer, float radius) {
 			this.ParticleInitializer = initializer;
-			this.Radius = r;
+			this.Radius = radius;
 			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Engine.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_SKEW_POWER) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
 		}
 

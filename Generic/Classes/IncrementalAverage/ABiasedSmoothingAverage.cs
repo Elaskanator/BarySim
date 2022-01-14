@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Generic.Models {
+namespace Generic.Classes {
 	//public abstract class ABiasedSmoothingAverage<T> : ASimpleExponentialMovingAverage<T>
 	//where T : struct, IComparable<T> {
 	//	public ABiasedSmoothingAverage(T normalUpdateThreshold, double weighting)

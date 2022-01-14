@@ -1,5 +1,5 @@
 ﻿using System;
-using Generic.Models;
+using Generic.Classes;
 using ParticleSimulator.Engine;
 using ParticleSimulator.Engine.Threading;
 using ParticleSimulator.Rendering.Rasterization;

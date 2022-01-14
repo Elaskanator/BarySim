@@ -2,14 +2,14 @@
 using Generic.Extensions;
 using System.Linq;
 using System.Threading;
-using Generic.Models;
+using Generic.Classes;
 using ParticleSimulator.Rendering;
 using ParticleSimulator.Rendering.Rasterization;
 using ParticleSimulator.Rendering.SystemConsole;
 using ParticleSimulator.Simulation;
 using ParticleSimulator.Simulation.Baryon;
 using ParticleSimulator.Simulation.Particles;
-using ParticleSimulator.Rendering.Exporter;
+//using ParticleSimulator.Rendering.Exporter;
 using ParticleSimulator.Engine.Threading;
 using System.Collections.Generic;
 
@@ -28,7 +28,10 @@ namespace ParticleSimulator.Engine {
 
 			this.Simulator = new BaryonSimulator();
 
-			this.Camera = new(Parameters.ZOOM_SCALE);
+			this.Camera = new() {
+				Zoom = Parameters.ZOOM_SCALE,
+				AutoCentering = Parameters.AUTOFOCUS_DEFAULT,
+			};
 
 			this.Rasterizer = new(
 				this.Camera,
@@ -44,10 +47,10 @@ namespace ParticleSimulator.Engine {
 
 			this.Renderer = new ConsoleRenderer(this);
 
-			this.Exporter = new BitmapGenerator(
-				Parameters.WINDOW_WIDTH,
-				Parameters.WINDOW_HEIGHT * 2,
-				Parameters.EXPORT_DIR);
+			//this.Exporter = new BitmapGenerator(
+			//	Parameters.WINDOW_WIDTH,
+			//	Parameters.WINDOW_HEIGHT * 2,
+			//	Parameters.EXPORT_DIR);
 		}
 
 		~RenderEngine() => this.Dispose(false);
@@ -78,7 +81,7 @@ namespace ParticleSimulator.Engine {
 		public ARenderer Renderer { get; private set; }
 		public Autoscaler Scaling { get; private set; }
 		public Rasterizer Rasterizer { get; private set; }
-		public BitmapGenerator Exporter { get; private set; }
+		//public BitmapGenerator Exporter { get; private set; }
 		public Camera Camera { get; private set; }
 		
 		internal ACalculationHandler[] Evaluators { get; private set; }
@@ -88,7 +91,7 @@ namespace ParticleSimulator.Engine {
 		private ProcessThread _stepEval_Autoscale;
 		private ProcessThread _stepEval_Rasterize;
 		private ProcessThread _stepEval_Render;
-		private ProcessThread _stepEval_Export;
+		//private ProcessThread _stepEval_Export;
 		private Dictionary<int, bool> _stepsStartingPaused;
 		
 		private readonly SynchronousBuffer<ParticleData[]> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
@@ -167,8 +170,8 @@ namespace ParticleSimulator.Engine {
 				this._scalingResource.Reset();
 
 				this.Scaling.Reset();
-				this.Rasterizer.Camera.ResetRotation();
-				this.Exporter.Reset();
+				this.Camera.ResetRotation();
+				//this.Exporter.Reset();
 				
 				this.Start(running);
 				this.Pause();
@@ -215,7 +218,7 @@ namespace ParticleSimulator.Engine {
 					: null,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
 				InputResourceUses = new IIngestedResource[] {
-					new IngestedResource<Pixel[]>(this._rasterResource, Parameters.EXPORT_FRAMES ? ConsumptionType.ReadReady : ConsumptionType.Consume),
+					new IngestedResource<Pixel[]>(this._rasterResource, /*Parameters.EXPORT_FRAMES ? ConsumptionType.ReadReady : */ConsumptionType.Consume),
 					new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
 				}});
 			yield return this._stepEval_Render;
@@ -236,17 +239,17 @@ namespace ParticleSimulator.Engine {
 				yield return this._stepEval_Autoscale;
 			}
 
-			if (Parameters.EXPORT_FRAMES) {
-				this._stepEval_Export = ProcessThread.New(new() {
-					Name = "Exporter",
-					EvaluatorFn = (r, p) => { this.Exporter.RenderOut(r, p); },
-					InputResourceUses = new IIngestedResource[] {
-						new IngestedResource<Pixel[]>(this._rasterResource, ConsumptionType.Consume),
-						new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
-					}
-				});
-				yield return this._stepEval_Export;
-			}
+			//if (Parameters.EXPORT_FRAMES) {
+			//	this._stepEval_Export = ProcessThread.New(new() {
+			//		Name = "Exporter",
+			//		EvaluatorFn = (r, p) => { this.Exporter.RenderOut(r, p); },
+			//		InputResourceUses = new IIngestedResource[] {
+			//			new IngestedResource<Pixel[]>(this._rasterResource, ConsumptionType.Consume),
+			//			new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
+			//		}
+			//	});
+			//	yield return this._stepEval_Export;
+			//}
 		}
 
 		private IEnumerable<KeyListener> BuildKeyListeners() {
@@ -271,27 +274,27 @@ namespace ParticleSimulator.Engine {
 				() => { return !this._stepsStartingPaused[this._stepEval_Autoscale.Id]; });
 			KeyListener[] rotationFunctions = new KeyListener[] {
 				new(ConsoleKey.F5, "Rotate",
-					() => { return this.Rasterizer.Camera.IsAutoIncrementActive; },
-					s => { this.Rasterizer.Camera.IsAutoIncrementActive = s; },
-					() => { this.Rasterizer.Camera.ResetRotation(); }) ,
+					() => { return this.Camera.IsAutoIncrementActive; },
+					s => { this.Camera.IsAutoIncrementActive = s; },
+					() => { this.Camera.ResetRotation(); }) ,
 				new(ConsoleKey.F6, "α",
-					() => { return this.Rasterizer.Camera.IsPitchRotationActive; },
-					s => { this.Rasterizer.Camera.IsPitchRotationActive = s; },
-					() => { this.Rasterizer.Camera.IsPitchRotationActive = false; this.Rasterizer.Camera.RotationStepsPitch = 0; }),
+					() => { return this.Camera.IsPitchRotationActive; },
+					s => { this.Camera.IsPitchRotationActive = s; },
+					() => { this.Camera.IsPitchRotationActive = false; this.Camera.RotationStepsPitch = 0; }),
 				new(ConsoleKey.F7, "β",
-					() => { return this.Rasterizer.Camera.IsYawRotationActive; },
-					s => { this.Rasterizer.Camera.IsYawRotationActive = s; },
-					() => { this.Rasterizer.Camera.IsYawRotationActive = false; this.Rasterizer.Camera.RotationStepsYaw = 0; }),
+					() => { return this.Camera.IsYawRotationActive; },
+					s => { this.Camera.IsYawRotationActive = s; },
+					() => { this.Camera.IsYawRotationActive = false; this.Camera.RotationStepsYaw = 0; }),
 				new(ConsoleKey.F8, "γ",
-					() => { return this.Rasterizer.Camera.IsRollRotationActive; },
-					s => { this.Rasterizer.Camera.IsRollRotationActive = s; },
-					() => { this.Rasterizer.Camera.IsRollRotationActive = false; this.Rasterizer.Camera.RotationStepsRoll = 0; }),
+					() => { return this.Camera.IsRollRotationActive; },
+					s => { this.Camera.IsRollRotationActive = s; },
+					() => { this.Camera.IsRollRotationActive = false; this.Camera.RotationStepsRoll = 0; }),
 			};
 			KeyListener[] positionFunctions = new KeyListener[] {
 				new(ConsoleKey.F9, "Focus",
-					() => { return this.Rasterizer.Camera.AutoCentering; },
-					s => { this.Rasterizer.Camera.AutoCentering = s; },
-					() => { this.Rasterizer.Camera.ResetFocus(); }),
+					() => { return this.Camera.AutoCentering; },
+					s => { this.Camera.AutoCentering = s; },
+					() => { this.Camera.ResetFocus(); }),
 			};
 
 			IEnumerable<KeyListener> result = standardFunctions;

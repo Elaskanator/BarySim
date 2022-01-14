@@ -1,4 +1,4 @@
-﻿namespace Generic.Models {
+﻿namespace Generic.Classes {
 	public class FibonacciEnumerator : ALazyComputedSequenceEnumerator<long> {
 		public FibonacciEnumerator(long x0 = 0, long x1 = 1) : base(new[] { x0, x1 }) { }
 

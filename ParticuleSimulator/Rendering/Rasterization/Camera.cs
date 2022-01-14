@@ -2,41 +2,30 @@
 using System.Linq;
 using System.Numerics;
 using Generic.Vectors;
-using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Camera {
 		public const float AUTO_CENTER_UPDATE_ALPHA = 0.2f;
 
-		public Camera(float scaling = 1f) {
-			this.InitialScaling = this.Scaling = scaling;
-
+		public Camera() {
 			this.RotationMatrixColumns = VectorFunctions.IdentityMatrixColumns;
-			this.SetRange(
-				-Vector<float>.One * (1f / scaling),
-				Vector<float>.One * (1f / scaling));
-			this.InitialCenter = this.Center;
-
-			this.AutoCentering = true;
 		}
 
-		public bool AutoCentering { get; set; }
+		public bool AutoCentering;
 
 		public bool IsAutoIncrementActive { get; set; }
 		public bool IsPitchRotationActive { get; set; }
 		public bool IsYawRotationActive { get; set; }
 		public bool IsRollRotationActive { get; set; }
 
-		public Vector<float> Left { get; private set; }
 		private VectorSmoothedIncrementalAverage _center = new(AUTO_CENTER_UPDATE_ALPHA);
 		public Vector<float> Center {
 			get => this._center.Current;
 			set { this._center.Reset(); this._center.Update(value); } }
-		public Vector<float> InitialCenter { get; private set; }
-		public Vector<float> Right { get; private set; }
-		public Vector<float> Size { get; private set; }
-		public float Scaling { get; set; }
-		public readonly float InitialScaling;
+		public Vector<float> DefaultCenter = Vector<float>.Zero;
+		//public Vector<float> Size { get; private set; }
+		public float Zoom = 1f;
+		public float DeafultZoom = 1f;
 
 		public Vector<float>[] RotationMatrixColumns { get; private set; }
 		public bool IsRotationNonzero { get; private set; }
@@ -55,16 +44,9 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			this.RotationStepsRoll = 0;
 		}
 		public void ResetFocus() {
-			this.Scaling = this.InitialScaling;
-			this.Center = this.InitialCenter;
+			this.Zoom = this.DeafultZoom;
+			this.Center = this.DefaultCenter;
 			this.AutoCentering = false;
-		}
-
-		public void SetRange(Vector<float> left, Vector<float> right) {
-			this.Left = left;
-			this.Right = right;
-			this.Center = left + 0.5f*(right - left);
-			this.Size = right - left;
 		}
 
 		public void Set3DRotation(float yaw, float pitch, float roll) {
@@ -93,7 +75,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 		public Vector<float> Rotate(Vector<float> v) {
 			Vector<float> offsetV = v - this.Center;
-			offsetV *= this.Scaling;
+			offsetV *= this.Zoom;
 
 			if (this.IsRotationNonzero) {
 				Span<float> values = stackalloc float[Vector<float>.Count];
@@ -106,16 +88,14 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			} else return offsetV;
 		}
 
-		public void Increment() {
+		public void Increment(Vector<float> position) {
 			this.Set3DRotation(
 				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsPitch,
 				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsYaw,
 				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsRoll);
 			
-			if (this.AutoCentering && Program.Engine.Simulator.ParticleCount > 0 && !(Program.Engine.Simulator.ParticleTree is null)) {
-				BarnesHutTree tree = (BarnesHutTree)Program.Engine.Simulator.ParticleTree;
-				if (tree.MassBaryCenter.Weight > 0f)
-					this._center.Update(tree.MassBaryCenter.Position, this._center.NumUpdates > 1 ? null : 1f);
+			if (this.AutoCentering) {
+				this._center.Update(position);
 			}
 
 			if (this.IsAutoIncrementActive) {

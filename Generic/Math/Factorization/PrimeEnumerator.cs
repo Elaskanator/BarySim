@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Generic.Models {
+namespace Generic.Classes {
 	/// <summary>
 	/// Provides an endless enumeration of the prime number sequence
 	/// </summary>

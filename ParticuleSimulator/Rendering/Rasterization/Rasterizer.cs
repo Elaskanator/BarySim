@@ -52,9 +52,9 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		public readonly int InternalHeight;
 		private readonly float InternalHeightF;
 		
-		public readonly Camera Camera;
-		public readonly Vector<float> InternalOffset;
-		public readonly float InternalScaleFactor;
+		private readonly Camera Camera;
+		private readonly Vector<float> InternalOffset;
+		private readonly float InternalScaleFactor;
 		
 		private readonly SynchronousBuffer<float?[]> _rawRankingsResource;
 		private readonly int _randOffset = 0;
@@ -68,7 +68,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				Pixel[] results = new Pixel[this.OutNumPixels];
 				float?[] ranks = new float?[this.OutNumPixels];
 
-				this.Camera.Increment();
+				this.Camera.Increment(Program.Engine.Simulator.Center);
 
 				int[] counts = new int[this.InternalNumPixels];
 				float[] densities = new float[this.InternalNumPixels];
@@ -119,7 +119,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								}
 							}
 							if (any2) {
-								if (Parameters.RANK_AGG_IS_SUMMATION)
+								if (Parameters.COLOR_METHOD == ParticleColoringMethod.Density)
 									ranks[idx] = bin.Sum(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
 								else ranks[idx] = bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
 								results[idx] = new(x, y, ranks[idx].Value);
@@ -161,7 +161,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		//TODO rewrite to not use Sqrt
 		private void Resample(ParticleData particle, Queue<Subsample> result) {
 			Vector<float> position = this.InternalOffset + (this.InternalScaleFactor * this.Camera.Rotate(particle.Position));
-			float radius = this.InternalScaleFactor * this.Camera.Scaling * particle.Radius;
+			float radius = this.InternalScaleFactor * this.Camera.Zoom * particle.Radius;
 
 			if (0f <= position[0] + radius && position[0] - radius < this.InternalWidthF
 			&& 0f <= position[1] + radius && position[1] - radius < this.InternalHeightF) {//visible

@@ -1,162 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Threading.Tasks;
-using Generic.Extensions;
 using Generic.Trees;
 using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Simulation.Baryon {
-	public class BaryonSimulator : ISimulator {//modified Barnes-Hut Algorithm
-		public int IterationCount { get; private set; }
-		public AParticleGroup<MatterClump>[] InitialParticleGroups { get; private set; }
-		public BarnesHutTree ParticleTree { get; private set; }
-		ITree ISimulator.ParticleTree => this.ParticleTree;
-		IEnumerable<IParticle> ISimulator.Particles => this.ParticleTree.AsEnumerable();
-		public int ParticleCount => this.ParticleTree is null ? 0 : this.ParticleTree.ItemCount;//this.ParticleTree is null ? 0 : this.ParticleTree.Count;
+	public class BaryonSimulator : ABinaryTreeSimulator<MatterClump, BarnesHutTree> {
+		public BaryonSimulator() : base(new(Parameters.DIM)) { }
 
-		public void Init() {
-			this.IterationCount = -1;
-			this.InitialParticleGroups = Enumerable
-				.Range(0, Parameters.PARTICLES_GROUP_COUNT)
-				.Select(i => new SpinningDisk<MatterClump>((p, v) => new(p, v), Parameters.GALAXY_RADIUS))
-				.ToArray();
-			for (int i = 0; i < this.InitialParticleGroups.Length; i++)
-				this.InitialParticleGroups[i].Init();
+		public override Vector<float> Center {
+			get { lock (this._lock)
+				return this.ParticleTree.MassBaryCenter.Position; } }
+		protected override bool AccumulateTreeNodeData => true;
+		private readonly object _lock = new();
 
-			ATree<MatterClump> node = new BarnesHutTree(Parameters.DIM);
-			node.Add(this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
-			this.ParticleTree = (BarnesHutTree)node.Root;
-		}
+		protected override AParticleGroup<MatterClump> NewParticleGroup() =>
+			new SpinningDisk<MatterClump>((p, v) => new(p, v), Parameters.GALAXY_RADIUS);
+		protected override void ComputeLeafNode(BarnesHutTree child, MatterClump[] particles) =>
+			child.InitBaryCenter(particles);
+		protected override void ComputeInnerNode(BarnesHutTree node) =>
+			node.UpdateBaryCenter();
 
-		public ParticleData[] RefreshSimulation() {
-			this.IterationCount++;
-			if (this.IterationCount > 0)//show starting data on first result
-				if (this.ParticleTree.ItemCount == 0) {
-					Program.CancelAction(null, null);
-				} else this.Refresh(Parameters.TIME_SCALE);
-
-			return this.ParticleTree.Select(p => new ParticleData(p)).ToArray();
-		}
-
-		private void Refresh(float timeStep) {
-			List<Tuple<ATree<MatterClump>, MatterClump[]>> leaves = this.BuildLeavesAndBaryCenters();
-
-			Parallel.ForEach(
-				leaves,
-				leaf => this.ProcessLeaf(
-					(BarnesHutTree)leaf.Item1,
-					leaf.Item2));
-			
-			Queue<MatterClump> pending;
-			ATree<MatterClump> node, leaf, otherLeaf;
-			MatterClump particle, other, tail;
-			for (int i = 0; i < leaves.Count; i++) {
-				for (int j = 0; j < leaves[i].Item2.Length; j++) {
-					node = leaves[i].Item1;
-					particle = leaves[i].Item2[j];
-					leaf = node.GetContainingLeaf(particle);
-
-					if (particle.Enabled) {
-						particle.ApplyTimeStep(timeStep, this.ParticleTree.MassBaryCenter);
-
-						if (!(particle.Mergers is null)) {
-							pending = particle.Mergers;
-							particle.Mergers = null;
-
-							while (pending.TryDequeue(out other)) {
-								if (other.Enabled) {
-									otherLeaf = node.GetContainingLeaf(other);
-									particle.Incorporate(other);
-									other.Enabled = false;
-									node.Remove(other, false);
-
-									if (!(other.Mergers is null)) {
-										while (other.Mergers.TryDequeue(out tail))
-											pending.Enqueue(tail);
-										other.Mergers = null;
-									}
-								}
-							}
-						}
-						
-						if (!(particle.NewParticles is null)) {
-							while (particle.NewParticles.TryDequeue(out other))
-								node.Add(other);
-							particle.NewParticles = null;
-						}
-					}
-
-					if (particle.Enabled)
-						leaf.MoveFromLeaf(particle, false);
-					else leaf.RemoveFromLeaf(particle, false);
-				}
+		protected override BarnesHutTree PruneTree() {
+			BaryCenter center = this.ParticleTree.MassBaryCenter;
+			BarnesHutTree result;
+			lock (this._lock) {
+				result = (BarnesHutTree)this.ParticleTree.Prune();
+				result.MassBaryCenter = center;
 			}
-
-			//trim top of tree
-			this.ParticleTree = (BarnesHutTree)this.ParticleTree.Prune();
+			return result;
 		}
 
-		private List<Tuple<ATree<MatterClump>, MatterClump[]>> BuildLeavesAndBaryCenters() {
-			List<Tuple<ATree<MatterClump>, MatterClump[]>> leaves = new((this.ParticleTree.ItemCount / this.ParticleTree.LeafCapacity) << (this.ParticleTree.LeafCapacity > 1 ? 1 : 0));
-			MatterClump[] particles;
-
-			if (this.ParticleTree.IsLeaf) {
-				particles = this.ParticleTree.Bin.ToArray();
-				this.ParticleTree.InitBaryCenter(particles);
-				leaves.Add(new(this.ParticleTree, particles));
-			} else {
-				Stack<BarnesHutTree> pendingNodes = new(), testNodes = new();
-				Stack<BarnesHutTree[]> levelStack = new();
-				pendingNodes.Push(this.ParticleTree);
-				levelStack.Push(new BarnesHutTree[] { this.ParticleTree });
-
-				BarnesHutTree[] levelNodes;
-				BarnesHutTree child, node;
-				do {
-					while (pendingNodes.TryPop(out node))
-						for (int cIdx = 0; cIdx < node.Children.Length; cIdx++)
-							if (node.Children[cIdx].ItemCount > 0) {
-								child = (BarnesHutTree)node.Children[cIdx];
-								if (child.IsLeaf) {
-									particles = child.Bin.ToArray();
-									child.InitBaryCenter(particles);
-									leaves.Add(new(child, particles));
-								} else testNodes.Push(child);
-							} else node.Children[cIdx].Children = null;
-
-					if (testNodes.Count > 0) {
-						levelNodes = new BarnesHutTree[testNodes.Count];
-						testNodes.CopyTo(levelNodes, 0);//casting magic?
-						levelStack.Push(levelNodes);
-
-						(pendingNodes, testNodes) = (testNodes, pendingNodes);
-					}
-				} while (pendingNodes.Count > 0);
-
-				while (levelStack.TryPop(out levelNodes))
-					for (int i = 0; i < levelNodes.Length; i++)
-						levelNodes[i].UpdateBaryCenter();
-			}
-
-			return leaves;
-		}
-
-		private void ProcessLeaf(BarnesHutTree leaf, MatterClump[] particles) {
+		protected override void ProcessLeaf(BarnesHutTree leaf, MatterClump[] particles) {
 			Vector<float> farFieldContribution = Vector<float>.Zero;
 			List<MatterClump> nearField = new();
 			Queue<BarnesHutTree> farField = new();
 			this.DetermineNeighbors(leaf, nearField, farField);
 
-			float distSq;
+			float distanceSquared;
 			Vector<float> toOther;
 			BarnesHutTree otherNode;
 			while (farField.TryDequeue(out otherNode)) {
 				toOther = otherNode.MassBaryCenter.Position - leaf.MassBaryCenter.Position;
-				distSq = Vector.Dot(toOther, toOther);
-				if (distSq > Parameters.WORLD_EPSILON)
-					farFieldContribution += toOther * (otherNode.MassBaryCenter.Weight / distSq);
+				distanceSquared = Vector.Dot(toOther, toOther);
+				if (distanceSquared > Parameters.WORLD_EPSILON)
+					farFieldContribution += toOther * (otherNode.MassBaryCenter.Weight / distanceSquared);
 			}
 			farFieldContribution *= Parameters.GRAVITATIONAL_CONSTANT;
 

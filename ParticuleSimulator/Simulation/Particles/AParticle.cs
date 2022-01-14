@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Generic.Trees;
-using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Simulation.Particles {
 	public abstract class AParticle<TSelf> : IParticle
@@ -45,9 +44,9 @@ namespace ParticleSimulator.Simulation.Particles {
 
 		protected virtual void AfterMove() { }
 
-		protected virtual bool IsInRange(BaryCenter center) => false;
+		protected virtual bool IsInRange(ATree<TSelf> tree) => false;
 
-		public void ApplyTimeStep(float timeStep, BaryCenter center) {
+		public void ApplyTimeStep(float timeStep, ATree<TSelf> tree) {
 			Vector<float> velocity = this.Velocity + (timeStep * this.Acceleration),
 				displacement = timeStep*velocity,
 				position = this.Position + displacement;
@@ -71,7 +70,7 @@ namespace ParticleSimulator.Simulation.Particles {
 					}
 				}
 			} else if (Parameters.WORLD_DEATH_BOUND_RADIUS > 0f) {
-				this.Enabled &= this.IsInRange(center);
+				this.Enabled &= this.IsInRange(tree);
 			}
 
 			this.Position = position;

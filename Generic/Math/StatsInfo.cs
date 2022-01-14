@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 
-namespace Generic.Models {
+namespace Generic.Classes {
 	public class StatsInfo {
 		public StatsInfo(params double[] data) {
 			this.Data_asc = data.Order().ToArray();

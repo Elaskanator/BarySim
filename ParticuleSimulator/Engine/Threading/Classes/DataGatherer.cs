@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading;
-using Generic.Models;
+using Generic.Classes;
 using ParticleSimulator.Engine.Threading;
 
 namespace ParticleSimulator.Engine {

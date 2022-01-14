@@ -26,8 +26,12 @@ namespace ParticleSimulator.Simulation.Particles {
 
 		protected override void ParticleAddPositionVelocity(TParticle particle) {
 			float rand = (float)Program.Engine.Random.NextDouble();
-			float radiusRange = this.Radius * MathF.Pow(rand, Parameters.GALAXY_CONCENTRATION);
-			Vector<float> offset = radiusRange * VectorFunctions.New(VectorFunctions.RandomCoordinate_Spherical(radiusRange, Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
+			Vector<float> offset = VectorFunctions.New(
+				VectorFunctions.RandomCoordinate_Spherical(
+					this.Radius * MathF.Pow(rand, 1f + Parameters.GALAXY_CONCENTRATION),
+					Parameters.DIM,
+					Program.Engine.Random)
+				.Select(x => (float)x));
 			float offsetGalaxySizeFraction = offset.Magnitude() / this.Radius;
 			particle.Position += offset;
 			Vector<float> velocityDirection = this.DirectionUnitVector(offset);

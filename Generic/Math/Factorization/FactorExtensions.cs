@@ -3,7 +3,7 @@ using System.Linq;
 
 using Generic.Extensions;
 
-namespace Generic.Models {
+namespace Generic.Classes {
 	public static class FactorExtensions {
 		/// <summary>
 		/// Returns the numeric representation of the provided prime factors representation the factorization of a fraction

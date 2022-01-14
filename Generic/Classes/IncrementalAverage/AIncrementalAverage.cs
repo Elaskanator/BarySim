@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Generic.Models {
+namespace Generic.Classes {
 	public abstract class AIncrementalAverage<T>
 	where T : struct {
 		public AIncrementalAverage() { }

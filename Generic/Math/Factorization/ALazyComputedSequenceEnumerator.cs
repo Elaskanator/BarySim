@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Generic.Models {
+namespace Generic.Classes {
 	public abstract class ALazyComputedSequenceEnumerator<T> : IEnumerator<T>, IDisposable {
 		public static readonly int WARN_LIMIT_IDX = 100000;
 		public static readonly int SAFETY_LIMIT_IDX = 10000000;

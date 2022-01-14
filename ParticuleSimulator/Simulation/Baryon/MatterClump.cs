@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using Generic.Trees;
 using Generic.Vectors;
 using ParticleSimulator.Simulation.Particles;
 
@@ -34,41 +35,47 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public override Tuple<Vector<float>, Vector<float>> ComputeInfluence(MatterClump other) {
 			Vector<float> toOther = other.Position - this.Position;
 			float distanceSquared = Vector.Dot(toOther, toOther);
-			float distance = MathF.Sqrt(distanceSquared);
 
-			Vector<float> gravitationalInfluence = distance > Parameters.WORLD_EPSILON
-				? toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distanceSquared * distance))
-				: Vector<float>.Zero;
+			Vector<float> gravitationalInfluence;
 			Vector<float> collisionInfluence = Vector<float>.Zero;
-			if (Parameters.COLLISION_ENABLE) {
-				float radiusSum = this.Radius + other.Radius;
-				if (distance < radiusSum) {
-					MatterClump smaller, larger;
-					(smaller, larger) = this.Radius <= other.Radius
-						? (this, other)
-						: (other, this);
+			if (distanceSquared <= Parameters.WORLD_EPSILON) {
+				gravitationalInfluence = Vector<float>.Zero;
+				if (Parameters.MERGE_ENABLE)
+					(this.Mergers ??= new()).Enqueue(other);
+			} else {
+				float distance = MathF.Sqrt(distanceSquared);
+				gravitationalInfluence = toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distanceSquared * distance));
+				if (Parameters.COLLISION_ENABLE) {
+					float radiusSum = this.Radius + other.Radius;
+					if (distance < radiusSum) {
+						MatterClump smaller, larger;
+						(smaller, larger) = this.Radius <= other.Radius
+							? (this, other)
+							: (other, this);
 
-					if (Parameters.MERGE_ENABLE && distance <= (larger.Radius - Parameters.MERGE_ENGULF_RATIO*smaller.Radius)) {
-						gravitationalInfluence = Vector<float>.Zero;
-						this.Mergers ??= new();
-						this.Mergers.Enqueue(other);
-					} else {
-						float relativeDistance = distance / radiusSum;
-						Vector<float> dV = other.Velocity - this.Velocity;
-						collisionInfluence = dV * ((1f - relativeDistance) * Parameters.DRAG_CONSTANT * smaller.Mass);
+						if (Parameters.MERGE_ENABLE && distance <= (larger.Radius - Parameters.MERGE_ENGULF_RATIO*smaller.Radius)) {
+							gravitationalInfluence = Vector<float>.Zero;
+							(this.Mergers ??= new()).Enqueue(other);
+						} else {
+							float relativeDistance = distance / radiusSum;
+							Vector<float> dV = other.Velocity - this.Velocity;
+							gravitationalInfluence *= relativeDistance;
+							collisionInfluence = dV * ((1f - relativeDistance) * Parameters.DRAG_CONSTANT * smaller.Mass);
+						}
 					}
 				}
 			}
 			return new(gravitationalInfluence, collisionInfluence);
 		}
 
-		protected override bool IsInRange(BaryCenter center) {
-			Vector<float> pointingVector = center.Position - this.Position;
-			float distSquared = Vector.Dot(pointingVector, pointingVector);
-			return distSquared <= Parameters.WORLD_DEATH_BOUND_RADIUS_SQUARED
+		protected override bool IsInRange(ATree<MatterClump> tree) {
+			BaryCenter center = ((BarnesHutTree)tree).MassBaryCenter;
+			Vector<float> toCenter = center.Position - this.Position;
+			float distanceSquared = Vector.Dot(toCenter, toCenter);
+			return distanceSquared <= Parameters.WORLD_DEATH_BOUND_RADIUS_SQUARED
 				|| Vector.Dot(this.Velocity, this.Velocity) <
 					2f * Parameters.GRAVITATIONAL_CONSTANT * center.Weight
-					/ MathF.Sqrt(distSquared);
+					/ MathF.Sqrt(distanceSquared);
 		}
 
 		protected override void AfterMove() {

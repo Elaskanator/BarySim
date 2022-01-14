@@ -1,5 +1,5 @@
 ﻿using System.Numerics;
-using Generic.Models;
+using Generic.Classes;
 
 namespace Generic.Vectors {
 	public class VectorIncrementalAverage : AIncrementalAverage<Vector<float>> {

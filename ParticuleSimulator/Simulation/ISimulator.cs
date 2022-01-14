@@ -1,13 +1,13 @@
 ﻿using System.Collections.Generic;
-using Generic.Trees;
+using System.Numerics;
 using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Simulation {
 	public interface ISimulator {
 		int IterationCount { get; }
 		int ParticleCount { get; }
-		ITree ParticleTree { get; }
 		IEnumerable<IParticle> Particles { get; }
+		Vector<float> Center { get; }
 
 		void Init();
 

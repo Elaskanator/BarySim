@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Generic.Extensions;
-using Generic.Models;
+using Generic.Classes;
 
 namespace ParticleSimulator.Rendering.SystemConsole {
 	public class PerfGraph {
