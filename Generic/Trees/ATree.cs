@@ -136,6 +136,17 @@ namespace Generic.Trees {
 			return node;
 		}
 
+		public void RemoveFromLeaf(T item) {
+			ATree<T> node = this;
+			node.Bin.Remove(item);
+			--node.ItemCount;
+			while (!node.IsRoot) {
+				node = node.Parent;
+				if (--node.ItemCount == 0)
+					node.Children = null;
+			}
+		}
+
 		protected void AddToLeaf(T item) {//increments the count
 			ATree<T> node = this;
 			while (!node._isReceiving) {

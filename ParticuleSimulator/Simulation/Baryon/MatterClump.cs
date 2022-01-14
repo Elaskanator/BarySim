@@ -36,41 +36,34 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public override Tuple<Vector<float>, Vector<float>> ComputeInfluence(MatterClump other) {
 			Vector<float> toOther = other.Position - this.Position;
 			float distanceSquared = Vector.Dot(toOther, toOther);
+			float distance = MathF.Sqrt(distanceSquared);
 
-			if (Parameters.MERGE_ENABLE && distanceSquared <= Parameters.WORLD_EPSILON) {
-				this.Mergers.Enqueue(other);
-			} else {
-				Vector<float> gravitationalInfluence = toOther * (Parameters.GRAVITATIONAL_CONSTANT / distanceSquared);
-				if (Parameters.COLLISION_ENABLE) {
-					float sumRadiusSquared = this.RadiusSquared + 2f*this.Radius*other.Radius + other.RadiusSquared;
-					if (distanceSquared >= sumRadiusSquared) {
-						return new(gravitationalInfluence, Vector<float>.Zero);
+			Vector<float> gravitationalInfluence = distance > Parameters.WORLD_EPSILON
+				? toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distanceSquared * distance))
+				: Vector<float>.Zero;
+			Vector<float> collisionInfluence = Vector<float>.Zero;
+			if (Parameters.COLLISION_ENABLE) {
+				float radiusSum = this.Radius + other.Radius;
+				if (distance < radiusSum) {
+					MatterClump smaller, larger;
+					(smaller, larger) = this.Radius <= other.Radius
+						? (this, other)
+						: (other, this);
+
+					if (Parameters.MERGE_ENABLE && distance <= (larger.Radius - Parameters.MERGE_ENGULF_RATIO*smaller.Radius)) {
+						gravitationalInfluence = Vector<float>.Zero;
+						this.Mergers.Enqueue(other);
 					} else {
-						MatterClump larger, smaller;
-						if (this.Radius >= other.Radius) {
-							larger = this;
-							smaller = other;
-						} else {
-							larger = other;
-							smaller = this;
-						}
-
-						if (distanceSquared <= Parameters.MERGE_ENGULF_RATIO * (larger.RadiusSquared - 2f*larger.Radius*smaller.Radius + smaller.RadiusSquared)) {
-							this.Mergers.Enqueue(other);
-						} else {
-							float relativeDistance = sumRadiusSquared <= Parameters.WORLD_EPSILON ? 0f : MathF.Sqrt(distanceSquared / sumRadiusSquared);
-							Vector<float> dV = other.Velocity - this.Velocity;
-							return new(
-								gravitationalInfluence,
-								dV * ((1f - relativeDistance) * Parameters.DRAG_CONSTANT * smaller.Mass));
-						}
+						float relativeDistance = distance / radiusSum;
+						Vector<float> dV = other.Velocity - this.Velocity;
+						collisionInfluence = dV * ((1f - relativeDistance) * Parameters.DRAG_CONSTANT * smaller.Mass);
 					}
 				}
 			}
-			return new(Vector<float>.Zero, Vector<float>.Zero);
+			return new(gravitationalInfluence, collisionInfluence);
 		}
 
-		protected override void ApplyTimeStep_Specific() {
+		protected override void AfterMove() {
 			if (!this.IsCollapsed)
 				this.EvaluateExplosion();
 		}
@@ -118,12 +111,11 @@ namespace ParticleSimulator.Simulation.Baryon {
 					MatterClump newParticle;
 					for (int i = 1; i < numParticles; i++) {
 						direction = VectorFunctions.New(
-							VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random)
-								.Select(x => (float)x));
+							VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
 						rand = (float)Program.Engine.Random.NextDouble();
 
 						newParticle = new(
-							this.Position + (((1f - rand*rand*rand) * radiusRange) * direction),
+							this.Position + (((1f - rand*rand) * radiusRange) * direction),
 							this.Velocity + ((rand * Parameters.GRAVITY_EJECTA_SPEED) * direction))
 						{
 							GroupId = this.GroupId
@@ -135,13 +127,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 					}
 				}
 			}
-		}
-
-		protected override bool TestInRange(ATree<MatterClump> world) {
-			BaryCenter center = ((BarnesHutTree)world).MassBaryCenter;
-			return Vector.Dot(this.Velocity, this.Velocity) <
-				2f * Parameters.GRAVITATIONAL_CONSTANT * center.Weight
-				/ this.Position.Distance(center.Position);
 		}
 	}
 }

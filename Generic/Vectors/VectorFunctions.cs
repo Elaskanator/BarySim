@@ -237,37 +237,50 @@ namespace Generic.Vectors {
 					};
 				default://rejection sampling
 					float[] coords;
-					while ((coords = Enumerable.Range(0, dimensionality).Select(i => 2f*(0.5f - (float)rand.NextDouble()) * radius).ToArray()).Magnitude() > radius) { }
+					do {
+						coords = Enumerable
+							.Range(0, dimensionality)
+							.Select(i => 2f*(0.5f - (float)rand.NextDouble()) * radius)
+							.ToArray();
+					} while (coords.Magnitude() > radius);
 					return coords;
 			}
 		}
 
-		public static double[] RandomUnitVector_Spherical(this int dimensionality, Random rand = null) {
+		public static float[] RandomUnitVector_Spherical(this int dimensionality, Random rand = null) {
 			if (dimensionality < 1) throw new ArgumentOutOfRangeException(nameof(dimensionality));
 			rand ??= new Random();
 
 			switch (dimensionality) {
 				case 1:
 					if (rand.NextDouble() < 0.5)
-						return new double[] { 1 };
-					else return new double[] { -1 };
+						return new float[] { 1 };
+					else return new float[] { -1 };
 				case 2:
-					double angle = 2d * Math.PI * rand.NextDouble();
-					return new double[] {
-						Math.Cos(angle),
-						Math.Sin(angle)
+					float angle = 2f * MathF.PI * (float)rand.NextDouble();
+					return new float[] {
+						MathF.Cos(angle),
+						MathF.Sin(angle)
 					};
 				case 3:
-					double theta = Math.Acos(-1d + 2d*rand.NextDouble());
-					double phi = 2d * Math.PI * rand.NextDouble();
-					return new double[] {
-						Math.Sin(theta) * Math.Cos(phi),
-						Math.Sin(theta) * Math.Sin(phi),
-						Math.Cos(theta)
+					float theta = MathF.Acos(-1f + 2f*(float)rand.NextDouble());
+					float phi = 2f * MathF.PI * (float)rand.NextDouble();
+					return new float[] {
+						MathF.Sin(theta) * MathF.Cos(phi),
+						MathF.Sin(theta) * MathF.Sin(phi),
+						MathF.Cos(theta)
 					};
-				default:
-					//throw new NotImplementedException();
-					return Enumerable.Range(0, dimensionality).Select(i => rand.NextDouble()).ToArray().Normalize();//TODODODO
+				default://rejection sampling
+					float[] coords;
+					float magnitude;
+					do {
+						coords = Enumerable
+							.Range(0, dimensionality)
+							.Select(i => 2f*(0.5f - (float)rand.NextDouble()))
+							.ToArray();
+						magnitude = coords.Magnitude();
+					} while (0.0000001f >= magnitude || magnitude > 1f);
+					return coords.Select(x => x / magnitude).ToArray();
 			}
 		}
 

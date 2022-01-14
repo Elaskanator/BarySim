@@ -41,42 +41,38 @@ namespace ParticleSimulator.Simulation.Particles {
 		//Tuple<Gravity, Drag>
 		public abstract Tuple<Vector<float>, Vector<float>> ComputeInfluence(TSelf other);
 		public abstract void Incorporate(TSelf other);
-		protected abstract bool TestInRange(ATree<TSelf> world);
 
-		protected virtual void ApplyTimeStep_Specific() { }
+		protected virtual void AfterMove() { }
 
 		public void ApplyTimeStep(float timeStep, ATree<TSelf> world) {
-			this.ApplyTimeStep_Specific();
-
 			Vector<float> velocity = this.Velocity + (timeStep * this.Acceleration),
 				displacement = timeStep*velocity,
-				newP = this.Position + displacement;
+				position = this.Position + displacement;
 
-			Vector<int>
-				lesses = Vector.LessThan(newP, Parameters.WORLD_LEFT_INF),
-				greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_RIGHT_INF),
-				union = lesses | greaters;
-			if (Vector.LessThanAny(union, Vector<int>.Zero)) {
-				if (Parameters.WORLD_BOUNCING) {
-					newP = -newP + 2f
-						* Vector.ConditionalSelect(lesses,
-							Parameters.WORLD_LEFT,
-							Vector.ConditionalSelect(greaters,
-								Parameters.WORLD_RIGHT,
-								newP));
-					velocity = Vector.ConditionalSelect(union, -velocity, velocity);
-				} else if (Parameters.WORLD_WRAPPING) {
-					newP = WrapPosition(newP);
-				} else {//Parameters.WORLD_DEATH_BOUND_CNT >= 1f
-					lesses = Vector.LessThan(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_LEFT_INF);
-					greaters = Vector.GreaterThanOrEqual(newP, Parameters.WORLD_DEATH_BOUND_CNT * Parameters.WORLD_RIGHT_INF);
+			if (Parameters.WORLD_BOUNCING || Parameters.WORLD_WRAPPING) {
+				Vector<int>
+					lesses = Vector.LessThan(position, Parameters.WORLD_LEFT_INF),
+					greaters = Vector.GreaterThanOrEqual(position, Parameters.WORLD_RIGHT_INF),
 					union = lesses | greaters;
-					this.Enabled = Vector.EqualsAll(union, Vector<int>.Zero) || this.TestInRange(world);
+				if (Vector.LessThanAny(union, Vector<int>.Zero)) {
+					if (Parameters.WORLD_BOUNCING) {
+						position = -position
+							+ 2f * Vector.ConditionalSelect(lesses,
+								Parameters.WORLD_LEFT,
+								Vector.ConditionalSelect(greaters,
+									Parameters.WORLD_RIGHT,
+									position));
+						velocity = Vector.ConditionalSelect(union, -velocity, velocity);
+					} else {// if (Parameters.WORLD_WRAPPING) {
+						position = WrapPosition(position);
+					}
 				}
 			}
 
-			this.Position = newP;
+			this.Position = position;
 			this.Velocity = velocity;
+
+			this.AfterMove();
 		}
 
 		public void WrapPosition() {

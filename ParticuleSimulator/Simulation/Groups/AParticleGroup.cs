@@ -40,7 +40,7 @@ namespace ParticleSimulator.Simulation.Particles {
 
 				this.InitialParticles[i].Velocity +=
 					(min + (range * (float)Program.Engine.Random.NextDouble()))
-					* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
+					* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
 
 				if (Parameters.WORLD_BOUNCING)
 					if (Parameters.WORLD_WRAPPING)
@@ -58,9 +58,8 @@ namespace ParticleSimulator.Simulation.Particles {
 						.Select(d => (float)(Parameters.WORLD_SIZE[d] * Program.Engine.Random.NextDouble() * (1d - Parameters.WORLD_PADDING_PCT/50d)
 							+ Parameters.WORLD_LEFT[d]
 							+ (Parameters.WORLD_SIZE[d] * Parameters.WORLD_PADDING_PCT/100d))));
-				this.Velocity = VectorFunctions.New(
-					VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random)
-						.Select(x => (float)x * Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND));
+				this.Velocity = Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND
+					* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
 			}
 		}
 

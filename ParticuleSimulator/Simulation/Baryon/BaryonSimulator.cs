@@ -41,17 +41,34 @@ namespace ParticleSimulator.Simulation.Baryon {
 		}
 
 		private void Refresh(float timeStep) {
+			Tuple<ATree<MatterClump>, MatterClump[]>[] leaves = new Tuple<ATree<MatterClump>, MatterClump[]>[this.ParticleTree.ItemCount];
+			int numLeaves = this.BuildLeavesAndBaryCenters(leaves);
+
+			Parallel.ForEach(
+				leaves.Take(numLeaves),
+				leaf => this.ProcessLeaf(
+					(BarnesHutTree)leaf.Item1,
+					leaf.Item2));
+			
+			for (int i = 0; i < numLeaves; i++)
+				for (int j = 0; j < leaves[i].Item2.Length; j++)
+					this.TimestepParticle(timeStep, leaves[i].Item1, leaves[i].Item2[j]);
+
+			if (Parameters.MERGE_ENABLE)
+				this.HandleMergers();
+			//trim top of tree
+			this.ParticleTree = (BarnesHutTree)this.ParticleTree.Prune();
+		}
+
+		private int BuildLeavesAndBaryCenters(Tuple<ATree<MatterClump>, MatterClump[]>[] leaves) {
 			int numLeaves = 0;
-			Tuple<ATree<MatterClump>, MatterClump[]>[] leaves;
+			MatterClump[] particles;
 
 			if (this.ParticleTree.IsLeaf) {
-				numLeaves = 1;
-				leaves = new Tuple<ATree<MatterClump>, MatterClump[]>[] {
-					new(this.ParticleTree, this.ParticleTree.Bin.ToArray())
-				};
+				particles = this.ParticleTree.Bin.ToArray();
+				this.ParticleTree.InitBaryCenter(particles);
+				leaves[numLeaves++] = new(this.ParticleTree, particles);
 			} else {
-				leaves = new Tuple<ATree<MatterClump>, MatterClump[]>[this.ParticleTree.ItemCount];
-
 				Stack<BarnesHutTree> pendingNodes = new(), testNodes = new();
 				Stack<BarnesHutTree[]> levelStack = new();
 				pendingNodes.Push(this.ParticleTree);
@@ -59,8 +76,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 				BarnesHutTree[] levelNodes;
 				BarnesHutTree child, node;
-				MatterClump[] particles;
-
 				do {
 					while (pendingNodes.TryPop(out node))
 						for (int cIdx = 0; cIdx < node.Children.Length; cIdx++)
@@ -87,100 +102,49 @@ namespace ParticleSimulator.Simulation.Baryon {
 						levelNodes[i].UpdateBaryCenter();
 			}
 
-			Parallel.ForEach(
-				leaves.Take(numLeaves),
-				leaf => this.ProcessLeaf(
-					(BarnesHutTree)leaf.Item1,
-					leaf.Item2));
-			
-			ATree<MatterClump> node2;
-			for (int i = 0; i < numLeaves; i++)
-				for (int j = 0; j < leaves[i].Item2.Length; j++) {
-					if (leaves[i].Item2[j].Enabled) {
-						node2 = leaves[i].Item1.GetContainingLeaf(leaves[i].Item2[j]);
-						leaves[i].Item2[j].ApplyTimeStep(timeStep, this.ParticleTree);
-						node2.MoveFromLeaf(leaves[i].Item2[j]);
-					} else leaves[i].Item1.Remove(leaves[i].Item2[j]);
-				}
+			return numLeaves;
+		}
 
+		private void TimestepParticle(float timeStep, ATree<MatterClump> originNode, MatterClump particle) {
+			originNode = originNode.GetContainingLeaf(particle);
+			particle.ApplyTimeStep(timeStep, this.ParticleTree);
 
-			if (Parameters.MERGE_ENABLE)
-				this.HandleMergers();
-			//trim top of tree
-			this.ParticleTree = (BarnesHutTree)this.ParticleTree.Prune();
+			bool enabled = true;
+			if (Parameters.WORLD_DEATH_BOUND_RADIUS >= 1f) {
+				Vector<float> pointingVector = this.ParticleTree.MassBaryCenter.Position - particle.Position;
+				float distSquared = Vector.Dot(pointingVector, pointingVector);
+				enabled = distSquared <= Parameters.WORLD_DEATH_BOUND_RADIUS_SQUARED
+					|| Vector.Dot(particle.Velocity, particle.Velocity) <
+						2f * Parameters.GRAVITATIONAL_CONSTANT * this.ParticleTree.MassBaryCenter.Weight
+						/ MathF.Sqrt(distSquared);
+			}
+
+			if (enabled)
+				originNode.MoveFromLeaf(particle);
+			else originNode.RemoveFromLeaf(particle);
 		}
 
 		private void ProcessLeaf(BarnesHutTree leaf, MatterClump[] particles) {
+			Vector<float> farFieldContribution = Vector<float>.Zero;
 			List<MatterClump> nearField = new();
 			Queue<BarnesHutTree> farField = new();
-			BarnesHutTree other;
-			/*
-			{//top down approach
-				Queue<BarnesHutTree> remaining = new();
-				remaining.Enqueue(this.ParticleTree);
-
-				BarnesHutTree node;
-				while (remaining.TryDequeue(out node))
-					if (node.IsLeaf) {
-						if (!ReferenceEquals(evalNode, node))
-							nearField.AddRange(node.Bin);
-					} else for (int c = 0; c < node.Children.Length; c++)
-						if (node.Children[c].ItemCount > 0) {
-							other = (BarnesHutTree)node.Children[c];
-							if (evalNode.CanApproximate(other))//how are we guaranteed to not approximate a parent node? I don't like this
-								farField.Enqueue(other);
-							else remaining.Enqueue(other);
-						}
-			}
-			*/
-			
-			{//bottom up approach
-				Queue<BarnesHutTree> remaining = new();
-				ATree<MatterClump> node = leaf, lastNode;
-				BarnesHutTree child;
-				while (!node.IsRoot) {
-					lastNode = node;
-					node = node.Parent;
-					for (int i = 0; i < node.Children.Length; i++)
-						if (node.Children[i].ItemCount > 0)
-							if (!ReferenceEquals(lastNode, node.Children[i])) {
-								child = (BarnesHutTree)node.Children[i];
-								if (leaf.CanApproximate(child))
-									farField.Enqueue(child);
-								else remaining.Enqueue(child);
-							}
-
-					while (remaining.TryDequeue(out other))
-						if (other.IsLeaf)
-							if (leaf.CanApproximate(other))
-								farField.Enqueue(other);
-							else nearField.AddRange(other.Bin);
-						else for (int i = 0; i < other.Children.Length; i++)
-							if (other.Children[i].ItemCount > 0) {
-								child = (BarnesHutTree)other.Children[i];
-								if (leaf.CanApproximate(child))
-									farField.Enqueue(child);
-								else remaining.Enqueue(child);
-							}
-				}
-			}
-			
-			Vector<float> farFieldContribution = Vector<float>.Zero;
+			this.DetermineNeighbors(leaf, nearField, farField);
 
 			float distSq;
 			Vector<float> toOther;
-			while (farField.TryDequeue(out other)) {
-				toOther = other.MassBaryCenter.Position - leaf.MassBaryCenter.Position;
+			BarnesHutTree otherNode;
+			while (farField.TryDequeue(out otherNode)) {
+				toOther = otherNode.MassBaryCenter.Position - leaf.MassBaryCenter.Position;
 				distSq = Vector.Dot(toOther, toOther);
 				if (distSq > Parameters.WORLD_EPSILON)
-					farFieldContribution += toOther * (other.MassBaryCenter.Weight / distSq);
+					farFieldContribution += toOther * (otherNode.MassBaryCenter.Weight / distSq);
 			}
 			farFieldContribution *= Parameters.GRAVITATIONAL_CONSTANT;
 
 			Tuple<Vector<float>, Vector<float>> influence;
 			for (int i = 0; i < particles.Length; i++) {
-				particles[i].Acceleration = farFieldContribution;
-				for (int j = i + 1; j < particles.Length; j++) {
+				particles[i].Acceleration = Vector<float>.Zero;
+				for (int j = 0; j < i; j++) {
 					influence = particles[i].ComputeInfluence(particles[j]);
 					particles[i].Acceleration += particles[j].Mass*influence.Item1 + influence.Item2*(1f/particles[i].Mass);
 					particles[j].Acceleration -= particles[i].Mass*influence.Item1 + influence.Item2*(1f/particles[j].Mass);
@@ -189,18 +153,73 @@ namespace ParticleSimulator.Simulation.Baryon {
 					influence = particles[i].ComputeInfluence(nearField[n]);
 					particles[i].Acceleration += nearField[n].Mass*influence.Item1 + influence.Item2*(1f/particles[i].Mass);
 				}
+				particles[i].Acceleration += farFieldContribution;//add after to reduce floating point errors
+			}
+		}
+
+		private void DetermineNeighbors(BarnesHutTree leaf, List<MatterClump> nearField, Queue<BarnesHutTree> farField) {
+			BarnesHutTree other;
+
+			/*
+			//top down approach
+			Queue<BarnesHutTree> remaining = new();
+			remaining.Enqueue(this.ParticleTree);
+
+			BarnesHutTree node;
+			while (remaining.TryDequeue(out node))
+				if (node.IsLeaf) {
+					if (!ReferenceEquals(evalNode, node))
+						nearField.AddRange(node.Bin);
+				} else for (int c = 0; c < node.Children.Length; c++)
+					if (node.Children[c].ItemCount > 0) {
+						other = (BarnesHutTree)node.Children[c];
+						if (evalNode.CanApproximate(other))//how are we guaranteed to not approximate a parent node? I don't like this
+							farField.Enqueue(other);
+						else remaining.Enqueue(other);
+					}
+			*/
+			
+			//bottom up approach
+			Queue<BarnesHutTree> remaining = new();
+			ATree<MatterClump> node = leaf, lastNode;
+			BarnesHutTree child;
+			while (!node.IsRoot) {
+				lastNode = node;
+				node = node.Parent;
+				for (int i = 0; i < node.Children.Length; i++)
+					if (node.Children[i].ItemCount > 0)
+						if (!ReferenceEquals(lastNode, node.Children[i])) {
+							child = (BarnesHutTree)node.Children[i];
+							if (leaf.CanApproximate(child))
+								farField.Enqueue(child);
+							else remaining.Enqueue(child);
+						}
+
+				while (remaining.TryDequeue(out other))
+					if (other.IsLeaf)
+						if (leaf.CanApproximate(other))
+							farField.Enqueue(other);
+						else nearField.AddRange(other.Bin);
+					else for (int i = 0; i < other.Children.Length; i++)
+						if (other.Children[i].ItemCount > 0) {
+							child = (BarnesHutTree)other.Children[i];
+							if (leaf.CanApproximate(child))
+								farField.Enqueue(child);
+							else remaining.Enqueue(child);
+						}
 			}
 		}
 
 		private void HandleMergers() {
 			MatterClump other, tail;
 
-			Queue<MatterClump> pending = new();
-			HashSet<MatterClump> evaluated = new();
 			MatterClump[] originalParticles = this.ParticleTree.AsArray();
+			HashSet<MatterClump> evaluated = new();
+
+			Queue<MatterClump> pending = new();
 			ATree<MatterClump> leaf;
 			for (int i = 0; i < originalParticles.Length; i++) {
-				if (originalParticles[i].Enabled && evaluated.Add(originalParticles[i])) {
+				if (originalParticles[i].Enabled && originalParticles[i].Mergers.Count > 0 && evaluated.Add(originalParticles[i])) {
 					pending.Clear();
 					while (originalParticles[i].Mergers.TryDequeue(out other))
 						if (other.Enabled)

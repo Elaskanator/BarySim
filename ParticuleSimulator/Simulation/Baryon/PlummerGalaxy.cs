@@ -24,13 +24,13 @@ namespace ParticleSimulator.Simulation.Baryon {
 		protected override void ParticleAddPositionVelocity(MatterClump particle) {
 			float rand = (float)Program.Engine.Random.NextDouble();
 			float radius = this.Radius * this.BulgeScalar / MathF.Sqrt(MathF.Pow(rand, -2f/3f) - 1f);
-			Vector<float> uniformUnitVector = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
+			Vector<float> uniformUnitVector = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
 			Vector<float> particleOffset = radius * uniformUnitVector;
 			particle.Position += particleOffset;
 			
 			float bulgeRadius = this.Radius * this.BulgeScalar;
 			float velocity = this.VelocitySampling(radius, bulgeRadius);
-			uniformUnitVector = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random).Select(x => (float)x));
+			uniformUnitVector = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
 			particle.Velocity += velocity * uniformUnitVector;
 		}
 
