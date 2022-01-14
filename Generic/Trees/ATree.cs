@@ -52,6 +52,10 @@ namespace Generic.Trees {
 
 		public ATree<T> GetContainingLeaf(T item) {
 			ATree<T> node = this;
+			while (!node.DoesEncompass(item))
+				if (node.IsRoot)
+					throw new Exception("Uncontained");
+				else node = node.Parent;
 			while (!node.IsLeaf)
 				node = node.Children[node.ChildIndex(item)];
 			return node;
@@ -85,7 +89,7 @@ namespace Generic.Trees {
 			}
 		}
 
-		public bool Remove(T item) {
+		public bool Remove(T item, bool prune) {
 			ATree<T> node = this;
 			while (!node.DoesEncompass(item))
 				if (node.IsRoot)
@@ -95,18 +99,11 @@ namespace Generic.Trees {
 			while (!node.IsLeaf) 
 				node = node.Children[node.ChildIndex(item)];
 
-			if (node.Bin.Remove(item)) {
-				--node.ItemCount;
-				while (!node.IsRoot) {
-					node = node.Parent;
-					if (--node.ItemCount == 0)
-						node.Children = null;
-				}
-				return true;
-			} else return false;
+			return node.RemoveFromLeaf(item, prune);
 		}
+		public bool Remove(T item) => this.Remove(item, true);
 
-		public ATree<T> MoveFromLeaf(T item) {
+		public ATree<T> MoveFromLeaf(T item, bool prune = true) {
 			ATree<T> node = this;
 			if (!this.DoesEncompass(item)) {
 				this.Bin.Remove(item);
@@ -121,7 +118,7 @@ namespace Generic.Trees {
 						--node.ItemCount;
 					}
 
-					if (node.ItemCount == 0)
+					if (prune && node.ItemCount == 0)
 						node.Children = null;
 
 					encompasses = node.DoesEncompass(item);
@@ -136,15 +133,18 @@ namespace Generic.Trees {
 			return node;
 		}
 
-		public void RemoveFromLeaf(T item) {
+		public bool RemoveFromLeaf(T item, bool prune = true) {
 			ATree<T> node = this;
-			node.Bin.Remove(item);
-			--node.ItemCount;
-			while (!node.IsRoot) {
-				node = node.Parent;
-				if (--node.ItemCount == 0)
-					node.Children = null;
-			}
+			if (node.Bin.Remove(item)) {
+				--node.ItemCount;
+				while (!node.IsRoot) {
+					node = node.Parent;
+					--node.ItemCount;
+					if (prune && node.ItemCount == 0)
+						node.Children = null;
+				}
+				return true;
+			} else return false;
 		}
 
 		protected void AddToLeaf(T item) {//increments the count

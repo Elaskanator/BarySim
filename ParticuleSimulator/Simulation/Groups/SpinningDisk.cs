@@ -3,20 +3,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Generic.Vectors;
-using ParticleSimulator.Simulation.Particles;
 
-namespace ParticleSimulator.Simulation {
+namespace ParticleSimulator.Simulation.Particles {
 	public class SpinningDisk<TParticle> : AParticleGroup<TParticle>
 	where TParticle : AParticle<TParticle> {
 		public SpinningDisk(Func<Vector<float>, Vector<float>, TParticle> initializer, float radius)
-		: base(initializer, radius) { }
+		: base(initializer, radius) {
+			this.GlobalDirection = Program.Engine.Random.NextDouble() < 0.5d;
+			this.InternalDirection = Program.Engine.Random.NextDouble() < 0.5d;
+		}
+
+		public readonly bool GlobalDirection;
+		public readonly bool InternalDirection;
 
 		protected override void InitPositionVelocity() {
 			base.InitPositionVelocity();
-			if (Parameters.PARTICLES_GROUP_COUNT > 1)
-				this.Velocity +=
-					Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP
-					* this.DirectionUnitVector(this.Position);
+			this.Velocity +=
+				(this.GlobalDirection ? 1f : -1f)
+				* Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP
+				* this.DirectionUnitVector(this.Position);
 		}
 
 		protected override void ParticleAddPositionVelocity(TParticle particle) {
@@ -40,7 +45,7 @@ namespace ParticleSimulator.Simulation {
 			} else {
 				float angle = MathF.Atan2(offset[1], offset[0]);
 				angle += 2f * MathF.PI
-					* (0.25f//90 degree rotation
+					* (0.25f*(this.InternalDirection ? 1f : -1f)//90 degree rotation
 						+ (MathF.Pow((float)Program.Engine.Random.NextDouble(), Parameters.GRAVITY_ALIGNMENT_SKEW_POW)
 							* Parameters.GRAVITY_ALIGNMENT_SKEW_RANGE_PCT / 100f));
 

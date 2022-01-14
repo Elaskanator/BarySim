@@ -8,7 +8,7 @@ using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Rasterizer {
-		public Rasterizer(int width, int height, int depth, Random rand, SynchronousBuffer<float?[]> rawRankings) {
+		public Rasterizer(Camera camera, int width, int height, int depth, Random rand, SynchronousBuffer<float?[]> rawRankings) {
 			this.OutWidth = width;
 			this.OutHeight = height;
 			this.OutNumPixels = width * height;
@@ -29,7 +29,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			this.InternalHeightF = this.InternalHeight;
 
 			this._rawRankingsResource = rawRankings;
-			this.Camera = new Camera(Parameters.ZOOM_SCALE);
+			this.Camera = camera;
 
 			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random)
 				this._randOffset = (int)(100d * rand.NextDouble());

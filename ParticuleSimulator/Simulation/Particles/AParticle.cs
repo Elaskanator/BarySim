@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Generic.Trees;
+using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Simulation.Particles {
 	public abstract class AParticle<TSelf> : IParticle
@@ -35,8 +36,8 @@ namespace ParticleSimulator.Simulation.Particles {
 		public Vector<float> Velocity { get; set; }
 		public Vector<float> Acceleration { get; set; }
 
-		public readonly Queue<TSelf> Mergers = new();
-		public readonly Queue<TSelf> NewParticles = new();
+		public Queue<TSelf> Mergers = null;
+		public Queue<TSelf> NewParticles = null;
 
 		//Tuple<Gravity, Drag>
 		public abstract Tuple<Vector<float>, Vector<float>> ComputeInfluence(TSelf other);
@@ -44,7 +45,9 @@ namespace ParticleSimulator.Simulation.Particles {
 
 		protected virtual void AfterMove() { }
 
-		public void ApplyTimeStep(float timeStep, ATree<TSelf> world) {
+		protected virtual bool IsInRange(BaryCenter center) => false;
+
+		public void ApplyTimeStep(float timeStep, BaryCenter center) {
 			Vector<float> velocity = this.Velocity + (timeStep * this.Acceleration),
 				displacement = timeStep*velocity,
 				position = this.Position + displacement;
@@ -67,6 +70,8 @@ namespace ParticleSimulator.Simulation.Particles {
 						position = WrapPosition(position);
 					}
 				}
+			} else if (Parameters.WORLD_DEATH_BOUND_RADIUS > 0f) {
+				this.Enabled &= this.IsInRange(center);
 			}
 
 			this.Position = position;

@@ -12,32 +12,32 @@ namespace ParticleSimulator {
 		public static readonly int WINDOW_WIDTH = 120;//Console.LargestWindowWidth;
 		public static readonly int WINDOW_HEIGHT = 60;//Console.LargestWindowHeight;
 
-		public const float TARGET_FPS = 24f;
+		public const float TARGET_FPS = 30f;
 		public const bool VSYNC = false;
 		public const int SUPERSAMPLING = 2;
-		public const float PIXEL_ROUNDOFF = 0.5f;
-		public const int DETERMINISTIC_RANDOM_SEED = 0;
 
 		public const int DIM = 3;
-		public const float WORLD_SCALE = 1f;
+		public const float WORLD_SCALE = 8f;
 		public const float TIME_SCALE = 1f;
 		public static readonly float ZOOM_SCALE = 1f / WORLD_SCALE;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
-		public const int PARTICLES_GROUP_COUNT = 1 << 0;
+		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 15;
+		public const int PARTICLES_GROUP_MAX = 1 << 16;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float INACCURCY_SQUARED = 1f;
+		public const int DETERMINISTIC_RANDOM_SEED = 0;
+		public const float PIXEL_ROUNDOFF = 0.5f;
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
-		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
 		public const bool SYNC_SIMULATION = true;//controls synchronization of rendering to simulation (e.g. faster rotation)
+		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
 		public const int QUADTREE_LEAF_CAPACITY = 8;
 		
 		public const bool COLLISION_ENABLE = true;
 		public const bool MERGE_ENABLE = true;
-		public const float MERGE_ENGULF_RATIO = 0.5f;
+		public const float MERGE_ENGULF_RATIO = 0.9f;
 		public const float DRAG_CONSTANT = 0.2f;
 
 		public const bool WORLD_WRAPPING = false;
@@ -46,7 +46,7 @@ namespace ParticleSimulator {
 		public const float Y_BOUNCE_ASPECT = 1f;
 		public const float Z_BOUNCE_ASPECT = 1f;
 
-		public const float WORLD_PADDING_PCT = 0f;
+		public const float WORLD_PADDING_PCT = 5f;
 		public const float WORLD_DEATH_BOUND_RADIUS = 10f;
 		public const float WORLD_EPSILON = 1E-5f;
 		
@@ -70,24 +70,24 @@ namespace ParticleSimulator {
 
 		public const float MASS_SCALAR				= 1f;
 		public const float MASS_LUMINOSITY_SCALAR	= 4E-2f;
-		public const float GRAVITY_RADIAL_DENSITY	= 1E8f;
+		public const float GRAVITY_RADIAL_DENSITY	= 1E6f;
 
-		public const float GALAXY_RADIUS			= 0.8f;
+		public const float GALAXY_RADIUS			= 2.0f;
 		public const float GALAXY_CONCENTRATION		= 0.1f;
 		public const float GALAXY_PLUMMER_SOFTENING	= 0.1f;
 
 		public const bool GRAVITY_SUPERNOVA_ENABLE = true;
 		public const float GRAVITY_CRITICAL_MASS = 3000f;
 		public const float GRAVITY_EJECTA_PARTICLE_MASS = 1f;
-		public const float GRAVITY_EJECTA_SPEED = 1.5E-2f;
+		public const float GRAVITY_EJECTA_SPEED = 2.0E-2f;
 		public const float GRAVITY_EJECTA_RADIUS_SCALAR = 2f;
 		public const bool GRAVITY_BLACK_HOLE_ENABLE = false;
 		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.5f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 2.0E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.5E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 1.0E-2f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 1.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 3.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 1.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 2.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.5E-3f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;//WIP
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;//WIP
 		#endregion Gravity

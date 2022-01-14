@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
 using System.Numerics;
-using Generic.Trees;
 using Generic.Vectors;
 using ParticleSimulator.Simulation.Particles;
 
@@ -52,6 +50,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 					if (Parameters.MERGE_ENABLE && distance <= (larger.Radius - Parameters.MERGE_ENGULF_RATIO*smaller.Radius)) {
 						gravitationalInfluence = Vector<float>.Zero;
+						this.Mergers ??= new();
 						this.Mergers.Enqueue(other);
 					} else {
 						float relativeDistance = distance / radiusSum;
@@ -61,6 +60,15 @@ namespace ParticleSimulator.Simulation.Baryon {
 				}
 			}
 			return new(gravitationalInfluence, collisionInfluence);
+		}
+
+		protected override bool IsInRange(BaryCenter center) {
+			Vector<float> pointingVector = center.Position - this.Position;
+			float distSquared = Vector.Dot(pointingVector, pointingVector);
+			return distSquared <= Parameters.WORLD_DEATH_BOUND_RADIUS_SQUARED
+				|| Vector.Dot(this.Velocity, this.Velocity) <
+					2f * Parameters.GRAVITATIONAL_CONSTANT * center.Weight
+					/ MathF.Sqrt(distSquared);
 		}
 
 		protected override void AfterMove() {
@@ -82,8 +90,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 			this.Position = weightedPosition;
 			this.Momentum = totalMomentum;
 			this.Impulse = totalImpulse;
-
-			other.Enabled = false;
 		}
 
 		private void EvaluateExplosion() {
@@ -123,6 +129,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 						newParticle.SetMass(avgMass);
 						newParticle.Impulse += avgImpulse;
 
+						this.NewParticles ??= new();
 						this.NewParticles.Enqueue(newParticle);
 					}
 				}

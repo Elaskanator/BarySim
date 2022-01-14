@@ -22,7 +22,9 @@ namespace ParticleSimulator.Simulation.Particles {
 		protected virtual void PrepareNewParticle(TParticle p) { }
 
 		public void Init() {
-			this.InitPositionVelocity();
+			if (Parameters.PARTICLES_GROUP_COUNT > 1)
+				this.InitPositionVelocity();
+			else this.Position = Vector<float>.Zero;
 
 			this.InitialParticles = Enumerable
 				.Repeat(this.Position, this.NumParticles)
@@ -50,17 +52,13 @@ namespace ParticleSimulator.Simulation.Particles {
 		}
 		
 		protected virtual void InitPositionVelocity() {
-			if (Parameters.PARTICLES_GROUP_COUNT < 2) {
-				this.Position = Vector<float>.Zero;
-			} else {
-				this.Position = VectorFunctions.New(
-					Enumerable.Range(0, Parameters.DIM)
-						.Select(d => (float)(Parameters.WORLD_SIZE[d] * Program.Engine.Random.NextDouble() * (1d - Parameters.WORLD_PADDING_PCT/50d)
-							+ Parameters.WORLD_LEFT[d]
-							+ (Parameters.WORLD_SIZE[d] * Parameters.WORLD_PADDING_PCT/100d))));
-				this.Velocity = Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND
-					* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
-			}
+			this.Position = VectorFunctions.New(
+				Enumerable.Range(0, Parameters.DIM)
+					.Select(d => (float)(Parameters.WORLD_SIZE[d] * Program.Engine.Random.NextDouble() * (1d - Parameters.WORLD_PADDING_PCT/50d)
+						+ Parameters.WORLD_LEFT[d]
+						+ (Parameters.WORLD_SIZE[d] * Parameters.WORLD_PADDING_PCT/100d))));
+			this.Velocity = Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND
+				* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
 		}
 
 		protected abstract void ParticleAddPositionVelocity(TParticle particle);

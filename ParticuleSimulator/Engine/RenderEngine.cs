@@ -28,7 +28,10 @@ namespace ParticleSimulator.Engine {
 
 			this.Simulator = new BaryonSimulator();
 
+			this.Camera = new(Parameters.ZOOM_SCALE);
+
 			this.Rasterizer = new(
+				this.Camera,
 				Parameters.WINDOW_WIDTH,
 				Parameters.WINDOW_HEIGHT * 2,
 				Parameters.WINDOW_WIDTH > Parameters.WINDOW_HEIGHT * 2
@@ -76,6 +79,7 @@ namespace ParticleSimulator.Engine {
 		public Autoscaler Scaling { get; private set; }
 		public Rasterizer Rasterizer { get; private set; }
 		public BitmapGenerator Exporter { get; private set; }
+		public Camera Camera { get; private set; }
 		
 		internal ACalculationHandler[] Evaluators { get; private set; }
 		private Thread _keyReader;
