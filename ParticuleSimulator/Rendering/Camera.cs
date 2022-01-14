@@ -3,7 +3,7 @@ using System.Linq;
 using System.Numerics;
 using Generic.Vectors;
 
-namespace ParticleSimulator.Rendering.Rasterization {
+namespace ParticleSimulator.Rendering {
 	public class Camera {
 		public const float AUTO_CENTER_UPDATE_ALPHA = 0.2f;
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Generic.Extensions;
 
-namespace ParticleSimulator.Engine {
+namespace ParticleSimulator.Engine.Threading {
 	public class SynchronousBuffer<T> : ISynchronousConsumedResource {
 		private static int _globalId = 0;
 

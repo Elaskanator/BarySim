@@ -11,11 +11,14 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public override Vector<float> Center {
 			get { lock (this._lock)
 				return this.ParticleTree.MassBaryCenter.Position; } }
+
 		protected override bool AccumulateTreeNodeData => true;
+
 		private readonly object _lock = new();
 
 		protected override AParticleGroup<MatterClump> NewParticleGroup() =>
 			new SpinningDisk<MatterClump>((p, v) => new(p, v), Parameters.GALAXY_RADIUS);
+
 		protected override void ComputeLeafNode(BarnesHutTree child, MatterClump[] particles) =>
 			child.InitBaryCenter(particles);
 		protected override void ComputeInnerNode(BarnesHutTree node) =>

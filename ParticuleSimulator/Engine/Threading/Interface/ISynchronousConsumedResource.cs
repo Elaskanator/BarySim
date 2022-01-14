@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace ParticleSimulator.Engine {
+namespace ParticleSimulator.Engine.Threading {
 	public interface ISynchronousConsumedResource : IDisposable, IEquatable<ISynchronousConsumedResource>, IEqualityComparer<ISynchronousConsumedResource>
 	//ICollection, IEnumerable,
 	//IProducerConsumerCollection<object>, IReadOnlyCollection<object>,

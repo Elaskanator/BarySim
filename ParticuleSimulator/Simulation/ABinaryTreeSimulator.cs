@@ -32,9 +32,8 @@ namespace ParticleSimulator.Simulation {
 			this.ParticleTree = (TTree)this.ParticleTree.Add(
 				this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
 		}
-
+		
 		public abstract Vector<float> Center { get; }
-
 		protected abstract bool AccumulateTreeNodeData { get; }
 
 		protected abstract AParticleGroup<TParticle> NewParticleGroup();
@@ -51,8 +50,8 @@ namespace ParticleSimulator.Simulation {
 				if (this.ParticleTree.ItemCount == 0) {
 					Program.CancelAction(null, null);
 				} else {
-					this.ParticleTree = this.PruneTree();
 					this.Refresh();
+					this.ParticleTree = this.PruneTree();
 				}
 
 			return this.ParticleTree.Select(p => new ParticleData(p)).ToArray();

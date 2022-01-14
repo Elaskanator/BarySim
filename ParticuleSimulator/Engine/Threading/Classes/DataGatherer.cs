@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Threading;
-using Generic.Classes;
-using ParticleSimulator.Engine.Threading;
 
-namespace ParticleSimulator.Engine {
+namespace ParticleSimulator.Engine.Threading {
 	public static class DataGatherer {
 		public static IDataGatherer New(IIngestedResource config, AutoResetEvent readySignal, AutoResetEvent doneSignal, AutoResetEvent refreshSignal) =>
 			(IDataGatherer)Activator.CreateInstance(

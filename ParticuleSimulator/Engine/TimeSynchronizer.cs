@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Generic.Classes {
+namespace ParticleSimulator.Engine {
 	public class TimeSynchronizer {
 		//see https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-sleep
 		public const double THREAD_PULSE_MS = 15;//TODO read exact value for your system

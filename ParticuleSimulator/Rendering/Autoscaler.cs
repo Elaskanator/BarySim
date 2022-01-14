@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Generic.Extensions;
 using Generic.Classes;
-using ParticleSimulator.Engine;
 using ParticleSimulator.Engine.Threading;
 
-namespace ParticleSimulator.Rendering.Rasterization {
+namespace ParticleSimulator.Rendering {
 	public class Autoscaler {
 		public Autoscaler(SynchronousBuffer<float[]> resource) {
 			this._resource = resource;

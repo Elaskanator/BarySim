@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace ParticleSimulator.Engine {
+namespace ParticleSimulator.Engine.Threading {
 	public interface IRunnable : IDisposable, IEquatable<IRunnable>, IEqualityComparer<IRunnable> {
 		int Id { get; }
 		string Name { get; }

@@ -2,7 +2,6 @@
 using Generic.Extensions;
 using System.Linq;
 using System.Threading;
-using Generic.Classes;
 using ParticleSimulator.Rendering;
 using ParticleSimulator.Rendering.Rasterization;
 using ParticleSimulator.Rendering.SystemConsole;

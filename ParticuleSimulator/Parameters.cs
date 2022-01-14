@@ -8,23 +8,23 @@ using ParticleSimulator.Rendering.SystemConsole;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited or to disable the feature
 	public static class Parameters {
-		//using top and bottom halves of each character to get double the verticle resolution
 		public static readonly int WINDOW_WIDTH = 120;//Console.LargestWindowWidth;
 		public static readonly int WINDOW_HEIGHT = 60;//Console.LargestWindowHeight;
-
+		//using top and bottom halves of each character to get double the verticle resolution
 		public const float TARGET_FPS = 30f;
 		public const bool VSYNC = false;
 		public const int SUPERSAMPLING = 2;
 
 		public const int DIM = 3;
-		public const float ZOOM_SCALE = 1f;
-		public const float TIME_SCALE = 1f;
+		public const float ZOOM_SCALE = 0.3f;
+		public const float TIME_SCALE = 2f;
+		public const float WORLD_SCALE = 4f;
 		public const bool AUTOFOCUS_DEFAULT = true;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
-		public const int PARTICLES_GROUP_COUNT = 1;
+		public const int PARTICLES_GROUP_COUNT = 1 << 3;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 15;
+		public const int PARTICLES_GROUP_MAX = 1 << 13;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float INACCURCY_SQUARED = 1f;
@@ -46,7 +46,6 @@ namespace ParticleSimulator {
 		
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNCING = false;
-		public const float WORLD_SCALE = 1f;
 		public const float WORLD_X_ASPECT = 1f;
 		public const float WORLD_Y_ASPECT = 1f;
 		public const float WORLD_Z_ASPECT = 1f;
@@ -74,21 +73,21 @@ namespace ParticleSimulator {
 		public const float GRAVITY_RADIAL_DENSITY	= 5E7f;
 
 		public const float GALAXY_RADIUS			= 0.5f;
-		public const float GALAXY_CONCENTRATION		= 0.0f;
+		public const float GALAXY_CONCENTRATION		= -0.5f;
 		public const float GALAXY_PLUMMER_SOFTENING	= 0.1f;
 
 		public const bool GRAVITY_SUPERNOVA_ENABLE = true;
 		public const float GRAVITY_CRITICAL_MASS = 3000f;
 		public const float GRAVITY_EJECTA_PARTICLE_MASS = 1f;
-		public const float GRAVITY_EJECTA_SPEED = 5.0E-3f;
+		public const float GRAVITY_EJECTA_SPEED = 4.0E-3f;
 		public const float GRAVITY_EJECTA_RADIUS_SCALAR = 2f;
-		public const bool GRAVITY_BLACK_HOLE_ENABLE = false;
-		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.5f;
+		public const bool GRAVITY_BLACK_HOLE_ENABLE = true;
+		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.8f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 5.0E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 1.0E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 4.0E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 1.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 1.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.1E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 1.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.5E-3f;
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;//WIP
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;//WIP
 		#endregion Gravity

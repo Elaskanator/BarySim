@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using Generic.Classes;
-using ParticleSimulator.Engine.Threading;
 
-namespace ParticleSimulator.Engine {
+namespace ParticleSimulator.Engine.Threading {
 	public abstract class ACalculationHandler : IRunnable {
 		private const int _warn_interval_check_ms = 500;
 		private static int _globalId = 0;

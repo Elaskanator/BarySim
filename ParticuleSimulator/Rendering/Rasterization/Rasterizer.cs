@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using ParticleSimulator.Engine;
 using ParticleSimulator.Engine.Threading;
 using ParticleSimulator.Simulation.Particles;
 

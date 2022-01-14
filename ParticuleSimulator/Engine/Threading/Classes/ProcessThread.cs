@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
-using Generic.Classes;
-using ParticleSimulator.Engine.Threading;
 
-namespace ParticleSimulator.Engine {
+namespace ParticleSimulator.Engine.Threading {
 	public class ProcessThread : ACalculationHandler {
 		public ProcessThread(EvaluationStep config, IDataGatherer[] dataGatherers, AutoResetEvent[] readySignals, AutoResetEvent[] doneSignals)
 		: base(readySignals, doneSignals) {
