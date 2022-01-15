@@ -97,13 +97,12 @@ namespace ParticleSimulator.Simulation.Baryon {
 				lastNode = node;
 				node = node.Parent;
 				for (int i = 0; i < node.Children.Length; i++)
-					if (node.Children[i].ItemCount > 0)
-						if (!ReferenceEquals(lastNode, node.Children[i])) {
-							child = (BarnesHutTree)node.Children[i];
-							if (leaf.CanApproximate(child))
-								farField.Enqueue(child);
-							else remaining.Enqueue(child);
-						}
+					if (node.Children[i].ItemCount > 0 && !ReferenceEquals(lastNode, node.Children[i])) {
+						child = (BarnesHutTree)node.Children[i];
+						if (leaf.CanApproximate(child))
+							farField.Enqueue(child);
+						else remaining.Enqueue(child);
+					}
 
 				while (remaining.TryDequeue(out other))
 					if (other.IsLeaf)

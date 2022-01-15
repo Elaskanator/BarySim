@@ -43,7 +43,7 @@ namespace Generic.Trees {
 
 		protected virtual ICollection<T> NewBin() => new HashedContainer<T>();
 
-		protected virtual int ChildIndex(T item) {
+		public virtual int ChildIndex(T item) {
 			for (int i = 0; i < this.Children.Length; i++)
 				if (this.Children[i].DoesEncompass(item))
 					return i;

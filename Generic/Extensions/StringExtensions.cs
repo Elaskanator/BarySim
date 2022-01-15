@@ -15,13 +15,15 @@ namespace Generic.Extensions {
 			} else if (double.IsNaN(value) || double.IsInfinity(value)) {
 				result = value.ToString();
 			} else {
-				double mag = value.BaseExponent();
+				double mag = Math.Round(value.BaseExponent(), 5);
 				int magnitude = (int)Math.Floor(mag),
 					remainingDecimals = maxLength.HasValue && maxLength.Value - 2 < minAccuracy
 						? maxLength.Value - 2
 						: minAccuracy,
 					currentLength = 1;
-				if (magnitude > minAccuracy + 2 || Math.Abs(magnitude) + (magnitude < 0 ? 1 : 0) + 1 > maxLength) {
+				bool scientificNotation = magnitude > minAccuracy + 2
+					|| Math.Abs(magnitude) + (magnitude < 0 ? 1 : 0) + 1 > maxLength;
+				if (scientificNotation) {
 					stripZeros = false;
 					exponentStr = "E" + magnitude;
 					currentLength += exponentStr.Length;

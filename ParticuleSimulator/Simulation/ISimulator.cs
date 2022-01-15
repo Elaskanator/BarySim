@@ -11,6 +11,8 @@ namespace ParticleSimulator.Simulation {
 
 		void Init();
 
+		void Reset();
+
 		ParticleData[] RefreshSimulation();
 	}
 }

@@ -320,7 +320,9 @@ namespace ParticleSimulator.Engine {
 		private void ResetSimulation() {
 			bool paused = this._stepEval_Simulate.IsPaused;
 			this.ResetRandon();
+			//this._stepEval_Simulate.Pause();
 			this._stepEval_Simulate.Restart(false);
+			//this.Simulator.Reset();
 			this._stepsStartingPaused[this._stepEval_Simulate.Id] = !paused;
 			if (!paused)
 				this._stepEval_Simulate.Resume();

@@ -160,7 +160,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 						(isDiscrete && cIdx == 0 ? "=" : "≤")
 						+ (isDiscrete
 							? ((int)scaling[cIdx]).ToString()
-							: scaling[cIdx].ToStringBetter(2, true, 5));
+							: scaling[cIdx].ToStringBetter(2, true, 3));
 
 					for (int i = 0; i < rowStringData.Length; i++)
 						buffer[pixelIdx + i + 1] = new ConsoleExtensions.CharInfo(rowStringData[i], ConsoleColor.Gray);

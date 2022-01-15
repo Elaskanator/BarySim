@@ -32,6 +32,10 @@ namespace ParticleSimulator.Simulation {
 			this.ParticleTree = (TTree)this.ParticleTree.Add(
 				this.InitialParticleGroups.SelectMany(g => g.InitialParticles));
 		}
+
+		public void Reset() {
+			this.ParticleTree.Clear();
+		}
 		
 		public abstract Vector<float> Center { get; }
 		protected abstract bool AccumulateTreeNodeData { get; }
@@ -47,12 +51,8 @@ namespace ParticleSimulator.Simulation {
 		public ParticleData[] RefreshSimulation() {
 			this.IterationCount++;
 			if (this.IterationCount > 0)//show starting data on first result
-				if (this.ParticleTree.ItemCount == 0) {
-					Program.CancelAction(null, null);
-				} else {
-					this.Refresh();
-					this.ParticleTree = this.PruneTree();
-				}
+				this.Refresh();
+				this.ParticleTree = this.PruneTree();
 
 			return this.ParticleTree.Select(p => new ParticleData(p)).ToArray();
 		}
@@ -75,7 +75,9 @@ namespace ParticleSimulator.Simulation {
 
 					if (particle.Enabled) {
 						node = leaves[i].Item1;
-						leaf = node.GetContainingLeaf(particle);
+						leaf = node;
+						while (!leaf.IsLeaf)
+							leaf = leaf.Children[leaf.ChildIndex(particle)];
 						particle.ApplyTimeStep(Parameters.TIME_SCALE, this.ParticleTree);
 
 						if (particle.Enabled) {

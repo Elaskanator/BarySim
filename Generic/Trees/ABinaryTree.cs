@@ -34,7 +34,7 @@ namespace Generic.Trees {
 			this.BitmaskLessThan(item.Position, this.CornerLeft) == 0
 			&& this.BitmaskGreaterThanOrEqual(item.Position, this.CornerRight) == 0;
 
-		protected override int ChildIndex(TItem item) =>
+		public override int ChildIndex(TItem item) =>
 			this.BitmaskGreaterThanOrEqual(item.Position, this.Center);//left-handed convention [a, b)
 		protected int InverseIndex(int idx) =>
 			(1 << this.Dim) - idx - 1;

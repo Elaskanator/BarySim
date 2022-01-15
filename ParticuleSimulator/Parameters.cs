@@ -8,37 +8,37 @@ using ParticleSimulator.Rendering.SystemConsole;
 namespace ParticleSimulator {
 	//sentinel value is usually -1 for unlimited or to disable the feature
 	public static class Parameters {
-		public static readonly int WINDOW_WIDTH = 120;//Console.LargestWindowWidth;
-		public static readonly int WINDOW_HEIGHT = 60;//Console.LargestWindowHeight;
-		//using top and bottom halves of each character to get double the verticle resolution
-		public const float TARGET_FPS = 30f;
-		public const bool VSYNC = false;
+		public static readonly int WINDOW_WIDTH = 128;
+		public static readonly int WINDOW_HEIGHT = 64;
 		public const int SUPERSAMPLING = 2;
+		//using top and bottom halves of each character to get double the verticle resolution
+		public const float TARGET_FPS = 30;
+		public const bool VSYNC = false;
+		public const int DETERMINISTIC_RANDOM_SEED = 1;
 
 		public const int DIM = 3;
-		public const float ZOOM_SCALE = 0.3f;
-		public const float TIME_SCALE = 2f;
-		public const float WORLD_SCALE = 4f;
+		public const float ZOOM_SCALE = 0.333f;
+		public const float TIME_SCALE = 1f;
+		public const float WORLD_SCALE = 6f;
 		public const bool AUTOFOCUS_DEFAULT = true;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
-		public const int PARTICLES_GROUP_COUNT = 1 << 3;
+		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 1 << 13;
+		public const int PARTICLES_GROUP_MAX = 1000000;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
-		public const float INACCURCY_SQUARED = 1f;
-		public const int DETERMINISTIC_RANDOM_SEED = 0;
+		public const float INACCURCY = 3f;
 		public const float PIXEL_ROUNDOFF = 0.5f;
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
 		public const bool SYNC_SIMULATION = true;//controls synchronization of rendering to simulation (e.g. faster rotation)
-		public const int SIMULATION_SKIPS = 0;//run the simulation multiple times between result sets
+		public const int SIMULATION_SKIPS = 0;//refresh the simulation multiple times between renders
 		public const int QUADTREE_LEAF_CAPACITY = 8;
 		
 		public const bool COLLISION_ENABLE = true;
 		public const bool MERGE_ENABLE = true;
-		public const float MERGE_ENGULF_RATIO = 0.75f;
-		public const float DRAG_CONSTANT = 0.15f;
+		public const float MERGE_ENGULF_RATIO = 0.8f;
+		public const float DRAG_CONSTANT = 0.2f;
 
 		public const float WORLD_PADDING_PCT = 5f;
 		public const float WORLD_DEATH_BOUND_RADIUS = 10f;
@@ -54,7 +54,8 @@ namespace ParticleSimulator {
 		public static readonly ConsoleColor[] COLOR_ARRAY = ColoringScales.StarColors;
 		//public static readonly ConsoleColor[] COLOR_ARRAY = new ConsoleColor[] { ConsoleColor.White };
 		public const bool COLOR_USE_FIXED_BANDS = true;
-		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => (float)(1 << 2*i)).ToArray();
+		public static readonly float[] COLOR_FIXED_BANDS = Enumerable.Range(0, COLOR_ARRAY.Length).Select(i => MathF.Pow(10f, i)).ToArray();
+
 		public const bool AUTOSCALE_PERCENTILE = false;
 		public const float AUTOSCALE_FIXED_MIN = -1f;
 		public const float AUTOSCALE_FIXED_MAX = -1f;
@@ -68,32 +69,35 @@ namespace ParticleSimulator {
 		public const float GRAVITATIONAL_CONSTANT	= 1E-10f;
 		//TODO add electrostatic forces
 
-		public const float MASS_SCALAR				= 1f;
-		public const float MASS_LUMINOSITY_SCALAR	= 4E-2f;
-		public const float GRAVITY_RADIAL_DENSITY	= 5E7f;
+		public const float MASS_SCALAR				= 0.1f;
+		public const float MASS_LUMINOSITY_SCALAR	= 3.333f;
+		public const float MASS_LUMINOSITY_POW		= 3f;
+		public const float GRAVITY_RADIAL_DENSITY	= 4E7f;
 
-		public const float GALAXY_RADIUS			= 0.5f;
-		public const float GALAXY_CONCENTRATION		= -0.5f;
+		public const float GALAXY_RADIUS			= 1.5f;
+		public const float GALAXY_CONCENTRATION		= 0.5f;
+		public const float GALAXY_RADIAL_SPEED_POW	= 0.7f;
 		public const float GALAXY_PLUMMER_SOFTENING	= 0.1f;
 
 		public const bool GRAVITY_SUPERNOVA_ENABLE = true;
-		public const float GRAVITY_CRITICAL_MASS = 3000f;
-		public const float GRAVITY_EJECTA_PARTICLE_MASS = 1f;
-		public const float GRAVITY_EJECTA_SPEED = 4.0E-3f;
-		public const float GRAVITY_EJECTA_RADIUS_SCALAR = 2f;
-		public const bool GRAVITY_BLACK_HOLE_ENABLE = true;
-		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.8f;
+		public const float GRAVITY_CRITICAL_MASS = 3200f;
+		public static readonly float GRAVITY_EJECTA_PARTICLE_MASS = MASS_SCALAR;
+		public const float GRAVITY_EJECTA_SPEED = 1.0E-2f;
+		public const float GRAVITY_EJECTA_RADIUS_SCALAR = 4f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 1.0E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.1E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 1.0E-3f;
+		public const bool GRAVITY_BLACK_HOLE_ENABLE = true;
+		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.7f;
+
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 0.6E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 2.0E-3f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.5E-3f;
+
 		public const float GRAVITY_ALIGNMENT_SKEW_POW = 4f;//WIP
 		public const float GRAVITY_ALIGNMENT_SKEW_RANGE_PCT = 0f;//WIP
 		#endregion Gravity
 
 		#region Aux
-		public static readonly float WORLD_DEATH_BOUND_RADIUS_SQUARED = WORLD_DEATH_BOUND_RADIUS*WORLD_DEATH_BOUND_RADIUS;
 		public const float TARGET_FPS_DEFAULT = 30f;
 		public const int PERF_WARN_MS = 2000;
 		public const int AUTOSCALE_INTERVAL_MS = -1;
@@ -116,6 +120,9 @@ namespace ParticleSimulator {
 			!COLOR_USE_FIXED_BANDS && COLOR_ARRAY.Length > 1
 			&& COLOR_METHOD != ParticleColoringMethod.Group
 			&& COLOR_METHOD != ParticleColoringMethod.Random;
+
+		public static readonly float INACCURCY_SQUARED = INACCURCY * INACCURCY;
+		public static readonly float WORLD_DEATH_BOUND_RADIUS_SQUARED = WORLD_DEATH_BOUND_RADIUS*WORLD_DEATH_BOUND_RADIUS;
 
 		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-WORLD_X_ASPECT * WORLD_SCALE / 2f, -WORLD_Y_ASPECT * WORLD_SCALE / 2f, -WORLD_Z_ASPECT * WORLD_SCALE / 2f);
 		public static readonly Vector<float> WORLD_LEFT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_LEFT, new Vector<float>(float.NegativeInfinity));

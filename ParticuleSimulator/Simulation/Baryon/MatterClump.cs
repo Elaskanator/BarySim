@@ -15,7 +15,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 			this.Mass = value;
 			this.Luminosity = this.IsCollapsed
 				? -1f
-				: MathF.Pow(value * Parameters.MASS_LUMINOSITY_SCALAR, 3.5f);
+				: Parameters.MASS_LUMINOSITY_SCALAR * MathF.Pow(value, Parameters.MASS_LUMINOSITY_POW);
 			this.Radius = (float)VectorFunctions.HypersphereRadius(value / this.Density, 3);
 		}
 
