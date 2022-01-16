@@ -40,7 +40,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 			Vector<float> collisionInfluence = Vector<float>.Zero;
 			if (distanceSquared <= Parameters.WORLD_EPSILON) {
 				gravitationalInfluence = Vector<float>.Zero;
-				if (Parameters.MERGE_ENABLE)
+				if (Parameters.COLLISION_ENABLE && Parameters.MERGE_ENABLE)
 					(this.Mergers ??= new()).Enqueue(other);
 			} else {
 				float distance = MathF.Sqrt(distanceSquared);

@@ -28,7 +28,7 @@ namespace ParticleSimulator {
 		public const int PARTICLES_GROUP_MAX = 1000000;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
-		public const float INACCURCY = 3f;
+		public const float INACCURCY = 2f;
 		public const float PIXEL_ROUNDOFF = 0.5f;
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
 		public const bool SYNC_SIMULATION = true;//controls synchronization of rendering to simulation (e.g. faster rotation)
@@ -66,11 +66,11 @@ namespace ParticleSimulator {
 		//public const string EXPORT_DIR = null;	//TODO
 
 		#region Gravity
-		public const float GRAVITATIONAL_CONSTANT	= 1E-10f;
+		public const float GRAVITATIONAL_CONSTANT	= 2E-10f;
 		//TODO add electrostatic forces
 
 		public const float MASS_SCALAR				= 0.1f;
-		public const float MASS_LUMINOSITY_SCALAR	= 3.333f;
+		public const float MASS_LUMINOSITY_SCALAR	= 3f;
 		public const float MASS_LUMINOSITY_POW		= 3f;
 		public const float GRAVITY_RADIAL_DENSITY	= 4E7f;
 
@@ -80,13 +80,13 @@ namespace ParticleSimulator {
 		public const float GALAXY_PLUMMER_SOFTENING	= 0.1f;
 
 		public const bool GRAVITY_SUPERNOVA_ENABLE = true;
-		public const float GRAVITY_CRITICAL_MASS = 3200f;
+		public const float GRAVITY_CRITICAL_MASS = 3600f;
 		public static readonly float GRAVITY_EJECTA_PARTICLE_MASS = MASS_SCALAR;
-		public const float GRAVITY_EJECTA_SPEED = 1.0E-2f;
-		public const float GRAVITY_EJECTA_RADIUS_SCALAR = 4f;
+		public const float GRAVITY_EJECTA_SPEED = 8.0E-3f;
+		public const float GRAVITY_EJECTA_RADIUS_SCALAR = 5f;
 
-		public const bool GRAVITY_BLACK_HOLE_ENABLE = true;
-		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.7f;
+		public const bool GRAVITY_BLACK_HOLE_ENABLE = false;
+		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.5f;
 
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 0.6E-3f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.0E-3f;
