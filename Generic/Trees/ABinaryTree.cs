@@ -53,11 +53,11 @@ namespace Generic.Trees {
 			int inverseQuadrantMask = this.InverseIndex(quadrantMask);
 
 			ABinaryTree<TItem, TCorner> newParent = this.NewNode(quadrantMask, true);
+			newParent.ItemCount = this.ItemCount;
+			newParent.Children = new ABinaryTree<TItem, TCorner>[1u << this.Dim];
 			this.Parent = newParent;
 
 			int i = 0;
-			newParent.ItemCount = this.ItemCount;
-			newParent.Children = new ABinaryTree<TItem, TCorner>[1u << this.Dim];
 			foreach (ABinaryTree<TItem, TCorner> node in newParent.FormSubnodes())
 				newParent.Children[i] = inverseQuadrantMask == i++ ? this : node;
 

@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Numerics;
+using ParticleSimulator.Simulation.Baryon;
 using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Simulation {
@@ -7,11 +7,9 @@ namespace ParticleSimulator.Simulation {
 		int IterationCount { get; }
 		int ParticleCount { get; }
 		IEnumerable<IParticle> Particles { get; }
-		Vector<float> Center { get; }
+		BaryCenter Center { get; }
 
 		void Init();
-
-		void Reset();
 
 		ParticleData[] RefreshSimulation();
 	}

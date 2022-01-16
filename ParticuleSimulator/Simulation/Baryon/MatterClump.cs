@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using Generic.Trees;
 using Generic.Vectors;
 using ParticleSimulator.Simulation.Particles;
 
@@ -53,14 +52,14 @@ namespace ParticleSimulator.Simulation.Baryon {
 							? (this, other)
 							: (other, this);
 
-						if (Parameters.MERGE_ENABLE && distance <= (larger.Radius - Parameters.MERGE_ENGULF_RATIO*smaller.Radius)) {
+						if (Parameters.MERGE_ENABLE && distance * Parameters.MERGE_ENGULF_RATIO <= (larger.Radius - smaller.Radius)) {
 							gravitationalInfluence = Vector<float>.Zero;
 							(this.Mergers ??= new()).Enqueue(other);
 						} else {
 							float relativeDistance = distance / radiusSum;
 							Vector<float> dV = other.Velocity - this.Velocity;
 							gravitationalInfluence *= relativeDistance;
-							collisionInfluence = dV * ((1f - relativeDistance) * Parameters.DRAG_CONSTANT * smaller.Mass);
+							collisionInfluence = dV * ((1f - relativeDistance) * smaller.Mass * Parameters.DRAG_CONSTANT);
 						}
 					}
 				}
@@ -68,8 +67,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 			return new(gravitationalInfluence, collisionInfluence);
 		}
 
-		protected override bool IsInRange(ATree<MatterClump> tree) {
-			BaryCenter center = ((BarnesHutTree)tree).MassBaryCenter;
+		protected override bool IsInRange(BaryCenter center) {
 			Vector<float> toCenter = center.Position - this.Position;
 			float distanceSquared = Vector.Dot(toCenter, toCenter);
 			return distanceSquared <= Parameters.WORLD_DEATH_BOUND_RADIUS_SQUARED
@@ -131,7 +129,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 							this.Position + (((1f - rand*rand) * radiusRange) * direction),
 							this.Velocity + ((rand * Parameters.GRAVITY_EJECTA_SPEED) * direction))
 						{
-							GroupId = this.GroupId
+							GroupId = this.GroupId,
 						};
 						newParticle.SetMass(avgMass);
 						newParticle.Impulse += avgImpulse;

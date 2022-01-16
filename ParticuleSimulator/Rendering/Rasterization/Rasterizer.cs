@@ -67,7 +67,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				Pixel[] results = new Pixel[this.OutNumPixels];
 				float?[] ranks = new float?[this.OutNumPixels];
 
-				this.Camera.Increment(Program.Engine.Simulator.Center);
+				this.Camera.Increment(Program.Engine.Simulator.Center.Position);
 
 				int[] counts = new int[this.InternalNumPixels];
 				float[] densities = new float[this.InternalNumPixels];

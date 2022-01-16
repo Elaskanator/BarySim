@@ -59,10 +59,5 @@ namespace ParticleSimulator.Simulation.Baryon {
 				? total
 				: new(total.Position * (1f / total.Weight), total.Weight);
 		}
-
-		public bool CanApproximate(BarnesHutTree node) {
-			Vector<float> pointingVector = node.MassBaryCenter.Position - this.MassBaryCenter.Position;
-			return Parameters.INACCURCY_SQUARED * Vector.Dot(pointingVector, pointingVector) > node.SizeSquared;
-		}
 	}
 }
