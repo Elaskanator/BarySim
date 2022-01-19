@@ -58,7 +58,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 						} else {
 							float relativeDistance = distance / radiusSum;
 							Vector<float> dV = other.Velocity - this.Velocity;
-							gravitationalInfluence *= relativeDistance;
+							gravitationalInfluence *= relativeDistance * relativeDistance;
 							collisionInfluence = dV * ((1f - relativeDistance) * smaller.Mass * Parameters.DRAG_CONSTANT);
 						}
 					}

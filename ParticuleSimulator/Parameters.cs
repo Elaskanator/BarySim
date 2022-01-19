@@ -14,8 +14,7 @@ namespace ParticleSimulator {
 		//using top and bottom halves of each character to get double the verticle resolution
 		public const float TARGET_FPS = 30;
 		public const bool VSYNC = false;
-
-		public const int FRAME_LIMIT = 600;
+		public const int FRAME_LIMIT = -1;
 		public const int DETERMINISTIC_RANDOM_SEED = 0;
 
 		public const int DIM = 3;
@@ -27,22 +26,21 @@ namespace ParticleSimulator {
 
 		public const int PARTICLES_GROUP_COUNT = 1;
 		public const int PARTICLES_GROUP_MIN = 1;
-		public const int PARTICLES_GROUP_MAX = 20000;
+		public const int PARTICLES_GROUP_MAX = 25000;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
 		public const float INACCURCY = 2f;
 		public const float PIXEL_ROUNDOFF = 0.5f;
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
-		public const bool PARALLEL_SIMULATION = true;//once tree data are ready, whether to parallelize particle interaction
-		//public const int PARALLELISM_THREADS = 8;//tree preparation and particle evaluation
+		public const int PARTICLES_PER_BATCH = 5000;//tree preparation and particle evaluation parallelism, breaks determinism due to evaluation order and floating point precision
 		public const bool SYNC_SIMULATION = true;//controls synchronization of rendering to simulation (e.g. faster rotation)
 		public const int SIMULATION_SKIPS = 0;//refresh the simulation multiple times between renders
-		public const int QUADTREE_LEAF_CAPACITY = 1;
+		public const int QUADTREE_LEAF_CAPACITY = 8;//affects accuracy
 		
 		public const bool COLLISION_ENABLE = true;
 		public const bool MERGE_ENABLE = true;
-		public const float MERGE_ENGULF_RATIO = 0.9f;
-		public const float DRAG_CONSTANT = 0.15f;
+		public const float MERGE_ENGULF_RATIO = 0.75f;
+		public const float DRAG_CONSTANT = 0.1f;
 
 		public const float WORLD_PADDING_PCT = 5f;
 		public const float WORLD_DEATH_BOUND_RADIUS = 10f;
@@ -74,13 +72,13 @@ namespace ParticleSimulator {
 		//TODO add electrostatic forces
 
 		public const float MASS_SCALAR				= 0.1f;
-		public const float MASS_RADIAL_DENSITY		= 2E8f;
+		public const float MASS_RADIAL_DENSITY		= 4E7f;
 		public const float MASS_LUMINOSITY_SCALAR	= 1E-1f;
 		public const float MASS_LUMINOSITY_POW		= 3f;
 
 		public const float GALAXY_RADIUS			= 0.5f;
 		public const float GALAXY_THINNESS			= 2f;
-		public const float GALAXY_CONCENTRATION		= 1f;
+		public const float GALAXY_CONCENTRATION		= 0.667f;
 		public const float GALAXY_RADIAL_SPEED_POW	= 0f;
 
 		public const bool GRAVITY_SUPERNOVA_ENABLE = true;
@@ -93,8 +91,8 @@ namespace ParticleSimulator {
 
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 0.2E-3f;
 		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.1E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 0.5E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.1E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 1.0E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.2E-3f;
 		#endregion Gravity
 
 		#region Aux
