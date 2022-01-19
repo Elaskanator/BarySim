@@ -38,6 +38,9 @@ namespace ParticleSimulator.Rendering {
 					this.SimTimings.LastUpdate,
 					this.FpsTimings.LastUpdate);
 				this.FramesCompleted++;
+
+				if (Parameters.FRAME_LIMIT > 0 && this.Engine.Simulator.IterationCount >= Parameters.FRAME_LIMIT)
+					Program.CancelAction(null, null);
 			}
 		}
 

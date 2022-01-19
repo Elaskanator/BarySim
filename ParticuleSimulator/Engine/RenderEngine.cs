@@ -25,10 +25,11 @@ namespace ParticleSimulator.Engine {
 			this.Evaluators = this.BuildEvaluators().ToArray();
 			this._stepsStartingPaused = this.Evaluators.ToDictionary(e => e.Id, e => e.IsPaused);
 
-			this.Simulator = new BaryonSimulator();
+			this.Simulator = new BaryonSimulator(Parameters.DIM);
 
 			this.Camera = new() {
 				Zoom = Parameters.ZOOM_SCALE,
+				DeafultZoom = Parameters.ZOOM_SCALE,
 				AutoCentering = Parameters.AUTOFOCUS_DEFAULT,
 			};
 
@@ -188,7 +189,7 @@ namespace ParticleSimulator.Engine {
 			this._stepEval_Simulate = ProcessThread.New(new() {
 				Name = "Simulate",
 				InitFn = () => { this.Simulator.Init(); },
-				GeneratorFn = () => { return this.Simulator.RefreshSimulation(); },
+				GeneratorFn = () => { return this.Simulator.Update(); },
 				CallbackFn = (r) => { this.Renderer.UpdateSimTime(r); },
 				OutputResource = this._particleResource,
 				OutputSkips = Parameters.SIMULATION_SKIPS,

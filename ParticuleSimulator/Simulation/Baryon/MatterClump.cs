@@ -18,7 +18,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 			this.Radius = (float)VectorFunctions.HypersphereRadius(value / this.Density, 3);
 		}
 
-		public override float Density => Parameters.GRAVITY_RADIAL_DENSITY;
+		public override float Density => Parameters.MASS_RADIAL_DENSITY;
 		public bool IsCollapsed { get; private set; }
 
 		public float Mass;
@@ -77,8 +77,47 @@ namespace ParticleSimulator.Simulation.Baryon {
 		}
 
 		protected override void AfterMove() {
-			if (!this.IsCollapsed)
-				this.EvaluateExplosion();
+			if (Parameters.GRAVITY_SUPERNOVA_ENABLE && !this.IsCollapsed && this.Mass >= Parameters.GRAVITY_CRITICAL_MASS) {
+				if (Parameters.GRAVITY_BLACK_HOLE_ENABLE && this.Mass >= Parameters.GRAVITY_BLACKHOLE_THRESHOLD_RATIO * Parameters.GRAVITY_CRITICAL_MASS) {
+					this.IsCollapsed = true;
+					this.Luminosity = -1f;
+				} else {
+					int numParticles = (int)(Parameters.GRAVITY_EJECTA_PARTICLE_MASS > 0
+						? this.Mass / Parameters.GRAVITY_EJECTA_PARTICLE_MASS
+						: this.Mass);
+					if (numParticles > 1) {
+						float radiusRange = MathF.Pow(this.Radius, Parameters.DIM);
+						float ratio = (1f / numParticles);
+						float avgMass = ratio * this.Mass;
+						Vector<float> avgImpulse = ratio * this.Impulse;
+
+						this.NewParticles ??= new();
+						this.SetMass(avgMass);
+						this.Impulse = avgImpulse;
+
+						Vector<float> direction;
+						float rand, radius;
+						MatterClump newParticle;
+						for (int i = 1; i < numParticles; i++) {
+							direction = VectorFunctions.New(
+								VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
+							rand = (float)Program.Engine.Random.NextDouble();
+							radius = MathF.Pow(rand*radiusRange, (1f / Parameters.DIM));
+
+							newParticle = new(
+								this.Position + direction * radius,
+								this.Velocity + direction * (rand * Parameters.GRAVITY_EJECTA_SPEED))
+							{
+								GroupId = this.GroupId,
+							};
+							newParticle.SetMass(avgMass);
+							newParticle.Impulse += avgImpulse;
+
+							this.NewParticles.Enqueue(newParticle);
+						}
+					}
+				}
+			}
 		}
 
 		public override void Incorporate(MatterClump other) {
@@ -95,50 +134,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 			this.Position = weightedPosition;
 			this.Momentum = totalMomentum;
 			this.Impulse = totalImpulse;
-		}
-
-		private void EvaluateExplosion() {
-			if (Parameters.GRAVITY_SUPERNOVA_ENABLE && this.Mass > Parameters.GRAVITY_CRITICAL_MASS) {//supernova!
-				if (Parameters.GRAVITY_BLACK_HOLE_ENABLE && this.Mass > Parameters.GRAVITY_BLACKHOLE_THRESHOLD_RATIO * Parameters.GRAVITY_CRITICAL_MASS) {
-					this.IsCollapsed = true;
-					this.Luminosity = -1f;
-				} else {
-					int numParticles = (int)(Parameters.GRAVITY_EJECTA_PARTICLE_MASS > 0
-						? this.Mass / Parameters.GRAVITY_EJECTA_PARTICLE_MASS
-						: this.Mass);
-					numParticles = numParticles > 0 ? numParticles : 1;
-
-					float ratio = (1f / numParticles);
-					float avgMass = ratio * this.Mass;
-					Vector<float> avgImpulse = ratio * this.Impulse;
-				
-					float radiusRange = this.Radius * Parameters.GRAVITY_EJECTA_RADIUS_SCALAR;
-
-					this.SetMass(avgMass);
-					this.Impulse = avgImpulse;
-
-					Vector<float> direction;
-					float rand;
-					MatterClump newParticle;
-					for (int i = 1; i < numParticles; i++) {
-						direction = VectorFunctions.New(
-							VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
-						rand = (float)Program.Engine.Random.NextDouble();
-
-						newParticle = new(
-							this.Position + (((1f - rand*rand) * radiusRange) * direction),
-							this.Velocity + ((rand * Parameters.GRAVITY_EJECTA_SPEED) * direction))
-						{
-							GroupId = this.GroupId,
-						};
-						newParticle.SetMass(avgMass);
-						newParticle.Impulse += avgImpulse;
-
-						this.NewParticles ??= new();
-						this.NewParticles.Enqueue(newParticle);
-					}
-				}
-			}
 		}
 	}
 }

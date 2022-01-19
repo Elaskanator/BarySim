@@ -25,19 +25,37 @@ namespace ParticleSimulator.Simulation.Particles {
 
 		protected override void ParticleAddPositionVelocity(TParticle particle) {
 			float rand = (float)Program.Engine.Random.NextDouble();
-			Vector<float> offset = VectorFunctions.New(
-				VectorFunctions.RandomCoordinate_Spherical(
-					this.Radius * MathF.Pow(rand, Parameters.GALAXY_CONCENTRATION),
-					Parameters.DIM,
-					Program.Engine.Random)
-				.Select(x => (float)x));
-			particle.Position += offset;
+			float offset = this.Radius * MathF.Pow(rand, Parameters.GALAXY_CONCENTRATION);
+			float[] offsetV;
+			if (Parameters.DIM <= 2) {
+				offsetV = VectorFunctions
+					.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random)
+					.Select(x => offset*x)
+					.ToArray();
+			} else{
+				offsetV = VectorFunctions
+					.RandomUnitVector_Spherical(2, Program.Engine.Random)
+					.Select(x => offset*x)
+					.Concat(Enumerable.Repeat(0f, Vector<float>.Count - 2))
+					.ToArray();
+				float offset2 = (this.Radius*this.Radius - offset*offset) / (this.Radius * this.Radius);
+				float rand2 = MathF.Pow((float)Program.Engine.Random.NextDouble(), Parameters.GALAXY_CONCENTRATION);
+				offset2 *= rand2 * this.Radius / Parameters.GALAXY_THINNESS;
+				float[] offsetV2 = VectorFunctions
+					.RandomUnitVector_Spherical(Parameters.DIM - 2, Program.Engine.Random)
+					.Select(x => offset2*x)
+					.ToArray();
+				for (int i = 0; i < Parameters.DIM - 2; i++)
+					offsetV[i + 2] = offsetV2[i];
+			}
+			Vector<float> positionOffset = VectorFunctions.New(offsetV);
+			particle.Position += positionOffset;
 			particle.Velocity +=
 				  (this.InternalDirection ? 1f : -1f)
 				* (float)Program.Engine.Random.NextDouble()
 				* Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP
-				* MathF.Pow(offset.Magnitude() / this.Radius, Parameters.GALAXY_RADIAL_SPEED_POW)
-				* this.DirectionUnitVector(offset);
+				* MathF.Pow(offset / this.Radius, Parameters.GALAXY_RADIAL_SPEED_POW)
+				* this.DirectionUnitVector(positionOffset);
 		}
 
 		private Vector<float> DirectionUnitVector(Vector<float> offset) {

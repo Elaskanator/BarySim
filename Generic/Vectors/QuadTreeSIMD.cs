@@ -19,13 +19,13 @@ namespace Generic.Vectors {
 		protected virtual QuadTreeSIMD<TItem> NewNode(QuadTreeSIMD<TItem> parent, Vector<float> cornerLeft, Vector<float> cornerRight) =>
 			new QuadTreeSIMD<TItem>(this.Dim, cornerLeft, cornerRight, parent);
 
-		protected override Vector<float> Midpoint(Vector<float> first, Vector<float> second) =>
+		public override Vector<float> Midpoint(Vector<float> first, Vector<float> second) =>
 			(first + second) * 0.5f;
-		protected override bool EqualsAny(Vector<float> first, Vector<float> second) =>
+		public override bool EqualsAny(Vector<float> first, Vector<float> second) =>
 			first.EqualsAny(second, this.Dim);
-		protected override int BitmaskLessThan(Vector<float> first, Vector<float> second) =>
+		public override int BitmaskLessThan(Vector<float> first, Vector<float> second) =>
 			first.BitmaskLessThan(second, this.Dim);
-		protected override int BitmaskGreaterThanOrEqual(Vector<float> first, Vector<float> second) =>
+		public override int BitmaskGreaterThanOrEqual(Vector<float> first, Vector<float> second) =>
 			first.BitmaskGreaterThanOrEqual(second, this.Dim);
 
 		public readonly Vector<float> Size;

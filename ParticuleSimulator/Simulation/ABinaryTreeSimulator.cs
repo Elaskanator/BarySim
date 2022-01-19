@@ -11,16 +11,17 @@ namespace ParticleSimulator.Simulation {
 	where TParticle : AParticle<TParticle>
 	where TTree : ATree<TParticle> {
 		protected ABinaryTreeSimulator(TTree tree) {
-			this.ParticleTree = tree;
+			this._tree = tree;
 		}
 
 		public int IterationCount { get; private set; }
 		public AParticleGroup<TParticle>[] ParticleGroups { get; private set; }
 
-		protected TTree ParticleTree;
+		protected TTree _tree;
+		private readonly Queue<Tuple<TTree, TParticle[]>> _leaves = new();
 
-		public int ParticleCount => this.ParticleTree is null ? 0 : this.ParticleTree.ItemCount;//this.ParticleTree is null ? 0 : this.ParticleTree.Count;
-		public ICollection<TParticle> Particles => this.ParticleTree;
+		public int ParticleCount => this._tree is null ? 0 : this._tree.ItemCount;//this.ParticleTree is null ? 0 : this.ParticleTree.Count;
+		public ICollection<TParticle> Particles => this._tree;
 		IEnumerable<IParticle> ISimulator.Particles => this.Particles;
 		
 		public abstract BaryCenter Center { get; }
@@ -32,7 +33,7 @@ namespace ParticleSimulator.Simulation {
 		protected virtual void ComputeLeafNode(TTree node, TParticle[] particles) => throw null;
 		protected virtual void ComputeInnerNode(TTree node) => throw null;
 
-		protected virtual TTree PruneTree() => (TTree)this.ParticleTree.Prune();
+		protected virtual TTree PruneTree() => (TTree)this._tree.Prune();
 		public void Init() {
 			this.IterationCount = -1;
 
@@ -42,48 +43,38 @@ namespace ParticleSimulator.Simulation {
 				this.ParticleGroups[i].Init();
 			}
 
-			this.ParticleTree.Clear();
-			this.ParticleTree = (TTree)this.ParticleTree
+			this._leaves.Clear();
+			this._tree.Clear();
+			this._tree = (TTree)this._tree
 				.Add(this.ParticleGroups.SelectMany(g => g.InitialParticles))
 				.Prune();
 		}
 
-		public ParticleData[] RefreshSimulation() {
-			this.IterationCount++;
-			if (this.IterationCount > 0) {//show starting data on first result
-				List<Tuple<TTree, TParticle[]>> leaves = this.PrepareTree();
-
-				Parallel.ForEach(
-					leaves,
-					leaf => this.ComputeInteractions(
-						leaf.Item1,
-						leaf.Item2));
-
-				this.MoveParticles(leaves);
-
-				this.ParticleTree = this.PruneTree();
+		public ParticleData[] Update() {
+			if (++this.IterationCount > 0) {//show starting data on first result
+				this.PrepareTree();
+				this.RefreshInteractions();
+				this.MoveParticles();
+				this._tree = this.PruneTree();
 			}
-			return this.ParticleTree.Select(p => new ParticleData(p)).ToArray();
+			return this._tree.Select(p => new ParticleData(p)).ToArray();
 		}
 
-		private List<Tuple<TTree, TParticle[]>> PrepareTree() {
-			List<Tuple<TTree, TParticle[]>> leaves = new((int)(
-				((float)this.ParticleTree.ItemCount / this.ParticleTree.LeafCapacity)
-				* (this.ParticleTree.LeafCapacity > 1 ? 1.5f : 1f)));
+		private void PrepareTree() {
 			TParticle[] particles;
 
-			if (this.ParticleTree.IsLeaf) {
-				particles = this.ParticleTree.Bin.ToArray();
-				leaves.Add(new(this.ParticleTree, particles));
+			if (this._tree.IsLeaf) {
+				particles = this._tree.Bin.ToArray();
+				this._leaves.Enqueue(new(this._tree, particles));
 				if (this.AccumulateTreeNodeData)
-					this.ComputeLeafNode(this.ParticleTree, particles);
+					this.ComputeLeafNode(this._tree, particles);
 			} else {
 				Stack<TTree> pendingNodes = new(), testNodes = new();
-				pendingNodes.Push(this.ParticleTree);
+				pendingNodes.Push(this._tree);
 
 				Stack<TTree[]> levelStack = new();
 				if (this.AccumulateTreeNodeData)
-					levelStack.Push(new TTree[] { this.ParticleTree });
+					levelStack.Push(new TTree[] { this._tree });
 
 				TTree[] levelNodes;
 				TTree child, node;
@@ -94,7 +85,7 @@ namespace ParticleSimulator.Simulation {
 								child = (TTree)node.Children[cIdx];
 								if (child.IsLeaf) {
 									particles = child.Bin.ToArray();
-									leaves.Add(new(child, particles));
+									this._leaves.Enqueue(new(child, particles));
 									if (this.AccumulateTreeNodeData)
 										this.ComputeLeafNode(child, particles);
 								} else testNodes.Push(child);
@@ -114,32 +105,44 @@ namespace ParticleSimulator.Simulation {
 					for (int i = 0; i < levelNodes.Length; i++)
 						this.ComputeInnerNode(levelNodes[i]);
 			}
-
-			return leaves;
 		}
 
-		private void MoveParticles(List<Tuple<TTree, TParticle[]>> leaves) {
+		private void RefreshInteractions() {
+			if (Parameters.PARALLEL_SIMULATION)
+				Parallel.ForEach(
+					this._leaves,//creates copy of collection
+					leaf => this.ComputeInteractions(
+						leaf.Item1,
+						leaf.Item2));
+			else foreach (Tuple<TTree, TParticle[]> leaf in this._leaves)
+				this.ComputeInteractions(
+					leaf.Item1,
+					leaf.Item2);
+		}
+
+		private void MoveParticles() {
 			BaryCenter center = this.Center;
-			ATree<TParticle> node, leaf;
-			TParticle particle, other, tail;
-			for (int i = 0; i < leaves.Count; i++) {
-				for (int j = 0; j < leaves[i].Item2.Length; j++) {
-					particle = leaves[i].Item2[j];
+
+			Tuple<TTree, TParticle[]> oldLeaf;
+			ATree<TParticle> leaf;
+			TParticle particle;
+			while (this._leaves.TryDequeue(out oldLeaf)) {
+				for (int j = 0; j < oldLeaf.Item2.Length; j++) {
+					particle = oldLeaf.Item2[j];
 					if (particle.Enabled) {
-						node = leaves[i].Item1;
-						leaf = node;
+						leaf = oldLeaf.Item1;
 						while (!leaf.IsLeaf)
 							leaf = leaf.Children[leaf.ChildIndex(particle)];
 
 						if (!(particle.Mergers is null))
-							while (particle.Mergers.TryDequeue(out other))
+							while (particle.Mergers.TryDequeue(out TParticle other))
 								if (other.Enabled) {
 									other.Enabled = false;
-									node.GetContainingLeaf(other).RemoveFromLeaf(other, false);
+									oldLeaf.Item1.GetContainingLeaf(other).RemoveFromLeaf(other, false);
 
 									particle.Incorporate(other);
 									if (!(other.Mergers is null))
-										while (other.Mergers.TryDequeue(out tail))
+										while (other.Mergers.TryDequeue(out TParticle tail))
 											if (particle.Id != tail.Id)
 												particle.Mergers.Enqueue(tail);
 								}
@@ -150,8 +153,8 @@ namespace ParticleSimulator.Simulation {
 						else leaf.RemoveFromLeaf(particle, false);
 						
 						if (!(particle.NewParticles is null))
-							while (particle.NewParticles.TryDequeue(out other))
-								node.Add(other);
+							while (particle.NewParticles.TryDequeue(out TParticle other))
+								oldLeaf.Item1.Add(other);
 					}
 				}
 			}

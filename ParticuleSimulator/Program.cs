@@ -37,16 +37,15 @@ namespace ParticleSimulator {
 			if (!(args is null))
 				args.Cancel = true;
 
-			Engine.Stop();
-
 			Console.ResetColor();
 			Console.CursorLeft = 0;
 			Console.CursorTop = Engine.OverlaysEnabled ? 1 + Parameters.GRAPH_HEIGHT : 0;
-			Console.WriteLine("{0} simulated in {1}", Engine.Simulator.IterationCount.Pluralize("frame"), Engine.EndTimeUtc.Value.Subtract(Engine.StartTimeUtc.Value));
-
-			Engine.Dispose();
+			Console.WriteLine("{0} simulated in {1}", Engine.Simulator.IterationCount.Pluralize("frame"), DateTime.UtcNow.Subtract(Engine.StartTimeUtc.Value));
 
 			ConsoleExtensions.WaitForEnter("Press enter to exit");
+
+			Engine.Stop();
+			Engine.Dispose();
 			Environment.Exit(0);
 		}
 	}

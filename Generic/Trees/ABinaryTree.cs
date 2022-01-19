@@ -12,6 +12,7 @@ namespace Generic.Trees {
 			this.CornerLeft = cornerLeft;
 			this.CornerRight = cornerRight;
 			this.Center = this.Midpoint(cornerLeft, cornerRight);
+
 			this._limitReached =
 				this.EqualsAny(this.CornerLeft, this.Center)
 				|| this.EqualsAny(this.CornerRight, this.Center);
@@ -36,13 +37,13 @@ namespace Generic.Trees {
 
 		public override int ChildIndex(TItem item) =>
 			this.BitmaskGreaterThanOrEqual(item.Position, this.Center);//left-handed convention [a, b)
-		protected int InverseIndex(int idx) =>
+		public int InverseIndex(int idx) =>
 			(1 << this.Dim) - idx - 1;
 		
-		protected abstract TCorner Midpoint(TCorner first, TCorner second);
-		protected abstract bool EqualsAny(TCorner first, TCorner second);
-		protected abstract int BitmaskLessThan(TCorner first, TCorner second);
-		protected abstract int BitmaskGreaterThanOrEqual(TCorner first, TCorner second);
+		public abstract TCorner Midpoint(TCorner first, TCorner second);
+		public abstract bool EqualsAny(TCorner first, TCorner second);
+		public abstract int BitmaskLessThan(TCorner first, TCorner second);
+		public abstract int BitmaskGreaterThanOrEqual(TCorner first, TCorner second);
 
 		protected override IEnumerable<ABinaryTree<TItem, TCorner>> FormSubnodes() =>
 			Enumerable.Range(0, 1 << this.Dim)

@@ -11,15 +11,16 @@ namespace Generic.Trees {
 
 		public override string ToString() => string.Format("HashedContainer[{0}]", this.Count.Pluralize("item"));
 
-		public int Count { get; private set; }
-		public IEnumerable<T> Items { get; private set; }
+		public int Count => this._count;
 		public bool IsReadOnly => false;
+		public IEnumerable<T> Items { get; private set; }
 
+		private int _count = 0;
 		private T _item;
 		private HashSet<T> _leftovers = null;
 
 		public void Add(T item) {
-			if (this.Count == 0 && this._leftovers is null) {
+			if (this._leftovers is null && this.Count == 0) {
 				this._item = item;
 				this.Items = new T[] { item };
 			} else {
@@ -30,27 +31,27 @@ namespace Generic.Trees {
 				}
 				this._leftovers.Add(item);
 			}
-			this.Count++;
+			this._count++;
 		}
 		public void Add(object item) { this.Add((T)item); }
 
 		public bool Remove(T item) {
-			//if (this.Count > 0)
+			if (this.Count > 0)
 				if (this._leftovers is null) {
-					//if (this._item.Equals(item)) {
-						this.Count = 0;
+					if (this._item.Equals(item)) {
+						this._count = 0;
 						this.Items = Enumerable.Empty<T>();
 						return true;
-					//} else return false;
+					} else return false;
 				} else if (this._leftovers.Remove(item)) {
-					this.Count--;
+					this._count--;
 					return true;
 				} else return false;
-			//return false;
+			return false;
 		}
 
 		public void Clear() {
-			this.Count = 0;
+			this._count = 0;
 			if (!(this._leftovers is null))
 				this._leftovers.Clear();
 		}
