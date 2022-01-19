@@ -11,6 +11,7 @@ namespace ParticleSimulator {
 		public static readonly int WINDOW_WIDTH = 120;
 		public static readonly int WINDOW_HEIGHT = 60;
 		public const int SUPERSAMPLING = 2;
+		public const float PIXEL_ROUNDOFF = 0.5f;
 		//using top and bottom halves of each character to get double the verticle resolution
 		public const float TARGET_FPS = 30;
 		public const bool VSYNC = false;
@@ -20,7 +21,7 @@ namespace ParticleSimulator {
 		public const int DIM = 3;
 		public const float ZOOM_SCALE = 1f;
 		public const float TIME_SCALE = 1f;
-		public const float WORLD_SCALE = 2f;
+		public const float WORLD_SCALE = 1f;
 		public const bool AUTOFOCUS_DEFAULT = true;
 		public const float WORLD_ROTATION_RADS_PER_STEP = 0.005f;
 
@@ -29,22 +30,22 @@ namespace ParticleSimulator {
 		public const int PARTICLES_GROUP_MAX = 25000;
 		public const float PARTICLES_GROUP_SIZE_SKEW_POWER = 0f;//0 for max size
 
-		public const float INACCURCY = 2f;
-		public const float PIXEL_ROUNDOFF = 0.5f;
+		public const float INACCURCY = 2f;//Barnes-Hut condition of approximating a node
+		public const int QUADTREE_LEAF_CAPACITY = 5;//degrades accuracy
+
 		public const int PRECALCULATION_LIMIT = 1;//how many calculations ahead steps can work
-		public const int PARTICLES_PER_BATCH = 5000;//tree preparation and particle evaluation parallelism, breaks determinism due to evaluation order and floating point precision
+		public const int PARTICLES_PER_BATCH = 1000;//tree preparation and particle evaluation parallelism, breaks determinism due to randomized evaluation order of mergers
 		public const bool SYNC_SIMULATION = true;//controls synchronization of rendering to simulation (e.g. faster rotation)
 		public const int SIMULATION_SKIPS = 0;//refresh the simulation multiple times between renders
-		public const int QUADTREE_LEAF_CAPACITY = 8;//affects accuracy
 		
 		public const bool COLLISION_ENABLE = true;
 		public const bool MERGE_ENABLE = true;
-		public const float MERGE_ENGULF_RATIO = 0.75f;
-		public const float DRAG_CONSTANT = 0.1f;
+		public const float MERGE_ENGULF_RATIO = 0.9f;
+		public const float DRAG_CONSTANT = 0.2f;
 
 		public const float WORLD_PADDING_PCT = 5f;
 		public const float WORLD_DEATH_BOUND_RADIUS = 10f;
-		public const float WORLD_EPSILON = 2E-5f;
+		public const float WORLD_EPSILON = 1E-5f;
 		
 		public const bool WORLD_WRAPPING = false;
 		public const bool WORLD_BOUNCING = false;
@@ -65,7 +66,7 @@ namespace ParticleSimulator {
 		public const float AUTOSCALE_MIN_STEP = 1f;
 
 		//public const bool EXPORT_FRAMES = false;//TODO
-		//public const string EXPORT_DIR = null;	//TODO
+		//public const string EXPORT_DIR = null;//TODO
 
 		#region Gravity
 		public const float GRAVITATIONAL_CONSTANT	= 1E-10f;
@@ -73,26 +74,27 @@ namespace ParticleSimulator {
 
 		public const float MASS_SCALAR				= 0.1f;
 		public const float MASS_RADIAL_DENSITY		= 4E7f;
-		public const float MASS_LUMINOSITY_SCALAR	= 1E-1f;
+		public const float MASS_LUMINOSITY_SCALAR	= 2E1f;
 		public const float MASS_LUMINOSITY_POW		= 3f;
 
 		public const float GALAXY_RADIUS			= 0.5f;
 		public const float GALAXY_THINNESS			= 2f;
-		public const float GALAXY_CONCENTRATION		= 0.667f;
-		public const float GALAXY_RADIAL_SPEED_POW	= 0f;
+		public const float GALAXY_CONCENTRATION		= 1.333f;
+		public const float GALAXY_RADIAL_SPEED_POW	= 0.1f;
 
 		public const bool GRAVITY_SUPERNOVA_ENABLE = true;
-		public const float GRAVITY_CRITICAL_MASS = 4000f;
+		public const float GRAVITY_CRITICAL_MASS = 1000f;
 		public static readonly float GRAVITY_EJECTA_PARTICLE_MASS = 0.1f;
-		public const float GRAVITY_EJECTA_SPEED = 3E-3f;
+		public const float GRAVITY_EJECTA_SPEED = 2E-3f;
+		public const float GRAVITY_EJECTA_RADIUS_SCALAR = 2.5f;
 
 		public const bool GRAVITY_BLACK_HOLE_ENABLE = false;
 		public const float GRAVITY_BLACKHOLE_THRESHOLD_RATIO = 1.5f;
 
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 0.2E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.1E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP				= 0.1E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_GROUP_RAND		= 0.0E-3f;
 		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP		= 1.0E-3f;
-		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.2E-3f;
+		public const float GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND	= 0.0E-3f;
 		#endregion Gravity
 
 		#region Aux

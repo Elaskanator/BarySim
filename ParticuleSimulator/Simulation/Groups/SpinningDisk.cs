@@ -54,7 +54,7 @@ namespace ParticleSimulator.Simulation.Particles {
 				  (this.InternalDirection ? 1f : -1f)
 				* (float)Program.Engine.Random.NextDouble()
 				* Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP
-				* MathF.Pow(offset / this.Radius, Parameters.GALAXY_RADIAL_SPEED_POW)
+				* MathF.Pow(1f - (offset / this.Radius), Parameters.GALAXY_RADIAL_SPEED_POW)
 				* this.DirectionUnitVector(positionOffset);
 		}
 

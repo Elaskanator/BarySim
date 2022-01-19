@@ -134,7 +134,7 @@ namespace ParticleSimulator.Rendering {
 						max = (float)this._max.Current;
 					}
 					range = max - min;
-					int numSteps = (int)(range * 10D);
+					int numSteps = Parameters.COLOR_ARRAY.Length;
 					numSteps = numSteps <= Parameters.COLOR_ARRAY.Length ? numSteps : Parameters.COLOR_ARRAY.Length;
 					if (numSteps > 0) {
 						float step = range / (numSteps + 1);

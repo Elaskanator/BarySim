@@ -35,15 +35,14 @@ namespace ParticleSimulator.Simulation.Baryon {
 			Vector<float> toOther = other.Position - this.Position;
 			float distanceSquared = Vector.Dot(toOther, toOther);
 
-			Vector<float> gravitationalInfluence;
 			Vector<float> collisionInfluence = Vector<float>.Zero;
-			if (distanceSquared <= Parameters.WORLD_EPSILON) {
-				gravitationalInfluence = Vector<float>.Zero;
-				if (Parameters.COLLISION_ENABLE && Parameters.MERGE_ENABLE)
-					(this.Mergers ??= new()).Enqueue(other);
-			} else {
+			Vector<float> gravitationalInfluence;
+			//if (distanceSquared <= Parameters.WORLD_EPSILON) {
+			//	gravitationalInfluence = Vector<float>.Zero;
+			//	if (Parameters.COLLISION_ENABLE && Parameters.MERGE_ENABLE)
+			//		(this.Mergers ??= new()).Enqueue(other);
+			//} else {
 				float distance = MathF.Sqrt(distanceSquared);
-				gravitationalInfluence = toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distanceSquared * distance));
 				if (Parameters.COLLISION_ENABLE) {
 					float radiusSum = this.Radius + other.Radius;
 					if (distance < radiusSum) {
@@ -51,19 +50,20 @@ namespace ParticleSimulator.Simulation.Baryon {
 						(smaller, larger) = this.Radius <= other.Radius
 							? (this, other)
 							: (other, this);
-
-						if (Parameters.MERGE_ENABLE && distance * Parameters.MERGE_ENGULF_RATIO <= (larger.Radius - smaller.Radius)) {
+						float fullEngulfDistance = larger.Radius - smaller.Radius;
+						if (Parameters.MERGE_ENABLE && (distance <= fullEngulfDistance || (distance - fullEngulfDistance) <= smaller.Radius*Parameters.MERGE_ENGULF_RATIO)) {
 							gravitationalInfluence = Vector<float>.Zero;
 							(this.Mergers ??= new()).Enqueue(other);
 						} else {
 							float relativeDistance = distance / radiusSum;
 							Vector<float> dV = other.Velocity - this.Velocity;
-							gravitationalInfluence *= relativeDistance * relativeDistance;
-							collisionInfluence = dV * ((1f - relativeDistance) * smaller.Mass * Parameters.DRAG_CONSTANT);
+							//compute at contact point
+							gravitationalInfluence = toOther * (Parameters.GRAVITATIONAL_CONSTANT / (radiusSum * radiusSum * distance));
+							collisionInfluence = dV * ((1f - relativeDistance) * Parameters.DRAG_CONSTANT);
 						}
-					}
-				}
-			}
+					} else gravitationalInfluence = toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distanceSquared * distance));
+				} else gravitationalInfluence = toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distanceSquared * distance));
+			//}
 			return new(gravitationalInfluence, collisionInfluence);
 		}
 
@@ -86,7 +86,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 						? this.Mass / Parameters.GRAVITY_EJECTA_PARTICLE_MASS
 						: this.Mass);
 					if (numParticles > 1) {
-						float radiusRange = MathF.Pow(this.Radius, Parameters.DIM);
+						float radiusRange = MathF.Pow(this.Radius*Parameters.GRAVITY_EJECTA_RADIUS_SCALAR, Parameters.DIM);
 						float ratio = (1f / numParticles);
 						float avgMass = ratio * this.Mass;
 						Vector<float> avgImpulse = ratio * this.Impulse;
@@ -106,7 +106,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 							newParticle = new(
 								this.Position + direction * radius,
-								this.Velocity + direction * (rand * Parameters.GRAVITY_EJECTA_SPEED))
+								this.Velocity + direction * Parameters.GRAVITY_EJECTA_SPEED)
 							{
 								GroupId = this.GroupId,
 							};
@@ -125,7 +125,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 			Vector<float> totalImpulse = this.Impulse + other.Impulse;
 			Vector<float> totalMomentum = this.Momentum + other.Momentum;
-			Vector<float> weightedPosition = ((this.Position*this.Mass) + (other.Position*other.Mass)) * (1f / totalMass);
+			Vector<float> weightedPosition = ((this.Mass*this.Position) + (other.Mass*other.Position)) * (1f / totalMass);
 
 			this.IsCollapsed |= other.IsCollapsed;
 
