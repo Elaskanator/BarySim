@@ -69,11 +69,11 @@ namespace ParticleSimulator.Engine.Threading {
 				this.FullIterationCount = 0;
 				this.IsComputing = false;
 
-				this.WaitTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
-				this.SyncTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
-				this.ExclusiveTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
-				this.FullTime = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
-				this.FullTimePunctual = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
+				this.WaitTime = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
+				this.SyncTime = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
+				this.ExclusiveTime = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
+				this.FullTime = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
+				this.FullTimePunctual = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
 
 				this.IsOpen = true;
 				this.StartTimeUtc = DateTime.UtcNow;

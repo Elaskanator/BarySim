@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
 using Generic.Trees;
 using ParticleSimulator.Simulation.Baryon;
@@ -10,7 +11,7 @@ using ParticleSimulator.Simulation.Particles;
 namespace ParticleSimulator.Simulation {
 	public abstract class ABinaryTreeSimulator<TParticle, TTree> : ISimulator
 	where TParticle : AParticle<TParticle>
-	where TTree : ATree<TParticle> {
+	where TTree : ABinaryTree<TParticle> {
 		protected ABinaryTreeSimulator(TTree tree) {
 			this._tree = tree;
 		}
@@ -36,105 +37,107 @@ namespace ParticleSimulator.Simulation {
 		protected virtual void AccumulateLeafNode(TTree node, TParticle[] particles) => throw null;
 		protected virtual void AccumulateInnerNode(TTree node) => throw null;
 
-		protected virtual TTree PruneTree() => (TTree)this._tree.Prune();
+		protected virtual TTree PruneTreeTop() => (TTree)this._tree.PruneTop();
 
 		public void Init() {
 			this.IterationCount = -1;
-
+			//initialize all the particles
 			this.ParticleGroups = new AParticleGroup<TParticle>[Parameters.PARTICLES_GROUP_COUNT];
 			for (int i = 0; i < this.ParticleGroups.Length; i++) {
 				this.ParticleGroups[i] = this.NewParticleGroup();
 				this.ParticleGroups[i].Init();
 			}
-
+			//initial population of the binary tree
 			this._tree.Clear();
 			this._tree = (TTree)this._tree
 				.Add(this.ParticleGroups.SelectMany(g => g.InitialParticles))
-				.Prune();
+				.PruneTop();
 		}
 
 		public ParticleData[] Update() {
-			if (++this.IterationCount > 0)//show starting data on first result
+			if (++this.IterationCount > 0)//skip to show starting data on first result (TODO cleanup)
 				this.Refresh();
+			//return a deep copy of the particle data for rendering so simulation can continue concurrently
 			return this._tree.Select(p => new ParticleData(p)).ToArray();
 		}
 
 		private void Refresh() {
 			//determine all leaves and aggregate barycenters in parallel
-			this.PrepareNode(this._tree, true, null);
-
-			//compute particle interactions on leaves in parallel
+			this.AggregateSubtree(this._tree, true, null);
+			//compute particle interactions on leaves in parallel (no movement occurs)
 			this._cde.Reset(this._partitionedLeafData.Count);
 			foreach (Queue<Tuple<TTree, TParticle[]>> nodeLeaves in this._partitionedLeafData)//do not consume yet
-				ThreadPool.QueueUserWorkItem(this.NodeInteractionHelper, nodeLeaves);
+				ThreadPool.QueueUserWorkItem(this.LeafInteractionWorker, nodeLeaves);
 			this._cde.Wait();
-
-			BaryCenter center = this.Center;
+			//refresh particle and tree location data
+			BaryCenter center = this.Center;//for escape velocity check
 			while (this._partitionedLeafData.TryTake(out Queue<Tuple<TTree, TParticle[]>> nodeLeaves))//random order
 				while (nodeLeaves.TryDequeue(out Tuple<TTree, TParticle[]> leaf))
-					this.MoveLeafParticles(center, leaf.Item1, leaf.Item2);
-
-			this._tree = this.PruneTree();
+					this.RefreshLeafParticles(center, leaf.Item1, leaf.Item2);
+			//remove empty space from the top of the tree
+			this._tree = this.PruneTreeTop();
 		}
 
-		private void MoveLeafParticles(BaryCenter center, TTree originLeaf, TParticle[] particles) {
-			ATree<TParticle> leaf;
+		private void RefreshLeafParticles(BaryCenter center, TTree originLeaf, TParticle[] particles) {
+			ABinaryTree<TParticle> leaf;
 			TParticle particle;
-			for (int j = 0; j < particles.Length; j++) {
-				particle = particles[j];
-				if (particle.Enabled) {
+			for (int i = 0; i < particles.Length; i++) {
+				particle = particles[i];
+				if (particle.Enabled) {//will have already been removed in an earlier iteration if disabled
 					leaf = originLeaf;
 					while (!leaf.IsLeaf)
 						leaf = leaf.Children[leaf.ChildIndex(particle)];
-
-					if (!(particle.Mergers is null)) {
-						while (particle.Mergers.TryDequeue(out TParticle other)) {
+					//recursively consume merge chain
+					if (!(particle.Mergers is null))
+						while (particle.Mergers.TryDequeue(out TParticle other))
 							if (other.Enabled) {
 								other.Enabled = false;
-								originLeaf.GetContainingLeaf(other).RemoveFromLeaf(other, false);
-
-								particle.Incorporate(other);
+								originLeaf.GetContainingLeaf(other).RemoveFromLeaf(other, false);//defer leaf pruning
+								//ingest the other particle's information
+								particle.Merge(other);
 								if (!(other.Mergers is null))
 									while (other.Mergers.TryDequeue(out TParticle tail))
 										if (particle.Id != tail.Id)
 											particle.Mergers.Enqueue(tail);
 							}
-						}
-					}
-
-					particle.ApplyTimeStep(Parameters.TIME_SCALE, center);
-
+					//update particle information and location in tree in isolation of anything else affecting the tree
+					particle.ApplyTimeStep(center);
 					if (particle.Enabled)
-						leaf.MoveFromLeaf(particle, false);
-					else leaf.RemoveFromLeaf(particle, false);
-						
+						leaf.MoveFromLeaf(particle, false);//defer leaf pruning
+					else leaf.RemoveFromLeaf(particle, false);//defer leaf pruning
+					//finally add any newborn particles
 					if (!(particle.NewParticles is null))
 						while (particle.NewParticles.TryDequeue(out TParticle other))
-							originLeaf.Add(other);
+							originLeaf.Add(other);//closer than new leaf position?
 				}
 			}
 		}
 
-		private void PrepareNode(TTree root, bool isPrep, Queue<Tuple<TTree, TParticle[]>> leaves) {
-			//identical recursive behavior is needed for both prep and "normal" modes, so this remains one convoluted method...
-			if (isPrep && (root.IsLeaf || Parameters.PARTICLES_PER_BATCH < 1 || root.Count <= Parameters.PARTICLES_PER_BATCH)) {
+		private void AggregateSubtree(TTree root, bool isPrep, Queue<Tuple<TTree, TParticle[]>> leaves) {//recursively discover leaves and aggregate barycenters
+			//identical recursive behavior is needed for both prep and "normal" modes, so this remains one convoluted method with all the conditionals split...
+			if (isPrep && (root.IsLeaf || Parameters.TREE_BATCH_SIZE < 1 || root.Count <= Parameters.TREE_BATCH_SIZE)) {
 				Queue<TTree> work = new();
 				work.Enqueue(root);
 				this._cde.Reset(1);
-				ThreadPool.QueueUserWorkItem(this.PrepareNodeHelper, work);
+				ThreadPool.QueueUserWorkItem(this.SubtreeAggregationWorker, work);
 				this._cde.Wait();
-			} else if (root.IsLeaf) {
-				TParticle[] leafParticles = root.Bin.ToArray();
+			} else if (root.IsLeaf) {//and not prep mode
+				TParticle[] leafParticles = new TParticle[root.ItemCount];
+				int idx = 0;
+				foreach (TParticle particle in root.Bin) {
+					particle.Acceleration = Vector<float>.Zero;
+					leafParticles[idx++] = particle;
+				}
 				leaves.Enqueue(new(root, leafParticles));
 				if (this.AccumulateTreeNodeData)
 					this.AccumulateLeafNode(root, leafParticles);
-			} else {
-				int numFilled = 0;
+			} else {//not leaf
+				int idx, numFilled = 0;
 				Queue<TTree> work = isPrep ? new() : null;
 				Stack<TTree[]> levelStack = this.AccumulateTreeNodeData ? new() : null;
 				Stack<TTree> pendingNodes = new(), testNodes = new();
+				//work down to leaf nodes with depth-first recursion
 				pendingNodes.Push(root);
-				
 				TTree[] levelNodes; TTree child; TParticle[] leafParticles;
 				do {
 					while (pendingNodes.TryPop(out TTree node)) {
@@ -144,73 +147,84 @@ namespace ParticleSimulator.Simulation {
 								if (isPrep && child.IsLeaf) {
 									work.Enqueue(child);
 									numFilled += child.ItemCount;
-									if (numFilled >= Parameters.PARTICLES_PER_BATCH) {
+									//not worth splitting a new worker if near capacity already
+									if (numFilled >= Parameters.TREE_BATCH_SIZE) {//dispatch workload
 										lock (this._cdeLock)
 											if (this._cde.IsSet)
 												this._cde.Reset(1);
 											else this._cde.AddCount();
-										ThreadPool.QueueUserWorkItem(this.PrepareNodeHelper, work);
+										ThreadPool.QueueUserWorkItem(this.SubtreeAggregationWorker, work);
 										work = new();
 										numFilled = 0;
 									}
-								} else if (child.IsLeaf) {
-									leafParticles = child.Bin.ToArray();
+								} else if (child.IsLeaf) {//and not prep mode
+									leafParticles = new TParticle[child.ItemCount];
+									idx = 0;
+									foreach (TParticle particle in child.Bin) {
+										particle.Acceleration = Vector<float>.Zero;
+										leafParticles[idx++] = particle;
+									}
 									leaves.Enqueue(new(child, leafParticles));
+									//initialize the barycenter
 									if (this.AccumulateTreeNodeData)
 										this.AccumulateLeafNode(child, leafParticles);
-								} else if (isPrep
-								&& (numFilled + child.Count <= Parameters.PARTICLES_PER_BATCH
-									|| (double)((numFilled + child.Count) - Parameters.PARTICLES_PER_BATCH) / Parameters.PARTICLES_PER_BATCH < 0.1d))
-								{
+								} else if (isPrep//and not leaf
+								&& (numFilled + child.Count <= Parameters.TREE_BATCH_SIZE
+									|| (double)((numFilled + child.Count) - Parameters.TREE_BATCH_SIZE) / Parameters.TREE_BATCH_SIZE < Parameters.TREE_BATCH_SLACK))
+								{//skip enqueueing work, to split further when too far over capacity
 									work.Enqueue(child);
 									numFilled += child.ItemCount;
-									if (numFilled >= Parameters.PARTICLES_PER_BATCH) {
+									if (numFilled >= Parameters.TREE_BATCH_SIZE) {//dispatch workload
 										lock (this._cdeLock)
 											if (this._cde.IsSet)
 												this._cde.Reset(1);
 											else this._cde.AddCount();
-										ThreadPool.QueueUserWorkItem(this.PrepareNodeHelper, work);
+										ThreadPool.QueueUserWorkItem(this.SubtreeAggregationWorker, work);
 										work = new();
 										numFilled = 0;
 									}
-								} else testNodes.Push(child);
-							} else node.Children[cIdx].Children = null;
+								} else testNodes.Push(child);//continue recursion
+							} else node.Children[cIdx].Children = null;//prune the leaves
 						}
 					}
-					if (this.AccumulateTreeNodeData && testNodes.Count > 0) {
-						levelNodes = new TTree[testNodes.Count];
-						testNodes.CopyTo(levelNodes, 0);//casting magic?
-						levelStack.Push(levelNodes);
+					if (testNodes.Count > 0) {
+						if (this.AccumulateTreeNodeData) {//copy layer for aggregation later
+							levelNodes = new TTree[testNodes.Count];
+							testNodes.CopyTo(levelNodes, 0);//casting magic?
+							levelStack.Push(levelNodes);
+						}
+						//process next layer deeper in the tree
+						(pendingNodes, testNodes) = (testNodes, pendingNodes);
 					}
-					(pendingNodes, testNodes) = (testNodes, pendingNodes);
 				} while (pendingNodes.Count > 0);
-				
+				//wait for child aggregations to finish
 				if (isPrep) {
-					if (work.Count > 0) {
+					if (work.Count > 0) {//dispatch any leftover workload
 						lock (this._cdeLock)
 							if (this._cde.IsSet)
 								this._cde.Reset(1);
 							else this._cde.AddCount();
-						ThreadPool.QueueUserWorkItem(this.PrepareNodeHelper, work);
+						ThreadPool.QueueUserWorkItem(this.SubtreeAggregationWorker, work);
 					}
 					this._cde.Wait();
 				}
-
+				//aggregate barycenters from bottom-up
 				if (this.AccumulateTreeNodeData) {
 					while (levelStack.TryPop(out levelNodes))
 						for (int i = 0; i < levelNodes.Length; i++)
 							this.AccumulateInnerNode(levelNodes[i]);
-
+					//finish him
 					this.AccumulateInnerNode(root);
 				}
 			}
 		}
 
-		private void PrepareNodeHelper(object work) {
+		private void SubtreeAggregationWorker(object work) {
+			Queue<Tuple<TTree, TParticle[]>> result = new((int)(Parameters.TREE_BATCH_SIZE * (1f + Parameters.TREE_BATCH_SLACK)));
+
 			Queue<TTree> nodes = (Queue<TTree>)work;
-			Queue<Tuple<TTree, TParticle[]>> result = new();
 			while (nodes.TryDequeue(out TTree node))
-				this.PrepareNode(node, false, result);
+				this.AggregateSubtree(node, false, result);//"normal" mode
 
 			this._partitionedLeafData.Add(result);
 
@@ -218,7 +232,7 @@ namespace ParticleSimulator.Simulation {
 				this._cde.Signal();
 		}
 
-		private void NodeInteractionHelper(object work) {
+		private void LeafInteractionWorker(object work) {
 			Queue<Tuple<TTree, TParticle[]>> nodeLeaves = (Queue<Tuple<TTree, TParticle[]>>)work;
 			foreach (Tuple<TTree, TParticle[]> leaf in nodeLeaves)//do not consume the queue
 				this.ComputeInteractions(leaf.Item1, leaf.Item2);

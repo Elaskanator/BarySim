@@ -23,11 +23,11 @@ namespace ParticleSimulator.Simulation.Baryon {
 		protected override void AccumulateInnerNode(BarnesHutTree node) =>
 			node.UpdateBaryCenter();
 
-		protected override BarnesHutTree PruneTree() {
+		protected override BarnesHutTree PruneTreeTop() {
 			BaryCenter center = this._tree.MassBaryCenter;
 			BarnesHutTree result;
 			lock (this._lock) {
-				result = (BarnesHutTree)this._tree.Prune();
+				result = (BarnesHutTree)this._tree.PruneTop();
 				result.MassBaryCenter = center;
 			}
 			return result;
@@ -39,27 +39,79 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 			Tuple<Vector<float>, Vector<float>> influence;
 			for (int i = 0; i < particles.Length; i++) {
-				particles[i].Acceleration = Vector<float>.Zero;
-				for (int j = 0; j < i; j++) {
-					influence = particles[i].ComputeInfluence(particles[j]);
-					particles[i].Acceleration += particles[j].Mass*influence.Item1 + influence.Item2;
-					particles[j].Acceleration -= particles[i].Mass*influence.Item1 + influence.Item2;
-				}
 				for (int n = 0; n < nearField.Count; n++) {
 					influence = particles[i].ComputeInfluence(nearField[n]);
-					particles[i].Acceleration += nearField[n].Mass*influence.Item1 + influence.Item2;
+					particles[i].Velocity += (1f/particles[i].Mass)*influence.Item1;
+					particles[i].Acceleration += nearField[n].Mass*influence.Item2;
 				}
-				particles[i].Acceleration += farFieldContribution;//add after to reduce floating point errors
+				for (int j = 0; j < i; j++) {
+					influence = particles[i].ComputeInfluence(particles[j]);
+					particles[i].Velocity += (1f/particles[i].Mass)*influence.Item1;
+					particles[i].Acceleration += particles[j].Mass*influence.Item2;
+					particles[j].Velocity -= (1f/particles[j].Mass)*influence.Item1;
+					particles[j].Acceleration -= particles[i].Mass*influence.Item2;
+				}
+				particles[i].Acceleration += farFieldContribution;//add last to reduce floating point errors
 			}
 		}
 
+		private Vector<float> DetermineNeighbors(BarnesHutTree leaf, List<MatterClump> nearField) {
+			//minimize floating point error by computing nodes likely to be more distant first
+			Vector<float> farFieldContribution = Vector<float>.Zero, subTotal1, subTotal2, toOther;
+			Stack<BarnesHutTree> pathDown = new(), remaining = new();
+			BarnesHutTree parent, child, other, tail;
+			float distanceSquared, distance;
+			//compute path thru the tree
+			parent = leaf;
+			while (!parent.IsRoot) {
+				pathDown.Push(parent);
+				parent = (BarnesHutTree)parent.Parent;
+			}
+			//compute from top nodes down
+			while (pathDown.TryPop(out child)) {
+				subTotal1 = Vector<float>.Zero;
+				for (int i = 0; i < parent.Children.Length; i++) {
+					subTotal2 = Vector<float>.Zero;
+					other = (BarnesHutTree)parent.Children[i];
+					if (!ReferenceEquals(child, other) && other.ItemCount > 0) {
+						do {//recursively test depth-first for nodes that can be approximated as point masses
+							if (other.IsLeaf) {
+								nearField.AddRange(other.Bin);
+							} else {
+								toOther = other.MassBaryCenter.Position - leaf.MassBaryCenter.Position;
+								distanceSquared = Vector.Dot(toOther, toOther);
+								if (distanceSquared <= Parameters.WORLD_EPSILON) {//TODO check for adjacency instead
+									nearField.AddRange(other);
+								} else if (distanceSquared * Parameters.INACCURCY_SQUARED > other.SizeSquared) {//Barnes-Hut condition
+									distance = MathF.Sqrt(distanceSquared);
+									subTotal2 += toOther * (other.MassBaryCenter.Weight / distanceSquared / distance);//gravity
+								} else {//recurse down
+									for (int j = 0; j < other.Children.Length; j++) {
+										tail = (BarnesHutTree)other.Children[j];
+										if (tail.ItemCount > 0)
+											remaining.Push(tail);
+									}
+								}
+							}
+						} while (remaining.TryPop(out other));
+					}
+					subTotal1 += subTotal2;
+				}
+				//reduce floating point error with subtotalling before adding to running total
+				farFieldContribution += subTotal1;
+				parent = child;
+			}
+			//finally apply G
+			return farFieldContribution * Parameters.GRAVITATIONAL_CONSTANT;
+		}
+		/*
+		//old version more susceptible to floating point errors from evaluating more local neighbors first
 		private Vector<float> DetermineNeighbors(BarnesHutTree leaf, List<MatterClump> nearField) {
 			Vector<float> farFieldContribution = Vector<float>.Zero;
 			Stack<BarnesHutTree> remaining = new();
 			BarnesHutTree node = leaf, lastNode, child, tail;
 			Vector<float> toOther;
 			float distanceSquared, distance;
-
 			while (!node.IsRoot) {
 				lastNode = node;
 				node = (BarnesHutTree)node.Parent;
@@ -72,7 +124,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 							} else {
 								toOther = child.MassBaryCenter.Position - leaf.MassBaryCenter.Position;
 								distanceSquared = Vector.Dot(toOther, toOther);
-								if (distanceSquared * Parameters.INACCURCY_SQUARED > child.SizeSquared) {
+								if (distanceSquared <= Parameters.WORLD_EPSILON) {
+									nearField.AddRange(child);
+								} else if (distanceSquared * Parameters.INACCURCY_SQUARED > child.SizeSquared) {
 									distance = MathF.Sqrt(distanceSquared);
 									farFieldContribution += toOther * (child.MassBaryCenter.Weight / distanceSquared / distance);
 								} else {
@@ -87,8 +141,8 @@ namespace ParticleSimulator.Simulation.Baryon {
 					}
 				}
 			}
-
 			return farFieldContribution * Parameters.GRAVITATIONAL_CONSTANT;
 		}
+		*/
 	}
 }

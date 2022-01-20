@@ -3,7 +3,7 @@ using System.Numerics;
 using Generic.Trees;
 
 namespace Generic.Vectors {
-	public class QuadTreeSIMD<TItem> : ABinaryTree<TItem, Vector<float>>
+	public class QuadTreeSIMD<TItem> : AHyperdimensionalBinaryTree<TItem, Vector<float>>
 	where TItem : IPosition<Vector<float>> {
 		protected QuadTreeSIMD(int dim, Vector<float> corner1, Vector<float> corner2, QuadTreeSIMD<TItem> parent = null) 
 		: base(dim, corner1, corner2, parent) {//caller needs to ensure all values in x1 are smaller than x2 (the corners of a cubic volume)

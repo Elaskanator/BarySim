@@ -19,13 +19,14 @@ namespace ParticleSimulator.Simulation.Particles {
 			base.InitPositionVelocity();
 			this.Velocity +=
 				  (this.GlobalDirection ? 1f : -1f)
-				* Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP
+				* Parameters.GALAXY_SPEED_ANGULAR
 				* this.DirectionUnitVector(this.Position);
 		}
 
 		protected override void ParticleAddPositionVelocity(TParticle particle) {
 			float rand = (float)Program.Engine.Random.NextDouble();
 			float offset = this.Radius * MathF.Pow(rand, Parameters.GALAXY_CONCENTRATION);
+
 			float[] offsetV;
 			if (Parameters.DIM <= 2) {
 				offsetV = VectorFunctions
@@ -40,7 +41,7 @@ namespace ParticleSimulator.Simulation.Particles {
 					.ToArray();
 				float offset2 = (this.Radius*this.Radius - offset*offset) / (this.Radius * this.Radius);
 				float rand2 = MathF.Pow((float)Program.Engine.Random.NextDouble(), Parameters.GALAXY_CONCENTRATION);
-				offset2 *= rand2 * this.Radius / Parameters.GALAXY_THINNESS;
+				offset2 *= rand * rand2 * this.Radius / Parameters.GALAXY_THINNESS;
 				float[] offsetV2 = VectorFunctions
 					.RandomUnitVector_Spherical(Parameters.DIM - 2, Program.Engine.Random)
 					.Select(x => offset2*x)
@@ -48,14 +49,17 @@ namespace ParticleSimulator.Simulation.Particles {
 				for (int i = 0; i < Parameters.DIM - 2; i++)
 					offsetV[i + 2] = offsetV2[i];
 			}
+
 			Vector<float> positionOffset = VectorFunctions.New(offsetV);
 			particle.Position += positionOffset;
+
 			particle.Velocity +=
-				  (this.InternalDirection ? 1f : -1f)
-				* (float)Program.Engine.Random.NextDouble()
-				* Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP
-				* MathF.Pow(1f - (offset / this.Radius), Parameters.GALAXY_RADIAL_SPEED_POW)
-				* this.DirectionUnitVector(positionOffset);
+			  (   (this.InternalDirection ? 1f : -1f)
+				* Parameters.GALAXY_SPIN_ANGULAR
+				* MathF.Pow(offset / this.Radius, Parameters.GALAXY_SPIN_POW)
+				* this.DirectionUnitVector(positionOffset))
+			+ (   new Vector<float>(Parameters.GALAXY_SPIN_RAND) * MathF.Pow(1f - (offset / this.Radius), Parameters.GALAXY_SPIN_POW)
+				* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random)));
 		}
 
 		private Vector<float> DirectionUnitVector(Vector<float> offset) {

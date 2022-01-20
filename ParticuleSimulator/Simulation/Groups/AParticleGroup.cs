@@ -15,7 +15,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		public AParticleGroup(Func<Vector<float>, Vector<float>, TParticle> initializer, float radius) {
 			this.ParticleInitializer = initializer;
 			this.Radius = radius;
-			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Engine.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_SKEW_POWER) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
+			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Engine.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
 		}
 
 		public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleInitializer;
@@ -31,18 +31,11 @@ namespace ParticleSimulator.Simulation.Particles {
 				.Select(position => this.ParticleInitializer(position, this.Velocity))
 				.ToArray();
 
-			Vector<float> min = new Vector<float>(Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND);
-			Vector<float> max = new Vector<float>(Parameters.GRAVITY_STARTING_SPEED_MAX_INTRAGROUP_RAND);
-			Vector<float> range = max - min;
 			for (int i = 0; i < this.NumParticles; i++) {
 				this.InitialParticles[i].GroupId = this.Id;
 
 				if (this.NumParticles > 1)
 					this.ParticleAddPositionVelocity(this.InitialParticles[i]);
-
-				this.InitialParticles[i].Velocity +=
-					(min + (range * (float)Program.Engine.Random.NextDouble()))
-					* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
 
 				if (Parameters.WORLD_BOUNCING)
 					if (Parameters.WORLD_WRAPPING)
@@ -57,7 +50,7 @@ namespace ParticleSimulator.Simulation.Particles {
 					.Select(d => (float)(Parameters.WORLD_SIZE[d] * Program.Engine.Random.NextDouble() * (1d - Parameters.WORLD_PADDING_PCT/50d)
 						+ Parameters.WORLD_LEFT[d]
 						+ (Parameters.WORLD_SIZE[d] * Parameters.WORLD_PADDING_PCT/100d))));
-			this.Velocity = Parameters.GRAVITY_STARTING_SPEED_MAX_GROUP_RAND
+			this.Velocity = Parameters.GALAXY_SPEED_RAND
 				* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
 		}
 

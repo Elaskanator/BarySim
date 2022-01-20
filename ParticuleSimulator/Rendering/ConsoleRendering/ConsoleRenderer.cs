@@ -33,7 +33,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		public static ConsoleColor GetRankColor(float rank, float[] scaling) =>
 			rank < 0f
 				? ConsoleColor.Green
-				: Parameters.COLOR_ARRAY[scaling.Drop(1).TakeWhile(ds => ds < rank).Count()];
+				: Parameters.COLORS[scaling.Drop(1).TakeWhile(ds => ds < rank).Count()];
 
 		public override void Init() {
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
@@ -83,8 +83,8 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			this.Watchdog(prepResults, buffer);
 			if (this.Engine.OverlaysEnabled) {
 				this._perfMon.DrawStatsOverlay(prepResults, buffer);
-				if (Parameters.COLOR_METHOD != ParticleColoringMethod.Random
-				&& Parameters.COLOR_METHOD != ParticleColoringMethod.Group)
+				if (Parameters.COLORING != ParticleColoringMethod.Random
+				&& Parameters.COLORING != ParticleColoringMethod.Group)
 					this.DrawLegend(scaling, buffer);
 
 				ConsoleExtensions.CharInfo[] label;
@@ -107,7 +107,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		}
 
 		protected override void UpdateMonitor(int framesCompleted, TimeSpan frameTime, TimeSpan fpsTime) =>
-			this._perfMon.Graph.Update(framesCompleted % Parameters.PERF_GRAPH_FRAMES_PER_COLUMN, frameTime, fpsTime);
+			this._perfMon.Graph.Update(framesCompleted % Parameters.MON_GRAPH_COLUMN_FRAMES, frameTime, fpsTime);
 
 		private void Watchdog(EvalResult prepResults, ConsoleExtensions.CharInfo[] buffer) {
 			if (!this.Engine.IsPaused && !this.Engine.OverlaysEnabled) {
@@ -115,7 +115,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					this._lastPunctualWrite = DateTime.UtcNow;
 				TimeSpan timeSinceLastUpdate = DateTime.UtcNow.Subtract(this._lastPunctualWrite);
 
-				if (timeSinceLastUpdate.TotalMilliseconds >= Parameters.PERF_WARN_MS) {
+				if (timeSinceLastUpdate.TotalMilliseconds >= Parameters.MON_WARN_MS) {
 					string message = "No update for " + (timeSinceLastUpdate.TotalSeconds.ToStringBetter(2) + "s") + " ";
 					for (int i = 0; i < message.Length; i++)
 						buffer[i] = new ConsoleExtensions.CharInfo(message[i], ConsoleColor.Red);
@@ -142,7 +142,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			if (!(scaling is null) && scaling.Length > 0) {
 				int numColors = scaling.Length;
 				bool isDiscrete = false;//Parameters.DIM < 3 && Parameters.SIM_TYPE == SimulationType.Boid;
-				string header = Parameters.COLOR_METHOD.ToString();
+				string header = Parameters.COLORING.ToString();
 
 				int pixelIdx = Parameters.WINDOW_WIDTH * (Parameters.WINDOW_HEIGHT - numColors - 1);
 				for (int i = 0; i < header.Length; i++)
@@ -154,7 +154,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 					buffer[pixelIdx] = new ConsoleExtensions.CharInfo(
 						CHAR_BOTH,
-						Parameters.COLOR_ARRAY[cIdx]);
+						Parameters.COLORS[cIdx]);
 
 					rowStringData = 
 						(isDiscrete && cIdx == 0 ? "=" : "≤")

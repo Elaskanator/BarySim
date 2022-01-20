@@ -12,7 +12,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 		protected override BarnesHutTree NewNode(QuadTreeSIMD<MatterClump> parent, Vector<float> cornerLeft, Vector<float> cornerRight) =>
 			new BarnesHutTree(this.Dim, cornerLeft, cornerRight, parent);
 
-		public override int LeafCapacity => Parameters.QUADTREE_LEAF_CAPACITY;
+		public override int LeafCapacity => Parameters.TREE_LEAF_CAPACITY;
 
 		public BaryCenter MassBaryCenter;
 

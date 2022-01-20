@@ -30,7 +30,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			this._rawRankingsResource = rawRankings;
 			this.Camera = camera;
 
-			if (Parameters.COLOR_METHOD == ParticleColoringMethod.Random)
+			if (Parameters.COLORING == ParticleColoringMethod.Random)
 				this._randOffset = (int)(100d * rand.NextDouble());
 		
 			float[] offset = new float[Vector<float>.Count];
@@ -58,6 +58,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		private readonly SynchronousBuffer<float?[]> _rawRankingsResource;
 		private readonly int _randOffset = 0;
 		
+		//orthographic projection
 		public Pixel[] Rasterize(EvalResult prepResults, object[] parameters) {//top down view (smaller Z values = closer)
 			ParticleData[] particles = (ParticleData[])parameters[0];
 			if (particles is null) {
@@ -118,7 +119,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								}
 							}
 							if (any2) {
-								if (Parameters.COLOR_METHOD == ParticleColoringMethod.Density)
+								if (Parameters.COLORING == ParticleColoringMethod.Density)
 									ranks[idx] = bin.Sum(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
 								else ranks[idx] = bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
 								results[idx] = new(x, y, ranks[idx].Value);
@@ -139,7 +140,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		}
 
 		private float GetRank(float[] scaling, Subsample resampling, float count, float halfHeight) {
-			switch (Parameters.COLOR_METHOD) {
+			switch (Parameters.COLORING) {
 				case ParticleColoringMethod.Random:
 					return (resampling.Particle.Id + this._randOffset) % scaling.Length;
 				case ParticleColoringMethod.Group:

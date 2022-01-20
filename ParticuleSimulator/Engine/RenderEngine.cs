@@ -27,9 +27,10 @@ namespace ParticleSimulator.Engine {
 
 			this.Simulator = new BaryonSimulator(Parameters.DIM);
 
+			float zoomLevel = Parameters.ZOOM_SCALE / Parameters.WORLD_SCALE;
 			this.Camera = new() {
-				Zoom = Parameters.ZOOM_SCALE,
-				DeafultZoom = Parameters.ZOOM_SCALE,
+				Zoom = zoomLevel,
+				DeafultZoom = zoomLevel,
 				AutoCentering = Parameters.AUTOFOCUS_DEFAULT,
 			};
 
@@ -73,9 +74,9 @@ namespace ParticleSimulator.Engine {
 
 		public Random Random { get; private set; }
 		public void ResetRandon() {
-			this.Random = Parameters.DETERMINISTIC_RANDOM_SEED == -1
+			this.Random = Parameters.RANDOM_SEED == -1
 				? new()
-				: new(Parameters.DETERMINISTIC_RANDOM_SEED);
+				: new(Parameters.RANDOM_SEED);
 		}
 		public ISimulator Simulator { get; private set; }
 		public ARenderer Renderer { get; private set; }
@@ -112,13 +113,14 @@ namespace ParticleSimulator.Engine {
 				this._particleResourceUse.ReadType = enable ? this._particleResourceReadType : ConsumptionType.ConsumeReady;
 				this._keyReader = new(this.HandleInputs);
 				this._keyReader.Start();
+				bool startActive;
 
 				for (int i = 0; i < this.Evaluators.Length; i++) {
-					this.Evaluators[i].Start(
-						(enable || this.Evaluators[i] == this._stepEval_Render)
+					startActive = (enable || this.Evaluators[i] == this._stepEval_Render)
 						&& (this.Evaluators[i] != this._stepEval_Autoscale
-							|| (Parameters.COLOR_METHOD != ParticleColoringMethod.Depth && Parameters.COLOR_METHOD != ParticleColoringMethod.Overlap)));
-					this._stepsStartingPaused[this.Evaluators[i].Id] = this.Evaluators[i].IsPaused;
+							|| (Parameters.COLORING != ParticleColoringMethod.Depth && Parameters.COLORING != ParticleColoringMethod.Overlap));
+					this.Evaluators[i].Start(startActive);
+					this._stepsStartingPaused[this.Evaluators[i].Id] = !startActive;
 				}
 			}
 		}
@@ -216,7 +218,7 @@ namespace ParticleSimulator.Engine {
 				Synchronizer = Parameters.TARGET_FPS > 0f
 					? new TimeSynchronizer(Parameters.TARGET_FPS, Parameters.VSYNC)
 					: null,
-				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.PERF_WARN_MS),
+				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.MON_WARN_MS),
 				InputResourceUses = new IIngestedResource[] {
 					new IngestedResource<Pixel[]>(this._rasterResource, /*Parameters.EXPORT_FRAMES ? ConsumptionType.ReadReady : */ConsumptionType.Consume),
 					new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),

@@ -5,14 +5,14 @@ using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Simulation.Particles {
 	public abstract class AParticle<TSelf> : IParticle
-	where TSelf : AParticle<TSelf>{
+	where TSelf : AParticle<TSelf> {//
 		private static int _globalID = 0;
 		private readonly int _id = ++_globalID;
 
 		protected AParticle(Vector<float> position, Vector<float> velocity) {
 			this.Position = position;
 			this.Velocity = velocity;
-			this.Acceleration = Vector<float>.Zero;
+			this.Acceleration = this._acceleration1 = this._acceleration2 = Vector<float>.Zero;
 			this.Enabled = true;
 		}
 
@@ -34,47 +34,69 @@ namespace ParticleSimulator.Simulation.Particles {
 		public Vector<float> Position { get; set; }
 		public Vector<float> Velocity { get; set; }
 		public Vector<float> Acceleration { get; set; }
+		private Vector<float> _acceleration1;
+		private Vector<float> _acceleration2;
+		public Vector<float> Jerk {
+			get {
+				//using second-order Lagrange interpolation (equally-spaced three-point endpoint formula)
+				//see https://www3.nd.edu/~zxu2/acms40390F15/Lec-4.1.pdf
+				//return this.Acceleration - this._acceleration1;//first-order
+				return (1f / (2f*Parameters.TIME_SCALE))
+						* (this._acceleration2 - 4f*this._acceleration1 + 3f*this.Acceleration);
+			}
+		}
 
 		public Queue<TSelf> Mergers = null;
 		public Queue<TSelf> NewParticles = null;
 
-		//Tuple<Gravity, Drag>
+		//Tuple<DragImpulse, Gravity> (TODO cleanup for adding other forces)
 		public abstract Tuple<Vector<float>, Vector<float>> ComputeInfluence(TSelf other);
-		public abstract void Incorporate(TSelf other);
-
+		protected abstract void Consume(TSelf other);
+		
 		protected virtual void AfterMove() { }
+		protected virtual bool IsInRange(BaryCenter center) => true;
 
-		protected virtual bool IsInRange(BaryCenter center) => false;
-
-		public void ApplyTimeStep(float timeStep, BaryCenter center) {
-			Vector<float> velocity = this.Velocity + (timeStep * this.Acceleration),
-				displacement = timeStep*velocity,
-				position = this.Position + displacement;
-
+		public void ApplyTimeStep(BaryCenter center) {
+			//Modified Taylor Series integration
+			//see http://www.schlitt.net/xstar/n-body.pdf section 2.2.1
+			//Vector<float> displacement = Parameters.TIME_SCALE*(this.Velocity + this.Acceleration);//Riemann sum
+			Vector<float> displacement =
+				(Parameters.TIME_SCALE)*this.Velocity
+				+ (Parameters.TIME_SCALE2/2f)*this.Acceleration
+				+ (Parameters.TIME_SCALE3/6f)*this.Jerk;
+			this.Position += displacement;
+			//check bounding conditions, including escape velocity
 			if (Parameters.WORLD_BOUNCING || Parameters.WORLD_WRAPPING) {
 				Vector<int>
-					lesses = Vector.LessThan(position, Parameters.WORLD_LEFT_INF),
-					greaters = Vector.GreaterThanOrEqual(position, Parameters.WORLD_RIGHT_INF),
+					lesses = Vector.LessThan(this.Position, Parameters.WORLD_LEFT_INF),
+					greaters = Vector.GreaterThanOrEqual(this.Position, Parameters.WORLD_RIGHT_INF),
 					union = lesses | greaters;
 				if (Vector.LessThanAny(union, Vector<int>.Zero)) {
 					if (Parameters.WORLD_BOUNCING) {
-						position = -position
-							+ 2f * Vector.ConditionalSelect(lesses,
+						this.Position = -this.Position
+							+ 2f*Vector.ConditionalSelect(lesses,
 								Parameters.WORLD_LEFT,
 								Vector.ConditionalSelect(greaters,
 									Parameters.WORLD_RIGHT,
-									position));
-						velocity = Vector.ConditionalSelect(union, -velocity, velocity);
-					} else position = WrapPosition(position);
+									this.Position));
+						displacement = Vector.ConditionalSelect(union, -displacement, displacement);
+					} else this.Position = WrapPosition(this.Position);
 				}
-			} else if (Parameters.WORLD_DEATH_BOUND_RADIUS > 0f) {
-				this.Enabled &= this.IsInRange(center);
+			} else if (Parameters.WORLD_PRUNE_RADII > 0f) {
+				this.Enabled &= this.IsInRange(center);//escape velocity etc
 			}
 
-			this.Position = position;
-			this.Velocity = velocity;
-
+			this.Velocity = (1f/Parameters.TIME_SCALE) * displacement;
+			//supernova and stuff
 			this.AfterMove();
+			//update history
+			this._acceleration2 = this._acceleration1;
+			this._acceleration1 = this.Acceleration;
+		}
+
+		public void Merge(TSelf other) {
+			this._acceleration1 = this._acceleration2 = this.Acceleration;
+			this.Consume(other);
 		}
 
 		public void WrapPosition() {
@@ -86,6 +108,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		}
 
 		public static Vector<float> WrapPosition(Vector<float> p) {
+			//unrolled puke
 			Span<float> values = stackalloc float[Vector<float>.Count];
 			values[0] = Parameters.DIM < 1 ? 0f :
 				p[0] < Parameters.WORLD_LEFT[0]
@@ -139,6 +162,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		}
 
 		public static Vector<float> BoundPosition(Vector<float> p) {
+			//unrolled puke
 			Span<float> values = stackalloc float[Vector<float>.Count];
 			values[0] = Parameters.DIM < 1 ? 0f :
 				p[0] < Parameters.WORLD_LEFT[0]

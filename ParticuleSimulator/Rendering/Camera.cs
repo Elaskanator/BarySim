@@ -90,9 +90,9 @@ namespace ParticleSimulator.Rendering {
 
 		public void Increment(Vector<float> position) {
 			this.Set3DRotation(
-				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsPitch,
-				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsYaw,
-				Parameters.WORLD_ROTATION_RADS_PER_STEP * this.RotationStepsRoll);
+				Parameters.WORLD_ROTATION_RAD_PER_FRAME * this.RotationStepsPitch,
+				Parameters.WORLD_ROTATION_RAD_PER_FRAME * this.RotationStepsYaw,
+				Parameters.WORLD_ROTATION_RAD_PER_FRAME * this.RotationStepsRoll);
 			
 			if (this.AutoCentering) {
 				this._center.Update(position);

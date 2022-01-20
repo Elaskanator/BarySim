@@ -11,17 +11,17 @@ namespace ParticleSimulator.Rendering {
 			this._resource = resource;
 
 			if (Parameters.COLOR_USE_FIXED_BANDS)
-				this.Values = Parameters.COLOR_FIXED_BANDS ?? new float[0];
-			else if (Parameters.COLOR_METHOD == ParticleColoringMethod.Depth) {
+				this.Values = Parameters.FIXED_BANDS ?? new float[0];
+			else if (Parameters.COLORING == ParticleColoringMethod.Depth) {
 				int minDim = Parameters.WINDOW_WIDTH > Parameters.WINDOW_HEIGHT ? Parameters.WINDOW_HEIGHT : Parameters.WINDOW_WIDTH;
 				float range = MathF.Sqrt(3f) * minDim / 2f;
-				this.Values = Enumerable.Range(1, Parameters.COLOR_ARRAY.Length).Select(i => -range + (i * 2f*range / (Parameters.COLOR_ARRAY.Length + 1f))).ToArray();
+				this.Values = Enumerable.Range(1, Parameters.COLORS.Length).Select(i => -range + (i * 2f*range / (Parameters.COLORS.Length + 1f))).ToArray();
 			} else this.Values = Enumerable
 					.Range(
-						Parameters.COLOR_METHOD == ParticleColoringMethod.Group ? 0
-							: Parameters.COLOR_METHOD == ParticleColoringMethod.Random ? 0
+						Parameters.COLORING == ParticleColoringMethod.Group ? 0
+							: Parameters.COLORING == ParticleColoringMethod.Random ? 0
 							: 1,
-						Parameters.COLOR_ARRAY.Length)
+						Parameters.COLORS.Length)
 					.Select(i => (float)i)
 					.ToArray();
 
@@ -59,10 +59,10 @@ namespace ParticleSimulator.Rendering {
 				}
 
 				if (Parameters.AUTOSCALE_PERCENTILE) {
-					List<float> results = new(Parameters.COLOR_ARRAY.Length);
+					List<float> results = new(Parameters.COLORS.Length);
 					int position, diff,
-						totalBands = Parameters.COLOR_ARRAY.Length < stats.Data_asc.Length
-							? Parameters.COLOR_ARRAY.Length
+						totalBands = Parameters.COLORS.Length < stats.Data_asc.Length
+							? Parameters.COLORS.Length
 							: stats.Data_asc.Length;
 					float newValue, threshold;
 
@@ -110,8 +110,8 @@ namespace ParticleSimulator.Rendering {
 					this.Values = results.ToArray();
 				} else {
 					lock (this._lock) {
-						this._min.Update(stats.GetPercentileValue(100d / (Parameters.COLOR_ARRAY.Length + 1)));
-						this._max.Update(stats.GetPercentileValue(100d * (1d - 1d / (Parameters.COLOR_ARRAY.Length + 1))));
+						this._min.Update(stats.GetPercentileValue(100d / (Parameters.COLORS.Length + 1)));
+						this._max.Update(stats.GetPercentileValue(100d * (1d - 1d / (Parameters.COLORS.Length + 1))));
 					}
 					float min, range;
 
@@ -127,15 +127,15 @@ namespace ParticleSimulator.Rendering {
 							max = (float)this._max.Current;
 						}
 					} else if (Parameters.AUTOSCALE_FIXED_MAX >= 0) {
-						min = Parameters.AUTOSCALE_FIXED_MAX / (Parameters.COLOR_ARRAY.Length + 1);
+						min = Parameters.AUTOSCALE_FIXED_MAX / (Parameters.COLORS.Length + 1);
 						max = Parameters.AUTOSCALE_FIXED_MAX;
 					} else {
 						min = (float)this._min.Current;
 						max = (float)this._max.Current;
 					}
 					range = max - min;
-					int numSteps = Parameters.COLOR_ARRAY.Length;
-					numSteps = numSteps <= Parameters.COLOR_ARRAY.Length ? numSteps : Parameters.COLOR_ARRAY.Length;
+					int numSteps = Parameters.COLORS.Length;
+					numSteps = numSteps <= Parameters.COLORS.Length ? numSteps : Parameters.COLORS.Length;
 					if (numSteps > 0) {
 						float step = range / (numSteps + 1);
 						this.Values = Enumerable.Range(1, numSteps).Select(i => min + step*i).ToArray();

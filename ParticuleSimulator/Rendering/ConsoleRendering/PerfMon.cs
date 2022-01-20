@@ -17,7 +17,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 		public void Init() {
 			this._statsHeaderValues = new HeaderValue[1 + this._engine.Evaluators.Length];
-			this.HeaderWidth = (this._engine.Evaluators.Length * (1 + Parameters.NUMBER_SPACING)) + 8;
+			this.HeaderWidth = (this._engine.Evaluators.Length * (1 + Parameters.MON_NUMBER_SPACING)) + 8;
 			this.Graph = new PerfGraph(this.HeaderWidth);
 		}
 
@@ -30,7 +30,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				for (int j = 0; j < _statsHeaderValues[i].Label.Length; j++)
 					frameBuffer[position + j] = new ConsoleExtensions.CharInfo(_statsHeaderValues[i].Label[j], ConsoleColor.Gray);
 				position += _statsHeaderValues[i].Label.Length;
-				numberStr = _statsHeaderValues[i].Value.ToStringBetter(Parameters.NUMBER_ACCURACY, false, Parameters.NUMBER_SPACING).PadCenter(Parameters.NUMBER_SPACING);
+				numberStr = _statsHeaderValues[i].Value.ToStringBetter(Parameters.MON_NUMBER_ACCURACY, false, Parameters.MON_NUMBER_SPACING).PadCenter(Parameters.MON_NUMBER_SPACING);
 				for (int j = 0; j < numberStr.Length; j++)
 					frameBuffer[position + j] = new ConsoleExtensions.CharInfo(numberStr[j], _statsHeaderValues[i].ForegroundColor, _statsHeaderValues[i].BackgroundColor);
 				position += numberStr.Length;
@@ -55,7 +55,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					_statsHeaderValues[i + 1] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
 				} else {
 					duration = this._engine.Evaluators[i].ExclusiveTime.LastUpdate;
-					if (duration.TotalMilliseconds >= Parameters.PERF_WARN_MS)
+					if (duration.TotalMilliseconds >= Parameters.MON_WARN_MS)
 						_statsHeaderValues[i + 1] = new(label,
 							duration.TotalMilliseconds,
 							ConsoleColor.White,
@@ -84,7 +84,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		}
 
 		private ConsoleColor ChooseFrameIntervalColor(double timeMs) {
-			double ratioToDesired = 1000d / (Parameters.TARGET_FPS > 0f ? Parameters.TARGET_FPS : Parameters.TARGET_FPS_DEFAULT) / timeMs;
+			double ratioToDesired = 1000d / (Parameters.TARGET_FPS > 0f ? Parameters.TARGET_FPS : Parameters.MON_FPS_DEFAULT) / timeMs;
 			for (int i = 0; i < ColoringScales.RatioColors.Length; i++)
 				if (ratioToDesired >= ColoringScales.RatioColors[i].Item1)
 					return ColoringScales.RatioColors[i].Item2;

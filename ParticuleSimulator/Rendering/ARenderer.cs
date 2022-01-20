@@ -12,8 +12,8 @@ namespace ParticleSimulator.Rendering {
 		
 		public readonly RenderEngine Engine;
 
-		public readonly AIncrementalAverage<TimeSpan> SimTimings = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
-		public readonly AIncrementalAverage<TimeSpan> FpsTimings = new SimpleExponentialMovingTimeAverage(Parameters.PERF_SMA_ALPHA);
+		public readonly AIncrementalAverage<TimeSpan> SimTimings = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
+		public readonly AIncrementalAverage<TimeSpan> FpsTimings = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
 		public int FramesCompleted { get; private set; }
 
 		private float[] _scaling = null;
