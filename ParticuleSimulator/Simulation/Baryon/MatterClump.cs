@@ -12,7 +12,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		private void SetMass(float value) {
 			this.Mass = value;
-			this._density = (1f + MathF.Log(value, 100f)) * Parameters.MASS_RADIAL_DENSITY;
+			this._density = (1f + MathF.Log(value, 16f)) * Parameters.MASS_RADIAL_DENSITY;
 			this.Radius = (float)VectorFunctions.HypersphereRadius(value, 3) / this._density;
 			this.Luminosity = this.IsCollapsed
 				? -1f
@@ -49,23 +49,23 @@ namespace ParticleSimulator.Simulation.Baryon {
 			
 			Vector<float> collisionImpulse = Vector<float>.Zero;
 			if (Parameters.COLLISION_ENABLE && distance < radiusSum) {
-				if (distance <= Parameters.MERGE_WITHIN) {
+				if (Parameters.MERGE_ENABLE && distance <= Parameters.MERGE_WITHIN) {
 					(this.Mergers ??= new()).Enqueue(other);
 					gravitationalInfluence = Vector<float>.Zero;
 				} else {
-					Vector<float> dV = other.Velocity - this.Velocity;
 					MatterClump smaller, larger;
 					(smaller, larger) = this.Radius <= other.Radius
 						? (this, other)
 						: (other, this);
 					
 					float relativeDistance = (distance + smaller.Radius - larger.Radius) / (2f * smaller.Radius);
-					if (relativeDistance + Parameters.MERGE_ENGULF_RATIO <= 1f) {
+					if (Parameters.MERGE_ENABLE && relativeDistance + Parameters.MERGE_ENGULF_RATIO <= 1f) {
 						(this.Mergers ??= new()).Enqueue(other);
 						gravitationalInfluence = Vector<float>.Zero;
 					} else {
+						Vector<float> dV = other.Velocity - this.Velocity;
 						//gravitationalInfluence *= relativeDistance;
-						//if (this.Age > 0)
+						if (Parameters.DRAG_CONSTANT > 0f)
 							collisionImpulse = dV * ((1f - relativeDistance) * smaller.Mass * Parameters.DRAG_CONSTANT);
 					}
 				}

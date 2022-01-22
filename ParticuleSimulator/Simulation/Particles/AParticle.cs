@@ -12,6 +12,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		protected AParticle(Vector<float> position, Vector<float> velocity) {
 			this.Position = position;
 			this.Velocity = velocity;
+			this.Drag = Vector<float>.Zero;
 			this.Acceleration = this._acceleration1 = this._acceleration2 = Vector<float>.Zero;
 			this.Enabled = true;
 		}
@@ -34,13 +35,14 @@ namespace ParticleSimulator.Simulation.Particles {
 		
 		public Vector<float> Position { get; set; }
 		public Vector<float> Velocity { get; set; }
+		public Vector<float> Drag { get; set; }
 		public Vector<float> Acceleration { get; set; }
 		protected Vector<float> _acceleration1;
 		protected Vector<float> _acceleration2;
 		public Vector<float> Jerk1 => this.Acceleration - this._acceleration1;//first-order Lagrange
 		//see https://www3.nd.edu/~zxu2/acms40390F15/Lec-4.1.pdf
 		public Vector<float> Jerk2 =>//second-order Lagrange interpolation (equally-spaced three-point endpoint formula)
-			(1f / (2f*Parameters.TIME_SCALE)) * (this._acceleration2 - 4f*this._acceleration1 + 3f*this.Acceleration);
+			0.5f * (this._acceleration2 - 4f*this._acceleration1 + 3f*this.Acceleration);
 
 		public Queue<TSelf> Mergers = null;
 		public Queue<TSelf> NewParticles = null;
@@ -55,26 +57,24 @@ namespace ParticleSimulator.Simulation.Particles {
 		public void ApplyTimeStep(BaryCenter center) {
 			//Modified Taylor Series integration
 			//see http://www.schlitt.net/xstar/n-body.pdf section 2.2.1
-			Vector<float> displacement;
+			Vector<float> displacement = this.Velocity + this.Drag;
 			switch (this.Age++) {
 				case 0:
-					this._acceleration1 = this.Acceleration;
-					displacement = Parameters.TIME_SCALE*(this.Velocity + this.Acceleration);//Riemann sum
+					displacement += this.Acceleration;//Riemann sum
 					break;
 				case 1:
-					displacement =
-						   Parameters.TIME_SCALE     *this.Velocity
-						+ (Parameters.TIME_SCALE2/2f)*this.Acceleration
-						+ (Parameters.TIME_SCALE3/6f)*this.Jerk1;
+					displacement +=
+						  (Parameters.TIME_SCALE/2f)*this.Acceleration
+						+ (Parameters.TIME_SCALE2/6f)*this.Jerk1;
 					break;
 				default:
-					displacement =
-						   Parameters.TIME_SCALE     *this.Velocity
-						+ (Parameters.TIME_SCALE2/2f)*this.Acceleration
-						+ (Parameters.TIME_SCALE3/6f)*this.Jerk2;
+					displacement +=
+						  (Parameters.TIME_SCALE/2f)*this.Acceleration
+						+ (Parameters.TIME_SCALE2/6f)*this.Jerk2;
 					break;
 			}
-			this.Position += displacement;
+
+			this.Position += displacement * Parameters.TIME_SCALE;
 
 			//check bounding conditions, including escape velocity
 			if (Parameters.WORLD_BOUNCING || Parameters.WORLD_WRAPPING) {
@@ -98,7 +98,8 @@ namespace ParticleSimulator.Simulation.Particles {
 				this.Enabled &= this.IsInRange(center);//escape velocity etc
 			}
 
-			this.Velocity = (1f/Parameters.TIME_SCALE) * displacement;
+			this.Velocity = displacement;
+
 			//supernova and stuff
 			this.AfterMove();
 			//update history

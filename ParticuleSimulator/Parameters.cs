@@ -17,24 +17,25 @@ namespace ParticleSimulator {
 		public const int FRAME_LIMIT				= -1;
 		public const bool VSYNC						= false;
 		//rendering size (using top and bottom halves of each character to get double the verticle resolution)
-		public static readonly int WINDOW_WIDTH		= Console.LargestWindowHeight*2;//Console.LargestWindowWidth;
+		public static readonly int WINDOW_WIDTH		= Console.LargestWindowHeight*2;
 		public static readonly int WINDOW_HEIGHT	= Console.LargestWindowHeight;
 		public const int SUPERSAMPLING				= 2;
 		public const float PIXEL_ROUNDOFF			= 0.5f;
 		//camera
-		public const float WORLD_SCALE				= 200f;
+		public const float WORLD_SCALE				= 100f;
 		public const float ZOOM_SCALE				= 1f;
-		public const bool AUTOFOCUS_DEFAULT			= false;
+		public const bool AUTOFOCUS_DEFAULT			= true;
 		public const float ROT_DEG_PER_FRAME		= 0.33333f;
 		//particle count
 		public const int PARTICLES_GROUP_COUNT		= 1;
 		public const int PARTICLES_GROUP_MIN		= 1;
-		public const int PARTICLES_GROUP_MAX		= 50000;
+		public const int PARTICLES_GROUP_MAX		= 10000;
 		public const float PARTICLES_GROUP_SIZE_POW	= 0f;//0 for max size
 		//particle features
 		public const float TIME_SCALE				= 1f;
 		public const bool COLLISION_ENABLE			= true;//TODO handle ALL collisions before applying drag forces?
-		public const float DRAG_CONSTANT			= 0.08f;
+		public const float DRAG_CONSTANT			= 0f;
+		public const bool MERGE_ENABLE				= true;
 		public const float MERGE_ENGULF_RATIO		= 0.9f;
 		public const float MERGE_WITHIN				= 0.1f;
 		//world
@@ -79,26 +80,26 @@ namespace ParticleSimulator {
 		public const float GRAVITATIONAL_CONSTANT	= 1E-3f;
 		//TODO add electrostatic force
 
-		public const float MASS_SCALAR				= 0.1f;
+		public const float MASS_SCALAR				= 1f;
 		public const float MASS_RADIAL_DENSITY		= 1f;
-		public const float MASS_LUMINOSITY_SCALAR	= 5f;
+		public const float MASS_LUMINOSITY_SCALAR	= 0.1f;
 		public const float MASS_LUMINOSITY_POW		= 1f;
 
-		public const float GALAXY_RADIUS			= 80f;
+		public const float GALAXY_RADIUS			= 50f;
 		public const float GALAXY_THINNESS			= 2f;
-		public const float GALAXY_CONCENTRATION		= 1.1f;
+		public const float GALAXY_CONCENTRATION		= 1.25f;
 
-		public const float GALAXY_SPEED_ANGULAR		= 0f;
-		public const float GALAXY_SPEED_RAND		= 0f;
-		public const float GALAXY_SPIN_ANGULAR		= 0.05f;
-		public const float GALAXY_SPIN_RAND			= 0.10f;
-		public const float GALAXY_SPIN_POW			= 0.9f;
+		public const float GALAXY_SPEED_ANGULAR		= 0.0f;
+		public const float GALAXY_SPEED_RAND		= 0.0f;
+		public const float GALAXY_SPIN_ANGULAR		= 0.3f;
+		public const float GALAXY_SPIN_RAND			= 0f;
+		public const float GALAXY_SPIN_POW			= 0.75f;
 
 		public const bool SUPERNOVA_ENABLE			= true;
-		public const float SUPERNOVA_CRITICAL_MASS	= 1000f;
-		public const float SUPERNOVA_EJECTA_MASS	= 0.1f;
-		public const float SUPERNOVA_EJECTA_SPEED	= 0.5f;
-		public const float SUPERNOVA_RADIUS_SCALAR	= 1.5f;
+		public const float SUPERNOVA_CRITICAL_MASS	= 10000f;
+		public const float SUPERNOVA_EJECTA_MASS	= 1f;
+		public const float SUPERNOVA_EJECTA_SPEED	= 0.3f;
+		public const float SUPERNOVA_RADIUS_SCALAR	= 1f;
 
 		public const bool BLACKHOLE_ENABLE			= false;
 		public const float BLACKHOLE_THRESHOLD		= 1.75f;
@@ -129,7 +130,6 @@ namespace ParticleSimulator {
 		public static readonly float INACCURCY_SQUARED = ACCURACY_CRITERION * ACCURACY_CRITERION;
 		public static readonly float WORLD_PRUNE_RADII_SQUARED = WORLD_PRUNE_RADII*WORLD_PRUNE_RADII;
 		public static readonly float TIME_SCALE2 = TIME_SCALE*TIME_SCALE;
-		public static readonly float TIME_SCALE3 = TIME_SCALE*TIME_SCALE*TIME_SCALE;
 
 		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-WORLD_X_ASPECT * WORLD_SCALE / 2f, -WORLD_Y_ASPECT * WORLD_SCALE / 2f, -WORLD_Z_ASPECT * WORLD_SCALE / 2f);
 		public static readonly Vector<float> WORLD_LEFT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_LEFT, new Vector<float>(float.NegativeInfinity));
