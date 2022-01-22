@@ -21,6 +21,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		public int Id => this._id;
 		public int GroupId { get; set; }
 		public bool Enabled { get; set; }
+		public int Age { get; set; }
 		
 		public float Luminosity { get; set; }
 		public virtual float Density => 1f;
@@ -34,24 +35,19 @@ namespace ParticleSimulator.Simulation.Particles {
 		public Vector<float> Position { get; set; }
 		public Vector<float> Velocity { get; set; }
 		public Vector<float> Acceleration { get; set; }
-		private Vector<float> _acceleration1;
-		private Vector<float> _acceleration2;
-		public Vector<float> Jerk {
-			get {
-				//using second-order Lagrange interpolation (equally-spaced three-point endpoint formula)
-				//see https://www3.nd.edu/~zxu2/acms40390F15/Lec-4.1.pdf
-				//return this.Acceleration - this._acceleration1;//first-order
-				return (1f / (2f*Parameters.TIME_SCALE))
-						* (this._acceleration2 - 4f*this._acceleration1 + 3f*this.Acceleration);
-			}
-		}
+		protected Vector<float> _acceleration1;
+		protected Vector<float> _acceleration2;
+		public Vector<float> Jerk1 => this.Acceleration - this._acceleration1;//first-order Lagrange
+		//see https://www3.nd.edu/~zxu2/acms40390F15/Lec-4.1.pdf
+		public Vector<float> Jerk2 =>//second-order Lagrange interpolation (equally-spaced three-point endpoint formula)
+			(1f / (2f*Parameters.TIME_SCALE)) * (this._acceleration2 - 4f*this._acceleration1 + 3f*this.Acceleration);
 
 		public Queue<TSelf> Mergers = null;
 		public Queue<TSelf> NewParticles = null;
 
 		//Tuple<DragImpulse, Gravity> (TODO cleanup for adding other forces)
 		public abstract Tuple<Vector<float>, Vector<float>> ComputeInfluence(TSelf other);
-		protected abstract void Consume(TSelf other);
+		public abstract void Consume(TSelf other);
 		
 		protected virtual void AfterMove() { }
 		protected virtual bool IsInRange(BaryCenter center) => true;
@@ -59,12 +55,27 @@ namespace ParticleSimulator.Simulation.Particles {
 		public void ApplyTimeStep(BaryCenter center) {
 			//Modified Taylor Series integration
 			//see http://www.schlitt.net/xstar/n-body.pdf section 2.2.1
-			//Vector<float> displacement = Parameters.TIME_SCALE*(this.Velocity + this.Acceleration);//Riemann sum
-			Vector<float> displacement =
-				(Parameters.TIME_SCALE)*this.Velocity
-				+ (Parameters.TIME_SCALE2/2f)*this.Acceleration
-				+ (Parameters.TIME_SCALE3/6f)*this.Jerk;
+			Vector<float> displacement;
+			switch (this.Age++) {
+				case 0:
+					this._acceleration1 = this.Acceleration;
+					displacement = Parameters.TIME_SCALE*(this.Velocity + this.Acceleration);//Riemann sum
+					break;
+				case 1:
+					displacement =
+						   Parameters.TIME_SCALE     *this.Velocity
+						+ (Parameters.TIME_SCALE2/2f)*this.Acceleration
+						+ (Parameters.TIME_SCALE3/6f)*this.Jerk1;
+					break;
+				default:
+					displacement =
+						   Parameters.TIME_SCALE     *this.Velocity
+						+ (Parameters.TIME_SCALE2/2f)*this.Acceleration
+						+ (Parameters.TIME_SCALE3/6f)*this.Jerk2;
+					break;
+			}
 			this.Position += displacement;
+
 			//check bounding conditions, including escape velocity
 			if (Parameters.WORLD_BOUNCING || Parameters.WORLD_WRAPPING) {
 				Vector<int>
@@ -73,7 +84,8 @@ namespace ParticleSimulator.Simulation.Particles {
 					union = lesses | greaters;
 				if (Vector.LessThanAny(union, Vector<int>.Zero)) {
 					if (Parameters.WORLD_BOUNCING) {
-						this.Position = -this.Position
+						this.Position =
+							-this.Position
 							+ 2f*Vector.ConditionalSelect(lesses,
 								Parameters.WORLD_LEFT,
 								Vector.ConditionalSelect(greaters,
@@ -92,11 +104,6 @@ namespace ParticleSimulator.Simulation.Particles {
 			//update history
 			this._acceleration2 = this._acceleration1;
 			this._acceleration1 = this.Acceleration;
-		}
-
-		public void Merge(TSelf other) {
-			this._acceleration1 = this._acceleration2 = this.Acceleration;
-			this.Consume(other);
 		}
 
 		public void WrapPosition() {
@@ -168,49 +175,49 @@ namespace ParticleSimulator.Simulation.Particles {
 				p[0] < Parameters.WORLD_LEFT[0]
 				? Parameters.WORLD_LEFT[0]
 				: p[0] >= Parameters.WORLD_RIGHT[0]
-					? Parameters.WORLD_RIGHT[0] - Parameters.WORLD_EPSILON
+					? Parameters.WORLD_RIGHT[0] - Parameters.PRECISION_EPSILON
 					: p[0];
 			values[1] = Parameters.DIM < 1 ? 0f :
 				p[1] < Parameters.WORLD_LEFT[1]
 				? Parameters.WORLD_LEFT[1]
 				: p[1] >= Parameters.WORLD_RIGHT[1]
-					? Parameters.WORLD_RIGHT[1] - Parameters.WORLD_EPSILON
+					? Parameters.WORLD_RIGHT[1] - Parameters.PRECISION_EPSILON
 					: p[1];
 			values[2] = Parameters.DIM < 1 ? 0f :
 				p[2] < Parameters.WORLD_LEFT[2]
 				? Parameters.WORLD_LEFT[2]
 				: p[2] >= Parameters.WORLD_RIGHT[2]
-					? Parameters.WORLD_RIGHT[2] - Parameters.WORLD_EPSILON
+					? Parameters.WORLD_RIGHT[2] - Parameters.PRECISION_EPSILON
 					: p[2];
 			values[3] = Parameters.DIM < 1 ? 0f :
 				p[3] < Parameters.WORLD_LEFT[3]
 				? Parameters.WORLD_LEFT[3]
 				: p[3] >= Parameters.WORLD_RIGHT[3]
-					? Parameters.WORLD_RIGHT[3] - Parameters.WORLD_EPSILON
+					? Parameters.WORLD_RIGHT[3] - Parameters.PRECISION_EPSILON
 					: p[3];
 			values[4] = Parameters.DIM < 1 ? 0f :
 				p[4] < Parameters.WORLD_LEFT[4]
 				? Parameters.WORLD_LEFT[4]
 				: p[4] >= Parameters.WORLD_RIGHT[4]
-					? Parameters.WORLD_RIGHT[4] - Parameters.WORLD_EPSILON
+					? Parameters.WORLD_RIGHT[4] - Parameters.PRECISION_EPSILON
 					: p[4];
 			values[5] = Parameters.DIM < 1 ? 0f :
 				p[5] < Parameters.WORLD_LEFT[5]
 				? Parameters.WORLD_LEFT[5]
 				: p[5] >= Parameters.WORLD_RIGHT[5]
-					? Parameters.WORLD_RIGHT[5] - Parameters.WORLD_EPSILON
+					? Parameters.WORLD_RIGHT[5] - Parameters.PRECISION_EPSILON
 					: p[5];
 			values[6] = Parameters.DIM < 1 ? 0f :
 				p[6] < Parameters.WORLD_LEFT[6]
 				? Parameters.WORLD_LEFT[6]
 				: p[6] >= Parameters.WORLD_RIGHT[6]
-					? Parameters.WORLD_RIGHT[6] - Parameters.WORLD_EPSILON
+					? Parameters.WORLD_RIGHT[6] - Parameters.PRECISION_EPSILON
 					: p[6];
 			values[7] = Parameters.DIM < 1 ? 0f :
 				p[7] < Parameters.WORLD_LEFT[7]
 				? Parameters.WORLD_LEFT[7]
 				: p[7] >= Parameters.WORLD_RIGHT[7]
-					? Parameters.WORLD_RIGHT[7] - Parameters.WORLD_EPSILON
+					? Parameters.WORLD_RIGHT[7] - Parameters.PRECISION_EPSILON
 					: p[7];
 			return new Vector<float>(values);
 		}

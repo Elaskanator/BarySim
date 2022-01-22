@@ -12,11 +12,11 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		private void SetMass(float value) {
 			this.Mass = value;
-			this._density = (1f + MathF.Log(value, 128f)) * Parameters.MASS_RADIAL_DENSITY;
+			this._density = (1f + MathF.Log(value, 100f)) * Parameters.MASS_RADIAL_DENSITY;
+			this.Radius = (float)VectorFunctions.HypersphereRadius(value, 3) / this._density;
 			this.Luminosity = this.IsCollapsed
 				? -1f
 				: Parameters.MASS_LUMINOSITY_SCALAR * MathF.Pow(value, Parameters.MASS_LUMINOSITY_POW);
-			this.Radius = (float)VectorFunctions.HypersphereRadius(value, 3) / this._density;
 		}
 
 		private float _density = Parameters.MASS_RADIAL_DENSITY;
@@ -25,43 +25,51 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		public float Mass;
 
-		public Vector<float> Impulse {
-			get => this.Acceleration * this.Mass;
-			set { this.Acceleration = value * (1f / this.Mass); } }
-
 		public Vector<float> Momentum {
 			get => this.Velocity * this.Mass;
 			set { this.Velocity = value * (1f / this.Mass); } }
 
+		public Vector<float> Impulse {
+			get => this.Acceleration * this.Mass;
+			set { this.Acceleration = value * (1f / this.Mass); } }
+
 		public override Tuple<Vector<float>, Vector<float>> ComputeInfluence(MatterClump other) {
 			Vector<float> toOther = other.Position - this.Position;
 			float distanceSquared = Vector.Dot(toOther, toOther);
-
-			Vector<float> collisionImpulse = Vector<float>.Zero;
-			Vector<float> gravitationalInfluence;
 			float distance = MathF.Sqrt(distanceSquared);
-			if (Parameters.COLLISION_ENABLE) {
-				float radiusSum = this.Radius + other.Radius;
-				if (distance < radiusSum) {
+			float radiusSum = this.Radius + other.Radius;
+			
+			Vector<float> gravitationalInfluence =
+				distance >= radiusSum
+					? toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distanceSquared * distance))
+				: distance > Parameters.PRECISION_EPSILON//gravity at contact distance
+					? toOther * (Parameters.GRAVITATIONAL_CONSTANT / (radiusSum * radiusSum * distance))
+					//? toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distanceSquared * distance))
+				: Vector<float>.Zero;//cannot safely normalize the direction vector
+			
+			Vector<float> collisionImpulse = Vector<float>.Zero;
+			if (Parameters.COLLISION_ENABLE && distance < radiusSum) {
+				if (distance <= Parameters.MERGE_WITHIN) {
+					(this.Mergers ??= new()).Enqueue(other);
+					gravitationalInfluence = Vector<float>.Zero;
+				} else {
+					Vector<float> dV = other.Velocity - this.Velocity;
 					MatterClump smaller, larger;
 					(smaller, larger) = this.Radius <= other.Radius
 						? (this, other)
 						: (other, this);
-					float fullEngulfDistance = larger.Radius - smaller.Radius;
-					if (Parameters.MERGE_ENABLE && (distance <= fullEngulfDistance || (distance - larger.Radius)/smaller.Radius <= (1f - Parameters.MERGE_ENGULF_RATIO))) {
-						gravitationalInfluence = Vector<float>.Zero;
+					
+					float relativeDistance = (distance + smaller.Radius - larger.Radius) / (2f * smaller.Radius);
+					if (relativeDistance + Parameters.MERGE_ENGULF_RATIO <= 1f) {
 						(this.Mergers ??= new()).Enqueue(other);
+						gravitationalInfluence = Vector<float>.Zero;
 					} else {
-						//compute gravity at contact distance and downscale
-						float relativeDistance = (distance - fullEngulfDistance) / smaller.Radius;
-						gravitationalInfluence = toOther * (relativeDistance * Parameters.GRAVITATIONAL_CONSTANT / (radiusSum * radiusSum * distance));
-						if (Parameters.DRAG_CONSTANT > 0) {
-							Vector<float> dV = this.Velocity - other.Velocity;
+						//gravitationalInfluence *= relativeDistance;
+						//if (this.Age > 0)
 							collisionImpulse = dV * ((1f - relativeDistance) * smaller.Mass * Parameters.DRAG_CONSTANT);
-						}
 					}
-				} else gravitationalInfluence = toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distanceSquared * distance));
-			} else gravitationalInfluence = toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distanceSquared * distance));
+				}
+			}
 
 			return new(collisionImpulse, gravitationalInfluence);
 		}
@@ -73,6 +81,26 @@ namespace ParticleSimulator.Simulation.Baryon {
 				|| Vector.Dot(this.Velocity, this.Velocity) <//below escape velocity
 					2f * Parameters.GRAVITATIONAL_CONSTANT * center.Weight
 					/ MathF.Sqrt(distanceSquared);
+		}
+
+		public override void Consume(MatterClump other) {
+			float totalMass = this.Mass + other.Mass;
+			float totalMassInv = 1f / totalMass;
+
+			Vector<float> weightedPosition = ((this.Mass*this.Position) + (other.Mass*other.Position)) * totalMassInv;
+			Vector<float> weightedAcceleration1 = ((this.Mass*this._acceleration1) + (other.Mass*other._acceleration1)) * totalMassInv;
+			Vector<float> weightedAcceleration2 = ((this.Mass*this._acceleration2) + (other.Mass*other._acceleration2)) * totalMassInv;
+			Vector<float> totalMomentum = this.Momentum + other.Momentum;
+			Vector<float> totalImpulse = this.Impulse + other.Impulse;
+
+			this.SetMass(totalMass);
+
+			this.IsCollapsed |= other.IsCollapsed;
+			this.Position = weightedPosition;
+			this.Momentum = totalMomentum;
+			this.Impulse = totalImpulse;
+			this._acceleration1 = weightedAcceleration1;
+			this._acceleration2 = weightedAcceleration2;
 		}
 
 		protected override void AfterMove() {
@@ -117,22 +145,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 					}
 				}
 			}
-		}
-
-		protected override void Consume(MatterClump other) {
-			float totalMass = this.Mass + other.Mass;
-
-			Vector<float> totalImpulse = this.Impulse + other.Impulse;
-			Vector<float> totalMomentum = this.Momentum + other.Momentum;
-			Vector<float> weightedPosition = ((this.Mass*this.Position) + (other.Mass*other.Position)) * (1f / totalMass);
-
-			this.IsCollapsed |= other.IsCollapsed;
-
-			this.SetMass(totalMass);
-
-			this.Position = weightedPosition;
-			this.Momentum = totalMomentum;
-			this.Impulse = totalImpulse;
 		}
 	}
 }

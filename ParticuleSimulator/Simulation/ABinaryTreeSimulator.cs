@@ -94,7 +94,7 @@ namespace ParticleSimulator.Simulation {
 								other.Enabled = false;
 								originLeaf.GetContainingLeaf(other).RemoveFromLeaf(other, false);//defer leaf pruning
 								//ingest the other particle's information
-								particle.Merge(other);
+								particle.Consume(other);
 								if (!(other.Mergers is null))
 									while (other.Mergers.TryDequeue(out TParticle tail))
 										if (particle.Id != tail.Id)

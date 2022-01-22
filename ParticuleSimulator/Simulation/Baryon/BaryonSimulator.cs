@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Numerics;
 using ParticleSimulator.Simulation.Particles;
 
+using Generic.Vectors;
+using System.Linq;
+
 namespace ParticleSimulator.Simulation.Baryon {
 	public class BaryonSimulator : ABinaryTreeSimulator<MatterClump, BarnesHutTree> {
 		public BaryonSimulator(int dim) : base(new(dim)) { }
@@ -36,8 +39,8 @@ namespace ParticleSimulator.Simulation.Baryon {
 		protected override void ComputeInteractions(BarnesHutTree leaf, MatterClump[] particles) {
 			List<MatterClump> nearField = new();
 			Vector<float> farFieldContribution = this.DetermineNeighbors(leaf, nearField);
-
 			Tuple<Vector<float>, Vector<float>> influence;
+
 			for (int i = 0; i < particles.Length; i++) {
 				for (int n = 0; n < nearField.Count; n++) {
 					influence = particles[i].ComputeInfluence(nearField[n]);
@@ -80,7 +83,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 							} else {
 								toOther = other.MassBaryCenter.Position - leaf.MassBaryCenter.Position;
 								distanceSquared = Vector.Dot(toOther, toOther);
-								if (distanceSquared <= Parameters.WORLD_EPSILON) {//TODO check for adjacency instead
+								if (distanceSquared <= Parameters.NODE_EPSILON) {//TODO check for adjacency instead
 									nearField.AddRange(other);
 								} else if (distanceSquared * Parameters.INACCURCY_SQUARED > other.SizeSquared) {//Barnes-Hut condition
 									distance = MathF.Sqrt(distanceSquared);
