@@ -21,24 +21,24 @@ namespace ParticleSimulator.Simulation.Baryon {
 		//Plummer distribution
 		//see https://articles.adsabs.harvard.edu/pdf/1974A%26A....37..183A
 		protected override void ParticleAddPositionVelocity(MatterClump particle) {
-			float rand = (float)Program.Engine.Random.NextDouble();
+			float rand = (float)Program.Random.NextDouble();
 			float radius = this.Radius * this.BulgeScalar / MathF.Sqrt(MathF.Pow(rand, -2f/3f) - 1f);
-			Vector<float> uniformUnitVector = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
+			Vector<float> uniformUnitVector = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random));
 			Vector<float> particleOffset = radius * uniformUnitVector;
-			particle.Position += particleOffset;
+			particle._position += particleOffset;
 			
 			float bulgeRadius = this.Radius * this.BulgeScalar;
 			float velocity = this.VelocitySampling(radius, bulgeRadius);
-			uniformUnitVector = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
+			uniformUnitVector = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random));
 			particle.Velocity += velocity * uniformUnitVector;
 		}
 
 		private float VelocitySampling(float radius, float bulgeRadius) {
-			float rand1 = (float)Program.Engine.Random.NextDouble(),
-				rand2 = 0.1f*(float)Program.Engine.Random.NextDouble();
+			float rand1 = (float)Program.Random.NextDouble(),
+				rand2 = 0.1f*(float)Program.Random.NextDouble();
 			while (rand2 > rand1*rand1*MathF.Pow(1f - rand1*rand1, 3.5f)) {
-				rand1 = (float)Program.Engine.Random.NextDouble();
-				rand2 = 0.1f*(float)Program.Engine.Random.NextDouble();
+				rand1 = (float)Program.Random.NextDouble();
+				rand2 = 0.1f*(float)Program.Random.NextDouble();
 			}
 
 			return rand1 * MathF.Sqrt(2)

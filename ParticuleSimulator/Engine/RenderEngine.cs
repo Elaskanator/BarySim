@@ -18,8 +18,6 @@ namespace ParticleSimulator.Engine {
 		private readonly int _id = ++_globalId;
 
 		public RenderEngine() {
-			this.ResetRandon();
-
 			this.KeyListeners = this.BuildKeyListeners().ToArray();
 
 			this.Evaluators = this.BuildEvaluators().ToArray();
@@ -38,10 +36,7 @@ namespace ParticleSimulator.Engine {
 				this.Camera,
 				Parameters.WINDOW_WIDTH,
 				Parameters.WINDOW_HEIGHT * 2,
-				Parameters.WINDOW_WIDTH > Parameters.WINDOW_HEIGHT * 2
-					? Parameters.WINDOW_HEIGHT * 2
-					: Parameters.WINDOW_WIDTH,
-				this.Random,
+				Program.Random,
 				this._rankingsResource);
 
 			this.Scaling = new(this._scalingResource);
@@ -72,12 +67,6 @@ namespace ParticleSimulator.Engine {
 		public DateTime? EndTimeUtc { get; private set; }
 		public KeyListener[] KeyListeners { get; private set; }
 
-		public Random Random { get; private set; }
-		public void ResetRandon() {
-			this.Random = Parameters.RANDOM_SEED == -1
-				? new()
-				: new(Parameters.RANDOM_SEED);
-		}
 		public ISimulator Simulator { get; private set; }
 		public ARenderer Renderer { get; private set; }
 		public Autoscaler Scaling { get; private set; }
@@ -95,9 +84,9 @@ namespace ParticleSimulator.Engine {
 		//private ProcessThread _stepEval_Export;
 		private Dictionary<int, bool> _stepsStartingPaused;
 		
-		private readonly SynchronousBuffer<ParticleData[]> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
+		private readonly SynchronousBuffer<List<ParticleData>> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
 		private readonly ConsumptionType _particleResourceReadType = Parameters.SYNC_SIMULATION ? ConsumptionType.Consume : ConsumptionType.ConsumeReady;
-		private IngestedResource<ParticleData[]> _particleResourceUse;
+		private IngestedResource<List<ParticleData>> _particleResourceUse;
 		private readonly SynchronousBuffer<float?[]> _rankingsResource = new("Ranks", 0);
 		private readonly SynchronousBuffer<Pixel[]> _rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 		private readonly SynchronousBuffer<float[]> _scalingResource = new("Scaling", 0);
@@ -164,7 +153,7 @@ namespace ParticleSimulator.Engine {
 			if (this.IsOpen) {
 				this.Stop();
 				
-				this.ResetRandon();
+				Program.ResetRandon();
 
 				this._particleResource.Reset();
 				this._rankingsResource.Reset();
@@ -322,7 +311,7 @@ namespace ParticleSimulator.Engine {
 
 		private void ResetSimulation() {
 			bool paused = this._stepEval_Simulate.IsPaused;
-			this.ResetRandon();
+			Program.ResetRandon();
 			this._stepEval_Simulate.Restart(false);
 			this._stepsStartingPaused[this._stepEval_Simulate.Id] = !paused;
 			if (!paused)

@@ -50,7 +50,7 @@ namespace Generic.Trees {
 			throw new Exception("Element does not belong");
 		}
 
-		public ABinaryTree<T> GetContainingLeaf(T item) {
+		public ABinaryTree<T> FindContainingLeaf(T item) {
 			ABinaryTree<T> node = this;
 			while (!node.DoesEncompass(item))
 				if (node.IsRoot)
@@ -129,7 +129,7 @@ namespace Generic.Trees {
 					++node.ItemCount;
 					node = node.Children[node.ChildIndex(item)];
 				}
-				node.AddToLeaf(item);//increments the count
+				node = node.AddToLeaf(item);//increments the count
 			}
 			return node;
 		}
@@ -148,7 +148,7 @@ namespace Generic.Trees {
 			} else return false;
 		}
 
-		protected void AddToLeaf(T item) {//increments the count
+		protected ABinaryTree<T> AddToLeaf(T item) {//increments the count
 			ABinaryTree<T> node = this;
 			while (!node._isReceiving) {
 				node.Refine();
@@ -158,6 +158,7 @@ namespace Generic.Trees {
 			node.Bin ??= this.NewBin();
 			node.Bin.Add(item);
 			++node.ItemCount;
+			return node;
 		}
 
 		private void Refine() {

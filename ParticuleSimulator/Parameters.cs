@@ -11,9 +11,9 @@ namespace ParticleSimulator {
 		#region Primary
 		//global
 		public const int DIM						= 3;
-		public const int RANDOM_SEED				= 0;
+		public const int RANDOM_SEED				= 1;
 		//evaluation
-		public const float TARGET_FPS				= 30;
+		public const float TARGET_FPS				= 30f;
 		public const int FRAME_LIMIT				= -1;
 		public const bool VSYNC						= false;
 		//rendering size (using top and bottom halves of each character to get double the verticle resolution)
@@ -22,22 +22,21 @@ namespace ParticleSimulator {
 		public const int SUPERSAMPLING				= 2;
 		public const float PIXEL_ROUNDOFF			= 0.5f;
 		//camera
-		public const float WORLD_SCALE				= 100f;
+		public const float WORLD_SCALE				= 400f;
 		public const float ZOOM_SCALE				= 1f;
 		public const bool AUTOFOCUS_DEFAULT			= true;
 		public const float ROT_DEG_PER_FRAME		= 0.33333f;
 		//particle count
 		public const int PARTICLES_GROUP_COUNT		= 1;
 		public const int PARTICLES_GROUP_MIN		= 1;
-		public const int PARTICLES_GROUP_MAX		= 10000;
+		public const int PARTICLES_GROUP_MAX		= 25000;
 		public const float PARTICLES_GROUP_SIZE_POW	= 0f;//0 for max size
 		//particle features
 		public const float TIME_SCALE				= 1f;
-		public const bool COLLISION_ENABLE			= true;//TODO handle ALL collisions before applying drag forces?
+		public const bool COLLISION_ENABLE			= true;
 		public const float DRAG_CONSTANT			= 0f;
 		public const bool MERGE_ENABLE				= true;
-		public const float MERGE_ENGULF_RATIO		= 0.9f;
-		public const float MERGE_WITHIN				= 0.1f;
+		public const float MERGE_ENGULF_RATIO		= 0.8f;
 		//world
 		public const float WORLD_PADDING_PCT		= 0f;
 		public const float WORLD_PRUNE_RADII		= 10f;
@@ -49,7 +48,7 @@ namespace ParticleSimulator {
 		//accuracy
 		public const float ACCURACY_CRITERION		= 2f;//Barnes-Hut condition of approximating a node (smaller = more accurate)
 		public const float NODE_EPSILON				= 4f;//nodes too close must be directly evaluated (helps prevent tight groupings not merging)
-		public const float PRECISION_EPSILON		= 1E-5f;//minimum distance to support
+		public const float PRECISION_EPSILON		= 1E-4f;//minimum distance to support
 		public const int TREE_LEAF_CAPACITY			= 8;//degrades integrity of approximation check
 		//parallelism
 		public const int PRECALCULATION_LIMIT		= 1;//how many calculations ahead steps can work
@@ -77,28 +76,28 @@ namespace ParticleSimulator {
 		#endregion Primary
 
 		#region Gravity
-		public const float GRAVITATIONAL_CONSTANT	= 1E-3f;
+		public const float GRAVITATIONAL_CONSTANT	= 1E-4f;
 		//TODO add electrostatic force
 
 		public const float MASS_SCALAR				= 1f;
 		public const float MASS_RADIAL_DENSITY		= 1f;
-		public const float MASS_LUMINOSITY_SCALAR	= 0.1f;
+		public const float MASS_LUMINOSITY_SCALAR	= 1f;
 		public const float MASS_LUMINOSITY_POW		= 1f;
 
-		public const float GALAXY_RADIUS			= 50f;
-		public const float GALAXY_THINNESS			= 2f;
-		public const float GALAXY_CONCENTRATION		= 1.25f;
+		public const float GALAXY_RADIUS			= 150f;
+		public const float GALAXY_THINNESS			= 3f;
+		public const float GALAXY_CONCENTRATION		= 1.5f;
 
 		public const float GALAXY_SPEED_ANGULAR		= 0.0f;
 		public const float GALAXY_SPEED_RAND		= 0.0f;
-		public const float GALAXY_SPIN_ANGULAR		= 0.3f;
-		public const float GALAXY_SPIN_RAND			= 0f;
-		public const float GALAXY_SPIN_POW			= 0.75f;
+		public const float GALAXY_SPIN_ANGULAR		= 0.07f;
+		public const float GALAXY_SPIN_RAND			= 0.1f;
+		public const float GALAXY_SPIN_POW			= 0.5f;
 
-		public const bool SUPERNOVA_ENABLE			= true;
+		public const bool SUPERNOVA_ENABLE			= false;
 		public const float SUPERNOVA_CRITICAL_MASS	= 10000f;
 		public const float SUPERNOVA_EJECTA_MASS	= 1f;
-		public const float SUPERNOVA_EJECTA_SPEED	= 0.3f;
+		public const float SUPERNOVA_EJECTA_SPEED	= 0.4f;
 		public const float SUPERNOVA_RADIUS_SCALAR	= 1f;
 
 		public const bool BLACKHOLE_ENABLE			= false;

@@ -7,7 +7,7 @@ using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Rendering.Rasterization {
 	public class Rasterizer {
-		public Rasterizer(Camera camera, int width, int height, int depth, Random rand, SynchronousBuffer<float?[]> rawRankings) {
+		public Rasterizer(Camera camera, int width, int height, Random rand, SynchronousBuffer<float?[]> rawRankings) {
 			this.OutWidth = width;
 			this.OutHeight = height;
 			this.OutNumPixels = width * height;
@@ -60,7 +60,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		
 		//orthographic projection
 		public Pixel[] Rasterize(EvalResult prepResults, object[] parameters) {//top down view (smaller Z values = closer)
-			ParticleData[] particles = (ParticleData[])parameters[0];
+			List<ParticleData> particles = (List<ParticleData>)parameters[0];
 			if (particles is null) {
 				return Array.Empty<Pixel>();
 			} else {
@@ -77,7 +77,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				Queue<Subsample> resamplings = new();
 				Subsample resampling;
 				int idx;
-				for (int i = 0; i < particles.Length; i++) {
+				for (int i = 0; i < particles.Count; i++) {
 					this.Resample(particles[i], resamplings);
 					while (resamplings.TryDequeue(out resampling)) {
 						idx = resampling.X + this.InternalWidth * resampling.Y;

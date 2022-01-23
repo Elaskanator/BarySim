@@ -9,7 +9,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		public SpinningDisk(Func<Vector<float>, Vector<float>, TParticle> initializer, float radius)
 		: base(initializer, radius) {
 			//this.GlobalDirection = Program.Engine.Random.NextDouble() < 0.5d;
-			this.InternalDirection = Program.Engine.Random.NextDouble() < 0.5d;
+			this.InternalDirection = Program.Random.NextDouble() < 0.5d;
 		}
 
 		public readonly bool GlobalDirection;
@@ -24,26 +24,26 @@ namespace ParticleSimulator.Simulation.Particles {
 		}
 
 		protected override void ParticleAddPositionVelocity(TParticle particle) {
-			float rand = (float)Program.Engine.Random.NextDouble();
+			float rand = (float)Program.Random.NextDouble();
 			float offset = this.Radius * MathF.Pow(rand, Parameters.GALAXY_CONCENTRATION);
 
 			float[] offsetV;
 			if (Parameters.DIM <= 2) {
 				offsetV = VectorFunctions
-					.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random)
+					.RandomUnitVector_Spherical(Parameters.DIM, Program.Random)
 					.Select(x => offset*x)
 					.ToArray();
 			} else{
 				offsetV = VectorFunctions
-					.RandomUnitVector_Spherical(2, Program.Engine.Random)
+					.RandomUnitVector_Spherical(2, Program.Random)
 					.Select(x => offset*x)
 					.Concat(Enumerable.Repeat(0f, Vector<float>.Count - 2))
 					.ToArray();
 				float offset2 = (this.Radius*this.Radius - offset*offset) / (this.Radius * this.Radius);
-				float rand2 = MathF.Pow((float)Program.Engine.Random.NextDouble(), Parameters.GALAXY_CONCENTRATION);
+				float rand2 = MathF.Pow((float)Program.Random.NextDouble(), Parameters.GALAXY_CONCENTRATION);
 				offset2 *= rand * rand2 * this.Radius / Parameters.GALAXY_THINNESS;
 				float[] offsetV2 = VectorFunctions
-					.RandomUnitVector_Spherical(Parameters.DIM - 2, Program.Engine.Random)
+					.RandomUnitVector_Spherical(Parameters.DIM - 2, Program.Random)
 					.Select(x => offset2*x)
 					.ToArray();
 				for (int i = 0; i < Parameters.DIM - 2; i++)
@@ -51,7 +51,7 @@ namespace ParticleSimulator.Simulation.Particles {
 			}
 
 			Vector<float> positionOffset = VectorFunctions.New(offsetV);
-			particle.Position += positionOffset;
+			particle._position += positionOffset;
 
 			particle.Velocity +=
 			  (   (this.InternalDirection ? 1f : -1f)
@@ -59,7 +59,7 @@ namespace ParticleSimulator.Simulation.Particles {
 				* MathF.Pow(offset / this.Radius, Parameters.GALAXY_SPIN_POW)
 				* this.DirectionUnitVector(positionOffset))
 			+ (   new Vector<float>(Parameters.GALAXY_SPIN_RAND) * MathF.Pow(1f - (offset / this.Radius), Parameters.GALAXY_SPIN_POW)
-				* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random)));
+				* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random)));
 		}
 
 		private Vector<float> DirectionUnitVector(Vector<float> offset) {

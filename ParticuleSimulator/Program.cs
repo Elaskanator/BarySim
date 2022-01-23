@@ -6,6 +6,12 @@ using ParticleSimulator.Engine;
 namespace ParticleSimulator {
 	public class Program {
 		public static RenderEngine Engine { get; private set; }
+		public static Random Random { get; private set; }
+		public static void ResetRandon() {
+			Random = Parameters.RANDOM_SEED == -1
+				? new()
+				: new(Parameters.RANDOM_SEED);
+		}
 
 		public static void Main(string[] args) {
 			Console.Title = string.Format("Particle Simulator ({0}D) - Initializing", Parameters.DIM);
@@ -26,6 +32,7 @@ namespace ParticleSimulator {
 
 			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);//ctrl+c and alt+f4 etc
 
+			ResetRandon();
 			Engine = new RenderEngine();
 			//ConsoleExtensions.WaitForEnter("Press enter to start");
 			Engine.Start();

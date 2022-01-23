@@ -38,29 +38,26 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		protected override void ComputeInteractions(BarnesHutTree leaf, MatterClump[] particles) {
 			List<MatterClump> nearField = new();
-			Vector<float> farFieldContribution = this.DetermineNeighbors(leaf, nearField);
-			Tuple<Vector<float>, Vector<float>> influence;
+			Vector<float> farFieldAcceleration = this.DetermineNeighbors(leaf, nearField);
+			Vector<float> impulse;
 
 			for (int i = 0; i < particles.Length; i++) {
 				for (int n = 0; n < nearField.Count; n++) {
-					influence = particles[i].ComputeInfluence(nearField[n]);
-					particles[i].Drag += (1f/particles[i].Mass)*influence.Item1;
-					particles[i].Acceleration += nearField[n].Mass*influence.Item2;
+					impulse = particles[i].ComputeInteractionImpulse(nearField[n]);
+					particles[i].Impulse += impulse;
 				}
 				for (int j = 0; j < i; j++) {
-					influence = particles[i].ComputeInfluence(particles[j]);
-					particles[i].Drag += (1f/particles[i].Mass)*influence.Item1;
-					particles[i].Acceleration += particles[j].Mass*influence.Item2;
-					particles[j].Drag -= (1f/particles[j].Mass)*influence.Item1;
-					particles[j].Acceleration -= particles[i].Mass*influence.Item2;
+					impulse = particles[i].ComputeInteractionImpulse(particles[j]);
+					particles[i].Impulse += impulse;
+					particles[j].Impulse -= impulse;
 				}
-				particles[i].Acceleration += farFieldContribution;//add last to reduce floating point errors
+				particles[i].Acceleration += farFieldAcceleration;//add last to reduce floating point errors
 			}
 		}
 
 		private Vector<float> DetermineNeighbors(BarnesHutTree leaf, List<MatterClump> nearField) {
 			//minimize floating point error by computing nodes likely to be more distant first
-			Vector<float> farFieldContribution = Vector<float>.Zero, subTotal1, subTotal2, toOther;
+			Vector<float> farFieldAcceleration = Vector<float>.Zero, subTotal1, subTotal2, toOther;
 			Stack<BarnesHutTree> pathDown = new(), remaining = new();
 			BarnesHutTree parent, child, other, tail;
 			float distanceSquared, distance;
@@ -101,11 +98,11 @@ namespace ParticleSimulator.Simulation.Baryon {
 					subTotal1 += subTotal2;
 				}
 				//reduce floating point error with subtotalling before adding to running total
-				farFieldContribution += subTotal1;
+				farFieldAcceleration += subTotal1;
 				parent = child;
 			}
 			//finally apply G
-			return farFieldContribution * Parameters.GRAVITATIONAL_CONSTANT;
+			return farFieldAcceleration * Parameters.GRAVITATIONAL_CONSTANT;
 		}
 	}
 }

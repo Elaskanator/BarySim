@@ -10,33 +10,28 @@ namespace ParticleSimulator.Simulation.Particles {
 		private readonly int _id = ++_globalID;
 
 		protected AParticle(Vector<float> position, Vector<float> velocity) {
-			this.Position = position;
+			this._position = position;
 			this.Velocity = velocity;
-			this.Drag = Vector<float>.Zero;
 			this.Acceleration = this._acceleration1 = this._acceleration2 = Vector<float>.Zero;
 			this.Enabled = true;
 		}
 
-		public override string ToString() => string.Format("Particle[<{0}> ID {1}]", this.Id, string.Join("", this.Position));
+		public override string ToString() => string.Format("Particle[<{0}> ID {1}]", this.Id, string.Join("", this._position));
 
 		public int Id => this._id;
 		public int GroupId { get; set; }
 		public bool Enabled { get; set; }
 		public int Age { get; set; }
 		
+		protected float _radius;
+		public float Radius => this._radius;
 		public float Luminosity { get; set; }
 		public virtual float Density => 1f;
-
-		private float _radius;
-		public float Radius {
-			get => this._radius;
-			set { this._radius = value; this.RadiusSquared = value * value; } }
-		public float RadiusSquared { get; private set; }
 		
-		public Vector<float> Position { get; set; }
-		public Vector<float> Velocity { get; set; }
-		public Vector<float> Drag { get; set; }
-		public Vector<float> Acceleration { get; set; }
+		public Vector<float> _position;
+		public Vector<float> Position => this._position;
+		public Vector<float> Velocity;
+		public Vector<float> Acceleration;
 		protected Vector<float> _acceleration1;
 		protected Vector<float> _acceleration2;
 		public Vector<float> Jerk1 => this.Acceleration - this._acceleration1;//first-order Lagrange
@@ -44,20 +39,47 @@ namespace ParticleSimulator.Simulation.Particles {
 		public Vector<float> Jerk2 =>//second-order Lagrange interpolation (equally-spaced three-point endpoint formula)
 			0.5f * (this._acceleration2 - 4f*this._acceleration1 + 3f*this.Acceleration);
 
-		public Queue<TSelf> Mergers = null;
+		public virtual Vector<float> Momentum {
+			get => this.Velocity;
+			set { this.Velocity = value; } }
+		public virtual Vector<float> Impulse {
+			get => this.Acceleration;
+			set { this.Acceleration = value; } }
+
+		public Queue<TSelf> Collisions = null;
 		public Queue<TSelf> NewParticles = null;
 
-		//Tuple<DragImpulse, Gravity> (TODO cleanup for adding other forces)
-		public abstract Tuple<Vector<float>, Vector<float>> ComputeInfluence(TSelf other);
-		public abstract void Consume(TSelf other);
-		
+		protected abstract Vector<float> ComputeForceImpulse(TSelf other, Vector<float> toOther, float distance, float distance2);
+		public abstract Vector<float> ComputeCollisionImpulse(TSelf other, float engulfRelativeDistance);
+		protected abstract void Absorb(TSelf other);
 		protected virtual void AfterMove() { }
-		protected virtual bool IsInRange(BaryCenter center) => true;
+		public virtual bool IsInRange(BaryCenter center) => true;
+
+		public float EngulfRelativeDistance(TSelf other, float distance) {
+			TSelf smaller, larger;
+			(smaller, larger) = this._radius <= other._radius
+				? ((TSelf)this, other)
+				: (other, (TSelf)this);
+			return (distance + smaller._radius - larger._radius) / (2f * smaller._radius);
+		}
+
+		public Vector<float> ComputeInteractionImpulse(TSelf other) {
+			Vector<float> toOther = other._position - this._position;
+			float distance2 = Vector.Dot(toOther, toOther);
+			float distance = MathF.Sqrt(distance2);
+
+			if (Parameters.COLLISION_ENABLE && distance < this._radius + other._radius)
+				(this.Collisions ??= new()).Enqueue(other);
+
+			return distance > Parameters.PRECISION_EPSILON
+				? this.ComputeForceImpulse(other, toOther, distance, distance2)
+				: Vector<float>.Zero;
+		}
 
 		public void ApplyTimeStep(BaryCenter center) {
 			//Modified Taylor Series integration
 			//see http://www.schlitt.net/xstar/n-body.pdf section 2.2.1
-			Vector<float> displacement = this.Velocity + this.Drag;
+			Vector<float> displacement = this.Velocity;
 			switch (this.Age++) {
 				case 0:
 					displacement += this.Acceleration;//Riemann sum
@@ -74,28 +96,26 @@ namespace ParticleSimulator.Simulation.Particles {
 					break;
 			}
 
-			this.Position += displacement * Parameters.TIME_SCALE;
+			this._position += displacement * Parameters.TIME_SCALE;
 
 			//check bounding conditions, including escape velocity
 			if (Parameters.WORLD_BOUNCING || Parameters.WORLD_WRAPPING) {
 				Vector<int>
-					lesses = Vector.LessThan(this.Position, Parameters.WORLD_LEFT_INF),
-					greaters = Vector.GreaterThanOrEqual(this.Position, Parameters.WORLD_RIGHT_INF),
+					lesses = Vector.LessThan(this._position, Parameters.WORLD_LEFT_INF),
+					greaters = Vector.GreaterThanOrEqual(this._position, Parameters.WORLD_RIGHT_INF),
 					union = lesses | greaters;
 				if (Vector.LessThanAny(union, Vector<int>.Zero)) {
 					if (Parameters.WORLD_BOUNCING) {
-						this.Position =
-							-this.Position
+						this._position =
+							-this._position
 							+ 2f*Vector.ConditionalSelect(lesses,
 								Parameters.WORLD_LEFT,
 								Vector.ConditionalSelect(greaters,
 									Parameters.WORLD_RIGHT,
-									this.Position));
+									this._position));
 						displacement = Vector.ConditionalSelect(union, -displacement, displacement);
-					} else this.Position = WrapPosition(this.Position);
+					} else this._position = WrapPosition(this._position);
 				}
-			} else if (Parameters.WORLD_PRUNE_RADII > 0f) {
-				this.Enabled &= this.IsInRange(center);//escape velocity etc
 			}
 
 			this.Velocity = displacement;
@@ -107,12 +127,21 @@ namespace ParticleSimulator.Simulation.Particles {
 			this._acceleration1 = this.Acceleration;
 		}
 
+		public void Consume(TSelf other) {
+			this.Absorb(other);//ingest the other particle's information
+			other.Enabled = false;
+			if (!(other.Collisions is null))
+				while (other.Collisions.TryDequeue(out TSelf tail))
+					if (tail.Enabled && this.Id != tail.Id)
+						this.Collisions.Enqueue(tail);
+		}
+
 		public void WrapPosition() {
-			this.Position = WrapPosition(this.Position);
+			this._position = WrapPosition(this._position);
 		}
 
 		public void BoundPosition() {
-			this.Position = BoundPosition(this.Position);
+			this._position = BoundPosition(this._position);
 		}
 
 		public static Vector<float> WrapPosition(Vector<float> p) {

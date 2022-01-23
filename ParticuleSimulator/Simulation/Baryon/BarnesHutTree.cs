@@ -1,5 +1,4 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Baryon {
@@ -19,17 +18,17 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public void InitBaryCenter(MatterClump[] particles) {
 			if (particles.Length > 1) {
 				BaryCenter total = new(
-					particles[0].Mass*particles[0].Position,
+					particles[0].Mass*particles[0]._position,
 					particles[0].Mass);
 				for (int i = 1; i < particles.Length; i++)
 					total = new(
-						total.Position + particles[i].Mass*particles[i].Position,
+						total.Position + particles[i].Mass*particles[i]._position,
 						total.Weight + particles[i].Mass);
 				this.MassBaryCenter = new(
 					(1f / total.Weight)*total.Position,
 					total.Weight);
 			} else this.MassBaryCenter = new(
-				particles[0].Position,
+				particles[0]._position,
 				particles[0].Mass);
 		}
 

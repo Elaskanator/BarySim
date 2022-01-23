@@ -15,7 +15,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		public AParticleGroup(Func<Vector<float>, Vector<float>, TParticle> initializer, float radius) {
 			this.ParticleInitializer = initializer;
 			this.Radius = radius;
-			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Engine.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
+			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
 		}
 
 		public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleInitializer;
@@ -47,11 +47,11 @@ namespace ParticleSimulator.Simulation.Particles {
 		protected virtual void InitPositionVelocity() {
 			this.Position = VectorFunctions.New(
 				Enumerable.Range(0, Parameters.DIM)
-					.Select(d => (float)(Parameters.WORLD_SIZE[d] * Program.Engine.Random.NextDouble() * (1d - Parameters.WORLD_PADDING_PCT/50d)
+					.Select(d => (float)(Parameters.WORLD_SIZE[d] * Program.Random.NextDouble() * (1d - Parameters.WORLD_PADDING_PCT/50d)
 						+ Parameters.WORLD_LEFT[d]
 						+ (Parameters.WORLD_SIZE[d] * Parameters.WORLD_PADDING_PCT/100d))));
 			this.Velocity = Parameters.GALAXY_SPEED_RAND
-				* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Engine.Random));
+				* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random));
 		}
 
 		protected abstract void ParticleAddPositionVelocity(TParticle particle);
