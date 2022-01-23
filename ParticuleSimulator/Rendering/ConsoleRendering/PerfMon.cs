@@ -51,20 +51,32 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			TimeSpan duration;
 			for (int i = 0; i < this._engine.Evaluators.Length; i++) {
 				label = this._engine.Evaluators[i].Name[0].ToString();
-				if (this._engine.Evaluators[i].ExclusiveTime.NumUpdates == 0) {
-					_statsHeaderValues[i + 1] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
-				} else {
+				duration = TimeSpan.Zero;
+
+				if (this._engine.Evaluators[i].IsComputing) {
+					duration = DateTime.UtcNow.Subtract(this._engine.Evaluators[i].LastIterationStartUtc ?? this._engine.StartTimeUtc.Value);
+					duration = this._engine.Evaluators[i].ExclusiveTime.NumUpdates > 0 && this._engine.Evaluators[i].ExclusiveTime.LastUpdate > duration
+						? this._engine.Evaluators[i].ExclusiveTime.LastUpdate
+						: duration;
+				} else if (this._engine.Evaluators[i].ExclusiveTime.NumUpdates > 0)
 					duration = this._engine.Evaluators[i].ExclusiveTime.LastUpdate;
-					if (duration.TotalMilliseconds >= Parameters.MON_WARN_MS)
+
+				if (duration.Ticks == 0L)
+					_statsHeaderValues[i + 1] = new(label, 0, ConsoleColor.DarkGray, ConsoleColor.Black);
+				else if (duration.TotalMilliseconds >= Parameters.MON_WARN_MS)
+					if (this._engine.Evaluators[i].IsComputing)
 						_statsHeaderValues[i + 1] = new(label,
 							duration.TotalMilliseconds,
 							ConsoleColor.White,
 							ConsoleColor.DarkRed);
 					else _statsHeaderValues[i + 1] = new(label,
 							duration.TotalMilliseconds,
-							ChooseFrameIntervalColor(this._engine.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds),
-							ConsoleColor.Black);
-				}
+							ConsoleColor.White,
+							ConsoleColor.DarkYellow);
+				else _statsHeaderValues[i + 1] = new(label,
+						duration.TotalMilliseconds,
+						ChooseFrameIntervalColor(this._engine.Evaluators[i].ExclusiveTime.Current.TotalMilliseconds),
+						ConsoleColor.Black);
 			}
 		}
 

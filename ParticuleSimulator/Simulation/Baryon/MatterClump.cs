@@ -46,7 +46,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 			} else return Vector<float>.Zero;
 		}
 
-		protected override void Absorb(MatterClump other) {
+		public override void Consume(MatterClump other) {
 			float totalMass = this.Mass + other.Mass;
 			float totalMassInv = 1f / totalMass;
 
@@ -113,7 +113,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public override bool IsInRange(BaryCenter center) {
 			Vector<float> toCenter = (center.Position - this._position) * (1f / Parameters.WORLD_SCALE);
 			float distanceSquared = Vector.Dot(toCenter, toCenter);
-			return distanceSquared <= Parameters.WORLD_PRUNE_RADII_SQUARED//always preserve if near enough the center
+			return distanceSquared <= Parameters.WORLD_PRUNE_RADII2//always preserve if near enough the center
 				|| Vector.Dot(this.Velocity, this.Velocity) <//below escape velocity
 					2f * Parameters.GRAVITATIONAL_CONSTANT * center.Weight
 					/ MathF.Sqrt(distanceSquared);

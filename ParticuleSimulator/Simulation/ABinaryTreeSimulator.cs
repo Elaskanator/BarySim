@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using System.Threading;
 using Generic.Trees;
@@ -29,8 +28,12 @@ namespace ParticleSimulator.Simulation {
 		}
 		
 		public override void Init() {
-			this.Tree = (TTree)this.Tree.Add(
-				this.ParticleGroups.SelectMany(g => g.InitialParticles));
+			//initialize all the particles
+			AParticleGroup<TParticle> group;
+			for (int i = 0; i < Parameters.PARTICLES_GROUP_COUNT; i++) {
+				group = this.NewParticleGroup();
+				this.Tree = (TTree)this.Tree.Add(group.InitialParticles);
+			}
 		}
 
 		protected override List<ParticleData> Refresh() {
@@ -47,17 +50,14 @@ namespace ParticleSimulator.Simulation {
 				ThreadPool.QueueUserWorkItem(this.LeafInteractionWorker, nodeLeaves);
 			this._cde.Wait();
 
-			Queue<Tuple<TParticle, ABinaryTree<TParticle>>>
-				collisions = new(),
-				ready = new(this.ParticleCount);
-
-			this.DiscoverLeaves(center, collisions, ready);
-			int births = this.HandleCollisions(collisions, ready);
+			Queue<Tuple<TParticle, ABinaryTree<TParticle>>> collisions = new(), ready = new();
+			this.DiscoverLeaves(center, ready, collisions);
+			this.HandleCollisions(ready, collisions);
 			//return a deep copy of the particle data for rendering so simulation can continue concurrently
-			return this.MoveParticles(center, ready, births);
+			return this.RefreshParticles(center, ready);
 		}
 
-		private void DiscoverLeaves(BaryCenter center, Queue<Tuple<TParticle, ABinaryTree<TParticle>>> collisions, Queue<Tuple<TParticle, ABinaryTree<TParticle>>> ready) {
+		private void DiscoverLeaves(BaryCenter center, Queue<Tuple<TParticle, ABinaryTree<TParticle>>> ready, Queue<Tuple<TParticle, ABinaryTree<TParticle>>> collisions) {
 			//collate all the leaves
 			TParticle particle;
 			ABinaryTree<TParticle> leaf;
@@ -76,15 +76,15 @@ namespace ParticleSimulator.Simulation {
 			}
 		}
 
-		private int HandleCollisions(Queue<Tuple<TParticle, ABinaryTree<TParticle>>> collisions, Queue<Tuple<TParticle, ABinaryTree<TParticle>>> ready) {
-			int births = 0;
+		private void HandleCollisions(Queue<Tuple<TParticle, ABinaryTree<TParticle>>> ready, Queue<Tuple<TParticle, ABinaryTree<TParticle>>> collisions) {
+			//recursively merge particles before evaluating collision forces
 			Queue<Tuple<TParticle, ABinaryTree<TParticle>, Queue<TParticle>>> normalCollisions = new();
-			//recursively merge particles
-			bool moved;
+
+			bool anyConsumed;
 			float distance, engulfRelativeDistance;
 			TParticle particle;
 			ABinaryTree<TParticle> leaf;
-			Queue<TParticle> remainder;
+			Queue<TParticle> remainder = new();
 			while (collisions.TryDequeue(out Tuple<TParticle, ABinaryTree<TParticle>> t)) {
 				particle = t.Item1;
 				if (particle.Enabled) {
@@ -92,23 +92,31 @@ namespace ParticleSimulator.Simulation {
 					while (!leaf.IsLeaf)
 						leaf = leaf.Children[leaf.ChildIndex(particle)];
 
-					moved = false;
-					remainder = new();
+					anyConsumed = false;
 					while (particle.Collisions.TryDequeue(out TParticle other)) {
 						if (other.Enabled) {
 							Vector<float> toOther = other._position - particle._position;
 							distance = MathF.Sqrt(Vector.Dot(toOther, toOther));
 							engulfRelativeDistance = particle.EngulfRelativeDistance(other, distance);
 							if (Parameters.MERGE_ENABLE && engulfRelativeDistance + Parameters.MERGE_ENGULF_RATIO <= 1f) {
-								moved = true;
+								anyConsumed = true;
 								particle.Consume(other);//adds other's collied particle(s) back
+								other.Enabled = false;
+								if (!(other.Collisions is null))
+									while (other.Collisions.TryDequeue(out TParticle tail))
+										if (tail.Enabled && particle.Id != tail.Id)
+											particle.Collisions.Enqueue(tail);
 								t.Item2.FindContainingLeaf(other).RemoveFromLeaf(other, false);//defer leaf pruning
 							} else remainder.Enqueue(other);
 						}
 					}
-					if (moved)
+					if (anyConsumed)
 						leaf = leaf.MoveFromLeaf(particle, false);//defer leaf pruning
-					normalCollisions.Enqueue(new(particle, leaf, remainder));
+					
+					if (remainder.Count > 0) {
+						normalCollisions.Enqueue(new(particle, leaf, remainder));
+						remainder = new();//reuse when unused
+					} else ready.Enqueue(new(particle, leaf));
 				}
 			}
 			//collide remainder
@@ -116,10 +124,6 @@ namespace ParticleSimulator.Simulation {
 				particle = t.Item1;
 				if (particle.Enabled) {
 					ready.Enqueue(new(particle, t.Item2));
-
-					if (!(particle.NewParticles is null))
-						births += particle.NewParticles.Count;
-
 					while (t.Item3.TryDequeue(out TParticle other)) {
 						if (other.Enabled) {
 							Vector<float> toOther = other._position - particle._position;
@@ -127,19 +131,17 @@ namespace ParticleSimulator.Simulation {
 							if (distance > Parameters.PRECISION_EPSILON) {
 								engulfRelativeDistance = particle.EngulfRelativeDistance(other, distance);
 								if (engulfRelativeDistance < 1f)
-									particle.Impulse += particle.ComputeCollisionImpulse(other, engulfRelativeDistance);;
+									particle.Impulse += particle.ComputeCollisionImpulse(other, engulfRelativeDistance);
 							}
 						}
 					}
 				}
 			}
-
-			return births;
 		}
 
-		private List<ParticleData> MoveParticles(BaryCenter center, Queue<Tuple<TParticle, ABinaryTree<TParticle>>> ready, int births) {
+		private List<ParticleData> RefreshParticles(BaryCenter center, Queue<Tuple<TParticle, ABinaryTree<TParticle>>> ready) {
 			//refresh particle and tree location data
-			List<ParticleData> results = new(ready.Count + births);
+			List<ParticleData> results = new(this.Tree.Count);
 
 			TParticle particle;
 			ABinaryTree<TParticle> leaf;

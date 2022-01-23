@@ -16,12 +16,7 @@ namespace ParticleSimulator.Simulation.Particles {
 			this.ParticleInitializer = initializer;
 			this.Radius = radius;
 			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
-		}
 
-		public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleInitializer;
-		protected virtual void PrepareNewParticle(TParticle p) { }
-
-		public void Init() {
 			if (Parameters.PARTICLES_GROUP_COUNT > 1)
 				this.InitPositionVelocity();
 			else this.Position = Vector<float>.Zero;
@@ -43,6 +38,9 @@ namespace ParticleSimulator.Simulation.Particles {
 					else this.InitialParticles[i].BoundPosition();
 			}
 		}
+
+		public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleInitializer;
+		protected virtual void PrepareNewParticle(TParticle p) { }
 		
 		protected virtual void InitPositionVelocity() {
 			this.Position = VectorFunctions.New(

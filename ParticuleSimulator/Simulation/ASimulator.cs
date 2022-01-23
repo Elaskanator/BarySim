@@ -8,16 +8,9 @@ namespace ParticleSimulator.Simulation {
 	where TParticle : AParticle<TParticle> {
 		public ASimulator() {
 			this.IterationCount = -1;
-			//initialize all the particles
-			this.ParticleGroups = new AParticleGroup<TParticle>[Parameters.PARTICLES_GROUP_COUNT];
-			for (int i = 0; i < this.ParticleGroups.Length; i++) {
-				this.ParticleGroups[i] = this.NewParticleGroup();
-				this.ParticleGroups[i].Init();
-			}
 		}
 
 		public int IterationCount { get; private set; }
-		public AParticleGroup<TParticle>[] ParticleGroups { get; private set; }
 		IEnumerable<IParticle> ISimulator.Particles => this.Particles;
 		public int ParticleCount => this.Particles.Count;
 

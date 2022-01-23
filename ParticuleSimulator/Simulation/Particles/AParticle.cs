@@ -51,7 +51,7 @@ namespace ParticleSimulator.Simulation.Particles {
 
 		protected abstract Vector<float> ComputeForceImpulse(TSelf other, Vector<float> toOther, float distance, float distance2);
 		public abstract Vector<float> ComputeCollisionImpulse(TSelf other, float engulfRelativeDistance);
-		protected abstract void Absorb(TSelf other);
+		public abstract void Consume(TSelf other);
 		protected virtual void AfterMove() { }
 		public virtual bool IsInRange(BaryCenter center) => true;
 
@@ -125,15 +125,6 @@ namespace ParticleSimulator.Simulation.Particles {
 			//update history
 			this._acceleration2 = this._acceleration1;
 			this._acceleration1 = this.Acceleration;
-		}
-
-		public void Consume(TSelf other) {
-			this.Absorb(other);//ingest the other particle's information
-			other.Enabled = false;
-			if (!(other.Collisions is null))
-				while (other.Collisions.TryDequeue(out TSelf tail))
-					if (tail.Enabled && this.Id != tail.Id)
-						this.Collisions.Enqueue(tail);
 		}
 
 		public void WrapPosition() {

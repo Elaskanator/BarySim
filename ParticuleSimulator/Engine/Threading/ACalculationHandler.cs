@@ -30,6 +30,7 @@ namespace ParticleSimulator.Engine.Threading {
 		public bool IsActive { get; private set; }
 		public bool IsPaused { get; private set; }
 		public int IterationCount { get; private set; }
+		public DateTime? LastIterationStartUtc { get; private set; }
 		public int FullIterationCount { get; private set; }
 		public bool IsWaiting { get; private set; }
 		public bool IsComputing { get; private set; }
@@ -170,6 +171,7 @@ namespace ParticleSimulator.Engine.Threading {
 					}
 						
 					if (this.IsOpen) {
+						this.LastIterationStartUtc = DateTime.UtcNow;
 						this._timer.Restart();
 
 						this.IsComputing = true;
