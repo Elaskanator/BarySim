@@ -20,10 +20,10 @@ namespace Generic.Trees {
 
 		public abstract bool MaxDepthReached { get; }
 		public virtual int LeafCapacity => 1;
+		protected bool IsReceiving => this.ItemCount < this.LeafCapacity || this.MaxDepthReached;
 
 		public bool IsRoot => this.Parent is null;
 		public bool IsLeaf => this.Children is null;
-		protected bool _isReceiving => this.ItemCount < this.LeafCapacity || this.MaxDepthReached;
 
 		public ABinaryTree<T> Parent;
 		ITree ITree.Parent => this.Parent;
@@ -41,7 +41,7 @@ namespace Generic.Trees {
 		protected abstract IEnumerable<ABinaryTree<T>> FormSubnodes();
 		protected abstract ABinaryTree<T> Expand(T item);
 
-		protected virtual ICollection<T> NewBin() => new HashedContainer<T>();
+		protected virtual ICollection<T> NewBin() => new HashSet<T>();//new HashedContainer<T>();
 
 		public virtual int ChildIndex(T item) {
 			for (int i = 0; i < this.Children.Length; i++)
@@ -53,9 +53,9 @@ namespace Generic.Trees {
 		public ABinaryTree<T> FindContainingLeaf(T item) {
 			ABinaryTree<T> node = this;
 			while (!node.DoesEncompass(item))
-				if (node.IsRoot)
-					throw new Exception("Uncontained");
-				else node = node.Parent;
+				node = node.IsRoot
+					? throw new Exception("Uncontained")
+					: node.Parent;
 			while (!node.IsLeaf)
 				node = node.Children[node.ChildIndex(item)];
 			return node;
@@ -81,7 +81,7 @@ namespace Generic.Trees {
 		}
 
 		public ABinaryTree<T> Add(IEnumerable<T> items) {
-			ABinaryTree<T> parent = this;
+			ABinaryTree<T> parent = this.Root;
 			foreach (T item in items) {
 				parent.Add(item);
 				while (!parent.IsRoot)
@@ -150,7 +150,7 @@ namespace Generic.Trees {
 
 		protected ABinaryTree<T> AddToLeaf(T item) {//increments the count
 			ABinaryTree<T> node = this;
-			while (!node._isReceiving) {
+			while (!node.IsReceiving) {
 				node.Refine();
 				++node.ItemCount;
 				node = node.Children[node.ChildIndex(item)];
@@ -214,9 +214,8 @@ namespace Generic.Trees {
 				encompasses = node.DoesEncompass(item);
 			}
 
-			if (encompasses && node.ItemCount > 0)
-				return node.Bin.Contains(item);
-			else return false;
+			return encompasses && node.ItemCount > 0
+				&& node.Bin.Contains(item);
 		}
 
 		public IEnumerator<T> GetEnumerator() => this.AsEnumerable().GetEnumerator();
@@ -225,7 +224,7 @@ namespace Generic.Trees {
 			int i = 0; foreach (T item in this) array[i++ + arrayIndex] = item; }
 
 		public IEnumerable<T> AsEnumerable() {
-			Stack<ABinaryTree<T>> remaining = new Stack<ABinaryTree<T>>();
+			Stack<ABinaryTree<T>> remaining = new();
 
 			remaining.Push(this);
 
@@ -243,7 +242,7 @@ namespace Generic.Trees {
 		public T[] AsArray() {
 			if (this.ItemCount > 0) {
 				T[] result = new T[this.ItemCount];
-				Stack<ABinaryTree<T>> remaining = new Stack<ABinaryTree<T>>();
+				Stack<ABinaryTree<T>> remaining = new();
 				remaining.Push(this);
 
 				int idx = 0;

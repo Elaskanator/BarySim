@@ -22,19 +22,20 @@ namespace ParticleSimulator {
 		public const int SUPERSAMPLING				= 2;
 		public const float PIXEL_ROUNDOFF			= 0.5f;
 		//camera
-		public const float WORLD_SCALE				= 400f;
+		public const float WORLD_SCALE				= 600f;
 		public const float ZOOM_SCALE				= 1f;
-		public const bool AUTOFOCUS_DEFAULT			= true;
+		public const bool AUTOFOCUS_DEFAULT			= false;
 		public const float ROT_DEG_PER_FRAME		= 0.33333f;
 		//particle count
 		public const int PARTICLES_GROUP_COUNT		= 1;
 		public const int PARTICLES_GROUP_MIN		= 1;
-		public const int PARTICLES_GROUP_MAX		= 1000000;
+		public const int PARTICLES_GROUP_MAX		= 20000;
 		public const float PARTICLES_GROUP_SIZE_POW	= 0f;//0 for max size
 		//particle features
 		public const float TIME_SCALE				= 1f;
 		public const bool COLLISION_ENABLE			= true;
-		public const float DRAG_CONSTANT			= 0.1f;//TODO fix the tweaking out of large clumps that form with high drag
+		public const float COLLISION_OVERLAP_BUFFER	= 0.1f;
+		public const float DRAG_CONSTANT			= 0.08f;//TODO large clumps form that tweak out for larger values
 		public const bool MERGE_ENABLE				= true;
 		public const float MERGE_ENGULF_RATIO		= 0.8f;
 		//world
@@ -47,8 +48,8 @@ namespace ParticleSimulator {
 		public const float WORLD_Z_ASPECT			= 1f;
 		//accuracy
 		public const float ACCURACY_CRITERION		= 2f;//Barnes-Hut condition of approximating a node (smaller = more accurate)
-		public const float NODE_EPSILON				= 2f;//nodes too close must be directly evaluated (helps prevent tight groupings not evaluating collisions)
-		public const float PRECISION_EPSILON		= 1E-2f;//minimum distance to evaluate forces
+		public const float PRECISION_EPSILON		= 1E-5f;//minimum distance to evaluate forces
+		public const float NODE_APPROX_CUTOFF		= 8f;//minimum distance nodes can be approximated
 		public const int TREE_LEAF_CAPACITY			= 8;//degrades integrity of approximation check
 		//parallelism
 		public const int PRECALCULATION_LIMIT		= 1;//how many calculations ahead steps can work
@@ -76,28 +77,28 @@ namespace ParticleSimulator {
 		#endregion Primary
 
 		#region Gravity
-		public const float GRAVITATIONAL_CONSTANT	= 1E-4f;
+		public const float GRAVITATIONAL_CONSTANT	= 1E-3f;
 		//TODO add electrostatic force
 
-		public const float MASS_SCALAR				= 1f;
-		public const float MASS_RADIAL_DENSITY		= 1f;
-		public const float MASS_LUMINOSITY_SCALAR	= 1f;
+		public const float MASS_SCALAR				= 0.5f;
+		public const float MASS_RADIAL_DENSITY		= 0.25f;
+		public const float MASS_LUMINOSITY_SCALAR	= 0.25f;
 		public const float MASS_LUMINOSITY_POW		= 1f;
 
-		public const float GALAXY_RADIUS			= 200f;
-		public const float GALAXY_THINNESS			= 3f;
-		public const float GALAXY_CONCENTRATION		= 1.5f;
+		public const float GALAXY_RADIUS			= 300f;
+		public const float GALAXY_THINNESS			= 2.5f;
+		public const float GALAXY_CONCENTRATION		= 2f;
 
 		public const float GALAXY_SPEED_ANGULAR		= 0.0f;
 		public const float GALAXY_SPEED_RAND		= 0.0f;
-		public const float GALAXY_SPIN_ANGULAR		= 0.1f;
-		public const float GALAXY_SPIN_RAND			= 0.0f;
-		public const float GALAXY_SPIN_POW			= 0.5f;
+		public const float GALAXY_SPIN_ANGULAR		= 0.12f;
+		public const float GALAXY_SPIN_RAND			= 0.06f;
+		public const float GALAXY_SPIN_POW			= 0.25f;
 
 		public const bool SUPERNOVA_ENABLE			= false;
 		public const float SUPERNOVA_CRITICAL_MASS	= 10000f;
 		public const float SUPERNOVA_EJECTA_MASS	= 1f;
-		public const float SUPERNOVA_EJECTA_SPEED	= 0.4f;
+		public const float SUPERNOVA_EJECTA_SPEED	= 0.45f;
 		public const float SUPERNOVA_RADIUS_SCALAR	= 1f;
 
 		public const bool BLACKHOLE_ENABLE			= false;
@@ -127,9 +128,11 @@ namespace ParticleSimulator {
 		public static readonly float WORLD_ROTATION_RAD_PER_FRAME = MathF.PI * ROT_DEG_PER_FRAME / 180f;
 
 		public static readonly float INACCURCY2 = ACCURACY_CRITERION * ACCURACY_CRITERION;
-		public static readonly float NODE_EPSILON2 = NODE_EPSILON * NODE_EPSILON;
+		public static readonly float NODE_APPROX_CUTOFF2 = NODE_APPROX_CUTOFF * NODE_APPROX_CUTOFF;
+		public static readonly float COLLISION_OVERLAP = 1f + COLLISION_OVERLAP_BUFFER;
 		public static readonly float WORLD_PRUNE_RADII2 = WORLD_PRUNE_RADII*WORLD_PRUNE_RADII;
-		public static readonly float TIME_SCALE2 = TIME_SCALE*TIME_SCALE;
+		public static readonly float TIME_SCALE_HALF = TIME_SCALE / 2f;
+		public static readonly float TIME_SCALE_SQUARED_SIXTH = TIME_SCALE*TIME_SCALE / 6f;
 
 		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-WORLD_X_ASPECT * WORLD_SCALE / 2f, -WORLD_Y_ASPECT * WORLD_SCALE / 2f, -WORLD_Z_ASPECT * WORLD_SCALE / 2f);
 		public static readonly Vector<float> WORLD_LEFT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_LEFT, new Vector<float>(float.NegativeInfinity));

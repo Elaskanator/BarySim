@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Generic.Trees;
 using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Simulation.Particles {
@@ -13,6 +14,7 @@ namespace ParticleSimulator.Simulation.Particles {
 			this._position = position;
 			this.Velocity = velocity;
 			this.Acceleration = this._acceleration1 = this._acceleration2 = Vector<float>.Zero;
+			this.DragAcceleration = Vector<float>.Zero;
 			this.Enabled = true;
 		}
 
@@ -28,15 +30,17 @@ namespace ParticleSimulator.Simulation.Particles {
 		public float Luminosity { get; set; }
 		public virtual float Density => 1f;
 		
-		public Vector<float> _position;
+		public Vector<float> _position;//fields are faster than properties with high-volume access
 		public Vector<float> Position => this._position;
 		public Vector<float> Velocity;
+		public Vector<float> DragAcceleration;//exclude from quadrature method on acceleration
 		public Vector<float> Acceleration;
+		//using derivative of Lagrange interpolating polynomial on acceleration (also counteracts the overstep phenomenon)
 		protected Vector<float> _acceleration1;
 		protected Vector<float> _acceleration2;
-		public Vector<float> Jerk1 => this.Acceleration - this._acceleration1;//first-order Lagrange
-		//see https://www3.nd.edu/~zxu2/acms40390F15/Lec-4.1.pdf
-		public Vector<float> Jerk2 =>//second-order Lagrange interpolation (equally-spaced three-point endpoint formula)
+		public Vector<float> Jerk1 => this.Acceleration - this._acceleration1;//first-order
+		//see https://www3.nd.edu/~zxu2/acms40390F15/Lec-4.1.pdf (equally-spaced three-point endpoint formula)
+		public Vector<float> Jerk2 =>//second-order
 			0.5f * (this._acceleration2 - 4f*this._acceleration1 + 3f*this.Acceleration);
 
 		public virtual Vector<float> Momentum {
@@ -45,17 +49,27 @@ namespace ParticleSimulator.Simulation.Particles {
 		public virtual Vector<float> Impulse {
 			get => this.Acceleration;
 			set { this.Acceleration = value; } }
+		public virtual Vector<float> DragImpulse {
+			get => this.DragAcceleration;
+			set { this.DragAcceleration = value; } }
 
 		public Queue<TSelf> Collisions = null;
 		public Queue<TSelf> NewParticles = null;
+		public ABinaryTree<TSelf> Node = null;
 
-		protected abstract Vector<float> ComputeForceImpulse(TSelf other, Vector<float> toOther, float distance, float distance2);
+		protected abstract Vector<float> ComputeInfluence(TSelf other, Vector<float> toOther, float distance, float distance2);
 		public abstract Vector<float> ComputeCollisionImpulse(TSelf other, float engulfRelativeDistance);
 		public abstract void Consume(TSelf other);
 		protected virtual void AfterMove() { }
-		public virtual bool IsInRange(BaryCenter center) => true;
+		public bool IsInRange(BaryCenter center) {
+			Vector<float> toCenter = (center.Position - this._position) * (1f / Parameters.WORLD_SCALE);
+			float distanceSquared = Vector.Dot(toCenter, toCenter);
+			return distanceSquared <= Parameters.WORLD_PRUNE_RADII2//near enough the center
+				|| this.SurviveOutOfBounds(center, distanceSquared);
+		}
+		protected virtual bool SurviveOutOfBounds(BaryCenter center, float distance2) => false;
 
-		public float EngulfRelativeDistance(TSelf other, float distance) {
+		public float EngulfRelativeDistance(TSelf other, float distance) {//values <= 0 are fully engulfed, 1 is touching, and larger are separate
 			TSelf smaller, larger;
 			(smaller, larger) = this._radius <= other._radius
 				? ((TSelf)this, other)
@@ -63,39 +77,30 @@ namespace ParticleSimulator.Simulation.Particles {
 			return (distance + smaller._radius - larger._radius) / (2f * smaller._radius);
 		}
 
-		public Vector<float> ComputeInteractionImpulse(TSelf other) {
+		public Vector<float> ComputeInteractionInfluence(TSelf other) {
 			Vector<float> toOther = other._position - this._position;
 			float distance2 = Vector.Dot(toOther, toOther);
 			float distance = MathF.Sqrt(distance2);
 
-			if (Parameters.COLLISION_ENABLE && distance < this._radius + other._radius)
+			if (Parameters.COLLISION_ENABLE && distance < (this._radius + other._radius) * Parameters.COLLISION_OVERLAP)
 				(this.Collisions ??= new()).Enqueue(other);
 
 			return distance > Parameters.PRECISION_EPSILON
-				? this.ComputeForceImpulse(other, toOther, distance, distance2)
+				? this.ComputeInfluence(other, toOther, distance, distance2)
 				: Vector<float>.Zero;
 		}
 
-		public void ApplyTimeStep(BaryCenter center) {
+		public void IntegrateMotion() {
 			//Modified Taylor Series integration
 			//see http://www.schlitt.net/xstar/n-body.pdf section 2.2.1
-			Vector<float> displacement = this.Velocity;
-			switch (this.Age++) {
-				case 0:
-					displacement += this.Acceleration;//Riemann sum
-					break;
-				case 1:
-					displacement +=
-						  (Parameters.TIME_SCALE/2f)*this.Acceleration
-						+ (Parameters.TIME_SCALE2/6f)*this.Jerk1;
-					break;
-				default:
-					displacement +=
-						  (Parameters.TIME_SCALE/2f)*this.Acceleration
-						+ (Parameters.TIME_SCALE2/6f)*this.Jerk2;
-					break;
-			}
-
+			Vector<float> displacement = this.Velocity + this.DragAcceleration;
+			displacement += this.Age++ switch {
+				0 => this.Acceleration,//Riemann sum
+				1 => Parameters.TIME_SCALE_HALF * this.Acceleration
+					+ Parameters.TIME_SCALE_SQUARED_SIXTH * this.Jerk1,
+				_ => Parameters.TIME_SCALE_HALF * this.Acceleration
+					+ Parameters.TIME_SCALE_SQUARED_SIXTH * this.Jerk2,
+			};
 			this._position += displacement * Parameters.TIME_SCALE;
 
 			//check bounding conditions, including escape velocity
@@ -119,7 +124,6 @@ namespace ParticleSimulator.Simulation.Particles {
 			}
 
 			this.Velocity = displacement;
-
 			//supernova and stuff
 			this.AfterMove();
 			//update history

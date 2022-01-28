@@ -32,10 +32,14 @@ namespace ParticleSimulator.Simulation.Baryon {
 			get => this.Acceleration * this.Mass;
 			set { this.Acceleration = value * (1f / this.Mass); } }
 
-		protected override Vector<float> ComputeForceImpulse(MatterClump other, Vector<float> toOther, float distance, float distance2) {
+		public override Vector<float> DragImpulse {
+			get => this.DragAcceleration * this.Mass;
+			set { this.DragAcceleration = value * (1f / this.Mass); } }
+
+		protected override Vector<float> ComputeInfluence(MatterClump other, Vector<float> toOther, float distance, float distance2) {
 			float largerRadius = this._radius > other._radius ? this._radius : other._radius;
 			distance = distance >= largerRadius ? distance : largerRadius;
-			return toOther * (Parameters.GRAVITATIONAL_CONSTANT * this.Mass * other.Mass / (distance2 * distance));
+			return toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distance2 * distance));
 		}
 
 		public override Vector<float> ComputeCollisionImpulse(MatterClump other, float engulfRelativeDistance) {
@@ -76,7 +80,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 						? this.Mass / Parameters.SUPERNOVA_EJECTA_MASS
 						: this.Mass);
 					if (numParticles > 1) {
-						float radiusRange = MathF.Pow(this._radius*this._density*Parameters.SUPERNOVA_RADIUS_SCALAR, Parameters.DIM);
+						float radiusRange = MathF.Pow(this._radius*this._density*Parameters.SUPERNOVA_RADIUS_SCALAR / Parameters.MASS_RADIAL_DENSITY, Parameters.DIM);
 						float ratio = (1f / numParticles);
 						float avgMass = ratio * this.Mass;
 						Vector<float> avgImpulse = ratio * this.Impulse;
@@ -110,13 +114,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 			}
 		}
 
-		public override bool IsInRange(BaryCenter center) {
-			Vector<float> toCenter = (center.Position - this._position) * (1f / Parameters.WORLD_SCALE);
-			float distanceSquared = Vector.Dot(toCenter, toCenter);
-			return distanceSquared <= Parameters.WORLD_PRUNE_RADII2//always preserve if near enough the center
-				|| Vector.Dot(this.Velocity, this.Velocity) <//below escape velocity
-					2f * Parameters.GRAVITATIONAL_CONSTANT * center.Weight
-					/ MathF.Sqrt(distanceSquared);
-		}
+		protected override bool SurviveOutOfBounds(BaryCenter center, float distance2) =>
+			Vector.Dot(this.Velocity, this.Velocity) < //below escape velocity
+				2f * Parameters.GRAVITATIONAL_CONSTANT * center.Weight
+				/ MathF.Sqrt(distance2);
 	}
 }

@@ -41,7 +41,7 @@ namespace ParticleSimulator.Simulation.Particles {
 					.ToArray();
 				float offset2 = (this.Radius*this.Radius - offset*offset) / (this.Radius * this.Radius);
 				float rand2 = MathF.Pow((float)Program.Random.NextDouble(), Parameters.GALAXY_CONCENTRATION);
-				offset2 *= rand * rand2 * this.Radius / Parameters.GALAXY_THINNESS;
+				offset2 *= rand2 * this.Radius / Parameters.GALAXY_THINNESS;
 				float[] offsetV2 = VectorFunctions
 					.RandomUnitVector_Spherical(Parameters.DIM - 2, Program.Random)
 					.Select(x => offset2*x)

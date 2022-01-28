@@ -75,11 +75,10 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				Subsample[] nearest = new Subsample[this.InternalNumPixels];
 
 				Queue<Subsample> resamplings = new();
-				Subsample resampling;
 				int idx;
 				for (int i = 0; i < particles.Count; i++) {
 					this.Resample(particles[i], resamplings);
-					while (resamplings.TryDequeue(out resampling)) {
+					while (resamplings.TryDequeue(out Subsample resampling)) {
 						idx = resampling.X + this.InternalWidth * resampling.Y;
 						densities[idx] += resampling.H;
 
@@ -140,22 +139,15 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		}
 
 		private float GetRank(float[] scaling, Subsample resampling, float count, float halfHeight) {
-			switch (Parameters.COLORING) {
-				case ParticleColoringMethod.Random:
-					return (resampling.Particle.Id + this._randOffset) % scaling.Length;
-				case ParticleColoringMethod.Group:
-					return (resampling.Particle.GroupId + this._randOffset) % scaling.Length;
-				case ParticleColoringMethod.Luminosity:
-					return resampling.Particle.Luminosity;
-				case ParticleColoringMethod.Depth:
-					return resampling.Z;
-				case ParticleColoringMethod.Overlap:
-					return count;
-				case ParticleColoringMethod.Density:
-					return halfHeight * 2f* resampling.Particle.Density;
-				default:
-					return 0f;
-			}
+			return Parameters.COLORING switch {
+				ParticleColoringMethod.Random => (resampling.Particle.Id + this._randOffset) % scaling.Length,
+				ParticleColoringMethod.Group => (resampling.Particle.GroupId + this._randOffset) % scaling.Length,
+				ParticleColoringMethod.Luminosity => resampling.Particle.Luminosity,
+				ParticleColoringMethod.Depth => resampling.Z,
+				ParticleColoringMethod.Overlap => count,
+				ParticleColoringMethod.Density => halfHeight * 2f * resampling.Particle.Density,
+				_ => 0f,
+			};
 		}
 
 		//TODO rewrite to not use Sqrt

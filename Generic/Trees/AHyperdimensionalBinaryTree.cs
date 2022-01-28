@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using Generic.Vectors;
 
 namespace Generic.Trees {
@@ -14,10 +13,11 @@ namespace Generic.Trees {
 			this.Center = this.Midpoint(cornerLeft, cornerRight);
 
 			this._limitReached =
-				this.EqualsAny(this.CornerLeft, this.Center)
-				|| this.EqualsAny(this.CornerRight, this.Center);
+				this.EqualsAny(cornerLeft, this.Center)
+				|| this.EqualsAny(cornerRight, this.Center);
 		}
-		protected abstract AHyperdimensionalBinaryTree<TItem, TCorner> NewNode(int directionMask, bool isExpansion);
+		protected abstract (TCorner, TCorner) NewNodeCorners(int directionMask, bool isExpansion);
+		protected abstract AHyperdimensionalBinaryTree<TItem, TCorner> NewNode(TCorner cornerLeft, TCorner cornerRight, AHyperdimensionalBinaryTree<TItem, TCorner> parent);
 
 		public override string ToString() =>
 			string.Format("{0}[{1} thru {2}]", base.ToString(), string.Join("", this.CornerLeft), string.Join("", this.CornerRight));
@@ -27,7 +27,7 @@ namespace Generic.Trees {
 		public readonly TCorner Center;
 		public readonly TCorner CornerRight;
 
-		private readonly bool _limitReached;
+		private bool _limitReached = false;
 		public override bool MaxDepthReached => this._limitReached;
 		
 		public override bool DoesEncompass(TItem item) =>//left-handed convention [a, b)
@@ -42,24 +42,41 @@ namespace Generic.Trees {
 		public abstract TCorner Midpoint(TCorner first, TCorner second);
 		public abstract bool EqualsAny(TCorner first, TCorner second);
 		public abstract int BitmaskLessThan(TCorner first, TCorner second);
+		//public abstract int BitmaskLessThanOrEqual(TCorner first, TCorner second);
+		//public abstract int BitmaskGreaterThan(TCorner first, TCorner second);
 		public abstract int BitmaskGreaterThanOrEqual(TCorner first, TCorner second);
 
-		protected override IEnumerable<AHyperdimensionalBinaryTree<TItem, TCorner>> FormSubnodes() =>
-			Enumerable.Range(0, 1 << this.Dim)
-				.Select(i => this.NewNode(i, false));
+		protected override IEnumerable<AHyperdimensionalBinaryTree<TItem, TCorner>> FormSubnodes() {
+			int max = 1 << this.Dim;
+			TCorner left, right;
+			for (int i = 0; i < max; i++) {
+				(left, right) = this.NewNodeCorners(i, false);
+				yield return this.NewNode(left, right, this);
+			}
+		}
 
 		protected override AHyperdimensionalBinaryTree<TItem, TCorner> Expand(TItem item) {
 			int quadrantMask = this.ChildIndex(item);
 			int inverseQuadrantMask = this.InverseIndex(quadrantMask);
 
-			AHyperdimensionalBinaryTree<TItem, TCorner> newParent = this.NewNode(quadrantMask, true);
+			TCorner left, right;
+			(left, right) = this.NewNodeCorners(quadrantMask, true);
+			AHyperdimensionalBinaryTree<TItem, TCorner> newParent = this.NewNode(left, right, null);
 			newParent.ItemCount = this.ItemCount;
-			newParent.Children = new AHyperdimensionalBinaryTree<TItem, TCorner>[1u << this.Dim];
+			newParent.Children = new AHyperdimensionalBinaryTree<TItem, TCorner>[1 << this.Dim];
 			this.Parent = newParent;
 
-			int i = 0;
-			foreach (AHyperdimensionalBinaryTree<TItem, TCorner> node in newParent.FormSubnodes())
-				newParent.Children[i] = inverseQuadrantMask == i++ ? this : node;
+			int max = 1 << this.Dim;
+			AHyperdimensionalBinaryTree<TItem, TCorner> childNode;
+			for (int i = 0; i < max; i++) {
+				if (i == inverseQuadrantMask) {
+					childNode = this;
+				} else {
+					(left, right) = this.NewNodeCorners(quadrantMask, false);
+					childNode = this.NewNode(left, right, newParent);
+				}
+				newParent.Children[i] = childNode;
+			}
 
 			return newParent;
 		}

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Numerics;
 using Generic.Vectors;
-using ParticleSimulator.Simulation.Particles;
+using ParticleSimulator.Simulation.Baryon;
 
-namespace ParticleSimulator.Simulation.Baryon {
+namespace ParticleSimulator.Simulation.Particles {
 	public class PlummerGalaxy : AParticleGroup<MatterClump> {
 		public PlummerGalaxy(Func<Vector<float>, Vector<float>, MatterClump> initializer, float r, float a) : base(initializer, r) {
 			this.BulgeScalar = a;

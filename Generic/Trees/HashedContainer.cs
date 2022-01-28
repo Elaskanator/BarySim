@@ -25,7 +25,7 @@ namespace Generic.Trees {
 				this.Items = new T[] { item };
 			} else {
 				if (this._leftovers is null) {
-					this._leftovers = new HashSet<T>();
+					this._leftovers = new();
 					this._leftovers.Add(this._item);
 					this.Items = this._leftovers;
 				}
