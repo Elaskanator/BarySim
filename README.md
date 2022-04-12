@@ -1,5 +1,5 @@
 # BarySim
-A volumetric Barnes-Hut n-dimensional gravity simulation (barycenter n-body approximation) and console rendering engine using SIMD vector acceleration.
+A Barnes-Hut n-dimensional gravity simulation (barycenter n-body binary tree approximation) and console rendering engine using SIMD vector acceleration.
 ![2022-01-09 01_06_38-Greenshot](https://user-images.githubusercontent.com/3358169/162883807-195b8cd3-d48b-4f67-ba3f-61aa4e8b6720.jpg)
 ![2022-01-23 16_45_06-Baryon Simulator 3D - 24296 Particles (15 FPS)](https://user-images.githubusercontent.com/3358169/162883558-610d2347-ec80-4e28-92de-7ead73df8a1a.png)
 ![2022-01-21 11_55_01-Baryon Simulator 3D - 38666 Particles (7 5 FPS)](https://user-images.githubusercontent.com/3358169/162883597-cdef63aa-d5c8-4bb5-8a6a-95395cb95d6c.png)
