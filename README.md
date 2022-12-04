@@ -1,5 +1,5 @@
 # BarySim
-A Barnes-Hut n-dimensional gravity simulation (barycenter n-body binary tree approximation) and console text-rendering engine using parallelized SIMD vector acceleration.
+A parallelized Barnes-Hut gravity simulation (barycenter n-body variable-dimensional binary tree approximation) and console text-rendering engine using SIMD vector acceleration.
 
 Press F1 to toggle the control overlay. Ctrl+Fx defaults parameters.
 
