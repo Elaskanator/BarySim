@@ -108,7 +108,7 @@ namespace Generic.Extensions {
 						tail.Enqueue(child);
 			return result;
 		}
-
+		/*
 		public static IEnumerable<T> Order<T>(this IEnumerable<T> source)
 		where T : IComparable<T> {
 			return source.OrderBy(x => x);
@@ -117,7 +117,7 @@ namespace Generic.Extensions {
 		where T : IComparable<T> {
 			return source.OrderByDescending(x => x);
 		}
-
+		*/
 		public static Tuple<T, T> Range<T>(this IEnumerable<T> source)
 		where T : IComparable<T> {
 			bool isFirst = true;
@@ -155,6 +155,7 @@ namespace Generic.Extensions {
 		#endregion Projections
 
 		#region Aggregations
+		/*
 		public static TSource MinBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection)
 		where TProjected :IComparable<TProjected> {
 			if (source is null) throw new ArgumentNullException("source");
@@ -244,7 +245,7 @@ namespace Generic.Extensions {
 				return max;
 			}
 		}
-
+		*/
 		public static long Product(this IEnumerable<long> source) {
 			return source.Aggregate(1L, (acc, x) => acc *= x);
 		}

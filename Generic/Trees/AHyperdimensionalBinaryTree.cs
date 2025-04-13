@@ -51,14 +51,23 @@ namespace Generic.Trees {
 		public abstract int BitmaskGreaterThan(TCorner first, TCorner second); // TESTING
 		public abstract int BitmaskGreaterThanOrEqual(TCorner first, TCorner second);
 
-
-		protected override IEnumerable<AHyperdimensionalBinaryTree<TItem, TCorner>> FormSubnodes() {
+		//protected override IEnumerable<AHyperdimensionalBinaryTree<TItem, TCorner>> FormSubnodes() {
+		//	int max = 1 << this.Dim;
+		//	TCorner left, right;
+		//	for (int i = 0; i < max; i++) {
+		//		(left, right) = this.NewNodeCorners(i, false);
+		//		yield return InstantiateNode(left, right, this);//static use
+		//	}
+		//}
+		protected override AHyperdimensionalBinaryTree<TItem, TCorner>[] FormSubnodes() {
 			int max = 1 << this.Dim;
+			AHyperdimensionalBinaryTree<TItem, TCorner>[] result = new AHyperdimensionalBinaryTree<TItem, TCorner>[max];
 			TCorner left, right;
 			for (int i = 0; i < max; i++) {
 				(left, right) = this.NewNodeCorners(i, false);
-				yield return InstantiateNode(left, right, this);//static use
+				result[i] = InstantiateNode(left, right, this);//static use
 			}
+			return result;
 		}
 
 		protected override AHyperdimensionalBinaryTree<TItem, TCorner> Expand(TItem item) {

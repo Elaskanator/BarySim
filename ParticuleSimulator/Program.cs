@@ -7,10 +7,13 @@ namespace ParticleSimulator {
 	public class Program {
 		public static RenderEngine Engine { get; private set; }
 		public static Random Random { get; private set; }
+		public static int RandomSeed { get; private set; }
+
 		public static void ResetRandon() {
-			Random = Parameters.RANDOM_SEED == -1
-				? new()
-				: new(Parameters.RANDOM_SEED);
+			if (Parameters.RANDOM_SEED == -1)
+				RandomSeed = new Random().Next();
+			else RandomSeed = Parameters.RANDOM_SEED;
+			Random = new(RandomSeed);
 		}
 
 		public static void Main(string[] args) {

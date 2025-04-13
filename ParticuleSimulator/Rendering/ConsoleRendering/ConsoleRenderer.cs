@@ -39,13 +39,14 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
 			//these require p-invokes
 			ConsoleExtensions.SetWindowPosition(0, 0);
-			ConsoleExtensions.HideScrollbars();
 			//rendering gets *really* messed up if the window gets resized by anything
 			ConsoleExtensions.DisableResizing();//note this doesn't work to disable OS window snapping
 			Console.CursorVisible = false;
 
 			Console.WindowWidth = Parameters.WINDOW_WIDTH;
 			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
+
+			ConsoleExtensions.HideScrollbars();
 
 			Thread titleMon = new(this.ConsoleTitleUpdate);
 			titleMon.Start();
@@ -86,7 +87,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 				this._perfMon.DrawStatsOverlay(prepResults, buffer);
 				if (Parameters.COLORING != ParticleColoringMethod.Random
 				&& Parameters.COLORING != ParticleColoringMethod.Group)
-					this.DrawLegend(scaling, buffer);
+					DrawLegend(scaling, buffer);
 
 				ConsoleExtensions.CharInfo[] label;
 				int position = 1 + this._perfMon.Graph.Width, keyLabelOffset;
@@ -126,11 +127,13 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 		private void ConsoleTitleUpdate() {
 			while (this.Engine.IsOpen) {
-				string result = string.Format("Baryon Simulator {0}D - {1}",
+				string result = string.Format("Baryon Simulator {0}D - Seed {1} - Frame {2} - {3}",
 					Parameters.DIM,
+					Program.RandomSeed,
+					this.Engine.Simulator.IterationCount,
 					this.Engine.Simulator.ParticleCount.Pluralize("Particle"));
 				if (this.FpsTimings.NumUpdates > 1)
-					result += string.Format(" ({0} FPS)", (1d / this.FpsTimings.Current.TotalSeconds).ToStringBetter(2));
+					result += string.Format(" ({0} FPS)", (1d / this.FpsTimings.Current.TotalSeconds).ToStringBetter(2, false));
 				if (this.Engine.IsPaused)
 					result += " (paused)";
 
@@ -139,7 +142,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 			}
 		}
 
-		private void DrawLegend(float[] scaling, ConsoleExtensions.CharInfo[] buffer) {
+		private static void DrawLegend(float[] scaling, ConsoleExtensions.CharInfo[] buffer) {
 			if (!(scaling is null) && scaling.Length > 0) {
 				int numColors = scaling.Length;
 				bool isDiscrete = false;//Parameters.DIM < 3 && Parameters.SIM_TYPE == SimulationType.Boid;

@@ -33,10 +33,10 @@ namespace Generic.Trees {
 			ABinaryTree<T> node = this;
 			while (!node.IsRoot)
 				node = node.Parent;
-			return node; } }
+			return node;
+		} }
 		public IEnumerable<ABinaryTree<T>> AllLeaves { get {
-			List<ABinaryTree<T>> leaves = new List<ABinaryTree<T>>();
-			Stack<ABinaryTree<T>> stack = new Stack<ABinaryTree<T>>();
+			Stack<ABinaryTree<T>> stack = new();
 			stack.Push(this);
 
 			while (stack.TryPop(out ABinaryTree<T> node)) {
@@ -54,7 +54,7 @@ namespace Generic.Trees {
 		public ICollection<T> Bin;
 
 		public abstract bool DoesEncompass(T item);
-		protected abstract IEnumerable<ABinaryTree<T>> FormSubnodes();
+		protected abstract ABinaryTree<T>[] FormSubnodes();
 		protected abstract ABinaryTree<T> Expand(T item);
 
 		protected virtual ICollection<T> NewBin() => new HashSet<T>();//new HashedContainer<T>();
@@ -111,7 +111,8 @@ namespace Generic.Trees {
 			while (!node.DoesEncompass(item))
 				if (node.IsRoot)
 					return false;
-				else node = node.Parent;
+				else
+					node = node.Parent;
 
 			while (!node.IsLeaf) 
 				node = node.Children[node.ChildIndex(item)];
@@ -123,8 +124,7 @@ namespace Generic.Trees {
 		public ABinaryTree<T> MoveFromLeaf(T item, bool prune = true) {
 			ABinaryTree<T> node = this;
 			if (!node.DoesEncompass(item)) {
-				node.Bin.Remove(item);
-				--node.ItemCount;
+				RemoveFromNode(node, item);
 
 				bool encompasses;
 				do {
@@ -150,10 +150,20 @@ namespace Generic.Trees {
 			return node;
 		}
 
-		public bool RemoveFromLeaf(T item, bool prune = true) {
-			ABinaryTree<T> node = this;
+		private static bool RemoveFromNode(ABinaryTree<T> node, T item) {
+			//if (node.Bin.Count == 1)
+			//	node.Bin.Clear();
+			//else node.Bin.Remove(item);
+			//return true;
 			if (node.Bin.Remove(item)) {
 				--node.ItemCount;
+				return true;
+			} else return false;
+		}
+
+		public bool RemoveFromLeaf(T item, bool prune = true) {
+			ABinaryTree<T> node = this;
+			if (RemoveFromNode(node, item)) {
 				while (!node.IsRoot) {
 					node = node.Parent;
 					--node.ItemCount;
@@ -178,7 +188,7 @@ namespace Generic.Trees {
 		}
 
 		private void Refine() {
-			this.Children = this.FormSubnodes().ToArray();
+			this.Children = this.FormSubnodes();
 			ABinaryTree<T> node;
 			if (this.ItemCount == 1) {
 				node = this.Children[this.ChildIndex(this.Bin.First())];
