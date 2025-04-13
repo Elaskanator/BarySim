@@ -22,20 +22,20 @@ namespace ParticleSimulator {
 		public const int SUPERSAMPLING				= 1;
 		public const float PIXEL_ROUNDOFF			= 0.5f;
 		//camera
-		public const float WORLD_SCALE				= 500f;
+		public const float WORLD_SCALE				= 600f;
 		public const float ZOOM_SCALE				= 1f;
 		public const bool AUTOFOCUS_DEFAULT			= false;
 		public const float ROT_DEG_PER_FRAME		= 0.33333f;
 		//particle count
 		public const int PARTICLES_GROUP_COUNT		= 1;
 		public const int PARTICLES_GROUP_MIN		= 1;
-		public const int PARTICLES_GROUP_MAX		= 20000;
+		public const int PARTICLES_GROUP_MAX		= 25000;
 		public const float PARTICLES_GROUP_SIZE_POW	= 0f;//0 for max size
 		//particle features
 		public const float TIME_SCALE				= 10f;
 		public const bool COLLISION_ENABLE			= true;
 		public const float COLLISION_OVERLAP_BUFFER	= 1f;
-		public const float DRAG_CONSTANT			= 0.002f;//TODO large clumps form that tweak out for larger values
+		public const float DRAG_CONSTANT			= 0.002f;//TODO large clumps form which tweak out for larger values
 		public const bool MERGE_ENABLE				= true;
 		public const float MERGE_ENGULF_RATIO		= 0.99f;
 		//world
@@ -59,8 +59,8 @@ namespace ParticleSimulator {
 		public const double TREE_BATCH_SLACK		= 0.1d;//relative overage allowed without further refining the tree
 		//render coloring
 		public const ParticleColoringMethod COLORING= ParticleColoringMethod.Luminosity;
-		public static readonly ConsoleColor[] COLORS= ColoringScales.DEFAULT_CONSOLE_COLORS;
-		public const bool COLOR_USE_FIXED_BANDS		= false;
+		public static readonly ConsoleColor[] COLORS= ColoringScales.StarColors;
+		public const bool COLOR_USE_FIXED_BANDS		= true;
 		public static readonly float[] FIXED_BANDS	= Enumerable.Range(0, COLORS.Length).Select(i => (float)(1 << i)).ToArray();
 		//render coloring autoscaling
 		public const int AUTOSCALE_INTERVAL_MS		= -1;
@@ -85,20 +85,20 @@ namespace ParticleSimulator {
 		public const float MASS_LUMINOSITY_SCALAR	= 1f;
 		public const float MASS_LUMINOSITY_POW		= 1f;
 
-		public const float GALAXY_RADIUS			= 250f;
+		public const float GALAXY_RADIUS			= 300f;
 		public const float GALAXY_THINNESS			= 2.5f;
 		public const float GALAXY_CONCENTRATION		= 0.8f;
 
 		public const float GALAXY_SPEED_ANGULAR		= 0.0f;
 		public const float GALAXY_SPEED_RAND		= 0.0f;
-		public const float GALAXY_SPIN_ANGULAR		= 0.015f;
+		public const float GALAXY_SPIN_ANGULAR		= 0.025f;
 		public const float GALAXY_SPIN_RAND			= 0.0f;
 		public const float GALAXY_SPIN_POW			= 1f;
 
 		public const bool SUPERNOVA_ENABLE			= true;
-		public const float SUPERNOVA_CRITICAL_MASS	= 750f;
+		public const float SUPERNOVA_CRITICAL_MASS	= 4096f;
 		public const float SUPERNOVA_EJECTA_MASS	= 1f;
-		public const float SUPERNOVA_EJECTA_SPEED	= 0.1f;
+		public const float SUPERNOVA_EJECTA_SPEED	= 0.08f;
 		public const float SUPERNOVA_RADIUS_SCALAR	= 1f;
 
 		public const bool BLACKHOLE_ENABLE			= false;

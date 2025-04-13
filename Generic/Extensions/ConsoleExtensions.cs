@@ -109,6 +109,15 @@ namespace Generic.Extensions {
 			}
 		}
 
+		public static void SetWindowPosition(int x, int y) {
+			IntPtr hWnd = GetConsoleWindow();
+			if (GetWindowRect(hWnd, out RECT rc)) {
+				int width = rc.Right - rc.Left;
+				int height = rc.Bottom - rc.Top;
+				MoveWindow(hWnd, x, y, width, height, true);
+			}
+		}
+
 		//does not prevent window snapping (e.g. drag to edge of screen, Win+Left/Right)
 		public static void HideScrollbars() {
 			int
@@ -126,11 +135,6 @@ namespace Generic.Extensions {
 			SetConsoleScreenBufferInfoEx(stdHandle, ref bufferInfo);
 		}
 
-		// P-Invoke declarations
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern bool GetWindowRect(IntPtr hWnd, out RECT rc);
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern bool MoveWindow(IntPtr hWnd, int x, int y, int w, int h, bool repaint);
 
 
   //      public static IntPtr HWND_BOTTOM = (IntPtr)1;
@@ -177,6 +181,12 @@ namespace Generic.Extensions {
 		//}
 
 		#region extern
+		// P-Invoke declarations
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern bool GetWindowRect(IntPtr hWnd, out RECT rc);
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern bool MoveWindow(IntPtr hWnd, int x, int y, int w, int h, bool repaint);
+
 		public const int SWP_NOZORDER = 0x4;
 		public const int SWP_NOACTIVATE = 0x10;
 

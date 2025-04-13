@@ -16,7 +16,7 @@ namespace Generic.Vectors {
 			this.SizeSquared = this.Size[0] * this.Size[0];
 		}
 		public QuadTreeSIMD(int dim) : this(dim, Vector<float>.One) { }
-		protected override QuadTreeSIMD<TItem> NewNode(Vector<float> cornerLeft, Vector<float> cornerRight, AHyperdimensionalBinaryTree<TItem, Vector<float>> parent) =>
+		protected override QuadTreeSIMD<TItem> InstantiateNode(Vector<float> cornerLeft, Vector<float> cornerRight, AHyperdimensionalBinaryTree<TItem, Vector<float>> parent) =>
 			new QuadTreeSIMD<TItem>(this.Dim, cornerLeft, cornerRight, parent);
 
 		public override Vector<float> Midpoint(Vector<float> first, Vector<float> second) =>
@@ -25,10 +25,14 @@ namespace Generic.Vectors {
 			first.EqualsAny(second, this.Dim);
 		public override int BitmaskLessThan(Vector<float> first, Vector<float> second) =>
 			first.BitmaskLessThan(second, this.Dim);
+		public override int BitmaskLessThanOrEqual(Vector<float> first, Vector<float> second) =>
+			first.BitmaskLessThanOrEqual(second, this.Dim);
 		//public override int BitmaskLessThanOrEqual(Vector<float> first, Vector<float> second) =>
 		//	first.BitmaskLessThanOrEqual(second, this.Dim);
 		//public override int BitmaskGreaterThan(Vector<float> first, Vector<float> second) =>
 		//	first.BitmaskGreaterThan(second, this.Dim);
+		public override int BitmaskGreaterThan(Vector<float> first, Vector<float> second) =>
+			first.BitmaskGreaterThan(second, this.Dim);
 		public override int BitmaskGreaterThanOrEqual(Vector<float> first, Vector<float> second) =>
 			first.BitmaskGreaterThanOrEqual(second, this.Dim);
 

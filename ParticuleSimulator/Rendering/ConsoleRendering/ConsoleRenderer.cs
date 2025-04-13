@@ -37,14 +37,15 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 		public override void Init() {
 			//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
-			Console.WindowWidth = Parameters.WINDOW_WIDTH;
-			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
 			//these require p-invokes
+			ConsoleExtensions.SetWindowPosition(0, 0);
 			ConsoleExtensions.HideScrollbars();
 			//rendering gets *really* messed up if the window gets resized by anything
 			ConsoleExtensions.DisableResizing();//note this doesn't work to disable OS window snapping
-			//ConsoleExtensions.SetWindowPosition(0, 0);//TODO
 			Console.CursorVisible = false;
+
+			Console.WindowWidth = Parameters.WINDOW_WIDTH;
+			Console.WindowHeight = Parameters.WINDOW_HEIGHT;
 
 			Thread titleMon = new(this.ConsoleTitleUpdate);
 			titleMon.Start();

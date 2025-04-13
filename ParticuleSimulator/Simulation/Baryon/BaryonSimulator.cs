@@ -27,8 +27,8 @@ namespace ParticleSimulator.Simulation.Baryon {
 			new SpinningDisk<MatterClump>((p, v) => new(p, v), Parameters.GALAXY_RADIUS);
 			//new PlummerGalaxy((p, v) => new(p, v), Parameters.GALAXY_RADIUS, Parameters.GALAXY_THINNESS);
 
-		protected override void AccumulateLeafNode(BarnesHutTree node, MatterClump[] particles) =>
-			node.InitBaryCenter(particles);
+		protected override void AccumulateLeafNode(NodeParticles leafBin) =>
+			leafBin.Node.InitBaryCenter(leafBin.Particles);
 		protected override void AccumulateInnerNode(BarnesHutTree node) =>
 			node.UpdateBaryCenter();
 
@@ -40,24 +40,24 @@ namespace ParticleSimulator.Simulation.Baryon {
 			}
 		}
 
-		protected override void ComputeInteractions(BarnesHutTree leaf, MatterClump[] particles) {
+		protected override void ComputeInteractions(NodeParticles leafParticles) {
 			List<MatterClump> nearField = new();
-			Vector<float> farFieldAcceleration = DetermineNeighbors(leaf, nearField);
+			Vector<float> farFieldAcceleration = DetermineNeighbors(leafParticles.Node, nearField);
 
 			Vector<float> influence;
-			for (int i = 0; i < particles.Length; i++) {
+			for (int i = 0; i < leafParticles.Particles.Length; i++) {
 				//add weaker forces first to reduce floating point errors
 				for (int n = 0; n < nearField.Count; n++) {
-					influence = particles[i].ComputeInteractionInfluence(nearField[n]);
-					particles[i].Acceleration += influence * nearField[n].Mass;
+					influence = leafParticles.Particles[i].ComputeInteractionInfluence(nearField[n]);
+					leafParticles.Particles[i].Acceleration += influence * nearField[n].Mass;
 				}
 				for (int j = 0; j < i; j++) {
-					influence = particles[i].ComputeInteractionInfluence(particles[j]);
-					particles[i].Acceleration += influence * particles[j].Mass;
-					particles[j].Acceleration -= influence * particles[i].Mass;
+					influence = leafParticles.Particles[i].ComputeInteractionInfluence(leafParticles.Particles[j]);
+					leafParticles.Particles[i].Acceleration += influence * leafParticles.Particles[j].Mass;
+					leafParticles.Particles[j].Acceleration -= influence * leafParticles.Particles[i].Mass;
 				}
 				//add last to reduce floating point errors
-				particles[i].Acceleration += farFieldAcceleration;//cheeky optimization to skip impulse/mass conversion
+				leafParticles.Particles[i].Acceleration += farFieldAcceleration;//cheeky optimization to skip impulse/mass conversion
 			}
 		}
 

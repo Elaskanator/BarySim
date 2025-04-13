@@ -9,7 +9,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 		private BarnesHutTree(int dim, Vector<float> corner1, Vector<float> corner2, AHyperdimensionalBinaryTree<MatterClump, Vector<float>> parent)
 		: base(dim, corner1, corner2, parent) { }
 
-		protected override QuadTreeSIMD<MatterClump> NewNode(Vector<float> cornerLeft, Vector<float> cornerRight, AHyperdimensionalBinaryTree<MatterClump, Vector<float>> parent) =>
+		protected override QuadTreeSIMD<MatterClump> InstantiateNode(Vector<float> cornerLeft, Vector<float> cornerRight, AHyperdimensionalBinaryTree<MatterClump, Vector<float>> parent) =>
 			new BarnesHutTree(this.Dim, cornerLeft, cornerRight, parent);
 
 		public override int LeafCapacity => Parameters.TREE_LEAF_CAPACITY;

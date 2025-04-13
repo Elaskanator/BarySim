@@ -34,6 +34,22 @@ namespace Generic.Trees {
 			while (!node.IsRoot)
 				node = node.Parent;
 			return node; } }
+		public IEnumerable<ABinaryTree<T>> AllLeaves { get {
+			List<ABinaryTree<T>> leaves = new List<ABinaryTree<T>>();
+			Stack<ABinaryTree<T>> stack = new Stack<ABinaryTree<T>>();
+			stack.Push(this);
+
+			while (stack.TryPop(out ABinaryTree<T> node)) {
+				if (node.IsLeaf) {
+					yield return node;
+				} else {
+					for (int i = 0; i < node.Children.Length; i++) {
+						if (node.Children[i].ItemCount > 0)
+							stack.Push(node.Children[i]);
+					}
+				}
+			}
+		} }
 
 		public ICollection<T> Bin;
 
