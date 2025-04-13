@@ -9,8 +9,9 @@ namespace Generic.Classes {
 		/// The sign of the value is ignored, so it is the responsibility of the caller to handle negativity.
 		/// </summary>
 		/// <param name="value">Test value to factorize, which must be nonzero</param>
+		/// <param name="reciprocol">Whether to return negated exponents (to use as a denominator)</param>
 		/// <returns>A sequence of prime factorizations of the provided whole number</returns>
-		public static IEnumerable<PrimeFactor> Factorize(this long value) {
+		public static IEnumerable<PrimeFactor> Factorize(this long value, bool reciprocol = false) {
 			if (value == 0) throw new ArgumentOutOfRangeException();
 			
 			long remaining = value > 0 ? value : -value;
@@ -19,7 +20,7 @@ namespace Generic.Classes {
 			PrimeEnumerator.Singleton.Reset();
 			while (remaining > 1 && PrimeEnumerator.Singleton.MoveNext()) {
 				if (PrimeEnumerator.Singleton.Current > sqrt) {//remainder is prime
-					yield return new PrimeFactor(remaining);//if we need to use System.Long for the factor, everything is sure to explode
+					yield return new PrimeFactor(remaining, reciprocol ? -1 : 1);//if we need to use System.Long for the factor, everything is sure to explode
 					break;
 				} else {
 					int power = 0;
@@ -27,9 +28,8 @@ namespace Generic.Classes {
 						power++;
 						remaining /= PrimeEnumerator.Singleton.Current;
 					}
-					if (power > 0) {
-						yield return new PrimeFactor(PrimeEnumerator.Singleton.Current, power);
-					}
+					if (power > 0)
+						yield return new PrimeFactor(PrimeEnumerator.Singleton.Current, reciprocol ? -power : power);
 				}
 			}
 		}

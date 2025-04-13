@@ -32,6 +32,7 @@ namespace ParticleSimulator.Simulation {
 			AParticleGroup<TParticle> group;
 			for (int i = 0; i < Parameters.PARTICLES_GROUP_COUNT; i++) {
 				group = this.NewParticleGroup();
+				group.Init();
 				this.Tree = (TTree)this.Tree.Add(group.InitialParticles);
 			}
 		}

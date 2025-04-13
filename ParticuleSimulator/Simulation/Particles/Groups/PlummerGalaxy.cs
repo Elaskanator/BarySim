@@ -5,8 +5,8 @@ using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Simulation.Particles {
 	public class PlummerGalaxy : AParticleGroup<MatterClump> {
-		public PlummerGalaxy(Func<Vector<float>, Vector<float>, MatterClump> initializer, float r, float a) : base(initializer, r) {
-			this.BulgeScalar = a;
+		public PlummerGalaxy(Func<Vector<float>, Vector<float>, MatterClump> particleConstructor, float radius, float bulgeScalar) : base(particleConstructor, radius) {
+			this.BulgeScalar = bulgeScalar;
 			this.ParticleMass = Parameters.MASS_SCALAR / this.NumParticles;
 		}
 
@@ -14,13 +14,11 @@ namespace ParticleSimulator.Simulation.Particles {
 
 		public readonly float ParticleMass;
 
-		protected override void PrepareNewParticle(MatterClump p) {
-			p.Mass = this.ParticleMass;
-		}
-
 		//Plummer distribution
 		//see https://articles.adsabs.harvard.edu/pdf/1974A%26A....37..183A
-		protected override void ParticleAddPositionVelocity(MatterClump particle) {
+		protected override void InitializeParticles(MatterClump particle) {
+			particle.Mass = this.ParticleMass;
+
 			float rand = (float)Program.Random.NextDouble();
 			float radius = this.Radius * this.BulgeScalar / MathF.Sqrt(MathF.Pow(rand, -2f/3f) - 1f);
 			Vector<float> uniformUnitVector = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random));
@@ -28,7 +26,7 @@ namespace ParticleSimulator.Simulation.Particles {
 			particle._position += particleOffset;
 			
 			float bulgeRadius = this.Radius * this.BulgeScalar;
-			float velocity = this.VelocitySampling(radius, bulgeRadius);
+			float velocity = Parameters.GRAVITATIONAL_CONSTANT * this.VelocitySampling(radius, bulgeRadius);
 			uniformUnitVector = VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random));
 			particle.Velocity += velocity * uniformUnitVector;
 		}

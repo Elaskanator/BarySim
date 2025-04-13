@@ -26,7 +26,7 @@ namespace Generic.Classes {
 		/// </summary>
 		public double AsNumber {
 			get {
-				long prime = this.Prime;
+				long prime = this.Prime;//cannot reference directly in enumerations
 				if (this.Exponent > 0) return Enumerable.Range(0, this.ExponentAbs).Aggregate(1d, (acc, e) => acc *= prime);
 				else return Enumerable.Range(0, this.ExponentAbs).Aggregate(1d, (acc, e) => acc /= prime);
 			}
@@ -60,7 +60,10 @@ namespace Generic.Classes {
 		}
 
 		public override string ToString() {
-			return this.AsNumber.ToString();
+			return string.Format("{0}{1}{2}",
+				this.Exponent < 0 ? "1/" : "",
+				this.Prime,
+				this.ExponentAbs > 1 ? "^"+this.ExponentAbs : "");
 		}
 		public override bool Equals(object obj) {
 			return obj is PrimeFactor && this.Equals((PrimeFactor)obj);

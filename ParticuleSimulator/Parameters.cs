@@ -11,7 +11,7 @@ namespace ParticleSimulator {
 		#region Primary
 		//global
 		public const int DIM						= 3;
-		public const int RANDOM_SEED				= 1;
+		public const int RANDOM_SEED				= -1;
 		//evaluation
 		public const float TARGET_FPS				= 30f;
 		public const int FRAME_LIMIT				= -1;
@@ -19,10 +19,10 @@ namespace ParticleSimulator {
 		//rendering size (using top and bottom halves of each character to get double the verticle resolution)
 		public static readonly int WINDOW_WIDTH		= Console.LargestWindowHeight*2;
 		public static readonly int WINDOW_HEIGHT	= Console.LargestWindowHeight;
-		public const int SUPERSAMPLING				= 2;
+		public const int SUPERSAMPLING				= 1;
 		public const float PIXEL_ROUNDOFF			= 0.5f;
 		//camera
-		public const float WORLD_SCALE				= 600f;
+		public const float WORLD_SCALE				= 500f;
 		public const float ZOOM_SCALE				= 1f;
 		public const bool AUTOFOCUS_DEFAULT			= false;
 		public const float ROT_DEG_PER_FRAME		= 0.33333f;
@@ -32,12 +32,12 @@ namespace ParticleSimulator {
 		public const int PARTICLES_GROUP_MAX		= 20000;
 		public const float PARTICLES_GROUP_SIZE_POW	= 0f;//0 for max size
 		//particle features
-		public const float TIME_SCALE				= 1f;
+		public const float TIME_SCALE				= 10f;
 		public const bool COLLISION_ENABLE			= true;
-		public const float COLLISION_OVERLAP_BUFFER	= 0.1f;
-		public const float DRAG_CONSTANT			= 0.08f;//TODO large clumps form that tweak out for larger values
+		public const float COLLISION_OVERLAP_BUFFER	= 1f;
+		public const float DRAG_CONSTANT			= 0.002f;//TODO large clumps form that tweak out for larger values
 		public const bool MERGE_ENABLE				= true;
-		public const float MERGE_ENGULF_RATIO		= 0.8f;
+		public const float MERGE_ENGULF_RATIO		= 0.99f;
 		//world
 		public const float WORLD_PADDING_PCT		= 0f;
 		public const float WORLD_PRUNE_RADII		= 10f;
@@ -47,7 +47,7 @@ namespace ParticleSimulator {
 		public const float WORLD_Y_ASPECT			= 1f;
 		public const float WORLD_Z_ASPECT			= 1f;
 		//accuracy
-		public const float ACCURACY_CRITERION		= 2f;//Barnes-Hut condition of approximating a node (smaller = more accurate)
+		public const float ACCURACY_CRITERION		= 0.5f;//Barnes-Hut condition of approximating a node (smaller = more accurate)
 		public const float PRECISION_EPSILON		= 1E-5f;//minimum distance to evaluate forces
 		public const float NODE_APPROX_CUTOFF		= 8f;//minimum distance nodes can be approximated
 		public const int TREE_LEAF_CAPACITY			= 8;//degrades integrity of approximation check
@@ -59,8 +59,8 @@ namespace ParticleSimulator {
 		public const double TREE_BATCH_SLACK		= 0.1d;//relative overage allowed without further refining the tree
 		//render coloring
 		public const ParticleColoringMethod COLORING= ParticleColoringMethod.Luminosity;
-		public static readonly ConsoleColor[] COLORS= ColoringScales.StarColors;
-		public const bool COLOR_USE_FIXED_BANDS		= true;
+		public static readonly ConsoleColor[] COLORS= ColoringScales.DEFAULT_CONSOLE_COLORS;
+		public const bool COLOR_USE_FIXED_BANDS		= false;
 		public static readonly float[] FIXED_BANDS	= Enumerable.Range(0, COLORS.Length).Select(i => (float)(1 << i)).ToArray();
 		//render coloring autoscaling
 		public const int AUTOSCALE_INTERVAL_MS		= -1;
@@ -72,33 +72,33 @@ namespace ParticleSimulator {
 		public const float AUTOSCALE_MIN_STEP		= 1f;
 		public const float AUTOSCALE_DIFF_THRESH	= 0f;
 		//render exporting
-		//public const bool EXPORT_FRAMES = false;//TODO
-		//public const string EXPORT_DIR = null;//TODO
+		public const bool EXPORT_FRAMES = false;//TODO
+		public const string EXPORT_DIR = null;//TODO
 		#endregion Primary
 
 		#region Gravity
-		public const float GRAVITATIONAL_CONSTANT	= 1E-3f;
+		public const float GRAVITATIONAL_CONSTANT	= 1E-5f;
 		//TODO add electrostatic force
 
-		public const float MASS_SCALAR				= 0.5f;
-		public const float MASS_RADIAL_DENSITY		= 0.25f;
-		public const float MASS_LUMINOSITY_SCALAR	= 0.25f;
+		public const float MASS_SCALAR				= 1f;
+		public const float MASS_RADIAL_DENSITY		= 0.5f;
+		public const float MASS_LUMINOSITY_SCALAR	= 1f;
 		public const float MASS_LUMINOSITY_POW		= 1f;
 
-		public const float GALAXY_RADIUS			= 300f;
+		public const float GALAXY_RADIUS			= 250f;
 		public const float GALAXY_THINNESS			= 2.5f;
-		public const float GALAXY_CONCENTRATION		= 2f;
+		public const float GALAXY_CONCENTRATION		= 0.8f;
 
 		public const float GALAXY_SPEED_ANGULAR		= 0.0f;
 		public const float GALAXY_SPEED_RAND		= 0.0f;
-		public const float GALAXY_SPIN_ANGULAR		= 0.12f;
-		public const float GALAXY_SPIN_RAND			= 0.06f;
-		public const float GALAXY_SPIN_POW			= 0.25f;
+		public const float GALAXY_SPIN_ANGULAR		= 0.015f;
+		public const float GALAXY_SPIN_RAND			= 0.0f;
+		public const float GALAXY_SPIN_POW			= 1f;
 
-		public const bool SUPERNOVA_ENABLE			= false;
-		public const float SUPERNOVA_CRITICAL_MASS	= 10000f;
+		public const bool SUPERNOVA_ENABLE			= true;
+		public const float SUPERNOVA_CRITICAL_MASS	= 750f;
 		public const float SUPERNOVA_EJECTA_MASS	= 1f;
-		public const float SUPERNOVA_EJECTA_SPEED	= 0.45f;
+		public const float SUPERNOVA_EJECTA_SPEED	= 0.1f;
 		public const float SUPERNOVA_RADIUS_SCALAR	= 1f;
 
 		public const bool BLACKHOLE_ENABLE			= false;

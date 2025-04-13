@@ -23,7 +23,7 @@ namespace ParticleSimulator.Simulation.Particles {
 				* this.DirectionUnitVector(this.Position);
 		}
 
-		protected override void ParticleAddPositionVelocity(TParticle particle) {
+		protected override void InitializeParticles(TParticle particle) {
 			float rand = (float)Program.Random.NextDouble();
 			float offset = this.Radius * MathF.Pow(rand, Parameters.GALAXY_CONCENTRATION);
 

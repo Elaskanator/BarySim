@@ -59,13 +59,13 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		private readonly int _randOffset = 0;
 		
 		//orthographic projection
-		public Pixel[] Rasterize(EvalResult prepResults, object[] parameters) {//top down view (smaller Z values = closer)
+		public PixelRank[] Rasterize(EvalResult prepResults, object[] parameters) {//top down view (smaller Z values = closer)
 			List<ParticleData> particles = (List<ParticleData>)parameters[0];
 			if (particles is null) {
-				return Array.Empty<Pixel>();
+				return Array.Empty<PixelRank>();
 			} else {
 				float[] scalings = (float[])parameters[1];
-				Pixel[] results = new Pixel[this.OutNumPixels];
+				PixelRank[] results = new PixelRank[this.OutNumPixels];
 				float?[] ranks = new float?[this.OutNumPixels];
 
 				this.Camera.Increment(Program.Engine.Simulator.Center.Position);
@@ -121,7 +121,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								if (Parameters.COLORING == ParticleColoringMethod.Density)
 									ranks[idx] = bin.Sum(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
 								else ranks[idx] = bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
-								results[idx] = new(x, y, ranks[idx].Value);
+								results[idx] = new(x, y, ranks[idx].Value);//TODO alpha
 							}
 						}
 					}
@@ -129,7 +129,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 					if (counts[i] > 0) {
 						any = true;
 						ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densities[i]);
-						results[i] = new(nearest[i].X, nearest[i].Y, ranks[i].Value);
+						results[i] = new(nearest[i].X, nearest[i].Y, ranks[i].Value);//TODO alpha
 					}
 
 				if (any) this._rawRankingsResource.Overwrite(ranks);
@@ -138,8 +138,8 @@ namespace ParticleSimulator.Rendering.Rasterization {
 			}
 		}
 
-		private float GetRank(float[] scaling, Subsample resampling, float count, float halfHeight) {
-			return Parameters.COLORING switch {
+		private float GetRank(float[] scaling, Subsample resampling, float count, float halfHeight)
+		=> Parameters.COLORING switch {
 				ParticleColoringMethod.Random => (resampling.Particle.Id + this._randOffset) % scaling.Length,
 				ParticleColoringMethod.Group => (resampling.Particle.GroupId + this._randOffset) % scaling.Length,
 				ParticleColoringMethod.Luminosity => resampling.Particle.Luminosity,
@@ -148,7 +148,6 @@ namespace ParticleSimulator.Rendering.Rasterization {
 				ParticleColoringMethod.Density => halfHeight * 2f * resampling.Particle.Density,
 				_ => 0f,
 			};
-		}
 
 		//TODO rewrite to not use Sqrt
 		private void Resample(ParticleData particle, Queue<Subsample> result) {

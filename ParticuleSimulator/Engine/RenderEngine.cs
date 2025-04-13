@@ -8,7 +8,7 @@ using ParticleSimulator.Rendering.SystemConsole;
 using ParticleSimulator.Simulation;
 using ParticleSimulator.Simulation.Baryon;
 using ParticleSimulator.Simulation.Particles;
-//using ParticleSimulator.Rendering.Exporter;
+using ParticleSimulator.Rendering.Exporter;
 using ParticleSimulator.Engine.Threading;
 using System.Collections.Generic;
 
@@ -43,10 +43,11 @@ namespace ParticleSimulator.Engine {
 
 			this.Renderer = new ConsoleRenderer(this);
 
-			//this.Exporter = new BitmapGenerator(
-			//	Parameters.WINDOW_WIDTH,
-			//	Parameters.WINDOW_HEIGHT * 2,
-			//	Parameters.EXPORT_DIR);
+			if (Parameters.EXPORT_FRAMES)
+				this.Exporter = new BitmapGenerator(
+					Parameters.WINDOW_WIDTH,
+					Parameters.WINDOW_HEIGHT * 2,
+					Parameters.EXPORT_DIR);
 		}
 
 		~RenderEngine() => this.Dispose(false);
@@ -71,7 +72,7 @@ namespace ParticleSimulator.Engine {
 		public ARenderer Renderer { get; private set; }
 		public Autoscaler Scaling { get; private set; }
 		public Rasterizer Rasterizer { get; private set; }
-		//public BitmapGenerator Exporter { get; private set; }
+		public BitmapGenerator Exporter { get; private set; }
 		public Camera Camera { get; private set; }
 		
 		internal ACalculationHandler[] Evaluators { get; private set; }
@@ -81,14 +82,14 @@ namespace ParticleSimulator.Engine {
 		private ProcessThread _stepEval_Autoscale;
 		private ProcessThread _stepEval_Rasterize;
 		private ProcessThread _stepEval_Render;
-		//private ProcessThread _stepEval_Export;
+		private ProcessThread _stepEval_Export;
 		private Dictionary<int, bool> _stepsStartingPaused;
 		
 		private readonly SynchronousBuffer<List<ParticleData>> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
 		private readonly ConsumptionType _particleResourceReadType = Parameters.SYNC_SIMULATION ? ConsumptionType.Consume : ConsumptionType.ConsumeReady;
 		private IngestedResource<List<ParticleData>> _particleResourceUse;
 		private readonly SynchronousBuffer<float?[]> _rankingsResource = new("Ranks", 0);
-		private readonly SynchronousBuffer<Pixel[]> _rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
+		private readonly SynchronousBuffer<PixelRank[]> _rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
 		private readonly SynchronousBuffer<float[]> _scalingResource = new("Scaling", 0);
 
 		public void Start(bool enable = true) {
@@ -146,6 +147,9 @@ namespace ParticleSimulator.Engine {
 					this.Evaluators[i].Stop();
 				this.EndTimeUtc = DateTime.UtcNow;
 				this.IsOpen = false;
+
+				if (Parameters.EXPORT_FRAMES)
+					this.Exporter.Cleanup();
 			} else throw new InvalidOperationException("Not open");
 		}
 
@@ -162,7 +166,8 @@ namespace ParticleSimulator.Engine {
 
 				this.Scaling.Reset();
 				this.Camera.ResetRotation();
-				//this.Exporter.Reset();
+				if (Parameters.EXPORT_FRAMES)
+					this.Exporter.Reset();
 				
 				this.Start(running);
 				this.Pause();
@@ -209,7 +214,7 @@ namespace ParticleSimulator.Engine {
 					: null,
 				DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.MON_WARN_MS),
 				InputResourceUses = new IIngestedResource[] {
-					new IngestedResource<Pixel[]>(this._rasterResource, /*Parameters.EXPORT_FRAMES ? ConsumptionType.ReadReady : */ConsumptionType.Consume),
+					new IngestedResource<PixelRank[]>(this._rasterResource, Parameters.EXPORT_FRAMES ? ConsumptionType.ReadReady : ConsumptionType.Consume),
 					new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
 				}});
 			yield return this._stepEval_Render;
@@ -230,17 +235,17 @@ namespace ParticleSimulator.Engine {
 				yield return this._stepEval_Autoscale;
 			}
 
-			//if (Parameters.EXPORT_FRAMES) {
-			//	this._stepEval_Export = ProcessThread.New(new() {
-			//		Name = "Exporter",
-			//		EvaluatorFn = (r, p) => { this.Exporter.RenderOut(r, p); },
-			//		InputResourceUses = new IIngestedResource[] {
-			//			new IngestedResource<Pixel[]>(this._rasterResource, ConsumptionType.Consume),
-			//			new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
-			//		}
-			//	});
-			//	yield return this._stepEval_Export;
-			//}
+			if (Parameters.EXPORT_FRAMES) {
+				this._stepEval_Export = ProcessThread.New(new() {
+					Name = "Exporter",
+					EvaluatorFn = (r, p) => { this.Exporter.RenderOut(r, p); },
+					InputResourceUses = new IIngestedResource[] {
+						new IngestedResource<PixelRank[]>(this._rasterResource, ConsumptionType.Consume),
+						new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
+					}
+				});
+				yield return this._stepEval_Export;
+			}
 		}
 
 		private IEnumerable<KeyListener> BuildKeyListeners() {

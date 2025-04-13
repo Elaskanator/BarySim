@@ -222,5 +222,18 @@ namespace Generic.Extensions {
 					new string(' ', right));
 			} else return str;
 		}
+
+		public static int EquivalenceLength(this string str, string other, bool caseInsensitive = false) {
+			if (str is null || other is null)
+				return 0;
+
+			if (caseInsensitive) {
+				str = str.ToUpper();
+				other = other.ToUpper();
+			}
+			int idx;
+			for (idx = 0; idx < str.Length && idx < other.Length && str[idx] == other[idx]; idx++) ;//empty loop doing the heavy lifting
+			return idx;
+		}
 	}
 }

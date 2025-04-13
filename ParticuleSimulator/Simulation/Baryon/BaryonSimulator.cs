@@ -25,6 +25,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		protected override AParticleGroup<MatterClump> NewParticleGroup() =>
 			new SpinningDisk<MatterClump>((p, v) => new(p, v), Parameters.GALAXY_RADIUS);
+			//new PlummerGalaxy((p, v) => new(p, v), Parameters.GALAXY_RADIUS, Parameters.GALAXY_THINNESS);
 
 		protected override void AccumulateLeafNode(BarnesHutTree node, MatterClump[] particles) =>
 			node.InitBaryCenter(particles);

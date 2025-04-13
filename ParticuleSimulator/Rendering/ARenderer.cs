@@ -21,7 +21,7 @@ namespace ParticleSimulator.Rendering {
 		public void Draw(EvalResult prepResults, object[] parameters) {
 			if (prepResults.PrepPunctual || this._scaling is null)
 				this._scaling = (float[])parameters[1];
-			object buffer = this.PrepareBuffer(this._scaling, (Pixel[])parameters[0]);
+			object buffer = this.PrepareBuffer(this._scaling, (PixelRank[])parameters[0]);
 			this.DrawOverlays(prepResults, this._scaling, buffer);
 			this.Flush(buffer);
 		}
@@ -46,7 +46,7 @@ namespace ParticleSimulator.Rendering {
 
 		public virtual void Init() { }
 
-		protected abstract object PrepareBuffer(float[] scaling, Pixel[] buffer);
+		protected abstract object PrepareBuffer(float[] scaling, PixelRank[] buffer);
 		protected abstract void DrawOverlays(EvalResult prepResults, float[] scaling, object buffer);
 		protected abstract void Flush(object buffer);
 		protected abstract void UpdateMonitor(int framesCompleted, TimeSpan frameTime, TimeSpan fpsTime);

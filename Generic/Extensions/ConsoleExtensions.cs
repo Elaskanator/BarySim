@@ -3,29 +3,91 @@ using System;
 using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 //using System.Collections.Generic;
 //using System.Drawing;
 //using System.Windows.Forms;//see https://stackoverflow.com/a/57908260/2799848
 
 namespace Generic.Extensions {
 	public static class ConsoleExtensions {
-        public static void WaitForEnter(string message, ConsoleColor foreground, ConsoleColor background) {
+		public const int ResultDelayMs = 250;
+
+        public static void WaitForEnter(string message, ConsoleColor? foreground = null, ConsoleColor? background = null) {
 			bool oldVisibility = Console.CursorVisible;
 			ConsoleColor oldForeground = Console.ForegroundColor,
 				oldbackground = Console.BackgroundColor;
 
-            Console.ForegroundColor = foreground;
-            Console.BackgroundColor = background;
+			if (!(foreground is null) && foreground.Value != oldForeground)
+				Console.ForegroundColor = foreground.Value;
+			if (!(foreground is null) && background.Value != oldbackground)
+            Console.BackgroundColor = background.Value;
             Console.Write(message);
-            Console.ForegroundColor = oldForeground;
-            Console.BackgroundColor = oldbackground;
-			Console.CursorVisible = true;
+			if (!(foreground is null) && foreground.Value != oldForeground)
+				Console.ForegroundColor = oldForeground;
+			if (!(foreground is null) && background.Value != oldbackground)
+				Console.BackgroundColor = oldbackground;
+			if (!Console.CursorVisible)
+				Console.CursorVisible = true;
 			
 			while (Console.ReadKey(true).Key != ConsoleKey.Enter) ;
 
-			Console.CursorVisible = oldVisibility;
+			if (!oldVisibility)
+				Console.CursorVisible = oldVisibility;
         }
-        public static void WaitForEnter(string message, ConsoleColor foreground) { WaitForEnter(message, foreground, Console.BackgroundColor); }
+
+		public static bool Confirm(string message, bool newline) {
+			bool result = Confirm(message, null, null);
+			if (newline)
+				Console.WriteLine();
+			return result;
+		}
+		public static bool Confirm(string message, ConsoleColor? foreground = null, ConsoleColor? background = null, bool newline = false) {
+			bool oldVisibility = Console.CursorVisible;
+			ConsoleColor oldForeground = Console.ForegroundColor,
+				oldbackground = Console.BackgroundColor;
+
+			if (!(foreground is null) && foreground.Value != oldForeground)
+				Console.ForegroundColor = foreground.Value;
+			if (!(foreground is null) && background.Value != oldbackground)
+            Console.BackgroundColor = background.Value;
+            Console.Write(message);
+			if (!(foreground is null) && foreground.Value != oldForeground)
+				Console.ForegroundColor = oldForeground;
+			if (!(foreground is null) && background.Value != oldbackground)
+				Console.BackgroundColor = oldbackground;
+			if (!Console.CursorVisible)
+				Console.CursorVisible = true;
+			
+			bool waiting = true, result = false;
+			while (waiting) {
+				switch (Console.ReadKey(true).Key) {
+					case ConsoleKey.Enter:
+						Console.Write("false");
+						waiting = false;
+						break;
+					case ConsoleKey.N:
+						Console.Write("false");
+						waiting = false;
+						break;
+					case ConsoleKey.Y:
+						Console.Write("true");
+						result = true;
+						waiting = false;
+						break;
+				}
+			}
+
+			if (!oldVisibility)
+				Console.CursorVisible = oldVisibility;
+			if (newline)
+				Console.WriteLine();
+
+			Thread.Sleep(ResultDelayMs);
+
+			return result;
+		}
+
+		public static void WaitForEnter(string message, ConsoleColor foreground) { WaitForEnter(message, foreground, Console.BackgroundColor); }
         public static void WaitForEnter(string message = "Press enter to continue") { WaitForEnter(message, Console.ForegroundColor, Console.BackgroundColor); }
 
 		public static void ClearLine(int line) {

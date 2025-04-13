@@ -53,7 +53,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		protected override void Flush(object buffer) =>
 			ConsoleExtensions.WriteConsoleOutput((ConsoleExtensions.CharInfo[])buffer);
 
-		protected override object PrepareBuffer(float[] scaling, Pixel[] buffer) {
+		protected override object PrepareBuffer(float[] scaling, PixelRank[] buffer) {
 			if (!(buffer is null)) {
 				ConsoleExtensions.CharInfo[] chars = new ConsoleExtensions.CharInfo[this.NumChars];
 				int col = 0, row = 0, i1, i2;

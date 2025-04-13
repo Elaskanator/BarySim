@@ -18,6 +18,9 @@ namespace Generic.Classes {
 		/// <summary>
 		/// The complete factorization of the fraction
 		/// </summary>
+		/// <todo>
+		/// Consider switching to numerator and denominators being readonly arrays
+		/// </todo>
 		public readonly PrimeFactor[] CompoundFactorization;
 
 		public IEnumerable<PrimeFactor> Numerator { get { return this.CompoundFactorization.Where(t => t.Exponent > 0); } }

@@ -5,32 +5,38 @@ using System.Numerics;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Particles {
-	public interface IParticleGroup : IEquatable<IParticleGroup>, IEqualityComparer<IParticleGroup> {
+	public interface IParticleGroup : IEquatable<IParticleGroup>, IEqualityComparer<IParticleGroup> {//extraneous interface?
 		int Id { get; }
 		IParticle[] InitialParticles { get; }
+
+		void Init();
 	}
 
 	public abstract class AParticleGroup<TParticle> : IParticleGroup
 	where TParticle : AParticle<TParticle> {
-		public AParticleGroup(Func<Vector<float>, Vector<float>, TParticle> initializer, float radius) {
-			this.ParticleInitializer = initializer;
+		public AParticleGroup(Func<Vector<float>, Vector<float>, TParticle> particleConstructor, float radius) {
+			this.ParticleConstructor = particleConstructor;
 			this.Radius = radius;
 			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
+		}
 
+		public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleConstructor;
+		
+		public void Init() {
 			if (Parameters.PARTICLES_GROUP_COUNT > 1)
 				this.InitPositionVelocity();
 			else this.Position = Vector<float>.Zero;
 
 			this.InitialParticles = Enumerable
 				.Repeat(this.Position, this.NumParticles)
-				.Select(position => this.ParticleInitializer(position, this.Velocity))
+				.Select(position => this.ParticleConstructor(position, this.Velocity))
 				.ToArray();
 
 			for (int i = 0; i < this.NumParticles; i++) {
 				this.InitialParticles[i].GroupId = this.Id;
 
 				if (this.NumParticles > 1)
-					this.ParticleAddPositionVelocity(this.InitialParticles[i]);
+					this.InitializeParticles(this.InitialParticles[i]);
 
 				if (Parameters.WORLD_BOUNCING)
 					if (Parameters.WORLD_WRAPPING)
@@ -39,9 +45,6 @@ namespace ParticleSimulator.Simulation.Particles {
 			}
 		}
 
-		public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleInitializer;
-		protected virtual void PrepareNewParticle(TParticle p) { }
-		
 		protected virtual void InitPositionVelocity() {
 			this.Position = VectorFunctions.New(
 				Enumerable.Range(0, Parameters.DIM)
@@ -52,7 +55,7 @@ namespace ParticleSimulator.Simulation.Particles {
 				* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random));
 		}
 
-		protected abstract void ParticleAddPositionVelocity(TParticle particle);
+		protected abstract void InitializeParticles(TParticle particle);
 
 		private static int _globalID = 0;
 		private readonly int _id = _globalID++;

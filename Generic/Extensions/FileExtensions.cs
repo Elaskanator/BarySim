@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Generic.Extensions {
 	public static class FileExtensions {
@@ -26,6 +27,34 @@ namespace Generic.Extensions {
 				extension);
 			}
 			return testName;
+		}
+
+		public static bool IsEmpty(this DirectoryInfo dirInfo) {
+			using (IEnumerator<FileSystemInfo> enumerator = dirInfo.EnumerateFileSystemInfos().GetEnumerator())
+				return !enumerator.MoveNext();
+		}
+		public static bool IsEmpty(string directory) {
+			return IsEmpty(new DirectoryInfo(directory));
+		}
+
+		//see https://stackoverflow.com/questions/309485/c-sharp-sanitize-file-name
+		public static string Sanitize(string path, string replacement = null) {
+			throw new Exception("untested");
+
+			string invalidChars = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+			string invalidRegStr = string.Format(@"([{0}]*\.+$)|([{0}]+)", invalidChars);
+
+			return Regex.Replace(path, invalidRegStr, replacement ?? string.Empty);
+		}
+
+		public static void EmptyDirectory(this DirectoryInfo dirInfo) {
+			foreach (FileInfo file in dirInfo.GetFiles())
+				file.Delete();
+			foreach (DirectoryInfo subdir in dirInfo.GetDirectories())
+				subdir.Delete(true);
+		}
+		public static void EmptyDirectory(string directory) {
+			EmptyDirectory(new DirectoryInfo(directory));
 		}
 	}
 }
