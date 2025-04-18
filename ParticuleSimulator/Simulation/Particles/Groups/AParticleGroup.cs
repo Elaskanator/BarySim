@@ -22,18 +22,18 @@ namespace ParticleSimulator.Simulation.Particles {
 
 		public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleConstructor;
 		
-		public void Init() {
-			if (Parameters.PARTICLES_GROUP_COUNT > 1)
-				this.InitPositionVelocity();
-			else this.Position = Vector<float>.Zero;
-
+		public virtual void Init() {
 			this.InitialParticles = Enumerable
 				.Repeat(this.Position, this.NumParticles)
 				.Select(position => this.ParticleConstructor(position, this.Velocity))
 				.ToArray();
+			
+			this.InitGroupPositionVelocity();
 
 			for (int i = 0; i < this.NumParticles; i++) {
 				this.InitialParticles[i].GroupId = this.Id;
+				this.InitialParticles[i]._position = this.Position;
+				this.InitialParticles[i].Velocity = this.Velocity;
 
 				if (this.NumParticles > 1)
 					this.InitializeParticles(this.InitialParticles[i]);
@@ -45,14 +45,14 @@ namespace ParticleSimulator.Simulation.Particles {
 			}
 		}
 
-		protected virtual void InitPositionVelocity() {
+		protected virtual void InitGroupPositionVelocity() {
 			this.Position = VectorFunctions.New(
 				Enumerable.Range(0, Parameters.DIM)
 					.Select(d => (float)(Parameters.WORLD_SIZE[d] * Program.Random.NextDouble() * (1d - Parameters.WORLD_PADDING_PCT/50d)
 						+ Parameters.WORLD_LEFT[d]
 						+ (Parameters.WORLD_SIZE[d] * Parameters.WORLD_PADDING_PCT/100d))));
 			this.Velocity = Parameters.GALAXY_SPEED_RAND
-				* VectorFunctions.New(VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random));
+				* VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);
 		}
 
 		protected abstract void InitializeParticles(TParticle particle);

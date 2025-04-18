@@ -6,7 +6,7 @@ using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Simulation.Particles {
 	public abstract class AParticle<TSelf> : IParticle
-	where TSelf : AParticle<TSelf> {//
+	where TSelf : AParticle<TSelf> {
 		private static int _globalID = 0;
 		private readonly int _id = ++_globalID;
 
@@ -38,9 +38,9 @@ namespace ParticleSimulator.Simulation.Particles {
 		//using derivative of Lagrange interpolating polynomial on acceleration (also counteracts the overstep phenomenon)
 		protected Vector<float> _acceleration1;
 		protected Vector<float> _acceleration2;
-		public Vector<float> Jerk1 => this.Acceleration - this._acceleration1;//first-order
+		public Vector<float> Jerk => this.Acceleration - this._acceleration1;//first-order
 		//see https://www3.nd.edu/~zxu2/acms40390F15/Lec-4.1.pdf (equally-spaced three-point endpoint formula)
-		public Vector<float> Jerk2 =>//second-order
+		public Vector<float> Snap =>//second-order
 			0.5f * (this._acceleration2 - 4f*this._acceleration1 + 3f*this.Acceleration);
 
 		public virtual Vector<float> Momentum {
@@ -97,9 +97,9 @@ namespace ParticleSimulator.Simulation.Particles {
 			displacement += this.Age++ switch {
 				0 => this.Acceleration,//Riemann sum
 				1 => Parameters.TIME_SCALE_HALF * this.Acceleration
-					+ Parameters.TIME_SCALE_SQUARED_SIXTH * this.Jerk1,
+					+ Parameters.TIME_SCALE_SQUARED_SIXTH * this.Jerk,
 				_ => Parameters.TIME_SCALE_HALF * this.Acceleration
-					+ Parameters.TIME_SCALE_SQUARED_SIXTH * this.Jerk2,
+					+ Parameters.TIME_SCALE_SQUARED_SIXTH * this.Snap,
 			};
 			this._position += displacement * Parameters.TIME_SCALE;
 

@@ -93,8 +93,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 						float rand, radius;
 						MatterClump newParticle;
 						for (int i = 1; i < numParticles; i++) {
-							direction = VectorFunctions.New(
-								VectorFunctions.RandomUnitVector_Spherical(Parameters.DIM, Program.Random));
+							direction = VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);
 							rand = (float)Program.Random.NextDouble();
 							radius = MathF.Pow(rand*radiusRange, (1f / Parameters.DIM));
 
@@ -116,7 +115,6 @@ namespace ParticleSimulator.Simulation.Baryon {
 
 		protected override bool SurviveOutOfBounds(BaryCenter center, float distance2) =>
 			Vector.Dot(this.Velocity, this.Velocity) < //below escape velocity
-				2f * Parameters.GRAVITATIONAL_CONSTANT * center.Weight
-				/ MathF.Sqrt(distance2);
+				2f * Parameters.GRAVITATIONAL_CONSTANT * center.Weight * MathF.ReciprocalSqrtEstimate(distance2);
 	}
 }

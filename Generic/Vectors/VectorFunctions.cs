@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.Intrinsics;
 using Generic.Extensions;
 
 namespace Generic.Vectors {
@@ -105,22 +106,11 @@ namespace Generic.Vectors {
 		}
 
 		public static float Magnitude(this Vector<float> v) =>  MathF.Sqrt(Vector.Dot(v, v));
-			//return MathF.Sqrt(
-			//	Enumerable.Range(0, dim)
-			//		.Select(d => v[d] * v[d])
-			//		.Sum());
 		public static float Magnitude(this float[] v) => MathF.Sqrt(v.Sum(x => x * x));
 
 		public static float Distance(this Vector<float> v1, Vector<float> v2) {
 			Vector<float> temp = Vector.Subtract(v1, v2);
 			return MathF.Sqrt(Vector.Dot(temp, temp));
-
-			//return MathF.Sqrt(
-			//	Enumerable
-			//		.Range(0, dim)
-			//		.Select(i => v2[i] - v1[i])
-			//		.Select(x => x * x)
-			//		.Sum());
 		}
 
 		public static Vector<float> Clamp(this Vector<float> v, float maxMagnitude) {
@@ -139,12 +129,6 @@ namespace Generic.Vectors {
 		}
 		public static Vector<float> Normalize(this Vector<float> v, float length = 1f) =>
 			v * (length / MathF.Sqrt(Vector.Dot(Vector.Multiply(v, v), Vector<float>.One)));
-
-			//float magnitude = v.Magnitude(dim),
-			//	ratio = length / magnitude;
-			//return magnitude == length
-			//	? v
-			//	: New(Enumerable.Range(1, dim).Select(d => v[d] * ratio));
 
 		public static float AngleTo_FullRange(this Vector<float> v1, Vector<float> v2, int dim) {
 			switch (dim) {
@@ -206,6 +190,23 @@ namespace Generic.Vectors {
 				.Determinant();
 		}
 
+		
+		public static Vector<float> RandomDirectionVector(int dimensionality, Random rand) =>
+			New(Enumerable.Range(0, dimensionality).Select(x => NormalDistSample(rand))).Normalize();
+
+		private static float NormalDistSample(Random rand) {
+			float u1 = (float)rand.NextDouble();
+			float u2 = (float)rand.NextDouble();
+			return MathF.Sqrt(-2f * MathF.Log(u1)) * MathF.Cos(2f * MathF.PI * u2);
+		}
+
+		public static T[] ToArray<T>(this Vector<T> vector) {
+			T[] array = new T[Vector<T>.Count];
+			vector.CopyTo(array);
+			return array;
+		}
+
+		/*
 		public static float[] RandomCoordinate_Spherical(this float radius, int dimensionality, Random rand = null) {
 			if (dimensionality < 1) throw new ArgumentOutOfRangeException(nameof(dimensionality));
 			rand ??= new Random();
@@ -283,7 +284,7 @@ namespace Generic.Vectors {
 					return coords.Select(x => x / magnitude).ToArray();
 			}
 		}
-
+		*/
 		/// <summary>
 		/// Normalizes a vector to have a Euclidean length of 1
 		/// </summary>

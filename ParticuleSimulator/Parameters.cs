@@ -17,7 +17,7 @@ namespace ParticleSimulator {
 		public const int FRAME_LIMIT				= -1;
 		public const bool VSYNC						= false;
 		//rendering size (using top and bottom halves of each character to get double the verticle resolution)
-		public static readonly int WINDOW_WIDTH		= (Console.LargestWindowHeight-1)*2;
+		public static readonly int WINDOW_WIDTH		= Console.LargestWindowWidth-1;//(Console.LargestWindowHeight-1)*2;
 		public static readonly int WINDOW_HEIGHT	= (Console.LargestWindowHeight-1);
 		public const int SUPERSAMPLING				= 2;
 		public const float PIXEL_ROUNDOFF			= 0.5f;
@@ -37,7 +37,7 @@ namespace ParticleSimulator {
 		public const float COLLISION_OVERLAP_BUFFER	= 1f;
 		public const float DRAG_CONSTANT			= 0.002f;//TODO large clumps form, which tweak out for larger values
 		public const bool MERGE_ENABLE				= true;
-		public const float MERGE_ENGULF_RATIO		= 0.99f;
+		public const float MERGE_ENGULF_RATIO		= 0.95f;
 		//world
 		public const float WORLD_PADDING_PCT		= 0f;
 		public const float WORLD_PRUNE_RADII		= 10f;
@@ -55,8 +55,8 @@ namespace ParticleSimulator {
 		public const int PRECALCULATION_LIMIT		= 1;//how many calculations ahead steps can work
 		public const bool SYNC_SIMULATION			= true;//controls synchronization of rendering to simulation (e.g. faster rotation)
 		public const int SIMULATION_SKIPS			= 0;//refresh the simulation multiple times between renders
-		public const int TREE_BATCH_SIZE			= 1800;//tree preparation and particle evaluation parallelism
-		public const double TREE_BATCH_SLACK		= 0.1d;//relative overage allowed without further refining the tree
+		public const int TREE_BATCH_SIZE			= 1300;//tree preparation and particle evaluation parallelism
+		public const double TREE_BATCH_SLACK		= 0.15d;//relative overage allowed without further refining the tree
 		//render coloring
 		public const ParticleColoringMethod COLORING= ParticleColoringMethod.Luminosity;
 		public static readonly ConsoleColor[] COLORS= ColoringScales.StarColors;
@@ -85,20 +85,24 @@ namespace ParticleSimulator {
 		public const float MASS_LUMINOSITY_SCALAR	= 1f;
 		public const float MASS_LUMINOSITY_POW		= 1f;
 
+		public const float GALAXY_PLUMMER_RADIUS	= 200f;
+
+		public const float GALAXY_SPEED_ANGULAR		= 0.02f;//relative to centerpoint of simulation, for initial radial velocity
+		public const float GALAXY_SPEED_RAND		= 0f;
+
+		// TODO deprecate
 		public const float GALAXY_RADIUS			= 300f;
 		public const float GALAXY_THINNESS			= 2.5f;
 		public const float GALAXY_CONCENTRATION		= 0.7f;//lower values bias toward the edge
-
-		public const float GALAXY_SPEED_ANGULAR		= 0.02f;
-		public const float GALAXY_SPEED_RAND		= 0f;
+		// TODO deprecate
 		public const float GALAXY_SPIN_ANGULAR		= 0.053f;
 		public const float GALAXY_SPIN_RAND			= 0.0f;
 		public const float GALAXY_SPIN_POW			= 0.7f;
 
-		public const bool SUPERNOVA_ENABLE			= true;
+		public const bool SUPERNOVA_ENABLE			= false;
 		public const float SUPERNOVA_CRITICAL_MASS	= 8192f;
 		public const float SUPERNOVA_EJECTA_MASS	= 1f;
-		public const float SUPERNOVA_EJECTA_SPEED	= 0.045f;
+		public const float SUPERNOVA_EJECTA_SPEED	= 0.04f;
 		public const float SUPERNOVA_RADIUS_SCALAR	= 1f;
 
 		public const bool BLACKHOLE_ENABLE			= false;

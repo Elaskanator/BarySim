@@ -24,8 +24,8 @@ namespace ParticleSimulator.Simulation.Baryon {
 		protected override bool AccumulateTreeNodeData => true;
 
 		protected override AParticleGroup<MatterClump> NewParticleGroup() =>
+			//new PlummerGalaxy((p, v) => new(p, v), Parameters.GALAXY_PLUMMER_RADIUS);
 			new SpinningDisk<MatterClump>((p, v) => new(p, v), Parameters.GALAXY_RADIUS);
-			//new PlummerGalaxy((p, v) => new(p, v), Parameters.GALAXY_RADIUS, Parameters.GALAXY_THINNESS);
 
 		protected override void AccumulateLeafNode(NodeParticles leafBin) =>
 			leafBin.Node.InitBaryCenter(leafBin.Particles);
@@ -45,19 +45,22 @@ namespace ParticleSimulator.Simulation.Baryon {
 			Vector<float> farFieldAcceleration = DetermineNeighbors(leafParticles.Node, nearField);
 
 			Vector<float> influence;
+			MatterClump particle1, particle2;
 			for (int i = 0; i < leafParticles.Particles.Length; i++) {
+				particle1 = leafParticles.Particles[i];
 				//add weaker forces first to reduce floating point errors
 				for (int n = 0; n < nearField.Count; n++) {
-					influence = leafParticles.Particles[i].ComputeInteractionInfluence(nearField[n]);
-					leafParticles.Particles[i].Acceleration += influence * nearField[n].Mass;
+					influence = particle1.ComputeInteractionInfluence(nearField[n]);
+					particle1.Acceleration += influence * nearField[n].Mass;
 				}
 				for (int j = 0; j < i; j++) {
-					influence = leafParticles.Particles[i].ComputeInteractionInfluence(leafParticles.Particles[j]);
-					leafParticles.Particles[i].Acceleration += influence * leafParticles.Particles[j].Mass;
-					leafParticles.Particles[j].Acceleration -= influence * leafParticles.Particles[i].Mass;
+					particle2 = leafParticles.Particles[j];
+					influence = particle1.ComputeInteractionInfluence(particle2);
+					particle1.Acceleration += influence * particle2.Mass;
+					particle2.Acceleration -= influence * particle1.Mass;
 				}
 				//add last to reduce floating point errors
-				leafParticles.Particles[i].Acceleration += farFieldAcceleration;//cheeky optimization to skip impulse/mass conversion
+				particle1.Acceleration += farFieldAcceleration;//cheeky optimization to skip impulse/mass conversion
 			}
 		}
 
@@ -85,7 +88,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 			Stack<BarnesHutTree> remaining = new();
 			BarnesHutTree neighbor, tail;
 			Vector<float> subTotal1, subTotal2, toOther;
-			float distanceSquared, distance;
+			float distanceSquared, invSqRt, invR2, invR3;
 			while (pathDown.TryPop(out idx)) {
 				subTotal1 = Vector<float>.Zero;
 				for (int i = 0; i < parent.Children.Length; i++) {
@@ -102,8 +105,10 @@ namespace ParticleSimulator.Simulation.Baryon {
 								distanceSquared = Vector.Dot(toOther, toOther);
 								if (distanceSquared > Parameters.NODE_APPROX_CUTOFF2
 								&& distanceSquared * Parameters.INACCURCY2 > neighbor.SizeSquared) {//Barnes-Hut condition
-									distance = MathF.Sqrt(distanceSquared);
-									subTotal2 += toOther * (neighbor.MassBaryCenter.Weight / distanceSquared / distance);//gravity
+									invSqRt = MathF.ReciprocalSqrtEstimate(distanceSquared);
+									invR2 = 1f / distanceSquared;
+									invR3 = invSqRt * invR2;
+									subTotal2 += toOther * neighbor.MassBaryCenter.Weight * invR3;
 								} else {//recurse down
 									for (int j = 0; j < neighbor.Children.Length; j++) {
 										tail = (BarnesHutTree)neighbor.Children[j];

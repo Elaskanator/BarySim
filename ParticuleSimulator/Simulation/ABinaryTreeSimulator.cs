@@ -48,6 +48,9 @@ namespace ParticleSimulator.Simulation {
 		}
 
 		private void ValidateMembers() {
+			foreach (var particle in this.Particles)
+				System.Diagnostics.Debug.Assert(this.Tree.DoesEncompass(particle));
+
 			foreach (var leaf in this.Tree.AllLeaves)
 				foreach (var particle in leaf)
 					System.Diagnostics.Debug.Assert(leaf.DoesEncompass(particle));
@@ -273,15 +276,14 @@ namespace ParticleSimulator.Simulation {
 			|| (double)((filled + testAddend) - Parameters.TREE_BATCH_SIZE) / Parameters.TREE_BATCH_SIZE < Parameters.TREE_BATCH_SLACK;
 
 		private void PartitionAggregateSubtree(TTree root) {
+			Queue<TTree> work = new();
 			if (root.IsLeaf || Parameters.TREE_BATCH_SIZE < 1 || root.Count <= Parameters.TREE_BATCH_SIZE) {
-				Queue<TTree> work = new();
 				work.Enqueue(root);
 				this._cde.Reset(1);
 				ThreadPool.QueueUserWorkItem(this.SubtreeAggregationWorker, work);
 				this._cde.Wait();
 			} else {
 				int numFilled = 0;
-				Queue<TTree> work = new();
 				Stack<TTree[]> levelStack = this.AccumulateTreeNodeData ? new() : null;
 				Stack<TTree> pendingNodes = new(), testNodes = new();
 				//work down to leaf nodes with depth-first recursion
