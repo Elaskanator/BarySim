@@ -14,7 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Applications", "Applications", "{580C276A-7726-4BD2-9343-78E316CA4612}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParticleSimulator", "ParticuleSimulator\ParticleSimulator.csproj", "{CF39B897-A8BF-4041-8D5E-227C9543AC3D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParticleSimulator", "ParticleSimulator\ParticleSimulator.csproj", "{CF39B897-A8BF-4041-8D5E-227C9543AC3D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
