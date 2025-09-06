@@ -31,26 +31,26 @@ namespace ParticleSimulator.Simulation.Particles {
 
 			float[] offsetV;
 			if (Parameters.DIM <= 2) {
-				offsetV = VectorFunctions
+				offsetV = [.. VectorFunctions
 					.RandomDirectionVector(Parameters.DIM, Program.Random)
 					.ToArray()
-					.Select(x => offset*x)
-					.ToArray();
+					.Select(x => offset*x)];
 			} else{
-				offsetV = VectorFunctions
-					.RandomDirectionVector(2, Program.Random)
-					.ToArray()
-					.Select(x => offset*x)
-					.Concat(Enumerable.Repeat(0f, Vector<float>.Count - 2))
-					.ToArray();
+				offsetV =
+				[
+					.. VectorFunctions
+						.RandomDirectionVector(2, Program.Random)
+						.ToArray()
+						.Select(x => offset*x),
+					.. Enumerable.Repeat(0f, Vector<float>.Count - 2),
+				];
 				float offset2 = (this.Radius*this.Radius - offset*offset) / (this.Radius * this.Radius);
 				float rand2 = MathF.Pow((float)Program.Random.NextDouble(), Parameters.GALAXY_CONCENTRATION);
 				offset2 *= rand2 * this.Radius / Parameters.GALAXY_THINNESS;
-				float[] offsetV2 = VectorFunctions
+				float[] offsetV2 = [.. VectorFunctions
 					.RandomDirectionVector(Parameters.DIM - 2, Program.Random)
 					.ToArray()
-					.Select(x => offset2*x)
-					.ToArray();
+					.Select(x => offset2*x)];
 				for (int i = 0; i < Parameters.DIM - 2; i++)
 					offsetV[i + 2] = offsetV2[i];
 			}
@@ -70,9 +70,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		private Vector<float> DirectionUnitVector(Vector<float> offset) {
 			if (Parameters.DIM > 1) {
 				float angle = MathF.Atan2(offset[1], offset[0]) + 0.5f*MathF.PI;
-				return VectorFunctions.New(new float[] {
-					MathF.Cos(angle),
-					MathF.Sin(angle) });
+				return VectorFunctions.New([ MathF.Cos(angle), MathF.Sin(angle) ]);
 			} else return Vector<float>.Zero;
 		}
 	}

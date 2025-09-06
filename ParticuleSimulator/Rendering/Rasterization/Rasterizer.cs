@@ -62,7 +62,7 @@ namespace ParticleSimulator.Rendering.Rasterization {
 		public PixelRank[] Rasterize(EvalResult prepResults, object[] parameters) {//top down view (smaller Z values = closer)
 			List<ParticleData> particles = (List<ParticleData>)parameters[0];
 			if (particles is null) {
-				return Array.Empty<PixelRank>();
+				return [];
 			} else {
 				float[] scalings = (float[])parameters[1];
 				PixelRank[] results = new PixelRank[this.OutNumPixels];
@@ -118,9 +118,9 @@ namespace ParticleSimulator.Rendering.Rasterization {
 								}
 							}
 							if (any2) {
-								if (Parameters.COLORING == ParticleColoringMethod.Density)
-									ranks[idx] = bin.Sum(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
-								else ranks[idx] = bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
+								ranks[idx] = Parameters.COLORING == ParticleColoringMethod.Density
+									? bin.Sum(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count))
+									: bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
 								results[idx] = new(x, y, ranks[idx].Value);//TODO alpha
 							}
 						}

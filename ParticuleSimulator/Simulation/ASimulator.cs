@@ -25,7 +25,7 @@ namespace ParticleSimulator.Simulation {
 		public List<ParticleData> Update() {
 			++this.IterationCount;
 			return this.IterationCount == 0//skip to show starting data on first result (TODO cleanup)
-				? this.Particles.Select(p => new ParticleData(p)).ToList()
+				? [.. this.Particles.Select(p => new ParticleData(p))]
 				: this.Refresh();
 		}
 	}

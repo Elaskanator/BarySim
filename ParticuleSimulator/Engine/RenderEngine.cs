@@ -18,9 +18,9 @@ namespace ParticleSimulator.Engine {
 		private readonly int _id = ++_globalId;
 
 		public RenderEngine() {
-			this.KeyListeners = this.BuildKeyListeners().ToArray();
+			this.KeyListeners = [.. this.BuildKeyListeners()];
 
-			this.Evaluators = this.BuildEvaluators().ToArray();
+			this.Evaluators = [.. this.BuildEvaluators()];
 			this._stepsStartingPaused = this.Evaluators.ToDictionary(e => e.Id, e => e.IsPaused);
 
 			this.Simulator = new BaryonSimulator(Parameters.DIM);
@@ -83,7 +83,7 @@ namespace ParticleSimulator.Engine {
 		private ProcessThread _stepEval_Rasterize;
 		private ProcessThread _stepEval_Render;
 		private ProcessThread _stepEval_Export;
-		private Dictionary<int, bool> _stepsStartingPaused;
+		private readonly Dictionary<int, bool> _stepsStartingPaused;
 		
 		private readonly SynchronousBuffer<List<ParticleData>> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
 		private readonly ConsumptionType _particleResourceReadType = Parameters.SYNC_SIMULATION ? ConsumptionType.Consume : ConsumptionType.ConsumeReady;

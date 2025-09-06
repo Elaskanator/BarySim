@@ -247,7 +247,10 @@ namespace Generic.Trees {
 		public IEnumerator<T> GetEnumerator() => this.AsEnumerable().GetEnumerator();
 
 		public void CopyTo(T[] array, int arrayIndex) {
-			int i = 0; foreach (T item in this) array[i++ + arrayIndex] = item; }
+			int i = 0;
+			foreach (T item in this)
+				array[i++ + arrayIndex] = item;
+		}
 
 		public IEnumerable<T> AsEnumerable() {
 			Stack<ABinaryTree<T>> remaining = new();
@@ -282,7 +285,7 @@ namespace Generic.Trees {
 							remaining.Push(node.Children[i]);
 
 				return result;
-			} else return Array.Empty<T>();
+			} else return [];
 		}
 	}
 }

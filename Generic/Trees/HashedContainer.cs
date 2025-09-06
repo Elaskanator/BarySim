@@ -22,7 +22,7 @@ namespace Generic.Trees {
 		public void Add(T item) {
 			if (this._leftovers is null && this.Count == 0) {
 				this._item = item;
-				this.Items = new T[] { item };
+				this.Items = [item];
 			} else {
 				if (this._leftovers is null) {
 					this._leftovers = new();

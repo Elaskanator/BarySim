@@ -15,15 +15,14 @@ namespace ParticleSimulator.Rendering {
 			else if (Parameters.COLORING == ParticleColoringMethod.Depth) {
 				int minDim = Parameters.WINDOW_WIDTH > Parameters.WINDOW_HEIGHT ? Parameters.WINDOW_HEIGHT : Parameters.WINDOW_WIDTH;
 				float range = MathF.Sqrt(3f) * minDim / 2f;
-				this.Values = Enumerable.Range(1, Parameters.COLORS.Length).Select(i => -range + (i * 2f*range / (Parameters.COLORS.Length + 1f))).ToArray();
-			} else this.Values = Enumerable
+				this.Values = [.. Enumerable.Range(1, Parameters.COLORS.Length).Select(i => -range + (i * 2f*range / (Parameters.COLORS.Length + 1f)))];
+			} else this.Values = [.. Enumerable
 					.Range(
 						Parameters.COLORING == ParticleColoringMethod.Group ? 0
 							: Parameters.COLORING == ParticleColoringMethod.Random ? 0
 							: 1,
 						Parameters.COLORS.Length)
-					.Select(i => (float)i)
-					.ToArray();
+					.Select(i => (float)i)];
 
 			this._resource.Overwrite(this.Values);
 			this.ValuesInitial = (float[])this.Values.Clone();
@@ -32,8 +31,8 @@ namespace ParticleSimulator.Rendering {
 		public readonly float[] ValuesInitial;
 		public float[] Values { get; private set; }
 
-		private SimpleExponentialMovingAverage _min = new SimpleExponentialMovingAverage(Parameters.AUTOSCALE_STRENGTH);
-		private SimpleExponentialMovingAverage _max = new SimpleExponentialMovingAverage(Parameters.AUTOSCALE_STRENGTH);
+		private SimpleExponentialMovingAverage _min = new(Parameters.AUTOSCALE_STRENGTH);
+		private SimpleExponentialMovingAverage _max = new(Parameters.AUTOSCALE_STRENGTH);
 		private readonly SynchronousBuffer<float[]> _resource;
 		private readonly object _lock = new();
 
@@ -47,7 +46,7 @@ namespace ParticleSimulator.Rendering {
 		}
 
 		public float[] Update(EvalResult prepResults, object[] parameters) {
-			float[] scalingValues = ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value).ToArray();
+			float[] scalingValues = [.. ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value)];
 
 			if (scalingValues.Length > 0) {
 				StatsInfo stats = new(scalingValues.Select(x => (double)x));
@@ -72,9 +71,7 @@ namespace ParticleSimulator.Rendering {
 
 						if (results.Count == 0) {
 							results.Add(newValue);
-							stats.Data_asc = stats.Data_asc
-								.SkipWhile(d => d == newValue)
-								.ToArray();
+							stats.Data_asc = [.. stats.Data_asc.SkipWhile(d => d == newValue)];
 						} else {
 							position = 0;
 							threshold = results[^1];
@@ -98,16 +95,15 @@ namespace ParticleSimulator.Rendering {
 									bandIdx = 0;
 								}
 								results.Add(newValue);
-								stats.Data_asc = stats.Data_asc
+								stats.Data_asc = [.. stats.Data_asc
 									.Skip(position)
-									.SkipWhile(d => d < threshold)
-									.ToArray();
+									.SkipWhile(d => d < threshold)];
 							}
 						}
 					}
 					results[^1] = max;
 
-					this.Values = results.ToArray();
+					this.Values = [.. results];
 				} else {
 					lock (this._lock) {
 						this._min.Update(stats.GetPercentileValue(100d / (Parameters.COLORS.Length + 1)));
@@ -138,8 +134,8 @@ namespace ParticleSimulator.Rendering {
 					numSteps = numSteps <= Parameters.COLORS.Length ? numSteps : Parameters.COLORS.Length;
 					if (numSteps > 0) {
 						float step = range / (numSteps + 1);
-						this.Values = Enumerable.Range(1, numSteps).Select(i => min + step*i).ToArray();
-					} else this.Values = new float[] { max };
+						this.Values = [.. Enumerable.Range(1, numSteps).Select(i => min + step*i)];
+					} else this.Values = [max];
 				}
 			}
 			return this.Values;

@@ -330,7 +330,7 @@ namespace Generic.Extensions {
 				Array.Copy(additional, 0, buffer, xOffset + yOffset*width, additional.Length);
 			else {
 				int row = 0;
-				foreach (CharInfo[] p in additional.Partition(width)) {
+				foreach (CharInfo[] p in additional.Chunk(width)) {
 					for (int i = 0; i < p.Length; i++)
 						buffer[xOffset + width*(row + yOffset)] = p[i];
 					row++;
@@ -343,7 +343,7 @@ namespace Generic.Extensions {
 				buffer.Merge(sourceWidth, additional, xOffset, yOffset);
 			else {
 				int row = 0;
-				foreach (CharInfo[] p in additional.Partition(addWidth)) {
+				foreach (CharInfo[] p in additional.Chunk(addWidth)) {
 					if (p.Length > 0)
 						Array.Copy(p, 0, buffer, xOffset + sourceWidth * (row + yOffset), cols ?? p.Length);
 					else break;
@@ -355,8 +355,8 @@ namespace Generic.Extensions {
 		public static string ToString(this CharInfo[] characters, int rowWidth) {
 			if (characters == null) return "";
 			else return string.Join(Environment.NewLine,
-				characters.Partition(rowWidth).Select(p =>
-					new string(p.Select(c => c.Char.UnicodeChar == 0 ? (char)c.Char.AsciiChar : c.Char.UnicodeChar).Select(c => c == 0 ? ' ' : c).ToArray())));
+				characters.Chunk(rowWidth).Select(p =>
+					new string([.. p.Select(c => c.Char.UnicodeChar == 0 ? (char)c.Char.AsciiChar : c.Char.UnicodeChar).Select(c => c == 0 ? ' ' : c)])));
 		}
 
 		[StructLayout(LayoutKind.Sequential)]

@@ -12,21 +12,14 @@ namespace ParticleSimulator.Simulation.Particles {
 		void Init();
 	}
 
-	public abstract class AParticleGroup<TParticle> : IParticleGroup
+	public abstract class AParticleGroup<TParticle>(Func<Vector<float>, Vector<float>, TParticle> particleConstructor, float radius) : IParticleGroup
 	where TParticle : AParticle<TParticle> {
-		public AParticleGroup(Func<Vector<float>, Vector<float>, TParticle> particleConstructor, float radius) {
-			this.ParticleConstructor = particleConstructor;
-			this.Radius = radius;
-			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
-		}
-
-		public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleConstructor;
+		public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleConstructor = particleConstructor;
 		
 		public virtual void Init() {
-			this.InitialParticles = Enumerable
-				.Repeat(this.Position, this.NumParticles)
-				.Select(position => this.ParticleConstructor(position, this.Velocity))
-				.ToArray();
+			this.InitialParticles = new TParticle[this.NumParticles];
+			for (int i = 0; i < this.NumParticles; i++)
+				this.InitialParticles[i] = this.ParticleConstructor(this.Position, this.Velocity);
 			
 			this.InitGroupPositionVelocity();
 
@@ -61,8 +54,8 @@ namespace ParticleSimulator.Simulation.Particles {
 		private readonly int _id = _globalID++;
 		public int Id => this._id;
 
-		public readonly float Radius;
-		public readonly int NumParticles;
+		public readonly float Radius = radius;
+		public readonly int NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
 
 		public Vector<float> Position { get; protected set; }
 		public Vector<float> Velocity { get; protected set; }

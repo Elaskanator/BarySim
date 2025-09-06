@@ -45,8 +45,8 @@ namespace Generic.Extensions {
 
 			if (maxLength.HasValue)
 				result = value < 1d
-					? new string(result.Take(maxLength.Value).ToArray())
-					: new string(result.Reverse().Take(maxLength.Value).Reverse().ToArray());
+					? new string([.. result.Take(maxLength.Value)])
+					: new string([.. result.Reverse().Take(maxLength.Value).Reverse()]);
 			return result + exponentStr;
 		}
 		public static string ToStringBetter(this float value, int minAccuracy = 2, bool stripZeros = true, int? maxLength = 6) {

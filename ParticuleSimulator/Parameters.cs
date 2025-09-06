@@ -17,12 +17,12 @@ namespace ParticleSimulator {
 		public const int FRAME_LIMIT				= -1;
 		public const bool VSYNC						= false;
 		//rendering size (using top and bottom halves of each character to get double the verticle resolution)
-		public static readonly int WINDOW_WIDTH		= Console.LargestWindowWidth-1;//(Console.LargestWindowHeight-1)*2;
+		public static readonly int WINDOW_WIDTH		= (Console.LargestWindowHeight-1)*2;
 		public static readonly int WINDOW_HEIGHT	= (Console.LargestWindowHeight-1);
 		public const int SUPERSAMPLING				= 2;
 		public const float PIXEL_ROUNDOFF			= 0.5f;
 		//camera
-		public const float WORLD_SCALE				= 600f;
+		public const float WORLD_SCALE				= 1000f;
 		public const float ZOOM_SCALE				= 1f;
 		public const bool AUTOFOCUS_DEFAULT			= true;
 		public const float ROT_DEG_PER_FRAME		= 0.33333f;
@@ -32,7 +32,7 @@ namespace ParticleSimulator {
 		public const int PARTICLES_GROUP_MAX		= 100000;
 		public const float PARTICLES_GROUP_SIZE_POW	= 0f;//0 for max size
 		//particle features
-		public const float TIME_SCALE				= 8f;
+		public const float TIME_SCALE				= 5f;
 		public const bool COLLISION_ENABLE			= true;
 		public const float COLLISION_OVERLAP_BUFFER	= 1f;
 		public const float DRAG_CONSTANT			= 0.002f;//TODO large clumps form, which tweak out for larger values
@@ -61,7 +61,7 @@ namespace ParticleSimulator {
 		public const ParticleColoringMethod COLORING= ParticleColoringMethod.Luminosity;
 		public static readonly ConsoleColor[] COLORS= ColoringScales.StarColors;
 		public const bool COLOR_USE_FIXED_BANDS		= true;
-		public static readonly float[] FIXED_BANDS	= Enumerable.Range(0, COLORS.Length).Select(i => (float)(1 << i)).ToArray();
+		public static readonly float[] FIXED_BANDS	= [.. Enumerable.Range(0, COLORS.Length).Select(i => (float)(1 << i))];
 		//render coloring autoscaling
 		public const int AUTOSCALE_INTERVAL_MS		= -1;
 		public const float AUTOSCALE_STRENGTH		= 0.25f;
@@ -91,11 +91,11 @@ namespace ParticleSimulator {
 		public const float GALAXY_SPEED_RAND		= 0f;
 
 		// TODO deprecate
-		public const float GALAXY_RADIUS			= 300f;
+		public const float GALAXY_RADIUS			= 500f;
 		public const float GALAXY_THINNESS			= 2.5f;
 		public const float GALAXY_CONCENTRATION		= 0.7f;//lower values bias toward the edge
 		// TODO deprecate
-		public const float GALAXY_SPIN_ANGULAR		= 0.053f;
+		public const float GALAXY_SPIN_ANGULAR		= 0.04f;
 		public const float GALAXY_SPIN_RAND			= 0.0f;
 		public const float GALAXY_SPIN_POW			= 0.7f;
 

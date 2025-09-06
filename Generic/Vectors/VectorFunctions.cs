@@ -13,11 +13,11 @@ namespace Generic.Vectors {
 	// http://scipp.ucsc.edu/~haber/archives/physics251_11/Clifford_Slides.pdf
 	public static partial class VectorFunctions {
 		public static readonly Vector<int> NegativeOne = -Vector<int>.One;
-		public static readonly Vector<int> PowersOfTwo = new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(i => 1 << i).ToArray());
-		public static readonly Vector<int>[] DimensionFilters = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : 1).ToArray())).ToArray();
-		public static readonly Vector<int>[] DimensionSignals = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : -1).ToArray())).ToArray();
-		public static readonly Vector<int>[] DimensionFiltersInverted = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 1 : 0).ToArray())).ToArray();
-		public static readonly Vector<int>[] DimensionSignalsInverted = Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? -1 : 0).ToArray())).ToArray();
+		public static readonly Vector<int> PowersOfTwo = new(Enumerable.Range(0, Vector<int>.Count).Select(i => 1 << i).ToArray());
+		public static readonly Vector<int>[] DimensionFilters = [.. Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : 1).ToArray()))];
+		public static readonly Vector<int>[] DimensionSignals = [.. Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 0 : -1).ToArray()))];
+		public static readonly Vector<int>[] DimensionFiltersInverted = [.. Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? 1 : 0).ToArray()))];
+		public static readonly Vector<int>[] DimensionSignalsInverted = [.. Enumerable.Range(0, Vector<int>.Count + 1).Select(d1 => new Vector<int>(Enumerable.Range(0, Vector<int>.Count).Select(d2 => d2 >= d1 ? -1 : 0).ToArray()))];
 
 		public static bool EqualsAny(this Vector<float> first, Vector<float> second, int? dim = null) =>
 			Vector.EqualsAny(
@@ -72,14 +72,13 @@ namespace Generic.Vectors {
 					Vector<int>.Zero),
 				DimensionFilters[dim ?? Vector<float>.Count]);
 
-		public static readonly Vector<float>[] IdentityMatrixColumns = Enumerable
+		public static readonly Vector<float>[] IdentityMatrixColumns = [.. Enumerable
 			.Range(0, Vector<float>.Count)
 			.Select(i => new Vector<float>(
 				Enumerable
 					.Range(0, Vector<float>.Count)
 					.Select(j => i == j ? 1f : 0f)
-					.ToArray()))
-			.ToArray();
+					.ToArray()))];
 
 		public static Vector<float> New(params float[] components) {
 			if (components.Length == Vector<float>.Count) {
@@ -97,7 +96,7 @@ namespace Generic.Vectors {
 				return new Vector<float>(values);
 			}
 		}
-		public static Vector<float> New(IEnumerable<float> components) => New(components.ToArray());
+		public static Vector<float> New(IEnumerable<float> components) => New([.. components]);
 		public static Vector<float> New(float x, float y) {
 			Span<float> values = stackalloc float[Vector<float>.Count];
 			values[0] = x;
@@ -125,7 +124,7 @@ namespace Generic.Vectors {
 				ratio = length / magnitude;
 			return magnitude == length
 				? v
-				: v.Select(x => x * ratio).ToArray();
+				: [.. v.Select(x => x * ratio)];
 		}
 		public static Vector<float> Normalize(this Vector<float> v, float length = 1f) =>
 			v * (length / MathF.Sqrt(Vector.Dot(Vector.Multiply(v, v), Vector<float>.One)));
@@ -140,14 +139,16 @@ namespace Generic.Vectors {
 					return MathF.Atan2(v1[1] - v2[1], v1[0] - v2[0]);
 				default:
 					float angle = MathF.Acos(Vector.Dot(v1, v2) / v1.Magnitude() / v2.Magnitude());
-					float[][] sqMatrixCols = new float[][] { Enumerable.Range(0, dim).Select(d => v1[d]).ToArray(), Enumerable.Range(0, dim).Select(d => v2[d]).ToArray() }
-						.Concat(Enumerable
-							.Range(0, dim - 2)
-							.Select(cIdx => Enumerable
-								.Range(0, dim)
-								.Select(idx => idx == cIdx + 2 ? 1f : 0f)
-								.ToArray()))
-						.ToArray();
+					float[][] sqMatrixCols =
+					[
+						[.. Enumerable.Range(0, dim).Select(d => v1[d])], [.. Enumerable.Range(0, dim).Select(d => v2[d])],
+						.. Enumerable
+								.Range(0, dim - 2)
+								.Select(cIdx => Enumerable
+									.Range(0, dim)
+									.Select(idx => idx == cIdx + 2 ? 1f : 0f)
+									.ToArray()),
+					];
 					int orientation = MathF.Sign(sqMatrixCols.Determinant());
 					return angle + (orientation < 0 ? MathF.PI : 0f);
 			}
@@ -301,7 +302,7 @@ namespace Generic.Vectors {
 		}
 
 		public static double[] Multiply(this double[] v, double scalar) {
-			return v.Select(n => n * scalar).ToArray();
+			return [.. v.Select(n => n * scalar)];
 		}
 
 		//see https://en.wikipedia.org/wiki/Volume_of_an_n-ball#Low_dimensions

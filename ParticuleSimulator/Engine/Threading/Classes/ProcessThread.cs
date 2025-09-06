@@ -59,7 +59,7 @@ namespace ParticleSimulator.Engine.Threading {
 		}
 		
 		protected override void PreProcess(EvalResult prepResult) {
-			this._parameters = this._dataGatherers.Select(x => x.Value).ToArray();
+			this._parameters = [.. this._dataGatherers.Select(x => x.Value)];
 		}
 
 		protected override void Process(EvalResult prepResult) {

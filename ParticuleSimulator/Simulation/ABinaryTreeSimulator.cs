@@ -15,9 +15,9 @@ namespace ParticleSimulator.Simulation {
 			public readonly TTree Node;
 			public readonly TParticle[] Particles;
 
-			public NodeParticles(TTree node, TParticle[] particles) {
+			public NodeParticles(TTree node, IEnumerable<TParticle> particles) {
 				this.Node = node;
-				this.Particles = particles;
+				this.Particles = [.. particles];
 			}
 		}
 

@@ -6,10 +6,10 @@ using Generic.Extensions;
 namespace Generic.Classes {
 	public class StatsInfo {
 		public StatsInfo(params double[] data) {
-			this.Data_asc = data.Order().ToArray();
+			this.Data_asc = [.. data.Order()];
 		}
 		public StatsInfo(IEnumerable<double> data)
-		: this(data.ToArray()) { }
+		: this([.. data]) { }
 
 		public double[] Data_asc { get; set; }
 		public double Min => this.Data_asc[0];
@@ -29,7 +29,7 @@ namespace Generic.Classes {
 		public void FilterData(double cutPct) {
 			int lowIdx = (int)((this.Data_asc.Length - 1) * cutPct / 100d),
 				highIdx = (int)Math.Ceiling(this.Data_asc.Length * (100d - cutPct) / 100d);
-			this.Data_asc = this.Data_asc.Skip(lowIdx).Take(highIdx - lowIdx).ToArray();
+			this.Data_asc = [.. this.Data_asc.Skip(lowIdx).Take(highIdx - lowIdx)];
 		}
 	}
 }

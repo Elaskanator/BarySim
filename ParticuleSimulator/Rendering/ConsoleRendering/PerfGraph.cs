@@ -51,7 +51,7 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 					return;
 				else if (_graphColumns[0] is null || DateTime.UtcNow.Subtract(_lastGraphRenderFrameUtc).TotalMilliseconds >= Parameters.MON_GRAPH_REFRESH_MS)
 					RerenderGraph();
-				graphColumnsCopy = _graphColumns.TakeUntil(s => s is null).ToArray();
+				graphColumnsCopy = [.. _graphColumns.TakeUntil(s => s is null)];
 			}
 			int numCols = graphColumnsCopy.Length;
 			
@@ -137,8 +137,8 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 
 		private void RerenderGraph() {
 			StatsInfo[]
-				frameTimeStats = _columnSimTimeStatsMs.Without(s => s is null).ToArray(),
-				fpsStats = _columnFpsStatsMs.Without(s => s is null).ToArray();
+				frameTimeStats = [.. _columnSimTimeStatsMs.Without(s => s is null)],
+				fpsStats = [.. _columnFpsStatsMs.Without(s => s is null)];
 			if (frameTimeStats.Length + fpsStats.Length > 0) {
 				StatsInfo rangeStats = new(frameTimeStats.Concat(fpsStats).SelectMany(s => s.Data_asc));
 			

@@ -55,7 +55,7 @@ namespace ParticleSimulator.Rendering {
 				this.IsRotationNonzero = false;
 			} else {
 				this.IsRotationNonzero = true;
-				this.RotationMatrixColumns = new Vector<float>[] {
+				this.RotationMatrixColumns = [
 					VectorFunctions.New(
 						MathF.Cos(yaw) * MathF.Cos(pitch),
 						MathF.Sin(yaw) * MathF.Cos(pitch),
@@ -67,9 +67,9 @@ namespace ParticleSimulator.Rendering {
 					VectorFunctions.New(
 						MathF.Cos(yaw) * MathF.Sin(pitch) * MathF.Cos(roll) + MathF.Sin(yaw) * MathF.Sin(roll),
 						MathF.Sin(yaw) * MathF.Sin(pitch) * MathF.Cos(roll) - MathF.Cos(yaw) * MathF.Sin(roll),
-						MathF.Cos(pitch) * MathF.Cos(roll))
-				}.Concat(VectorFunctions.IdentityMatrixColumns.Skip(3))
-				.ToArray();
+						MathF.Cos(pitch) * MathF.Cos(roll)),
+					.. VectorFunctions.IdentityMatrixColumns.Skip(3),
+				];
 			}
 		}
 
