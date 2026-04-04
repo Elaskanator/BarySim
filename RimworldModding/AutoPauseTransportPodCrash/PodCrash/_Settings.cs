@@ -1,13 +1,17 @@
 ﻿using System.Collections.Generic;
 using Verse;
 
-namespace BunkRimworldTweaks.PodCrash {
+namespace BunkRimworldTweaks.PodCrash
+{
 	public sealed class Settings : IExposable, ISimpleSettings {
 		private bool _masterEnabled = true;
 		public bool MasterEnabled { get => _masterEnabled; set => _masterEnabled = value; }
 
 		private Dictionary<string, bool> _propertiesEnabled = new Dictionary<string, bool>();
 		public Dictionary<string, bool> PropertiesEnabled { get => _propertiesEnabled; }
+
+		private static readonly List<(string headerLabel, ISimpleSettings settings)> _childSections = new List<(string headerLabel, ISimpleSettings settings)>();
+		public IReadOnlyList<(string headerLabel, ISimpleSettings settings)> ChildSections => _childSections;
 
 		public void ExposeData()
 		{

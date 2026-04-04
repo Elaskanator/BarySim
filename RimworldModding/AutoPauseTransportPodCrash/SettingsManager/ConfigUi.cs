@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Verse;
@@ -28,7 +29,7 @@ namespace BunkRimworldTweaks.SettingsManager
 
 		public override void DoSettingsWindowContents(Rect inRect)
 		{
-			float contentHeight = LayoutMetrics.EstimateContentHeight(_mySettings.Select(x => x.settings));
+			float contentHeight = LayoutMetrics.MeasureContentHeight(_mySettings.Select(x => x.settings));
 			Rect viewRect = new Rect(0f, 0f, inRect.width - LayoutMetrics.ViewScrollbarWidth, contentHeight);
 
 			Widgets.BeginScrollView(inRect, ref _scrollPosition, viewRect);
@@ -51,37 +52,58 @@ namespace BunkRimworldTweaks.SettingsManager
 			Settings.Write();
 		}
 
-		static void InsertSection(Listing_Standard listing, string headerLabel, ISimpleSettings sectionSettings)
+		static void InsertSection(Listing_Standard listing, string headerLabel, ISimpleSettings sectionSettings, int nestLevel = 0)
 		{
-			var master = sectionSettings.MasterEnabled;
-			listing.CheckboxLabeled(headerLabel, ref master);
-			sectionSettings.MasterEnabled = master;
+			DrawCheckboxRow(
+				listing,
+				headerLabel,
+				sectionSettings.MasterEnabled,
+				nestLevel,
+				value => sectionSettings.MasterEnabled = value);
 
 			if (!sectionSettings.MasterEnabled)
 				return;
 
+			foreach (var child in sectionSettings.ChildSections)
+				InsertSection(listing, child.headerLabel, child.settings, nestLevel + 1);
+
 			foreach (var key in sectionSettings.PropertiesEnabled.Keys.OrderBy(x => x).ToList())
 			{
-				var value = sectionSettings.PropertiesEnabled[key];
-				var label = sectionSettings.FriendlyName(key);
+				var propertyKey = key;
 
-				Rect row = listing.GetRect(Text.LineHeight);
-				row.xMin += LayoutMetrics.IndentWidth;
-
-				Rect labelRect = row;
-				labelRect.xMax -= LayoutMetrics.LabelRightPadding;
-
-				Rect checkboxRect = new Rect(
-					row.xMax - LayoutMetrics.CheckboxSize,
-					row.y,
-					LayoutMetrics.CheckboxSize,
-					row.height);
-
-				Widgets.Label(labelRect, label);
-				Widgets.Checkbox(checkboxRect.position, ref value);
-
-				sectionSettings.PropertiesEnabled[key] = value;
+				DrawCheckboxRow(
+					listing,
+					sectionSettings.FriendlyName(propertyKey),
+					sectionSettings.PropertiesEnabled[propertyKey],
+					nestLevel + 1,
+					value => sectionSettings.PropertiesEnabled[propertyKey] = value);
 			}
+		}
+
+		static void DrawCheckboxRow(Listing_Standard listing, string label, bool currentValue, int nestLevel, Action<bool> onChanged)
+		{
+			Rect row = listing.GetRect(Text.LineHeight);
+
+			float indent = LayoutMetrics.IndentWidth * nestLevel;
+
+			Rect checkboxRect = new Rect(
+				row.xMin + indent,
+				row.y,
+				LayoutMetrics.CheckboxSize,
+				row.height);
+
+			Rect labelRect = new Rect(
+				checkboxRect.xMax + 6f,
+				row.y,
+				row.width - indent - LayoutMetrics.CheckboxSize - 6f,
+				row.height);
+
+			Widgets.Label(labelRect, label);
+
+			var value = currentValue;
+			Widgets.Checkbox(checkboxRect.position, ref value);
+
+			onChanged(value);
 		}
 	}
 }

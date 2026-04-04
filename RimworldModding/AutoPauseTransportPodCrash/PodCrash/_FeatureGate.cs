@@ -2,7 +2,7 @@
 
 namespace BunkRimworldTweaks.PodCrash
 {
-	public static class FeatureGate
+	internal static class FeatureGate
 	{
 		public static bool IsEnabledFor(string fullTypeName)
 		{

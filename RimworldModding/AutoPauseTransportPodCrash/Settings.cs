@@ -13,6 +13,7 @@ namespace BunkRimworldTweaks
 		{
 			Scribe_Deep.Look(ref PodCrashSettings, "PodCrash");
 			Scribe_Deep.Look(ref AutoRetamingSettings, "AutoRetaming");
+
 			Scribe_Values.Look(ref PatchedQuestNodeCount, "PatchedQuestNodeCount", 0);
 
 			// TODO factory pattern
