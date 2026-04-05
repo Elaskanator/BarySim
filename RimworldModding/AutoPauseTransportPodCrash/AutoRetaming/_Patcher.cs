@@ -11,14 +11,8 @@ namespace BunkRimworldTweaks.AutoRetaming
 	{
 		static Patcher()
 		{
-			var settings = ConfigUi.Settings?.AutoRetamingSettings;
-			if (settings != null)
-				foreach (var def in FeatureGate.GetApplicableAnimalDefs())
-				{
-					var bucket = settings.GetBucket(def.GetAnimalType());
-					if (!bucket.PropertiesEnabled.ContainsKey(def.defName))
-						bucket.PropertiesEnabled[def.defName] = true;
-				}
+			var feature = ConfigUi.Settings?.AutoRetamingSettings;
+			feature?.EnsureDefaults();
 
 			var harmony = new Harmony("bunk.rimworldtweaks");
 			var target = AccessTools.Method(typeof(PawnUtility), "TrySpawnHatchedOrBornPawn");

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using Verse;
@@ -7,26 +9,27 @@ namespace BunkRimworldTweaks.AutoRetaming
 {
 	internal static partial class AnimalTypeExtensions
 	{
-		private static readonly Type RacePropertiesType = AccessTools.TypeByName("Verse.RaceProperties");
+		public static IEnumerable<ThingDef> GetApplicableAnimalDefs() =>
+			DefDatabase<ThingDef>.AllDefs
+				.Where(def => def.IsApplicableAnimal())
+				.OrderBy(def => def.LabelCap.RawText);
 
-		private static readonly PropertyInfo FenceBlockedProperty =
+		static readonly Type RacePropertiesType = AccessTools.TypeByName("Verse.RaceProperties");
+
+		static readonly PropertyInfo FenceBlockedProperty =
 			RacePropertiesType?.GetProperty("FenceBlocked", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-		private static readonly FieldInfo NuzzleMtbHoursField =
+		static readonly FieldInfo NuzzleMtbHoursField =
 			RacePropertiesType?.GetField("nuzzleMtbHours", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-		private static readonly PropertyInfo InsectProperty =
+		static readonly PropertyInfo InsectProperty =
 			RacePropertiesType?.GetProperty("Insect", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-		private static readonly FieldInfo InsectField =
+		static readonly FieldInfo InsectField =
 			RacePropertiesType?.GetField("Insect", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-		private static readonly FieldInfo FoodTypeField =
+		static readonly FieldInfo FoodTypeField =
 			RacePropertiesType?.GetField("foodType", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
-		private static readonly Type TrainabilityDefOfType = AccessTools.TypeByName("RimWorld.TrainabilityDefOf");
+		static readonly Type TrainabilityDefOfType = AccessTools.TypeByName("RimWorld.TrainabilityDefOf");
 
-		private static readonly FieldInfo TrainabilityNoneField =
+		static readonly FieldInfo TrainabilityNoneField =
 			TrainabilityDefOfType?.GetField("None", BindingFlags.Static | BindingFlags.Public);
 
 		public static bool IsApplicableAnimal(this ThingDef def)
@@ -48,19 +51,21 @@ namespace BunkRimworldTweaks.AutoRetaming
 			if (!def.IsApplicableAnimal())
 				throw new ArgumentException("ThingDef must be an applicable animal.", nameof(def));
 
-			if (def.IsBugAnimal())
+			if (def.IsBug())
 				return AnimalType.Bugs;
-			if (def.IsNuzzleableAnimal())
+			if (def.IsNuzzleable())
 				return AnimalType.Nuzzleable;
-			if (def.IsPenAnimal())
-				return AnimalType.Penned;
-			if (def.IsCarnivoreAnimal())
+			if (def.IsLivestock())
+				return AnimalType.Livestock;
+			if (def.IsCarnivore())
 				return AnimalType.Carnivore;
+			if (def.IsVermin())
+				return AnimalType.Vermin;
 
 			return AnimalType.Other;
 		}
 
-		public static bool IsBugAnimal(this ThingDef def)
+		public static bool IsBug(this ThingDef def)
 		{
 			if (!def.IsApplicableAnimal())
 				return false;
@@ -85,7 +90,7 @@ namespace BunkRimworldTweaks.AutoRetaming
 			return false;
 		}
 
-		public static bool IsNuzzleableAnimal(this ThingDef def)
+		public static bool IsNuzzleable(this ThingDef def)
 		{
 			if (!def.IsApplicableAnimal())
 				return false;
@@ -103,7 +108,7 @@ namespace BunkRimworldTweaks.AutoRetaming
 			return false;
 		}
 
-		public static bool IsPenAnimal(this ThingDef def)
+		public static bool IsLivestock(this ThingDef def)
 		{
 			if (!def.IsApplicableAnimal())
 				return false;
@@ -122,7 +127,7 @@ namespace BunkRimworldTweaks.AutoRetaming
 			return trainability != null && Equals(trainability, none);
 		}
 
-		public static bool IsCarnivoreAnimal(this ThingDef def)
+		public static bool IsCarnivore(this ThingDef def)
 		{
 			if (!def.IsApplicableAnimal())
 				return false;
@@ -141,6 +146,15 @@ namespace BunkRimworldTweaks.AutoRetaming
 
 			return text.IndexOf("Carnivore", StringComparison.OrdinalIgnoreCase) >= 0
 				|| text.IndexOf("Meat", StringComparison.OrdinalIgnoreCase) >= 0;
+		}
+
+		public static bool IsVermin(this ThingDef def)
+		{
+			if (!def.IsApplicableAnimal())
+				return false;
+			if (def.race == null)
+				return false;
+			return def.race.baseBodySize <= 0.25f;
 		}
 	}
 }

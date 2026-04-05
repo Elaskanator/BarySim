@@ -12,7 +12,7 @@ namespace BunkRimworldTweaks.SettingsManager
 
 		public override string SettingsCategory() => "Bunk Rimworld Tweaks";
 
-		private readonly List<(string headerLabel, ISimpleSettings settings)> _mySettings;
+		private readonly List<IFeatureSettings> _features;
 		private Vector2 _scrollPosition = Vector2.zero;
 
 		public ConfigUi(ModContentPack content) : base(content)
@@ -20,16 +20,16 @@ namespace BunkRimworldTweaks.SettingsManager
 			Settings = GetSettings<Settings>();
 
 			// TODO factory pattern
-			_mySettings = new List<(string headerLabel, ISimpleSettings settings)>
+			_features = new List<IFeatureSettings>
 			{
-				("Pod crash auto-pause", Settings.PodCrashSettings),
-				("Animal taming auto-maintenance", Settings.AutoRetamingSettings),
+				Settings.PodCrashSettings,
+				Settings.AutoRetamingSettings,
 			};
 		}
 
 		public override void DoSettingsWindowContents(Rect inRect)
 		{
-			float contentHeight = LayoutMetrics.MeasureContentHeight(_mySettings.Select(x => x.settings));
+			float contentHeight = LayoutMetrics.MeasureContentHeight(_features.Select(x => x.AdditionalSettings));
 			Rect viewRect = new Rect(0f, 0f, inRect.width - LayoutMetrics.ViewScrollbarWidth, contentHeight);
 
 			Widgets.BeginScrollView(inRect, ref _scrollPosition, viewRect);
@@ -37,12 +37,12 @@ namespace BunkRimworldTweaks.SettingsManager
 			var listing = new Listing_Standard();
 			listing.Begin(viewRect);
 
-			for (int i = 0; i < _mySettings.Count; i++)
+			for (int i = 0; i < _features.Count; i++)
 			{
-				var (headerLabel, settings) = _mySettings[i];
-				InsertSection(listing, headerLabel, settings);
+				var feature = _features[i];
+				InsertSection(listing, feature.AdditionalSettings, feature.FeatureLabel);
 
-				if (i < _mySettings.Count - 1)
+				if (i < _features.Count - 1)
 					listing.Gap(LayoutMetrics.SectionGap);
 			}
 
@@ -52,20 +52,20 @@ namespace BunkRimworldTweaks.SettingsManager
 			Settings.Write();
 		}
 
-		static void InsertSection(Listing_Standard listing, string headerLabel, ISimpleSettings sectionSettings, int nestLevel = 0)
+		static void InsertSection(Listing_Standard listing, ISettingsBase sectionSettings, string headerLabel, int nestLevel = 0)
 		{
 			DrawCheckboxRow(
 				listing,
 				headerLabel,
-				sectionSettings.MasterEnabled,
+				sectionSettings.Enabled,
 				nestLevel,
-				value => sectionSettings.MasterEnabled = value);
+				value => sectionSettings.Enabled = value);
 
-			if (!sectionSettings.MasterEnabled)
+			if (!sectionSettings.Enabled)
 				return;
 
 			foreach (var child in sectionSettings.ChildSections)
-				InsertSection(listing, child.headerLabel, child.settings, nestLevel + 1);
+				InsertSection(listing, child.settings, child.headerLabel, nestLevel + 1);
 
 			foreach (var key in sectionSettings.PropertiesEnabled.Keys.OrderBy(x => x).ToList())
 			{

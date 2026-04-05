@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using BunkRimworldTweaks.SettingsManager;
 using HarmonyLib;
 using Verse;
 
@@ -12,26 +13,25 @@ namespace BunkRimworldTweaks.PodCrash
 	{
 		static Patcher()
 		{
-			var harmony = new Harmony("bunk.rimworldtweaks");
-			var postfix = new HarmonyMethod(typeof(Patcher).GetMethod(nameof(PostfixPause), BindingFlags.Static | BindingFlags.NonPublic));
-
 			var types = GetApplicableTypes().OrderBy(t => t.FullName).ToList();
 
-			var settings = SettingsManager.ConfigUi.Settings;
-			if (settings != null)
+			var root = ConfigUi.Settings;
+			if (root != null)
 			{
-				settings.PatchedQuestNodeCount = types.Count;
+				root.PatchedQuestNodeCount = types.Count;
 
-				if (settings.PodCrashSettings == null)
-					settings.PodCrashSettings = new Settings();
-
-				foreach (var type in types)
+				var feature = root.PodCrashSettings;
+				if (feature == null)
 				{
-					if (!settings.PodCrashSettings.PropertiesEnabled.ContainsKey(type.FullName))
-						settings.PodCrashSettings.PropertiesEnabled[type.FullName] = true;
+					feature = new Settings();
+					root.PodCrashSettings = feature;
 				}
-			}
 
+				feature.EnsureDefaults();
+			}
+			
+			var harmony = new Harmony("bunk.rimworldtweaks");
+			var postfix = new HarmonyMethod(typeof(Patcher).GetMethod(nameof(Postfix), BindingFlags.Static | BindingFlags.NonPublic));
 			foreach (var type in types)
 			{
 				var method = type.GetMethod(
@@ -45,16 +45,23 @@ namespace BunkRimworldTweaks.PodCrash
 			}
 		}
 
-		static void PostfixPause(MethodBase __originalMethod)
+		static void Postfix(MethodBase __originalMethod)
 		{
 			var typeName = __originalMethod?.DeclaringType?.FullName;
 			if (typeName == null)
 				return;
 
-			FeatureGate.PauseIfEnabled(typeName);
+			var settings = ConfigUi.Settings?.PodCrashSettings;
+			if (settings == null)
+				return;
+
+			if (!settings.IsEnabledFor(typeName))
+				return;
+
+			Find.TickManager?.Pause();
 		}
 
-		static IEnumerable<Type> GetApplicableTypes() =>
+		internal static IEnumerable<Type> GetApplicableTypes() =>
 			typeof(Log).Assembly
 				.GetTypes()
 				.Where(t =>

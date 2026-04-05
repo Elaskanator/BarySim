@@ -2,8 +2,9 @@
 	internal enum AnimalType
 	{
 		Nuzzleable,
-		Penned,
+		Livestock,
 		Carnivore,
+		Vermin,
 		Bugs,
 		Other
 	}

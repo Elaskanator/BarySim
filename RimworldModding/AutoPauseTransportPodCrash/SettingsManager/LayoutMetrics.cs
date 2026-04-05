@@ -15,7 +15,7 @@ namespace BunkRimworldTweaks.SettingsManager
 		public const float CheckboxSize = 24f;
 		public const float LabelRightPadding = 30f;
 
-		public static float MeasureContentHeight(IEnumerable<ISimpleSettings> settingsSections)
+		public static float MeasureContentHeight(IEnumerable<ISettingsBase> settingsSections)
 		{
 			var sections = settingsSections.ToList();
 
@@ -36,11 +36,11 @@ namespace BunkRimworldTweaks.SettingsManager
 			return height;
 		}
 
-		private static void AdvanceLayoutForSection(Listing_Standard listing, ISimpleSettings section)
+		private static void AdvanceLayoutForSection(Listing_Standard listing, ISettingsBase section)
 		{
 			listing.GetRect(Text.LineHeight);
 
-			if (!section.MasterEnabled)
+			if (!section.Enabled)
 				return;
 
 			foreach (var child in section.ChildSections)

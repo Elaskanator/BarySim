@@ -1,45 +1,56 @@
-﻿using System.Collections.Generic;
-using Verse;
+﻿using Verse;
 
 namespace BunkRimworldTweaks.PodCrash
 {
-	public sealed class Settings : IExposable, ISimpleSettings {
-		private bool _masterEnabled = true;
-		public bool MasterEnabled { get => _masterEnabled; set => _masterEnabled = value; }
+	public sealed class Settings : AFeatureSettingsBase
+	{
+		public override string FeatureLabel => "Pod crash auto-pause";
 
-		private Dictionary<string, bool> _propertiesEnabled = new Dictionary<string, bool>();
-		public Dictionary<string, bool> PropertiesEnabled { get => _propertiesEnabled; }
+		readonly SubSettings _additionalSettings = new SubSettings();
+		public override ISettingsBase AdditionalSettings => _additionalSettings;
 
-		private static readonly List<(string headerLabel, ISimpleSettings settings)> _childSections = new List<(string headerLabel, ISimpleSettings settings)>();
-		public IReadOnlyList<(string headerLabel, ISimpleSettings settings)> ChildSections => _childSections;
-
-		public void ExposeData()
+		public override void EnsureDefaults()
 		{
-			Scribe_Values.Look(ref _masterEnabled, "Enabled", true);
-			Scribe_Collections.Look(ref _propertiesEnabled, "PauseByType", LookMode.Value, LookMode.Value);
+			var settings = AdditionalSettings;
+			if (settings == null)
+				return;
+
+			foreach (var type in Patcher.GetApplicableTypes())
+				if (!settings.PropertiesEnabled.ContainsKey(type.FullName))
+					settings.PropertiesEnabled[type.FullName] = true;
 		}
 
-		public string FriendlyName(string propertyName)
+		protected override void ExposeAdditionalParameters()
 		{
-			var label = propertyName; // e.g. RimWorld.QuestGen.QuestNode_Root_RefugeePodCrash[_Ghoul]
+			_additionalSettings.ExposeData();
+		}
 
-			// strip namespace
-			var lastDotIdx = label.LastIndexOf('.');
-			if (lastDotIdx >= 0)
-				label = label.Substring(lastDotIdx + 1);
-			label = label.Replace("QuestNode_Root_", "");
+		sealed class SubSettings : AFlatSimpleSettingsBase
+		{
+			protected override void ExposeAdditionalParameters()
+			{
+				Scribe_Collections.Look(ref _propertiesEnabled, "PauseByType", LookMode.Value, LookMode.Value);
+			}
 
-			// strip shared label
-			label = label.Replace("RefugeePodCrash", "");
-			if (string.IsNullOrWhiteSpace(label))
-				label = "Normal";
+			public override string FriendlyName(string propertyName)
+			{
+				var label = propertyName;
 
-			// format remainder
-			label = label.Replace('_', ' ');
-			label = Shared.EnumStringSplitterRegex.Replace(label, " ");
-			label = Shared.MultiSpaceRegex.Replace(label, " ");
+				var lastDotIdx = label.LastIndexOf('.');
+				if (lastDotIdx >= 0)
+					label = label.Substring(lastDotIdx + 1);
+				label = label.Replace("QuestNode_Root_", "");
 
-			return label.Trim();
+				label = label.Replace("RefugeePodCrash", "");
+				if (string.IsNullOrWhiteSpace(label))
+					label = "Normal";
+
+				label = label.Replace('_', ' ');
+				label = Shared.EnumStringSplitterRegex.Replace(label, " ");
+				label = Shared.MultiSpaceRegex.Replace(label, " ");
+
+				return label.Trim();
+			}
 		}
 	}
 }
