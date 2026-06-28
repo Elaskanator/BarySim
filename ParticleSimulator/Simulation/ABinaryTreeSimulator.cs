@@ -90,11 +90,11 @@ namespace ParticleSimulator.Simulation {
 					leaf = leafParticles.Node;
 					for (int i = 0; i < leafParticles.Particles.Length; i++) {
 						particle = leafParticles.Particles[i];
-						if (particle.Enabled && (Parameters.WORLD_PRUNE_RADII <= 0f || particle.IsInRange(center))) {
+						if (particle.Enabled && (Parameters.WORLD_PRUNE_RADII <= 0f || particle.IsInRange(center)))
 							if (!(particle.Collisions is null) && particle.Collisions.Count > 0)
 								collided.Enqueue(particle);
 							else ready.Enqueue(particle);
-						} else leaf.RemoveFromLeaf(particle);//prune the particle
+						else leaf.RemoveFromLeaf(particle);//prune the particle
 					}
 				}
 			}
@@ -121,7 +121,7 @@ namespace ParticleSimulator.Simulation {
 							distance = MathF.Sqrt(Vector.Dot(toOther, toOther));
 							engulfRelativeDistance = particle.EngulfRelativeDistance(other, distance);
 
-							if (Parameters.MERGE_ENABLE && engulfRelativeDistance + Parameters.MERGE_ENGULF_RATIO <= 1f) {
+							if (Parameters.MERGE_ENABLE && engulfRelativeDistance + Parameters.MERGE_ENGULF_RATIO <= 1f && !(other as MatterClump).IsCollapsed) {
 								if (!anyConsumed) {
 									anyConsumed = true;
 									while (!node.IsLeaf)
@@ -244,10 +244,10 @@ namespace ParticleSimulator.Simulation {
 					while (pendingNodes.TryPop(out TTree node)) {
 						for (int cIdx = 0; cIdx < node.Children.Length; cIdx++) {
 							child = (TTree)node.Children[cIdx];
-							if (child.ItemCount > 0) {
+							if (child.ItemCount > 0)
 								if (child.IsLeaf) ResetParticles(child, leaves);
 								else testNodes.Push(child);//continue recursion (not at a leaf)
-							} else node.Children[cIdx].Children = null;//prune the leaves
+							else node.Children[cIdx].Children = null;//prune the leaves
 						}
 					}
 					if (testNodes.Count > 0) {

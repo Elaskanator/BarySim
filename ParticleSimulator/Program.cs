@@ -9,7 +9,7 @@ namespace ParticleSimulator {
 		public static Random Random { get; private set; }
 		public static int RandomSeed { get; private set; }
 
-		public static void ResetRandon() {
+		public static void ResetRandom() {
 			if (Parameters.RANDOM_SEED == -1)
 				RandomSeed = new Random().Next();
 			else RandomSeed = Parameters.RANDOM_SEED;
@@ -35,7 +35,7 @@ namespace ParticleSimulator {
 
 			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);//ctrl+c and alt+f4 etc
 
-			ResetRandon();
+			ResetRandom();
 			Engine = new RenderEngine();
 			//ConsoleExtensions.WaitForEnter("Press enter to start");
 			Engine.Start();

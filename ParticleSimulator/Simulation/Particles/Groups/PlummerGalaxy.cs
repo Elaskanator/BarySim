@@ -28,7 +28,7 @@ namespace ParticleSimulator.Simulation.Particles {
 			} else this.Position = Vector<float>.Zero;
 		}
 
-		protected override void InitializeParticles(MatterClump particle) {
+		protected override void InitializeParticle(MatterClump particle) {
 			float nextRand = (float)Math.Clamp(Program.Random.NextDouble(), Parameters.PRECISION_EPSILON, 1d);
 			float plummerRadius = MathF.Pow(MathF.Pow(nextRand, -2f/3f) - 1f, -0.5f);
 			Vector<float> position = plummerRadius * VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);

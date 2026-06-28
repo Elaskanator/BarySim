@@ -21,7 +21,8 @@ namespace ParticleSimulator.Simulation.Particles {
 			for (int i = 0; i < this.NumParticles; i++)
 				this.InitialParticles[i] = this.ParticleConstructor(this.Position, this.Velocity);
 			
-			this.InitGroupPositionVelocity();
+			if (Parameters.PARTICLES_GROUP_COUNT > 1)
+				this.InitGroupPositionVelocity();
 
 			for (int i = 0; i < this.NumParticles; i++) {
 				this.InitialParticles[i].GroupId = this.Id;
@@ -29,7 +30,7 @@ namespace ParticleSimulator.Simulation.Particles {
 				this.InitialParticles[i].Velocity = this.Velocity;
 
 				if (this.NumParticles > 1)
-					this.InitializeParticles(this.InitialParticles[i]);
+					this.InitializeParticle(this.InitialParticles[i]);
 
 				if (Parameters.WORLD_BOUNCING)
 					if (Parameters.WORLD_WRAPPING)
@@ -48,7 +49,7 @@ namespace ParticleSimulator.Simulation.Particles {
 				* VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);
 		}
 
-		protected abstract void InitializeParticles(TParticle particle);
+		protected abstract void InitializeParticle(TParticle particle);
 
 		private static int _globalID = 0;
 		private readonly int _id = _globalID++;
@@ -57,8 +58,8 @@ namespace ParticleSimulator.Simulation.Particles {
 		public readonly float Radius = radius;
 		public readonly int NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
 
-		public Vector<float> Position { get; protected set; }
-		public Vector<float> Velocity { get; protected set; }
+		public Vector<float> Position { get; protected set; } = Vector<float>.Zero;
+		public Vector<float> Velocity { get; protected set; } = Vector<float>.Zero;
 
 		public TParticle[] InitialParticles { get; private set; }
 		IParticle[] IParticleGroup.InitialParticles => this.InitialParticles;

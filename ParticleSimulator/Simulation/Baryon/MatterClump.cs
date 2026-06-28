@@ -13,14 +13,20 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public float Mass;
 		private void SetMass(float value) {
 			this.Mass = value;
-			this._density = (1f + MathF.Log(1f + value, 16f)) * Parameters.MASS_RADIAL_DENSITY;
-			this._radius = (float)VectorFunctions.HypersphereRadius(value, 3) / this._density;
+			if (this.IsCollapsed) {
+				this._density = float.PositiveInfinity;
+				this._radius = MathF.Pow(value, 1f / 3f) * Parameters.BLACKHOLE_RADIUS_SCALAR * Parameters.MASS_RADIUS_SCALAR;
+			} else {
+				this._density = MathF.Pow(value, Parameters.MASS_DENSITY_POW) * Parameters.MASS_DENSITY_SCALAR;
+				var volume = value / this._density;
+				this._radius = (float)VectorFunctions.HypersphereRadius(volume, Parameters.DIM) * Parameters.MASS_RADIUS_SCALAR;
+			}
 			this.Luminosity = this.IsCollapsed
 				? -1f
 				: Parameters.MASS_LUMINOSITY_SCALAR * MathF.Pow(value, Parameters.MASS_LUMINOSITY_POW);
 		}
 		
-		private float _density = Parameters.MASS_RADIAL_DENSITY;
+		private float _density = Parameters.MASS_DENSITY_SCALAR;
 		public override float Density => this._density;
 		public bool IsCollapsed { get; private set; }
 
@@ -71,44 +77,46 @@ namespace ParticleSimulator.Simulation.Baryon {
 		}
 
 		protected override void AfterMove() {
-			if (Parameters.SUPERNOVA_ENABLE && !this.IsCollapsed && this.Mass >= Parameters.SUPERNOVA_CRITICAL_MASS) {
+			if (!this.IsCollapsed && this.Mass >= Parameters.SUPERNOVA_CRITICAL_MASS) {
 				if (Parameters.BLACKHOLE_ENABLE && this.Mass >= Parameters.BLACKHOLE_THRESHOLD * Parameters.SUPERNOVA_CRITICAL_MASS) {
 					this.IsCollapsed = true;
 					this.Luminosity = -1f;
-				} else {
-					int numParticles = (int)(Parameters.SUPERNOVA_EJECTA_MASS > 0
-						? this.Mass / Parameters.SUPERNOVA_EJECTA_MASS
-						: this.Mass);
-					if (numParticles > 1) {
-						float radiusRange = MathF.Pow(this._radius*this._density*Parameters.SUPERNOVA_RADIUS_SCALAR / Parameters.MASS_RADIAL_DENSITY, Parameters.DIM);
-						float ratio = (1f / numParticles);
-						float avgMass = ratio * this.Mass;
-						Vector<float> avgImpulse = ratio * this.Impulse;
+				} else if (Parameters.SUPERNOVA_ENABLE)
+					this.GoSupernova();
+			}
+		}
+		private void GoSupernova() {
+			int numParticles = (int)(Parameters.SUPERNOVA_EJECTA_MASS > 0
+				? this.Mass / Parameters.SUPERNOVA_EJECTA_MASS
+				: this.Mass);
+			if (numParticles > 1) {
+				float maxRadius = this._radius * Parameters.SUPERNOVA_RADIUS_SCALAR;
+				float ratio = (1f / numParticles);
+				float avgMass = ratio * this.Mass;
+				Vector<float> avgImpulse = ratio * this.Impulse;
 
-						this.NewParticles ??= new();
-						this.SetMass(avgMass);
-						this.Impulse = avgImpulse;
+				this.NewParticles ??= new();
+				this.SetMass(avgMass);
+				this.Impulse = avgImpulse;
 
-						Vector<float> direction;
-						float rand, radius;
-						MatterClump newParticle;
-						for (int i = 1; i < numParticles; i++) {
-							direction = VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);
-							rand = (float)Program.Random.NextDouble();
-							radius = MathF.Pow(rand*radiusRange, (1f / Parameters.DIM));
+				Vector<float> direction;
+				float rand, radius;
+				MatterClump newParticle;
+				for (int i = 1; i < numParticles; i++) {
+					direction = VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);
+					rand = (float)Program.Random.NextDouble();
+					radius = maxRadius * MathF.Pow(rand, 1f / Parameters.DIM);
 
-							newParticle = new(
-								this._position + direction * radius,
-								this.Velocity + direction * Parameters.SUPERNOVA_EJECTA_SPEED)
-							{
-								GroupId = this.GroupId,
-							};
-							newParticle.SetMass(avgMass);
-							newParticle.Impulse += avgImpulse;
+					newParticle = new(
+						this._position + direction * radius,
+						this.Velocity + direction * Parameters.SUPERNOVA_EJECTA_SPEED)
+					{
+						GroupId = this.GroupId,
+					};
+					newParticle.SetMass(avgMass);
+					newParticle.Impulse += avgImpulse;
 
-							this.NewParticles.Enqueue(newParticle);
-						}
-					}
+					this.NewParticles.Enqueue(newParticle);
 				}
 			}
 		}

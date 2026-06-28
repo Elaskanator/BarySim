@@ -63,6 +63,9 @@ namespace ParticleSimulator.Engine.Threading {
 		}
 
 		protected override void Process(EvalResult prepResult) {
+			if (this.Config.PreProcessFn is not null)
+				this.Config.PreProcessFn();
+
 			if (this.Config.OutputResource is null)
 				this.Config.EvaluatorFn(prepResult, this._parameters);
 			else this._result = this.Config.GeneratorFn is null

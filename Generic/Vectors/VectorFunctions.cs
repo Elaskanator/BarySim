@@ -332,7 +332,7 @@ namespace Generic.Vectors {
 				case 2:
 					return Math.Sqrt(volume / Math.PI);
 				case 3:
-					return Math.Cbrt(volume * 3d/4d / Math.PI);
+					return Math.Cbrt(volume * 3d / (4d * Math.PI));
 				case 4:
 					return Math.Pow(2d * volume, 0.25d) / Math.Sqrt(Math.PI);
 				default:

@@ -11,21 +11,23 @@ namespace ParticleSimulator.Rendering {
 			this.RotationMatrixColumns = VectorFunctions.IdentityMatrixColumns;
 		}
 
-		public bool AutoCentering;
+		public bool AutoCentering = Parameters.AUTOFOCUS_DEFAULT;
 
-		public bool IsAutoIncrementActive { get; set; }
+		public bool IsAutoIncrementActive { get; set; } = true;
 		public bool IsPitchRotationActive { get; set; }
 		public bool IsYawRotationActive { get; set; }
 		public bool IsRollRotationActive { get; set; }
+
+		public bool? Zooming { get; set; }
+		public bool? PanningX { get; set; }
+		public bool? PanningY { get; set; }
 
 		private VectorSmoothedIncrementalAverage _center = new(AUTO_CENTER_UPDATE_ALPHA);
 		public Vector<float> Center {
 			get => this._center.Current;
 			set { this._center.Reset(); this._center.Update(value); } }
-		public Vector<float> DefaultCenter = Vector<float>.Zero;
 		//public Vector<float> Size { get; private set; }
-		public float Zoom = 1f;
-		public float DeafultZoom = 1f;
+		public float Zoom = Parameters.STARTING_ZOOM;
 
 		public Vector<float>[] RotationMatrixColumns { get; private set; }
 		public bool IsRotationNonzero { get; private set; }
@@ -43,9 +45,14 @@ namespace ParticleSimulator.Rendering {
 			this.RotationStepsYaw = 0;
 			this.RotationStepsRoll = 0;
 		}
+		public void ResetPosition(int dimension) {
+			Span<float> values = stackalloc float[Vector<float>.Count];
+			this.Center.CopyTo(values);
+			values[dimension] = 0f;
+			this.Center = new Vector<float>(values);
+		}
 		public void ResetFocus() {
-			this.Zoom = this.DeafultZoom;
-			this.Center = this.DefaultCenter;
+			this.Center = Vector<float>.Zero;
 			this.AutoCentering = false;
 		}
 
@@ -88,15 +95,48 @@ namespace ParticleSimulator.Rendering {
 			} else return offsetV;
 		}
 
-		public void Increment(Vector<float> position) {
+		public void IncrementPosition(bool? x, bool? y) {
+			// TODO clamp for bounded world size
+
+			var windowSize = 1f / this.Zoom;
+			var step = windowSize * Parameters.PAN_RATIO_PER_FRAME;
+			var delta = Vector<float>.Zero;
+			if (x.HasValue)
+				delta += this.RotationMatrixColumns[0] * (x.Value ? 1 : -1 ) * step;
+			if (y.HasValue)
+				delta -= this.RotationMatrixColumns[1] * (y.Value ? 1 : -1 ) * step;
+
+			this.Center += delta;
+		}
+
+		public void IncrementZoom(bool increase) {
+			var zoom = this.Zoom;
+
+			var amount = 1f + Parameters.ZOOM_RATIO_PER_FRAME;
+			if (increase)
+				zoom *= amount;
+			else zoom /= amount;
+
+			if (Parameters.WORLD_WRAPPING || Parameters.WORLD_BOUNCING)
+				zoom = zoom < Parameters.STARTING_ZOOM ? Parameters.STARTING_ZOOM : zoom;
+
+			this.Zoom = zoom;
+		}
+
+		public void Iterate(Vector<float> position) {
 			this.Set3DRotation(
 				Parameters.WORLD_ROTATION_RAD_PER_FRAME * this.RotationStepsPitch,
 				Parameters.WORLD_ROTATION_RAD_PER_FRAME * this.RotationStepsYaw,
 				Parameters.WORLD_ROTATION_RAD_PER_FRAME * this.RotationStepsRoll);
 			
-			if (this.AutoCentering) {
+			if (this.Zooming.HasValue)
+				this.IncrementZoom(this.Zooming.Value);
+
+			if (this.PanningX.HasValue || this.PanningY.HasValue) {
+				this.AutoCentering = false;
+				this.IncrementPosition(this.PanningX, this.PanningY);
+			} else if (this.AutoCentering)
 				this._center.Update(position);
-			}
 
 			if (this.IsAutoIncrementActive) {
 				if (this.IsPitchRotationActive)

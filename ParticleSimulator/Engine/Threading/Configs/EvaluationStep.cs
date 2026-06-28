@@ -6,6 +6,7 @@ namespace ParticleSimulator.Engine.Threading {
 
 		public Action InitFn;
 		public Func<object> GeneratorFn;
+		public Action PreProcessFn;
 		public Action<EvalResult, object[]> EvaluatorFn;
 		public Func<EvalResult, object[], object> CalculatorFn;
 

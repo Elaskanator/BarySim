@@ -62,6 +62,5 @@ namespace Generic.Vectors {
 				: ( Vector.ConditionalSelect(leftMask, this.CornerLeft, this.Center),
 					Vector.ConditionalSelect(leftMask, this.Center, this.CornerRight));
 		}
-
 	}
 }

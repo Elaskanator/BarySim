@@ -104,7 +104,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 								toOther = neighbor.MassBaryCenter.Position - leaf.MassBaryCenter.Position;
 								distanceSquared = Vector.Dot(toOther, toOther);
 								if (distanceSquared > Parameters.NODE_APPROX_CUTOFF2
-								&& distanceSquared * Parameters.INACCURCY2 > neighbor.SizeSquared) {//Barnes-Hut condition
+								&& distanceSquared * Parameters.INACCURACY2 > neighbor.SizeSquared) {//Barnes-Hut condition
 									invSqRt = MathF.ReciprocalSqrtEstimate(distanceSquared);
 									invR2 = 1f / distanceSquared;
 									invR3 = invSqRt * invR2;

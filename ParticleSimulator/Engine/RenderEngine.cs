@@ -25,12 +25,8 @@ namespace ParticleSimulator.Engine {
 
 			this.Simulator = new BaryonSimulator(Parameters.DIM);
 
-			float zoomLevel = Parameters.ZOOM_SCALE / Parameters.WORLD_SCALE;
-			this.Camera = new() {
-				Zoom = zoomLevel,
-				DeafultZoom = zoomLevel,
-				AutoCentering = Parameters.AUTOFOCUS_DEFAULT,
-			};
+			float zoomLevel = 1f / Parameters.WORLD_SCALE;
+			this.Camera = new();
 
 			this.Rasterizer = new(
 				this.Camera,
@@ -76,7 +72,6 @@ namespace ParticleSimulator.Engine {
 		public Camera Camera { get; private set; }
 		
 		internal ACalculationHandler[] Evaluators { get; private set; }
-		private Thread _keyReader;
 
 		private ProcessThread _stepEval_Simulate;
 		private ProcessThread _stepEval_Autoscale;
@@ -101,8 +96,6 @@ namespace ParticleSimulator.Engine {
 				this.StartTimeUtc = DateTime.UtcNow;
 				
 				this._particleResourceUse.ReadType = enable ? this._particleResourceReadType : ConsumptionType.ConsumeReady;
-				this._keyReader = new(this.HandleInputs);
-				this._keyReader.Start();
 				bool startActive;
 
 				for (int i = 0; i < this.Evaluators.Length; i++) {
@@ -157,7 +150,7 @@ namespace ParticleSimulator.Engine {
 			if (this.IsOpen) {
 				this.Stop();
 				
-				Program.ResetRandon();
+				Program.ResetRandom();
 
 				this._particleResource.Reset();
 				this._rankingsResource.Reset();
@@ -195,6 +188,7 @@ namespace ParticleSimulator.Engine {
 			this._particleResourceUse = new(this._particleResource, this._particleResourceReadType);
 			this._stepEval_Rasterize = ProcessThread.New(new() {
 				Name = "Rasterize",
+				PreProcessFn = () => KeyListener.HandleConsoleInputs(this.KeyListeners),
 				CalculatorFn = (r, p) => { return this.Rasterizer.Rasterize(r, p); },
 				OutputResource = this._rasterResource,
 				InputResourceUses = new IIngestedResource[] {
@@ -291,6 +285,57 @@ namespace ParticleSimulator.Engine {
 					() => { return this.Camera.AutoCentering; },
 					s => { this.Camera.AutoCentering = s; },
 					() => { this.Camera.ResetFocus(); }),
+
+				new(ConsoleKey.A, "←",
+					() => { return this.Camera.PanningX == false; },
+					s => {
+						if (s) this.Camera.PanningX = false;
+						else if (this.Camera.PanningX == false) this.Camera.PanningX = null;
+					},
+					() => { this.Camera.ResetPosition(0); })
+				{ IsToggle = false },
+				new(ConsoleKey.D, "→",
+					() => { return this.Camera.PanningX == true; },
+					s => {
+						if (s) this.Camera.PanningX = true;
+						else if (this.Camera.PanningX == true) this.Camera.PanningX = null;
+					},
+					() => { this.Camera.ResetPosition(0); })
+				{ IsToggle = false },
+
+				new(ConsoleKey.S, "↓",
+					() => { return this.Camera.PanningY == false; },
+					s => {
+						if (s) this.Camera.PanningY = false;
+						else if (this.Camera.PanningY == false) this.Camera.PanningY = null;
+					},
+					() => { this.Camera.ResetPosition(1); })
+				{ IsToggle = false },
+				new(ConsoleKey.W, "↑",
+					() => { return this.Camera.PanningY == true; },
+					s => {
+						if (s) this.Camera.PanningY = true;
+						else if (this.Camera.PanningY == true) this.Camera.PanningY = null;
+					},
+					() => { this.Camera.ResetPosition(1); })
+				{ IsToggle = false },
+
+				new(ConsoleKey.Q, "-",
+					() => { return this.Camera.Zooming == false; },
+					s => {
+						if (s) this.Camera.Zooming = false;
+						else if (this.Camera.Zooming == false) this.Camera.Zooming = null;
+					},
+					() => { this.Camera.Zoom = Parameters.STARTING_ZOOM; })
+				{ IsToggle = false },
+				new(ConsoleKey.E, "+",
+					() => { return this.Camera.Zooming == true; },
+					s => {
+						if (s) this.Camera.Zooming = true;
+						else if (this.Camera.Zooming == true) this.Camera.Zooming = null;
+					},
+					() => { this.Camera.Zoom = Parameters.STARTING_ZOOM; })
+				{ IsToggle = false },
 			};
 
 			IEnumerable<KeyListener> result = standardFunctions;
@@ -316,25 +361,11 @@ namespace ParticleSimulator.Engine {
 
 		private void ResetSimulation() {
 			bool paused = this._stepEval_Simulate.IsPaused;
-			Program.ResetRandon();
+			Program.ResetRandom();
 			this._stepEval_Simulate.Restart(false);
 			this._stepsStartingPaused[this._stepEval_Simulate.Id] = !paused;
 			if (!paused)
 				this._stepEval_Simulate.Resume();
-		}
-
-		private void HandleInputs() {
-			ConsoleKeyInfo keyInfo;
-			try {
-				while (this.IsOpen) {
-					keyInfo = Console.ReadKey(true);
-					for (int i = 0; i < this.KeyListeners.Length; i++)
-						if (keyInfo.Key == this.KeyListeners[i].Key)
-							if ((this.KeyListeners[i].Resetter is null) || (keyInfo.Modifiers & ConsoleModifiers.Control) == 0)
-								this.KeyListeners[i].Toggle();
-							else this.KeyListeners[i].Resetter();
-				}
-			} catch (ThreadInterruptedException) { }//die
 		}
 	}
 }
