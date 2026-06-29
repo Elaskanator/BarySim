@@ -5,8 +5,9 @@ using System.Linq;
 using Generic.Extensions;
 
 namespace Generic.Trees {
-	public abstract class ABinaryTree<T> : ITree, ICollection<T>, IEnumerable<T> {
-		public ABinaryTree(ABinaryTree<T> parent = null) {
+	public abstract class ABinaryTree<TSelf, T> : ITree, ICollection<T>, IEnumerable<T>
+	where TSelf : ABinaryTree<TSelf, T> {
+		public ABinaryTree(TSelf parent = null) {
 			this.Parent = parent;
 		}
 
@@ -25,21 +26,21 @@ namespace Generic.Trees {
 		public bool IsRoot => this.Parent is null;
 		public bool IsLeaf => this.Children is null;
 
-		public ABinaryTree<T> Parent;
+		public TSelf Parent;
 		ITree ITree.Parent => this.Parent;
-		public ABinaryTree<T>[] Children;//srsly why does making this a FIELD instead of a PROEPRTY improve performance by 25%?
+		public TSelf[] Children;//srsly why does making this a FIELD instead of a PROEPRTY improve performance by 25%?
 		IEnumerable<ITree> ITree.Children => this.Children;
-		public ABinaryTree<T> Root { get {
-			ABinaryTree<T> node = this;
+		public TSelf Root { get {
+			var node = this;
 			while (!node.IsRoot)
 				node = node.Parent;
-			return node;
+			return (TSelf)node;
 		} }
-		public IEnumerable<ABinaryTree<T>> AllLeaves { get {
-			Stack<ABinaryTree<T>> stack = new();
-			stack.Push(this);
+		public IEnumerable<TSelf> AllLeaves { get {
+			Stack<TSelf> stack = new();
+			stack.Push((TSelf)this);
 
-			while (stack.TryPop(out ABinaryTree<T> node)) {
+			while (stack.TryPop(out TSelf node)) {
 				if (node.IsLeaf) {
 					yield return node;
 				} else {
@@ -56,8 +57,8 @@ namespace Generic.Trees {
 		public abstract bool DoesEncompass(T item);
 		public int ParentChildIndex { get; private set; }
 
-		protected abstract ABinaryTree<T>[] FormSubnodes();
-		protected abstract ABinaryTree<T> Expand(T item);
+		protected abstract TSelf[] FormSubnodes();
+		protected abstract TSelf Expand(T item);
 
 		protected virtual ICollection<T> NewBin() => new HashSet<T>();//new HashedContainer<T>();
 
@@ -68,25 +69,25 @@ namespace Generic.Trees {
 			throw new Exception("Element does not belong");
 		}
 
-		public ABinaryTree<T> FindContainingLeaf(T item) {
-			ABinaryTree<T> node = this;
+		public TSelf FindContainingLeaf(T item) {
+			var node = this;
 			while (!node.DoesEncompass(item))
 				node = node.IsRoot
 					? throw new Exception("Uncontained")
 					: node.Parent;
 			while (!node.IsLeaf)
 				node = node.Children[node.ChildIndex(item)];
-			return node;
+			return (TSelf)node;
 		}
 
 		public void Add(T item) {
-			ABinaryTree<T> node = this;
+			var node = this;
 			while (!node.DoesEncompass(item))
 				node = node.IsRoot
 					? node.Expand(item)
 					: node.Parent;
 
-			ABinaryTree<T> startingNode = node;
+			var startingNode = node;
 			while (!node.IsLeaf) {
 				++node.ItemCount;
 				node = node.Children[node.ChildIndex(item)];
@@ -98,8 +99,8 @@ namespace Generic.Trees {
 			}
 		}
 
-		public ABinaryTree<T> Add(IEnumerable<T> items) {
-			ABinaryTree<T> parent = this.Root;
+		public TSelf Add(IEnumerable<T> items) {
+			var parent = this.Root;
 			foreach (T item in items) {
 				parent.Add(item);
 				while (!parent.IsRoot)
@@ -109,7 +110,7 @@ namespace Generic.Trees {
 		}
 
 		public bool Remove(T item, bool prune) {
-			ABinaryTree<T> node = this;
+			var node = this;
 			while (!node.DoesEncompass(item))
 				if (node.IsRoot)
 					return false;
@@ -123,8 +124,8 @@ namespace Generic.Trees {
 		}
 		public bool Remove(T item) => this.Remove(item, true);
 
-		public ABinaryTree<T> MoveFromLeaf(T item, bool prune = true) {
-			ABinaryTree<T> node = this;
+		public TSelf MoveFromLeaf(T item, bool prune = true) {
+			var node = (TSelf)this;
 			if (!node.DoesEncompass(item)) {
 				RemoveFromNode(node, item);
 
@@ -152,7 +153,7 @@ namespace Generic.Trees {
 			return node;
 		}
 
-		private static bool RemoveFromNode(ABinaryTree<T> node, T item) {
+		private static bool RemoveFromNode(TSelf node, T item) {
 			//if (node.Bin.Count == 1)
 			//	node.Bin.Clear();
 			//else node.Bin.Remove(item);
@@ -164,7 +165,7 @@ namespace Generic.Trees {
 		}
 
 		public bool RemoveFromLeaf(T item, bool prune = true) {
-			ABinaryTree<T> node = this;
+			var node = (TSelf)this;
 			if (RemoveFromNode(node, item)) {
 				while (!node.IsRoot) {
 					node = node.Parent;
@@ -176,8 +177,8 @@ namespace Generic.Trees {
 			} else return false;
 		}
 
-		protected ABinaryTree<T> AddToLeaf(T item) {//increments the count
-			ABinaryTree<T> node = this;
+		protected TSelf AddToLeaf(T item) {//increments the count
+			var node = this;
 			while (!node.IsReceiving) {
 				node.Refine();
 				++node.ItemCount;
@@ -186,7 +187,7 @@ namespace Generic.Trees {
 			node.Bin ??= this.NewBin();
 			node.Bin.Add(item);
 			++node.ItemCount;
-			return node;
+			return (TSelf)node;
 		}
 
 		private void Refine() {
@@ -194,7 +195,7 @@ namespace Generic.Trees {
 			for (int i = 0; i < this.Children.Length; i++)
 				this.Children[i].ParentChildIndex = i;
 
-			ABinaryTree<T> node;
+			TSelf node;
 			if (this.ItemCount == 1) {
 				node = this.Children[this.ChildIndex(this.Bin.First())];
 				++node.ItemCount;
@@ -211,8 +212,8 @@ namespace Generic.Trees {
 		}
 		
 		//finds the first sub node with more than one child
-		public virtual ABinaryTree<T> PruneTop() {
-			ABinaryTree<T> node = this.Root;
+		public virtual TSelf PruneTop() {
+			var node = this.Root;
 
 			int count, idx;
 			while (!node.IsLeaf) {
@@ -238,7 +239,7 @@ namespace Generic.Trees {
 		}
 
 		public bool Contains(T item) {
-			ABinaryTree<T> node = this;
+			var node = this;
 			bool encompasses = node.DoesEncompass(item);
 			while (encompasses && !node.IsLeaf) {
 				node = node.Children[node.ChildIndex(item)];
@@ -258,11 +259,11 @@ namespace Generic.Trees {
 		}
 
 		public IEnumerable<T> AsEnumerable() {
-			Stack<ABinaryTree<T>> remaining = new();
+			Stack<TSelf> remaining = new();
 
-			remaining.Push(this);
+			remaining.Push((TSelf)this);
 
-			while (remaining.TryPop(out ABinaryTree<T> node))
+			while (remaining.TryPop(out TSelf node))
 				if (node.IsLeaf) {
 					if (!(node.Bin is null))
 						foreach (T item in node.Bin)
@@ -276,11 +277,11 @@ namespace Generic.Trees {
 		public T[] AsArray() {
 			if (this.ItemCount > 0) {
 				T[] result = new T[this.ItemCount];
-				Stack<ABinaryTree<T>> remaining = new();
-				remaining.Push(this);
+				Stack<TSelf> remaining = new();
+				remaining.Push((TSelf)this);
 
 				int idx = 0;
-				while (remaining.TryPop(out ABinaryTree<T> node))
+				while (remaining.TryPop(out TSelf node))
 					if (node.IsLeaf) {
 						if (!(node.Bin is null))
 							foreach (T item in node.Bin)

@@ -3,13 +3,13 @@ using Generic.Trees;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Baryon {
-	public class BarnesHutTree : QuadTreeSIMD<MatterClump> {
+	public class BarnesHutTree : QuadTreeSIMD<BarnesHutTree, MatterClump> {
 		public BarnesHutTree(int dim, Vector<float> size) : base(dim, size) { }
 		public BarnesHutTree(int dim) : base(dim, Vector<float>.One) { }
-		private BarnesHutTree(int dim, Vector<float> corner1, Vector<float> corner2, AHyperdimensionalBinaryTree<MatterClump, Vector<float>> parent)
+		private BarnesHutTree(int dim, Vector<float> corner1, Vector<float> corner2, BarnesHutTree parent)
 		: base(dim, corner1, corner2, parent) { }
 
-		protected override QuadTreeSIMD<MatterClump> InstantiateNode(Vector<float> cornerLeft, Vector<float> cornerRight, AHyperdimensionalBinaryTree<MatterClump, Vector<float>> parent) =>
+		protected override BarnesHutTree InstantiateNode(Vector<float> cornerLeft, Vector<float> cornerRight, BarnesHutTree parent) =>
 			new BarnesHutTree(this.Dim, cornerLeft, cornerRight, parent);
 
 		public override int LeafCapacity => Parameters.TREE_LEAF_CAPACITY;
@@ -39,7 +39,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 			int found = 0;
 			for (int i = 0; i < this.Children.Length; i++)
 				if (this.Children[i].ItemCount > 0) {
-					child = (BarnesHutTree)this.Children[i];
+					child = this.Children[i];
 					total = found++ switch {
 						//lazy skipping of reweighting if there ends up only being one child
 						0 => new(child.MassBaryCenter.Position, child.MassBaryCenter.Weight),

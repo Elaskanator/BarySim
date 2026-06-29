@@ -23,9 +23,9 @@ namespace ParticleSimulator.Simulation.Baryon {
 		public override BaryCenter Center => this.Tree.MassBaryCenter;
 		protected override bool AccumulateTreeNodeData => true;
 
-		protected override AParticleGroup<MatterClump> NewParticleGroup() =>
+		protected override AParticleGroup<MatterClump, BarnesHutTree> NewParticleGroup() =>
 			//new PlummerGalaxy((p, v) => new(p, v), Parameters.GALAXY_PLUMMER_RADIUS);
-			new SpinningDisk<MatterClump>((p, v) => new(p, v));
+			new SpinningDisk((p, v) => new(p, v));
 
 		protected override void AccumulateLeafNode(NodeParticles leafBin) =>
 			leafBin.Node.InitBaryCenter(leafBin.Particles);
@@ -69,7 +69,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 			Vector<float> farFieldAcceleration = Vector<float>.Zero;
 
 			Stack<int> pathDown = new();
-			ABinaryTree<MatterClump> parent = leaf,
+			BarnesHutTree parent = leaf,
 				child = null;//STFU compiler
 			int idx = parent.ParentChildIndex;
 			//evaluate from top nodes down to compute furthest (and weakest) interactions first, to reduce floating point errors when aggregating
@@ -83,7 +83,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 					if (i == idx) {
 						child = parent.Children[i];
 					} else if (parent.Children[i].ItemCount > 0) {
-						neighbor = (BarnesHutTree)parent.Children[i];
+						neighbor = parent.Children[i];
 						subTotal2 = Vector<float>.Zero;
 						do {//recursively test depth-first for nodes that can be approximated as point masses
 							if (neighbor.IsLeaf) {
@@ -99,7 +99,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 									subTotal2 += toOther * neighbor.MassBaryCenter.Weight * invR3;
 								} else {//recurse down
 									for (int j = 0; j < neighbor.Children.Length; j++) {
-										tail = (BarnesHutTree)neighbor.Children[j];
+										tail = neighbor.Children[j];
 										if (tail.ItemCount > 0)
 											remaining.Push(tail);
 									}

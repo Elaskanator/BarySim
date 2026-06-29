@@ -3,9 +3,10 @@ using System.Numerics;
 using Generic.Trees;
 
 namespace Generic.Vectors {
-	public class QuadTreeSIMD<TItem> : AHyperdimensionalBinaryTree<TItem, Vector<float>>
+	public class QuadTreeSIMD<TSelf, TItem> : AHyperdimensionalBinaryTree<TSelf, TItem, Vector<float>>
+	where TSelf : QuadTreeSIMD<TSelf, TItem>
 	where TItem : IPosition<Vector<float>> {
-		protected QuadTreeSIMD(int dim, Vector<float> corner1, Vector<float> corner2, AHyperdimensionalBinaryTree<TItem, Vector<float>> parent = null) 
+		protected QuadTreeSIMD(int dim, Vector<float> corner1, Vector<float> corner2, TSelf parent = null) 
 		: base(dim, corner1, corner2, parent) {//caller needs to ensure all values in x1 are smaller than x2 (the corners of a cubic volume)
 			this.Size = this.CornerRight - this.CornerLeft;
 			this.SizeSquared = this.Size[0] * this.Size[0];
@@ -16,8 +17,8 @@ namespace Generic.Vectors {
 			this.SizeSquared = this.Size[0] * this.Size[0];
 		}
 		public QuadTreeSIMD(int dim) : this(dim, Vector<float>.One) { }
-		protected override QuadTreeSIMD<TItem> InstantiateNode(Vector<float> cornerLeft, Vector<float> cornerRight, AHyperdimensionalBinaryTree<TItem, Vector<float>> parent) =>
-			new QuadTreeSIMD<TItem>(this.Dim, cornerLeft, cornerRight, parent);
+		protected override TSelf InstantiateNode(Vector<float> cornerLeft, Vector<float> cornerRight, TSelf parent) =>
+			(TSelf)new QuadTreeSIMD<TSelf, TItem>(this.Dim, cornerLeft, cornerRight, parent);
 
 		public override Vector<float> Midpoint(Vector<float> first, Vector<float> second) =>
 			(first + second) * 0.5f;

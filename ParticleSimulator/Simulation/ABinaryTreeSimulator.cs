@@ -8,9 +8,9 @@ using ParticleSimulator.Simulation.Baryon;
 using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Simulation {
-	public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParticle>
-	where TParticle : AParticle<TParticle>
-	where TTree : ABinaryTree<TParticle> {
+	public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParticle, TTree>
+	where TParticle : AParticle<TParticle, TTree>
+	where TTree : ABinaryTree<TTree, TParticle> {
 		protected struct NodeParticles {
 			public readonly TTree Node;
 			public readonly TParticle[] Particles;
@@ -39,7 +39,7 @@ namespace ParticleSimulator.Simulation {
 		
 		public override void Init() {
 			//initialize all the particles
-			AParticleGroup<TParticle> group;
+			AParticleGroup<TParticle, TTree> group;
 			for (int i = 0; i < Parameters.PARTICLES_GROUP_COUNT; i++) {
 				group = this.NewParticleGroup();
 				group.Init();
@@ -84,7 +84,7 @@ namespace ParticleSimulator.Simulation {
 		private void CheckLeaves(BaryCenter center, Queue<TParticle> collided, Queue<TParticle> ready) {
 			//collate all the leaves
 			TParticle particle;
-			ABinaryTree<TParticle> leaf;
+			TTree leaf;
 			while (this._partitionedLeafData.TryTake(out Queue<NodeParticles> nodeLeaves)) {//random order
 				while (nodeLeaves.TryDequeue(out NodeParticles leafParticles)) {
 					leaf = leafParticles.Node;
@@ -106,7 +106,7 @@ namespace ParticleSimulator.Simulation {
 
 			//recursively merge particles
 			bool anyConsumed;
-			ABinaryTree<TParticle> node, otherNode;
+			TTree node, otherNode;
 			Queue<TParticle> remainder = new();//reuse when empty
 			Vector<float> toOther;
 			float distance, engulfRelativeDistance;//always recompute relative distances as they may change from mergers
@@ -193,7 +193,7 @@ namespace ParticleSimulator.Simulation {
 			//move particles and add new ones
 			List<ParticleData> results = new(this.Tree.Count);
 
-			ABinaryTree<TParticle> leaf;
+			TTree leaf;
 			while (ready.TryDequeue(out TParticle particle)) {
 				if (particle.Enabled) {//will have already been removed in an earlier iteration if disabled
 					leaf = particle.Node;

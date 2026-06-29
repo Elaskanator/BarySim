@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Generic.Trees;
 using Generic.Vectors;
 
 namespace ParticleSimulator.Simulation.Particles {
@@ -12,8 +13,9 @@ namespace ParticleSimulator.Simulation.Particles {
 		void Init();
 	}
 
-	public abstract class AParticleGroup<TParticle> : IParticleGroup
-	where TParticle : AParticle<TParticle> {
+	public abstract class AParticleGroup<TParticle, TNode> : IParticleGroup
+	where TParticle : AParticle<TParticle, TNode>
+	where TNode : ABinaryTree<TNode, TParticle> {
 		protected AParticleGroup(Func<Vector<float>, Vector<float>, TParticle> particleConstructor) {
 			this.ParticleConstructor = particleConstructor;
 			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
@@ -69,10 +71,10 @@ namespace ParticleSimulator.Simulation.Particles {
 		IParticle[] IParticleGroup.InitialParticles => this.InitialParticles;
 
 		public bool Equals(IParticleGroup other) { return !(other is null) && this.Id == other.Id; }
-		public override bool Equals(object other) { return !(other is null) && (other is AParticleGroup<TParticle>) && this.Id == (other as AParticleGroup<TParticle>).Id; }
+		public override bool Equals(object other) { return !(other is null) && (other is AParticleGroup<TParticle, TNode>) && this.Id == (other as AParticleGroup<TParticle, TNode>).Id; }
 		public bool Equals(IParticleGroup x, IParticleGroup y) { return x.Id == y.Id; }
 		public int GetHashCode(IParticleGroup obj) { return obj.Id.GetHashCode(); }
 		public override int GetHashCode() { return this.Id.GetHashCode(); }
-		public override string ToString() { return string.Format("{0}[ID {1}]", nameof(AParticleGroup<TParticle>), this.Id); }
+		public override string ToString() { return string.Format("{0}[ID {1}]", nameof(AParticleGroup<TParticle, TNode>), this.Id); }
 	}
 }

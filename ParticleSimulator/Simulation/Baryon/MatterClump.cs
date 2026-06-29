@@ -4,7 +4,7 @@ using Generic.Vectors;
 using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Simulation.Baryon {
-	public class MatterClump : AParticle<MatterClump> {
+	public class MatterClump : AParticle<MatterClump, BarnesHutTree> {
 		public MatterClump(Vector<float> position, Vector<float> velocity)
 		: base(position, velocity) {
 			this.SetMass(Parameters.MASS_SCALAR);

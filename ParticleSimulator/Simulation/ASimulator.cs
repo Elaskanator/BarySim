@@ -1,11 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Generic.Trees;
 using ParticleSimulator.Simulation.Baryon;
 using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Simulation {
-	public abstract class ASimulator<TParticle> : ISimulator
-	where TParticle : AParticle<TParticle> {
+	public abstract class ASimulator<TParticle, TNode> : ISimulator
+	where TParticle : AParticle<TParticle, TNode>
+	where TNode : ABinaryTree<TNode, TParticle>{
 		public ASimulator() {
 			this.IterationCount = -1;
 		}
@@ -18,7 +20,7 @@ namespace ParticleSimulator.Simulation {
 		public abstract BaryCenter Center { get; }
 
 		protected abstract List<ParticleData> Refresh();
-		protected abstract AParticleGroup<TParticle> NewParticleGroup();
+		protected abstract AParticleGroup<TParticle, TNode> NewParticleGroup();
 		
 		public abstract void Init();
 

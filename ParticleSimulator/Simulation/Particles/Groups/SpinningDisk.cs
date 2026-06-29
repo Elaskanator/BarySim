@@ -2,11 +2,11 @@
 using System.Linq;
 using System.Numerics;
 using Generic.Vectors;
+using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Simulation.Particles {
-	public class SpinningDisk<TParticle> : AParticleGroup<TParticle>
-	where TParticle : AParticle<TParticle> {
-		public SpinningDisk(Func<Vector<float>, Vector<float>, TParticle> initializer)
+	public class SpinningDisk : AParticleGroup<MatterClump, BarnesHutTree>{
+		public SpinningDisk(Func<Vector<float>, Vector<float>, MatterClump> initializer)
 		: base(initializer) {
 			//this.GlobalDirection = Program.Engine.Random.NextDouble() < 0.5d;
 			this.InternalDirection = Program.Random.NextDouble() < 0.5d;
@@ -35,7 +35,7 @@ namespace ParticleSimulator.Simulation.Particles {
 			} else this.Position = Vector<float>.Zero;
 		}
 
-		protected override void InitializeParticle(TParticle particle) {
+		protected override void InitializeParticle(MatterClump particle) {
 			float rand = (float)Program.Random.NextDouble();
 			//float offset = this.Radius * MathF.Pow(rand, Parameters.GALAXY_CONCENTRATION);
 			//float offset = this.Radius * RandomMidBiased(Parameters.GALAXY_INNER_BIAS, Parameters.GALAXY_OUTER_BIAS);

@@ -5,7 +5,7 @@ using Generic.Vectors;
 using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Simulation.Particles {
-	public class PlummerGalaxy: AParticleGroup<MatterClump> {
+	public class PlummerGalaxy: AParticleGroup<MatterClump, BarnesHutTree> {
 		public PlummerGalaxy(Func<Vector<float>, Vector<float>, MatterClump> initializer)
 		: base(initializer) {
 			//this.GlobalDirection = Program.Engine.Random.NextDouble() < 0.5d;

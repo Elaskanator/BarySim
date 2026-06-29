@@ -3,9 +3,10 @@ using Generic.Vectors;
 
 namespace Generic.Trees {
 	//n-dimensional binary tree
-	public abstract class AHyperdimensionalBinaryTree<TItem, TCorner> : ABinaryTree<TItem>
+	public abstract class AHyperdimensionalBinaryTree<TSelf, TItem, TCorner> : ABinaryTree<TSelf, TItem>
+	where TSelf : AHyperdimensionalBinaryTree<TSelf, TItem, TCorner>
 	where TItem : IPosition<TCorner> {
-		protected AHyperdimensionalBinaryTree(int dim, TCorner cornerLeft, TCorner cornerRight, AHyperdimensionalBinaryTree<TItem, TCorner> parent = null)
+		protected AHyperdimensionalBinaryTree(int dim, TCorner cornerLeft, TCorner cornerRight, TSelf parent = null)
 		: base(parent) {
 			this.Dim = dim;
 			this.CornerLeft = cornerLeft;
@@ -17,7 +18,7 @@ namespace Generic.Trees {
 				|| this.EqualsAny(cornerRight, this.Center);
 		}
 		protected abstract (TCorner, TCorner) NewNodeCorners(int directionMask, bool isExpansion);
-		protected abstract AHyperdimensionalBinaryTree<TItem, TCorner> InstantiateNode(TCorner cornerLeft, TCorner cornerRight, AHyperdimensionalBinaryTree<TItem, TCorner> parent);//used statically
+		protected abstract TSelf InstantiateNode(TCorner cornerLeft, TCorner cornerRight, TSelf parent);//used statically
 
 		public override string ToString() =>
 			string.Format("{0}[{1} thru {2}]", base.ToString(), string.Join("", this.CornerLeft), string.Join("", this.CornerRight));
@@ -59,33 +60,33 @@ namespace Generic.Trees {
 		//		yield return InstantiateNode(left, right, this);//static use
 		//	}
 		//}
-		protected override AHyperdimensionalBinaryTree<TItem, TCorner>[] FormSubnodes() {
+		protected override TSelf[] FormSubnodes() {
 			int max = 1 << this.Dim;
-			AHyperdimensionalBinaryTree<TItem, TCorner>[] result = new AHyperdimensionalBinaryTree<TItem, TCorner>[max];
+			TSelf[] result = new TSelf[max];
 			TCorner left, right;
 			for (int i = 0; i < max; i++) {
 				(left, right) = this.NewNodeCorners(i, false);
-				result[i] = InstantiateNode(left, right, this);//static use
+				result[i] = InstantiateNode(left, right, (TSelf)this);//static use
 			}
 			return result;
 		}
 
-		protected override AHyperdimensionalBinaryTree<TItem, TCorner> Expand(TItem item) {
+		protected override TSelf Expand(TItem item) {
 			int quadrantMask = this.ChildIndex(item);
 			int inverseQuadrantMask = this.InverseIndex(quadrantMask);
 
 			TCorner left, right;
 			(left, right) = this.NewNodeCorners(quadrantMask, true);
-			AHyperdimensionalBinaryTree<TItem, TCorner> newParent = InstantiateNode(left, right, null);//static use
+			var newParent = InstantiateNode(left, right, null);//static use
 			newParent.ItemCount = this.ItemCount;
-			newParent.Children = new AHyperdimensionalBinaryTree<TItem, TCorner>[1 << this.Dim];
+			newParent.Children = new TSelf[1 << this.Dim];
 			this.Parent = newParent;
 
 			int max = 1 << this.Dim;
-			AHyperdimensionalBinaryTree<TItem, TCorner> childNode;
+			TSelf childNode;
 			for (int i = 0; i < max; i++) {
 				if (i == inverseQuadrantMask) {
-					childNode = this;
+					childNode = (TSelf)this;
 				} else {
 					(left, right) = newParent.NewNodeCorners(i, false);
 					childNode = InstantiateNode(left, right, newParent);//static use

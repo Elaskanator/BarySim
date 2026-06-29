@@ -5,8 +5,9 @@ using Generic.Trees;
 using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Simulation.Particles {
-	public abstract class AParticle<TSelf> : IParticle
-	where TSelf : AParticle<TSelf> {
+	public abstract class AParticle<TSelf, TNode> : IParticle
+	where TSelf : AParticle<TSelf, TNode>
+	where TNode : ABinaryTree<TNode, TSelf> {
 		private static int _globalID = 0;
 		private readonly int _id = ++_globalID;
 
@@ -55,7 +56,7 @@ namespace ParticleSimulator.Simulation.Particles {
 
 		public Queue<TSelf> Collisions = null;
 		public Queue<TSelf> NewParticles = null;
-		public ABinaryTree<TSelf> Node = null;
+		public TNode Node = null;
 
 		protected abstract Vector<float> ComputeInfluence(TSelf other, Vector<float> toOther, float distance, float distance2);
 		public abstract Vector<float> ComputeCollisionImpulse(TSelf other, float engulfRelativeDistance);
