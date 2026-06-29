@@ -4,6 +4,7 @@ using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.ComponentModel;
 //using System.Collections.Generic;
 //using System.Drawing;
 //using System.Windows.Forms;//see https://stackoverflow.com/a/57908260/2799848
@@ -102,7 +103,7 @@ namespace Generic.Extensions {
 				return false;
 			} else {
 				SmallRect rect = new SmallRect() { Left = 0, Top = 0, Right = (ushort)Console.WindowWidth, Bottom = (ushort)Console.WindowHeight };
-				return WriteConsoleOutput(h, buffer,
+				return WriteConsoleOutput(h, buffer, // InitConsoleDimensions
 					new Coord() { X = (ushort)Console.WindowWidth, Y = (ushort)Console.WindowHeight },
 					new Coord() { X = 0, Y = 0 },
 					ref rect);
@@ -483,5 +484,70 @@ namespace Generic.Extensions {
   //          WriteConsoleOutputCharacter(consoleHandle, c.ToString(), 1, new Coord((short)x, (short)y), ref n);
   //          */
   //      }
+
+		public static void SetFontSize(ushort width, ushort height) {
+			IntPtr handle = GetStdHandle(-11);
+
+			ConsoleFontInfoEx font = new();
+			font.cbSize = (uint)Marshal.SizeOf<ConsoleFontInfoEx>();
+
+			if (!GetCurrentConsoleFontEx(handle, false, ref font))
+				throw new Win32Exception(Marshal.GetLastWin32Error());
+
+			font.dwFontSize.X = width;   // use 0 if you want Windows to pick width
+			font.dwFontSize.Y = height;
+
+			if (!SetCurrentConsoleFontEx(handle, false, ref font))
+				throw new Win32Exception(Marshal.GetLastWin32Error());
+		}
+		public static ConsoleFontInfoEx GetCurrentFont() {
+			ConsoleExtensions.ConsoleFontInfoEx font = new();
+			font.cbSize = (uint)Marshal.SizeOf<ConsoleExtensions.ConsoleFontInfoEx>();
+
+			if (!ConsoleExtensions.GetCurrentConsoleFontEx(
+					ConsoleExtensions.GetStdHandle(-11), false, ref font))
+				throw new Win32Exception(Marshal.GetLastWin32Error());
+
+			return font;
+		}
+		[DllImport("kernel32.dll", SetLastError = true)]
+		private static extern bool GetCurrentConsoleFontEx(
+			IntPtr hConsoleOutput,
+			bool bMaximumWindow,
+			ref ConsoleFontInfoEx lpConsoleCurrentFontEx);
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		private static extern bool SetCurrentConsoleFontEx(
+			IntPtr hConsoleOutput,
+			bool bMaximumWindow,
+			ref ConsoleFontInfoEx lpConsoleCurrentFontEx);
+
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+		public struct ConsoleFontInfoEx {
+			public uint cbSize;
+			public uint nFont;
+			public Coord dwFontSize;
+			public int FontFamily;
+			public int FontWeight;
+
+			[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+			public string FaceName;
+		}
+
+		public static float GetActualConsoleCellAspect() {
+			IntPtr hWnd = GetConsoleWindow();
+
+			if (!GetClientRect(hWnd, out RECT rect))
+				throw new Win32Exception(Marshal.GetLastWin32Error());
+
+			float pxWidth = rect.Right - rect.Left;
+			float pxHeight = rect.Bottom - rect.Top;
+
+			return (pxHeight / Console.WindowHeight)
+				 / (pxWidth / Console.WindowWidth);
+		}
+
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
 	}
 }

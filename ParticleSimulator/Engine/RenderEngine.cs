@@ -27,6 +27,8 @@ namespace ParticleSimulator.Engine {
 
 			float zoomLevel = 1f / Parameters.VIEWPORT_WIDTH;
 			this.Camera = new();
+			
+			this.Renderer = new ConsoleRenderer(this);
 
 			this.Rasterizer = new(
 				this.Camera,
@@ -36,8 +38,6 @@ namespace ParticleSimulator.Engine {
 				this._rankingsResource);
 
 			this.Scaling = new(this._scalingResource);
-
-			this.Renderer = new ConsoleRenderer(this);
 
 			if (Parameters.EXPORT_FRAMES)
 				this.Exporter = new BitmapGenerator(

@@ -13,6 +13,10 @@ namespace ParticleSimulator.Rendering.SystemConsole {
 		public const char CHAR_TOP  = '\u2580';//▀
 
 		public ConsoleRenderer(RenderEngine engine) : base(engine) {
+			if (Parameters.FONT_SIZE_PX > 0)
+				ConsoleExtensions.SetFontSize(0, Parameters.FONT_SIZE_PX*2);
+			Parameters.InitConsoleDimensions(ConsoleExtensions.GetCurrentFont());
+
 			this.NumChars = Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT;
 			this._lastFrame = new ConsoleExtensions.CharInfo[NumChars];
 			this._perfMon = new PerfMon(this);

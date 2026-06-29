@@ -151,7 +151,17 @@ namespace ParticleSimulator.Rendering.Rasterization {
 
 		//TODO rewrite to not use Sqrt
 		private void Resample(ParticleData particle, Queue<Subsample> result) {
-			Vector<float> position = this.InternalOffset + (this.InternalScaleFactor * this.Camera.Rotate(particle.Position));
+			//Vector<float> position = this.InternalOffset + (this.InternalScaleFactor * this.Camera.Rotate(particle.Position));
+			Vector<float> rotated = this.Camera.Rotate(particle.Position);
+
+			float[] tmp = new float[Vector<float>.Count];
+			rotated.CopyTo(tmp);
+			tmp[0] *= Parameters.RENDER_ASPECT;
+
+			Vector<float> position =
+				this.InternalOffset
+				+ this.InternalScaleFactor * new Vector<float>(tmp);
+			
 			float radius = this.InternalScaleFactor * this.Camera.Zoom * particle.Radius;
 
 			if (0f <= position[0] + radius && position[0] - radius < this.InternalWidthF

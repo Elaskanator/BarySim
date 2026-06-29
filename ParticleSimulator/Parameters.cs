@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Numerics;
+using Generic.Extensions;
 using Generic.Vectors;
 using ParticleSimulator.Rendering;
 using ParticleSimulator.Rendering.SystemConsole;
@@ -17,9 +18,34 @@ namespace ParticleSimulator {
 		public const int FRAME_LIMIT				= -1;
 		public const bool VSYNC						= false;
 		//rendering size (using top and bottom halves of each character to get double the verticle resolution)
-		public static readonly int WINDOW_WIDTH		= (Console.LargestWindowHeight-1)*2;
-		public static readonly int WINDOW_HEIGHT	= (Console.LargestWindowHeight-1);
-		public const int SUPERSAMPLING				= 2;
+		public const ushort FONT_SIZE_PX			= 0;//0 to use the default (of 8)
+
+		public static int WINDOW_WIDTH { get; private set; }
+		public static int WINDOW_HEIGHT { get; private set; }
+		public static float RENDER_ASPECT = 1f;
+		public static void InitConsoleDimensions(ConsoleExtensions.ConsoleFontInfoEx font) {
+			int maxRows = Console.LargestWindowHeight - 1;
+			int maxCols = Console.LargestWindowWidth - 1;
+
+			Console.WindowWidth = Math.Min(120, maxCols);
+			Console.WindowHeight = Math.Min(40, maxRows);
+			Console.SetBufferSize(Console.WindowWidth, Console.WindowHeight);
+
+			float cellAspect = ConsoleExtensions.GetActualConsoleCellAspect();
+			int colsFromRows = (int)(maxRows * cellAspect);
+
+			if (colsFromRows <= maxCols) {
+				WINDOW_HEIGHT = maxRows;
+				WINDOW_WIDTH = colsFromRows;
+			} else {
+				WINDOW_WIDTH = maxCols;
+				WINDOW_HEIGHT = (int)(maxCols / cellAspect);
+			}
+
+			RENDER_ASPECT = cellAspect / 2f;
+		}
+
+		public const int SUPERSAMPLING = 1;
 		public const float PIXEL_ROUNDOFF			= 0.5f;
 		//camera
 		//public const 
@@ -145,7 +171,7 @@ namespace ParticleSimulator {
 		public static readonly float TIME_SCALE_HALF = TIME_SCALE / 2f;
 		public static readonly float TIME_SCALE_SQUARED_SIXTH = TIME_SCALE*TIME_SCALE / 6f;
 		
-		public static readonly float VIEWPORT_WIDTH	= WORLD_SCALE * 1.14f * MathF.Sqrt(PARTICLES_GROUP_MAX / GALAXY_STAR_DENSITY);
+		public static readonly float VIEWPORT_WIDTH	= WORLD_SCALE * 1.13f * MathF.Sqrt(PARTICLES_GROUP_MAX / GALAXY_STAR_DENSITY);
 		public static readonly float STARTING_ZOOM = 1f / VIEWPORT_WIDTH;
 		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-WORLD_X_ASPECT * VIEWPORT_WIDTH / 2f, -WORLD_Y_ASPECT * VIEWPORT_WIDTH / 2f, -WORLD_Z_ASPECT * VIEWPORT_WIDTH / 2f);
 		public static readonly Vector<float> WORLD_LEFT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_LEFT, new Vector<float>(float.NegativeInfinity));
