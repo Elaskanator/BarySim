@@ -159,9 +159,8 @@ public class Rasterizer {
 		rotated.CopyTo(tmp);
 		tmp[0] *= Parameters.RENDER_ASPECT;
 
-		Vector<float> position =
-			this.InternalOffset
-			+ this.InternalScaleFactor * new Vector<float>(tmp);
+		Vector<float> position = this.InternalOffset
+			+ (this.InternalScaleFactor * new Vector<float>(tmp));
 			
 		float radius = this.InternalScaleFactor * this.Camera.Zoom * particle.Radius;
 

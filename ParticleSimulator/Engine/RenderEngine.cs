@@ -80,11 +80,12 @@ public class RenderEngine : IRunnable {
 	private ProcessThread _stepEval_Export;
 	private readonly Dictionary<int, bool> _stepsStartingPaused;
 		
-	private readonly SynchronousBuffer<List<ParticleData>> _particleResource = new("Locations", Parameters.PRECALCULATION_LIMIT);
+	private readonly SynchronousBuffer<List<ParticleData>> _particleResource = new("Locations", Parameters.SYNC_SIMULATION ? Parameters.PRECALCULATION_LIMIT : 0);
 	private readonly ConsumptionType _particleResourceReadType = Parameters.SYNC_SIMULATION ? ConsumptionType.Consume : ConsumptionType.ConsumeReady;
 	private IngestedResource<List<ParticleData>> _particleResourceUse;
 	private readonly SynchronousBuffer<float?[]> _rankingsResource = new("Ranks", 0);
-	private readonly SynchronousBuffer<PixelRank[]> _rasterResource = new("Rasterization", Parameters.PRECALCULATION_LIMIT);
+	private readonly ConsumptionType _rasterResourceRenderReadType = Parameters.EXPORT_FRAMES ? ConsumptionType.ReadReady : ConsumptionType.Consume;
+	private readonly SynchronousBuffer<PixelRank[]> _rasterResource = new("Rasterization", Parameters.SYNC_SIMULATION ? Parameters.PRECALCULATION_LIMIT : 0);
 	private readonly SynchronousBuffer<float[]> _scalingResource = new("Scaling", 0);
 
 	public void Start(bool enable = true) {
@@ -182,6 +183,7 @@ public class RenderEngine : IRunnable {
 			CallbackFn = (r) => { this.Renderer.UpdateSimTime(r); },
 			OutputResource = this._particleResource,
 			OutputSkips = Parameters.SIMULATION_SKIPS,
+			IsOutputOverwrite = !Parameters.SYNC_SIMULATION,
 		});
 		yield return this._stepEval_Simulate;
 
@@ -208,7 +210,7 @@ public class RenderEngine : IRunnable {
 				: null,
 			DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.MON_WARN_MS),
 			InputResourceUses = new IIngestedResource[] {
-				new IngestedResource<PixelRank[]>(this._rasterResource, Parameters.EXPORT_FRAMES ? ConsumptionType.ReadReady : ConsumptionType.Consume),
+				new IngestedResource<PixelRank[]>(this._rasterResource, this._rasterResourceRenderReadType),
 				new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
 			}});
 		yield return this._stepEval_Render;

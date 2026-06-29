@@ -487,6 +487,9 @@ public static class ConsoleExtensions {
 	//      }
 
 	public static void SetFontSize(ushort width, ushort height) {
+		if (height < 2)
+			throw new ArgumentOutOfRangeException(nameof(height), height, "Windows don't like dat");
+
 		IntPtr handle = GetStdHandle(-11);
 
 		ConsoleFontInfoEx font = new();
@@ -495,8 +498,8 @@ public static class ConsoleExtensions {
 		if (!GetCurrentConsoleFontEx(handle, false, ref font))
 			throw new Win32Exception(Marshal.GetLastWin32Error());
 
-		font.dwFontSize.X = width;   // use 0 if you want Windows to pick width
-		font.dwFontSize.Y = height;
+		font.dwFontSize.X = width; // use 0 for Windows to pick width
+		font.dwFontSize.Y = height; // explodes if less than 2
 
 		if (!SetCurrentConsoleFontEx(handle, false, ref font))
 			throw new Win32Exception(Marshal.GetLastWin32Error());

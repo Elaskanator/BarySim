@@ -46,6 +46,7 @@ public abstract class ARenderer {
 	}
 
 	public virtual void Init() { }
+	public virtual void Start() { }
 
 	protected abstract object PrepareBuffer(float[] scaling, PixelRank[] buffer);
 	protected abstract void DrawOverlays(EvalResult prepResults, float[] scaling, object buffer);

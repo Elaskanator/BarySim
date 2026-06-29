@@ -9,7 +9,7 @@ public class SynchronousBuffer<T> : ISynchronousConsumedResource {
 	private static int _globalId = 0;
 
 	public SynchronousBuffer(string name, int size = 1) {
-		if (size < 0) throw new ArgumentOutOfRangeException(nameof(size), "Must be nonzero");
+		if (size < 0) throw new ArgumentOutOfRangeException(nameof(size), "Must be nonnegative");
 		this.Name = name;
 		this.BufferSize = size;
 

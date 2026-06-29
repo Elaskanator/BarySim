@@ -19,8 +19,9 @@ public static class Parameters {
 	public const float TARGET_FPS				= 30f;
 	public const int FRAME_LIMIT				= -1;
 	public const bool VSYNC						= false;
+	public const bool SYNC_SIMULATION			= true;//controls synchronization of rendering to simulation (e.g. faster rotation)
 	//rendering size (using top and bottom halves of each character to get double the verticle resolution)
-	public const ushort FONT_SIZE_PX			= 0;//0 to use the default (of 8)
+	public const ushort FONT_HEIGHT_PX			= 0;//0 to use the default (of 8); minimum of 2
 
 	public static int WINDOW_WIDTH { get; private set; }
 	public static int WINDOW_HEIGHT { get; private set; }
@@ -28,10 +29,6 @@ public static class Parameters {
 	public static void InitConsoleDimensions() {
 		int maxRows = Console.LargestWindowHeight - 1;
 		int maxCols = Console.LargestWindowWidth - 1;
-
-		Console.WindowWidth = Math.Min(120, maxCols);
-		Console.WindowHeight = Math.Min(40, maxRows);
-		Console.SetBufferSize(Console.WindowWidth, Console.WindowHeight);
 
 		float cellAspect = ConsoleExtensions.GetActualConsoleCellAspect();
 		int colsFromRows = (int)(maxRows * cellAspect);
@@ -83,7 +80,6 @@ public static class Parameters {
 	public const int TREE_LEAF_CAPACITY			= 2;//degrades integrity of approximation check (perfomance optimal value is 2)
 	//parallelism
 	public const int PRECALCULATION_LIMIT		= 1;//how many calculations ahead steps can work
-	public const bool SYNC_SIMULATION			= true;//controls synchronization of rendering to simulation (e.g. faster rotation)
 	public const int SIMULATION_SKIPS			= 0;//refresh the simulation multiple times between renders
 	public const int TREE_BATCH_SIZE			= 1300;//tree preparation and particle evaluation parallelism
 	public const double TREE_BATCH_SLACK		= 0.15d;//relative overage allowed without further refining the tree
@@ -150,7 +146,7 @@ public static class Parameters {
 
 	public const int MON_NUMBER_ACCURACY		= 2;
 	public const int MON_NUMBER_SPACING			= 5;
-	public const float MON_SMA_ALPHA			= 0.05f;
+	public const float MON_SMA_ALPHA			= 0.08f;
 		
 	public const int MON_GRAPH_REFRESH_MS		= 250;
 	public const int MON_GRAPH_HEIGHT			= 8;//at least 2

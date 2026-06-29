@@ -15,9 +15,7 @@ public class ConsoleRenderer : ARenderer {
 	public const char CHAR_TOP  = '\u2580';//▀
 
 	public ConsoleRenderer(RenderEngine engine) : base(engine) {
-		if (Parameters.FONT_SIZE_PX > 0)
-			ConsoleExtensions.SetFontSize(0, Parameters.FONT_SIZE_PX*2);
-		Parameters.InitConsoleDimensions();
+		SetWindowSize();
 
 		this.NumChars = Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT;
 		this._lastFrame = new ConsoleExtensions.CharInfo[NumChars];
@@ -41,6 +39,24 @@ public class ConsoleRenderer : ARenderer {
 			? ConsoleColor.Green
 			: Parameters.COLORS[scaling.Drop(1).TakeWhile(ds => ds < rank).Count()];
 
+	private static void SetWindowSize() {
+		if (Parameters.FONT_HEIGHT_PX > 0) {
+			// TODO fix this
+			// do it twice because the console host is disrespectful
+			ConsoleExtensions.SetFontSize(0, Parameters.FONT_HEIGHT_PX*2);
+			Thread.Sleep(100);
+			ConsoleExtensions.SetFontSize(0, Parameters.FONT_HEIGHT_PX*2);
+			Thread.Sleep(100);
+			ConsoleExtensions.SetFontSize(0, Parameters.FONT_HEIGHT_PX*2);
+			Thread.Sleep(100);
+			ConsoleExtensions.SetFontSize(0, Parameters.FONT_HEIGHT_PX*2);
+		}
+		Parameters.InitConsoleDimensions();
+		Console.SetBufferSize(Parameters.WINDOW_WIDTH, Parameters.WINDOW_HEIGHT);
+		Console.WindowWidth = Parameters.WINDOW_WIDTH;
+		Console.WindowHeight = Parameters.WINDOW_HEIGHT;
+		Console.SetBufferSize(Parameters.WINDOW_WIDTH, Parameters.WINDOW_HEIGHT);
+	}
 	public override void Init() {
 		//prepare the rendering area (abusing the System.Console window with p-invokes to flush frame buffers)
 		//these require p-invokes
@@ -138,14 +154,35 @@ public class ConsoleRenderer : ARenderer {
 				Program.RandomSeed,
 				this.Engine.Simulator.IterationCount,
 				this.Engine.Simulator.ParticleCount.Pluralize("Particle"));
-			if (this.FpsTimings.NumUpdates > 1)
-				result += string.Format(" ({0} FPS)", (1d / this.FpsTimings.Current.TotalSeconds).ToStringBetter(2, false));
+			result += this.GetCalculationRateString();
 			if (this.Engine.IsPaused)
 				result += " (paused)";
 
 			Console.Title = result;
 			Thread.Sleep(500);
 		}
+	}
+	private string GetCalculationRateString() {
+		string result = "";
+
+		bool hasSim = this.SimTimings.NumUpdates > 1;
+		bool hasFps = this.FpsTimings.NumUpdates > 1;
+		if (hasSim || hasFps) {
+			result += " (";
+
+			if (hasSim)
+				result += $"{(1d / this.SimTimings.Current.TotalSeconds).ToStringBetter(2, false)} Hz";
+
+			if (hasSim && hasFps)
+				result += ", ";
+
+			if (hasFps)
+				result += $"{(1d / this.FpsTimings.Current.TotalSeconds).ToStringBetter(2, false)} FPS";
+
+			result += ")";
+		}
+
+		return result;
 	}
 
 	private static void DrawLegend(float[] scaling, ConsoleExtensions.CharInfo[] buffer) {
