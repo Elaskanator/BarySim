@@ -2,31 +2,31 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace ParticleSimulator.Engine.Threading {
-	public interface ISynchronousConsumedResource : IDisposable, IEquatable<ISynchronousConsumedResource>, IEqualityComparer<ISynchronousConsumedResource>
-	//ICollection, IEnumerable,
-	//IProducerConsumerCollection<object>, IReadOnlyCollection<object>,
-	{
-		int Id { get; }
-		string Name { get; }
-		Type DataType { get; }
+namespace ParticleSimulator.Engine.Threading;
 
-		object Current { get; }
+public interface ISynchronousConsumedResource : IDisposable, IEquatable<ISynchronousConsumedResource>, IEqualityComparer<ISynchronousConsumedResource>
+//ICollection, IEnumerable,
+//IProducerConsumerCollection<object>, IReadOnlyCollection<object>,
+{
+	int Id { get; }
+	string Name { get; }
+	Type DataType { get; }
 
-		void Enqueue(object item);
-		void Overwrite(object item);
+	object Current { get; }
 
-		object Peek();
-		object Dequeue();
+	void Enqueue(object item);
+	void Overwrite(object item);
 
-		AutoResetEvent AddRefreshListener();
-		//AutoResetEvent[] RefreshListeners { get; }
+	object Peek();
+	object Dequeue();
 
-		bool Equals(object other) => !(other is null) && (other is ISynchronousConsumedResource) && this.Id == (other as ISynchronousConsumedResource).Id;
-		int GetHashCode() => this.Id.GetHashCode();
+	AutoResetEvent AddRefreshListener();
+	//AutoResetEvent[] RefreshListeners { get; }
 
-		bool IEquatable<ISynchronousConsumedResource>.Equals(ISynchronousConsumedResource other) => !(other is null) && this.Id == other.Id;
-		bool IEqualityComparer<ISynchronousConsumedResource>.Equals(ISynchronousConsumedResource x, ISynchronousConsumedResource y) => x.Id == y.Id;
-		int IEqualityComparer<ISynchronousConsumedResource>.GetHashCode(ISynchronousConsumedResource obj) => obj.Id.GetHashCode();
-	}
+	bool Equals(object other) => !(other is null) && (other is ISynchronousConsumedResource) && this.Id == (other as ISynchronousConsumedResource).Id;
+	int GetHashCode() => this.Id.GetHashCode();
+
+	bool IEquatable<ISynchronousConsumedResource>.Equals(ISynchronousConsumedResource other) => !(other is null) && this.Id == other.Id;
+	bool IEqualityComparer<ISynchronousConsumedResource>.Equals(ISynchronousConsumedResource x, ISynchronousConsumedResource y) => x.Id == y.Id;
+	int IEqualityComparer<ISynchronousConsumedResource>.GetHashCode(ISynchronousConsumedResource obj) => obj.Id.GetHashCode();
 }

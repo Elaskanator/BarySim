@@ -2,15 +2,15 @@
 using ParticleSimulator.Simulation.Baryon;
 using ParticleSimulator.Simulation.Particles;
 
-namespace ParticleSimulator.Simulation {
-	public interface ISimulator {
-		int IterationCount { get; }
-		int ParticleCount { get; }
-		IEnumerable<IParticle> Particles { get; }
-		BaryCenter Center { get; }
+namespace ParticleSimulator.Simulation;
 
-		void Init();
+public interface ISimulator {
+	int IterationCount { get; }
+	int ParticleCount { get; }
+	IEnumerable<IParticle> Particles { get; }
+	BaryCenter Center { get; }
 
-		List<ParticleData> Update();
-	}
+	void Init();
+
+	List<ParticleData> Update();
 }

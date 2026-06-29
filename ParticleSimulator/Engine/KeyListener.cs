@@ -2,78 +2,78 @@
 using System.Collections.Generic;
 using Generic.Extensions;
 
-namespace ParticleSimulator.Engine {
-	public class KeyListener {
-		public KeyListener(ConsoleKey key, string label, Func<bool> getter, Action<bool> setter, Action resetter = null, Func<bool> suspendStateGetter = null) {
-			this.Key = key;
-			this.Label = label;
-			this.Getter = getter;
-			this.Setter = setter;
-			this.Resetter = resetter;//bugged still
-			this.SuspendStateGetter = suspendStateGetter;
-		}
+namespace ParticleSimulator.Engine;
 
-		public ConsoleKey Key { get; private set; }
-		public string Label { get; private set; }
+public class KeyListener {
+	public KeyListener(ConsoleKey key, string label, Func<bool> getter, Action<bool> setter, Action resetter = null, Func<bool> suspendStateGetter = null) {
+		this.Key = key;
+		this.Label = label;
+		this.Getter = getter;
+		this.Setter = setter;
+		this.Resetter = resetter;//bugged still
+		this.SuspendStateGetter = suspendStateGetter;
+	}
 
-		public bool IsToggle = true;
-		public readonly Func<bool> Getter;
-		public readonly Action<bool> Setter;
-		public readonly Func<bool> SuspendStateGetter;
-		public readonly Action Resetter;
+	public ConsoleKey Key { get; private set; }
+	public string Label { get; private set; }
 
-		public ConsoleColor ForegroundActive = ConsoleColor.Black;
-		public ConsoleColor ForegroundInactive = ConsoleColor.Gray;
-		public ConsoleColor ForegroundSuspended = ConsoleColor.Gray;
+	public bool IsToggle = true;
+	public readonly Func<bool> Getter;
+	public readonly Action<bool> Setter;
+	public readonly Func<bool> SuspendStateGetter;
+	public readonly Action Resetter;
 
-		public ConsoleColor BackgroundActive = ConsoleColor.DarkGreen;
-		public ConsoleColor BackgroundInactive = ConsoleColor.Black;
-		public ConsoleColor BackgroundSuspended = ConsoleColor.DarkYellow;
+	public ConsoleColor ForegroundActive = ConsoleColor.Black;
+	public ConsoleColor ForegroundInactive = ConsoleColor.Gray;
+	public ConsoleColor ForegroundSuspended = ConsoleColor.Gray;
 
-		public void Toggle() => this.Setter(!this.Getter());
-		public void SetState(bool state) => this.Setter(state);
+	public ConsoleColor BackgroundActive = ConsoleColor.DarkGreen;
+	public ConsoleColor BackgroundInactive = ConsoleColor.Black;
+	public ConsoleColor BackgroundSuspended = ConsoleColor.DarkYellow;
 
-		public ConsoleExtensions.CharInfo[] ToConsoleCharString() {
-			bool state = this.Getter();
-			ConsoleColor foreground = state || (!(this.SuspendStateGetter is null) && this.SuspendStateGetter())
-				? Program.Engine.IsPaused
-					? this.ForegroundSuspended
-					: this.ForegroundActive
-				: this.ForegroundInactive;
-			ConsoleColor background = state || (!(this.SuspendStateGetter is null) && this.SuspendStateGetter())
-				? Program.Engine.IsPaused
-					? this.BackgroundSuspended
-					: this.BackgroundActive
-				: this.BackgroundInactive;
+	public void Toggle() => this.Setter(!this.Getter());
+	public void SetState(bool state) => this.Setter(state);
 
-			ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[this.Label.Length];
-			for (int i = 0; i < this.Label.Length; i++)
-				result[i] = new(this.Label[i], foreground, background);
-			return result;
-		}
+	public ConsoleExtensions.CharInfo[] ToConsoleCharString() {
+		bool state = this.Getter();
+		ConsoleColor foreground = state || (!(this.SuspendStateGetter is null) && this.SuspendStateGetter())
+			? Program.Engine.IsPaused
+				? this.ForegroundSuspended
+				: this.ForegroundActive
+			: this.ForegroundInactive;
+		ConsoleColor background = state || (!(this.SuspendStateGetter is null) && this.SuspendStateGetter())
+			? Program.Engine.IsPaused
+				? this.BackgroundSuspended
+				: this.BackgroundActive
+			: this.BackgroundInactive;
 
-		public static void HandleConsoleInputs(KeyListener[] listeners) {
-			HashSet<ConsoleKey> pressed = new();
-			HashSet<ConsoleKey> reset = new();
+		ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[this.Label.Length];
+		for (int i = 0; i < this.Label.Length; i++)
+			result[i] = new(this.Label[i], foreground, background);
+		return result;
+	}
 
-			while (Console.KeyAvailable) {
-				ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+	public static void HandleConsoleInputs(KeyListener[] listeners) {
+		HashSet<ConsoleKey> pressed = new();
+		HashSet<ConsoleKey> reset = new();
 
-				foreach (KeyListener listener in listeners)
-					if (listener.Key != keyInfo.Key)
-						continue;
-					else if (listener.Resetter is not null && (keyInfo.Modifiers & ConsoleModifiers.Control) != 0)
-						reset.Add(listener.Key);
-					else pressed.Add(keyInfo.Key);
-			}
+		while (Console.KeyAvailable) {
+			ConsoleKeyInfo keyInfo = Console.ReadKey(true);
 
 			foreach (KeyListener listener in listeners)
-				if (reset.Contains(listener.Key))
-					listener.Resetter();
-				else if (!listener.IsToggle)
-					listener.SetState(pressed.Contains(listener.Key));
-				else if (pressed.Contains(listener.Key))
-					listener.Toggle();
+				if (listener.Key != keyInfo.Key)
+					continue;
+				else if (listener.Resetter is not null && (keyInfo.Modifiers & ConsoleModifiers.Control) != 0)
+					reset.Add(listener.Key);
+				else pressed.Add(keyInfo.Key);
 		}
+
+		foreach (KeyListener listener in listeners)
+			if (reset.Contains(listener.Key))
+				listener.Resetter();
+			else if (!listener.IsToggle)
+				listener.SetState(pressed.Contains(listener.Key));
+			else if (pressed.Contains(listener.Key))
+				listener.Toggle();
 	}
 }

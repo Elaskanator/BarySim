@@ -1,5 +1,5 @@
-﻿namespace Generic.Vectors {
-	public interface IPosition<T> {
-		T Position { get; }
-	}
+﻿namespace Generic.Vectors;
+
+public interface IPosition<T> {
+	T Position { get; }
 }

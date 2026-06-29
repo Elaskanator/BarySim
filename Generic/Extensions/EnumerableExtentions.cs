@@ -2,277 +2,277 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Generic.Extensions {
-	public static class EnumerableExtentions {
-		#region Projections
-		public static IEnumerable<T> Zip<I1, I2, I3, T>(this IEnumerable<I1> in1, IEnumerable<I2> in2, IEnumerable<I3> in3, Func<I1, I2, I3, T> projection) {
-			IEnumerator<I1> it1 = in1.GetEnumerator();
-			IEnumerator<I2> it2 = in2.GetEnumerator();
-			IEnumerator<I3> it3 = in3.GetEnumerator();
-			while (it1.MoveNext() && it2.MoveNext() && it3.MoveNext())
-				yield return projection(it1.Current, it2.Current, it3.Current);
-		}
+namespace Generic.Extensions;
 
-		public static bool All<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
-			int count = 0;
-			foreach (T t in source)
-				if (!test(t, count++)) return false;
-			return true;
-		}
+public static class EnumerableExtentions {
+	#region Projections
+	public static IEnumerable<T> Zip<I1, I2, I3, T>(this IEnumerable<I1> in1, IEnumerable<I2> in2, IEnumerable<I3> in3, Func<I1, I2, I3, T> projection) {
+		IEnumerator<I1> it1 = in1.GetEnumerator();
+		IEnumerator<I2> it2 = in2.GetEnumerator();
+		IEnumerator<I3> it3 = in3.GetEnumerator();
+		while (it1.MoveNext() && it2.MoveNext() && it3.MoveNext())
+			yield return projection(it1.Current, it2.Current, it3.Current);
+	}
 
-		public static bool Any<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
-			int count = 0;
-			foreach (T t in source)
-				if (test(t, count++)) return true;
-			return false;
-		}
+	public static bool All<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
+		int count = 0;
+		foreach (T t in source)
+			if (!test(t, count++)) return false;
+		return true;
+	}
 
-		public static bool None<TSource>(this IEnumerable<TSource> source) { return !source.Any(); }
-		public static bool None<TSource>(this IEnumerable<TSource> source, Predicate<TSource> predicate) { return !source.Any(x => predicate(x)); }
-		public static bool None<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
-			int count = 0;
-			foreach (T t in source)
-				if (test(t, count++)) return false;
-			return true;
-		}
+	public static bool Any<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
+		int count = 0;
+		foreach (T t in source)
+			if (test(t, count++)) return true;
+		return false;
+	}
 
-		public static IEnumerable<T> WithoutIndex<T>(this IEnumerable<T> source, int idx) {
-			int i = 0;
-			foreach (T t in source)
-				if (i++ != idx)
-					yield return t;
-		}
-		/// <summary>
-		/// Complement of the Where filter, returning only items that do not return true when using the projection
-		/// </summary>
-		public static IEnumerable<T> Without<T>(this IEnumerable<T> source, Predicate<T> test) {
-			foreach (T element in source)
-				if (!test(element)) yield return element;
-		}
-		/// <summary>
-		/// Complement of the Where filter, returning only items that do not return true when using the projection
-		/// </summary>
-		public static IEnumerable<T> Without<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
-			int i = 0;
-			foreach (T element in source)
-				if (!test(element, i++)) yield return element;
-		}
-		public static IEnumerable<T> Without<T>(this IEnumerable<T> source, T skip)
+	public static bool None<TSource>(this IEnumerable<TSource> source) { return !source.Any(); }
+	public static bool None<TSource>(this IEnumerable<TSource> source, Predicate<TSource> predicate) { return !source.Any(x => predicate(x)); }
+	public static bool None<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
+		int count = 0;
+		foreach (T t in source)
+			if (test(t, count++)) return false;
+		return true;
+	}
+
+	public static IEnumerable<T> WithoutIndex<T>(this IEnumerable<T> source, int idx) {
+		int i = 0;
+		foreach (T t in source)
+			if (i++ != idx)
+				yield return t;
+	}
+	/// <summary>
+	/// Complement of the Where filter, returning only items that do not return true when using the projection
+	/// </summary>
+	public static IEnumerable<T> Without<T>(this IEnumerable<T> source, Predicate<T> test) {
+		foreach (T element in source)
+			if (!test(element)) yield return element;
+	}
+	/// <summary>
+	/// Complement of the Where filter, returning only items that do not return true when using the projection
+	/// </summary>
+	public static IEnumerable<T> Without<T>(this IEnumerable<T> source, Func<T, int, bool> test) {
+		int i = 0;
+		foreach (T element in source)
+			if (!test(element, i++)) yield return element;
+	}
+	public static IEnumerable<T> Without<T>(this IEnumerable<T> source, T skip)
 		where T :IEquatable<T> {
-			foreach (T element in source)
-				if (!skip.Equals(element)) yield return element;
-		}
+		foreach (T element in source)
+			if (!skip.Equals(element)) yield return element;
+	}
 
-		public static IEnumerable<T> Drop<T>(this IEnumerable<T> source, int count) {
-			T[] stuff = new T[count];
-			int i = 0;
-			foreach (T element in source) {
-				if (i >= count)
-					yield return stuff[i % count];
-				stuff[i % count] = element;
-				i++;
-			}
+	public static IEnumerable<T> Drop<T>(this IEnumerable<T> source, int count) {
+		T[] stuff = new T[count];
+		int i = 0;
+		foreach (T element in source) {
+			if (i >= count)
+				yield return stuff[i % count];
+			stuff[i % count] = element;
+			i++;
 		}
+	}
 
-		public static IEnumerable<T> TakeUntil<T>(this IEnumerable<T> source, Predicate<T> test) {
-			foreach (T element in source)
-				if (test(element)) yield break;
-				else yield return element;
-		}
+	public static IEnumerable<T> TakeUntil<T>(this IEnumerable<T> source, Predicate<T> test) {
+		foreach (T element in source)
+			if (test(element)) yield break;
+			else yield return element;
+	}
 
-		public static IEnumerable<T> SelectMany<T>(this IEnumerable<IEnumerable<T>> source) {
-			return source.SelectMany(x => x);
-		}
+	public static IEnumerable<T> SelectMany<T>(this IEnumerable<IEnumerable<T>> source) {
+		return source.SelectMany(x => x);
+	}
 
-		public static IEnumerable<TOut> SelectDistinct<TIn, TOut>(this IEnumerable<TIn> source, Func<TIn, TOut> projection)
+	public static IEnumerable<TOut> SelectDistinct<TIn, TOut>(this IEnumerable<TIn> source, Func<TIn, TOut> projection)
 		where TOut : IEquatable<TOut> {
-			return source.Select(x => projection(x)).Distinct();
-		}
+		return source.Select(x => projection(x)).Distinct();
+	}
 		
-		public static IEnumerable<T> DistinctDuplicates<T>(this IEnumerable<T> source)
+	public static IEnumerable<T> DistinctDuplicates<T>(this IEnumerable<T> source)
 		where T : IEquatable<T> {
-			return source.Except(source.Distinct()).Distinct();
-		}
+		return source.Except(source.Distinct()).Distinct();
+	}
 
-		public static HashSet<T> DistinctRecursiveChildren<T>(this T source, Func<T, IEnumerable<T>> projection, bool includeRoot = true) {
-			HashSet<T> result = new();
-			if (includeRoot) result.Add(source);
+	public static HashSet<T> DistinctRecursiveChildren<T>(this T source, Func<T, IEnumerable<T>> projection, bool includeRoot = true) {
+		HashSet<T> result = new();
+		if (includeRoot) result.Add(source);
 
-			Queue<T> tail = new();
-			tail.Enqueue(source);
+		Queue<T> tail = new();
+		tail.Enqueue(source);
 
-			T parent;
-			while (tail.TryDequeue(out parent))
-				foreach (T child in projection(parent))
-					if (result.Add(child))
-						tail.Enqueue(child);
-			return result;
-		}
-		/*
-		public static IEnumerable<T> Order<T>(this IEnumerable<T> source)
+		T parent;
+		while (tail.TryDequeue(out parent))
+			foreach (T child in projection(parent))
+				if (result.Add(child))
+					tail.Enqueue(child);
+		return result;
+	}
+	/*
+	public static IEnumerable<T> Order<T>(this IEnumerable<T> source)
+	where T : IComparable<T> {
+		return source.OrderBy(x => x);
+	}
+	public static IEnumerable<T> OrderDescending<T>(this IEnumerable<T> source)
+	where T : IComparable<T> {
+		return source.OrderByDescending(x => x);
+	}
+	*/
+	public static Tuple<T, T> Range<T>(this IEnumerable<T> source)
 		where T : IComparable<T> {
-			return source.OrderBy(x => x);
+		bool isFirst = true;
+		T min = default, max = default;
+		foreach (T element in source) {
+			if (isFirst) {
+				isFirst = false;
+				min = max = element;
+			} else if (element.CompareTo(min) < 0)
+				min = element;
+			else if (element.CompareTo(max) > 0)
+				max = element;
 		}
-		public static IEnumerable<T> OrderDescending<T>(this IEnumerable<T> source)
-		where T : IComparable<T> {
-			return source.OrderByDescending(x => x);
-		}
-		*/
-		public static Tuple<T, T> Range<T>(this IEnumerable<T> source)
-		where T : IComparable<T> {
-			bool isFirst = true;
-			T min = default, max = default;
-			foreach (T element in source) {
-				if (isFirst) {
-					isFirst = false;
-					min = max = element;
-				} else if (element.CompareTo(min) < 0)
-					min = element;
-				else if (element.CompareTo(max) > 0)
-					max = element;
+		return new(min, max);
+	}
+
+	//public static IEnumerable<T[]> Partition<T>(this IEnumerable<T> source, int size) {
+	//	if (size < 1) throw new ArgumentOutOfRangeException(nameof(size), "Must be strictly positive");
+
+	//	IEnumerator<T> iterator = source.GetEnumerator();
+	//	bool remaining = true;
+	//	T[] subResult;
+	//	while (remaining) {
+	//		subResult = SubPartition(iterator, size).ToArray();
+	//		remaining = subResult.Length > 0;
+	//		yield return subResult;
+	//	}
+	//}
+	//private static IEnumerable<T> SubPartition<T>(IEnumerator<T> iterator, int size) {
+	//	int count = 0;
+	//	while (count++ < size && iterator.MoveNext())
+	//		yield return iterator.Current;
+
+	//}
+	#endregion Projections
+
+	#region Aggregations
+	/*
+	public static TSource MinBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection)
+	where TProjected :IComparable<TProjected> {
+		if (source is null) throw new ArgumentNullException("source");
+		if (projection is null) throw new ArgumentNullException("projection");
+
+		using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
+			if (!enumerator.MoveNext()) {
+				throw new InvalidOperationException("Sequence contains no elements");
 			}
-			return new(min, max);
-		}
-
-		//public static IEnumerable<T[]> Partition<T>(this IEnumerable<T> source, int size) {
-		//	if (size < 1) throw new ArgumentOutOfRangeException(nameof(size), "Must be strictly positive");
-
-		//	IEnumerator<T> iterator = source.GetEnumerator();
-		//	bool remaining = true;
-		//	T[] subResult;
-		//	while (remaining) {
-		//		subResult = SubPartition(iterator, size).ToArray();
-		//		remaining = subResult.Length > 0;
-		//		yield return subResult;
-		//	}
-		//}
-		//private static IEnumerable<T> SubPartition<T>(IEnumerator<T> iterator, int size) {
-		//	int count = 0;
-		//	while (count++ < size && iterator.MoveNext())
-		//		yield return iterator.Current;
-
-		//}
-		#endregion Projections
-
-		#region Aggregations
-		/*
-		public static TSource MinBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection)
-		where TProjected :IComparable<TProjected> {
-			if (source is null) throw new ArgumentNullException("source");
-			if (projection is null) throw new ArgumentNullException("projection");
-
-			using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
-				if (!enumerator.MoveNext()) {
-					throw new InvalidOperationException("Sequence contains no elements");
+			TProjected minProjected, currentProjected;
+			TSource min = enumerator.Current;
+			minProjected = projection(min);
+			while (enumerator.MoveNext()) {
+				currentProjected = projection(enumerator.Current);
+				if (currentProjected.CompareTo(minProjected) < 0) {
+					min = enumerator.Current;
+					minProjected = currentProjected;
 				}
-				TProjected minProjected, currentProjected;
-				TSource min = enumerator.Current;
-				minProjected = projection(min);
-				while (enumerator.MoveNext()) {
-					currentProjected = projection(enumerator.Current);
-					if (currentProjected.CompareTo(minProjected) < 0) {
-						min = enumerator.Current;
-						minProjected = currentProjected;
-					}
-				}
-				return min;
 			}
+			return min;
 		}
-		public static TSource MinBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection, IComparer<TProjected> comparer = null) {
-			comparer = comparer ?? Comparer<TProjected>.Default;
-			if (source is null) throw new ArgumentNullException("source");
-			if (projection is null) throw new ArgumentNullException("projection");
+	}
+	public static TSource MinBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection, IComparer<TProjected> comparer = null) {
+		comparer = comparer ?? Comparer<TProjected>.Default;
+		if (source is null) throw new ArgumentNullException("source");
+		if (projection is null) throw new ArgumentNullException("projection");
 
-			using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
-				if (!enumerator.MoveNext())
-					throw new InvalidOperationException("Sequence contains no elements");
+		using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
+			if (!enumerator.MoveNext())
+				throw new InvalidOperationException("Sequence contains no elements");
 
-				TProjected minProjected, currentProjected;
-				TSource min = enumerator.Current;
-				minProjected = projection(min);
-				while (enumerator.MoveNext()) {
-					currentProjected = projection(enumerator.Current);
-					if (comparer.Compare(currentProjected, minProjected) < 0) {
-						min = enumerator.Current;
-						minProjected = currentProjected;
-					}
+			TProjected minProjected, currentProjected;
+			TSource min = enumerator.Current;
+			minProjected = projection(min);
+			while (enumerator.MoveNext()) {
+				currentProjected = projection(enumerator.Current);
+				if (comparer.Compare(currentProjected, minProjected) < 0) {
+					min = enumerator.Current;
+					minProjected = currentProjected;
 				}
-				return min;
 			}
+			return min;
 		}
+	}
 
-		public static TSource MaxBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection)
-		where TProjected :IComparable<TProjected> {
-			if (source is null) throw new ArgumentNullException("source");
-			if (projection is null) throw new ArgumentNullException("projection");
+	public static TSource MaxBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection)
+	where TProjected :IComparable<TProjected> {
+		if (source is null) throw new ArgumentNullException("source");
+		if (projection is null) throw new ArgumentNullException("projection");
 
-			using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
-				if (!enumerator.MoveNext())
-					throw new InvalidOperationException("Sequence contains no elements");
+		using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
+			if (!enumerator.MoveNext())
+				throw new InvalidOperationException("Sequence contains no elements");
 
-				TProjected maxProjected, currentProjected;
-				TSource max = enumerator.Current;
-				maxProjected = projection(max);
-				while (enumerator.MoveNext()) {
-					currentProjected = projection(enumerator.Current);
-					if (currentProjected.CompareTo(maxProjected) > 0) {
-						max = enumerator.Current;
-						maxProjected = currentProjected;
-					}
+			TProjected maxProjected, currentProjected;
+			TSource max = enumerator.Current;
+			maxProjected = projection(max);
+			while (enumerator.MoveNext()) {
+				currentProjected = projection(enumerator.Current);
+				if (currentProjected.CompareTo(maxProjected) > 0) {
+					max = enumerator.Current;
+					maxProjected = currentProjected;
 				}
-				return max;
 			}
+			return max;
 		}
-		public static TSource MaxBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection, IComparer<TProjected> comparer = null) {
-			comparer = comparer ?? Comparer<TProjected>.Default;
-			if (source is null) throw new ArgumentNullException("source");
-			if (projection is null) throw new ArgumentNullException("projection");
+	}
+	public static TSource MaxBy<TSource, TProjected>(this IEnumerable<TSource> source, Func<TSource, TProjected> projection, IComparer<TProjected> comparer = null) {
+		comparer = comparer ?? Comparer<TProjected>.Default;
+		if (source is null) throw new ArgumentNullException("source");
+		if (projection is null) throw new ArgumentNullException("projection");
 
-			using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
-				if (!enumerator.MoveNext())
-					throw new InvalidOperationException("Sequence contains no elements");
+		using (IEnumerator<TSource> enumerator = source.GetEnumerator()) {
+			if (!enumerator.MoveNext())
+				throw new InvalidOperationException("Sequence contains no elements");
 
-				TProjected maxProjected, currentProjected;
-				TSource max = enumerator.Current;
-				maxProjected = projection(max);
-				while (enumerator.MoveNext()) {
-					currentProjected = projection(enumerator.Current);
-					if (comparer.Compare(currentProjected, maxProjected) < 0) {
-						max = enumerator.Current;
-						maxProjected = currentProjected;
-					}
+			TProjected maxProjected, currentProjected;
+			TSource max = enumerator.Current;
+			maxProjected = projection(max);
+			while (enumerator.MoveNext()) {
+				currentProjected = projection(enumerator.Current);
+				if (comparer.Compare(currentProjected, maxProjected) < 0) {
+					max = enumerator.Current;
+					maxProjected = currentProjected;
 				}
-				return max;
 			}
+			return max;
 		}
-		*/
-		public static long Product(this IEnumerable<long> source) {
-			return source.Aggregate(1L, (acc, x) => acc *= x);
-		}
-		public static int Product(this IEnumerable<int> source) {
-			return source.Aggregate(1, (acc, x) => acc *= x);
-		}
-		public static double Product(this IEnumerable<double> source) {
-			return source.Aggregate(1d, (acc, x) => acc *= x);
-		}
-		#endregion Aggregations
+	}
+	*/
+	public static long Product(this IEnumerable<long> source) {
+		return source.Aggregate(1L, (acc, x) => acc *= x);
+	}
+	public static int Product(this IEnumerable<int> source) {
+		return source.Aggregate(1, (acc, x) => acc *= x);
+	}
+	public static double Product(this IEnumerable<double> source) {
+		return source.Aggregate(1d, (acc, x) => acc *= x);
+	}
+	#endregion Aggregations
 		
-		/// <summary>
-		/// Consumes the specified queue (empties it) and returns an array of its contents.
-		/// </summary>
-		public static IEnumerable<T> AsEnumerableDump<T>(this Queue<T> data) {
-			T element;
-			while (data.TryDequeue(out element))
-				yield return element;
-		}
-		/// <summary>
-		/// Consumes the specified queue (empties it) and returns an array of its contents.
-		/// </summary>
-		public static T[] ToArrayDump<T>(this Queue<T> data) {
-			T[] result = new T[data.Count];
-			int idx = 0;
-			while (data.TryDequeue(out result[idx++]));
-			return result;
-		}
+	/// <summary>
+	/// Consumes the specified queue (empties it) and returns an array of its contents.
+	/// </summary>
+	public static IEnumerable<T> AsEnumerableDump<T>(this Queue<T> data) {
+		T element;
+		while (data.TryDequeue(out element))
+			yield return element;
+	}
+	/// <summary>
+	/// Consumes the specified queue (empties it) and returns an array of its contents.
+	/// </summary>
+	public static T[] ToArrayDump<T>(this Queue<T> data) {
+		T[] result = new T[data.Count];
+		int idx = 0;
+		while (data.TryDequeue(out result[idx++]));
+		return result;
 	}
 }

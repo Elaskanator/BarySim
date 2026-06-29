@@ -5,76 +5,71 @@ using System.Numerics;
 using Generic.Trees;
 using Generic.Vectors;
 
-namespace ParticleSimulator.Simulation.Particles {
-	public interface IParticleGroup : IEquatable<IParticleGroup>, IEqualityComparer<IParticleGroup> {//extraneous interface?
-		int Id { get; }
-		IParticle[] InitialParticles { get; }
+namespace ParticleSimulator.Simulation.Particles.Groups;
 
-		void Init();
-	}
+public interface IParticleGroup : IEquatable<IParticleGroup>, IEqualityComparer<IParticleGroup> {//extraneous interface?
+	int Id { get; }
+	IParticle[] InitialParticles { get; }
 
-	public abstract class AParticleGroup<TParticle, TNode> : IParticleGroup
+	void Init();
+}
+
+public abstract class AParticleGroup<TParticle, TNode>(Func<Vector<float>, Vector<float>, TParticle> particleConstructor) : IParticleGroup
 	where TParticle : AParticle<TParticle, TNode>
 	where TNode : ABinaryTree<TNode, TParticle> {
-		protected AParticleGroup(Func<Vector<float>, Vector<float>, TParticle> particleConstructor) {
-			this.ParticleConstructor = particleConstructor;
-			this.NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
-		}
-
-		public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleConstructor;
+	public readonly Func<Vector<float>, Vector<float>, TParticle> ParticleConstructor = particleConstructor;
 		
-		public virtual void Init() {
-			this.InitialParticles = new TParticle[this.NumParticles];
-			for (int i = 0; i < this.NumParticles; i++)
-				this.InitialParticles[i] = this.ParticleConstructor(this.Position, this.Velocity);
+	public virtual void Init() {
+		this.InitialParticles = new TParticle[this.NumParticles];
+		for (int i = 0; i < this.NumParticles; i++)
+			this.InitialParticles[i] = this.ParticleConstructor(this.Position, this.Velocity);
 			
-			if (Parameters.PARTICLES_GROUP_COUNT > 1)
-				this.InitGroupPositionVelocity();
+		if (Parameters.PARTICLES_GROUP_COUNT > 1)
+			this.InitGroupPositionVelocity();
 
-			for (int i = 0; i < this.NumParticles; i++) {
-				this.InitialParticles[i].GroupId = this.Id;
-				this.InitialParticles[i]._position = this.Position;
-				this.InitialParticles[i].Velocity = this.Velocity;
+		for (int i = 0; i < this.NumParticles; i++) {
+			this.InitialParticles[i].GroupId = this.Id;
+			this.InitialParticles[i]._position = this.Position;
+			this.InitialParticles[i].Velocity = this.Velocity;
 
-				if (this.NumParticles > 1)
-					this.InitializeParticle(this.InitialParticles[i]);
+			if (this.NumParticles > 1)
+				this.InitializeParticle(this.InitialParticles[i]);
 
-				if (Parameters.WORLD_BOUNCING)
-					if (Parameters.WORLD_WRAPPING)
-						this.InitialParticles[i].WrapPosition();
-					else this.InitialParticles[i].BoundPosition();
-			}
+			if (Parameters.WORLD_BOUNCING)
+				if (Parameters.WORLD_WRAPPING)
+					this.InitialParticles[i].WrapPosition();
+				else this.InitialParticles[i].BoundPosition();
 		}
-
-		protected virtual void InitGroupPositionVelocity() {
-			this.Position = VectorFunctions.New(
-				Enumerable.Range(0, Parameters.DIM)
-					.Select(d => (float)(Parameters.WORLD_SIZE[d] * Program.Random.NextDouble() * (1d - Parameters.WORLD_PADDING_PCT/50d)
-						+ Parameters.WORLD_LEFT[d]
-						+ (Parameters.WORLD_SIZE[d] * Parameters.WORLD_PADDING_PCT/100d))));
-			this.Velocity = Parameters.GALAXY_SPEED_RAND
-				* VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);
-		}
-
-		protected abstract void InitializeParticle(TParticle particle);
-
-		private static int _globalID = 0;
-		private readonly int _id = _globalID++;
-		public int Id => this._id;
-
-		public readonly int NumParticles;
-
-		public Vector<float> Position { get; protected set; } = Vector<float>.Zero;
-		public Vector<float> Velocity { get; protected set; } = Vector<float>.Zero;
-
-		public TParticle[] InitialParticles { get; private set; }
-		IParticle[] IParticleGroup.InitialParticles => this.InitialParticles;
-
-		public bool Equals(IParticleGroup other) { return !(other is null) && this.Id == other.Id; }
-		public override bool Equals(object other) { return !(other is null) && (other is AParticleGroup<TParticle, TNode>) && this.Id == (other as AParticleGroup<TParticle, TNode>).Id; }
-		public bool Equals(IParticleGroup x, IParticleGroup y) { return x.Id == y.Id; }
-		public int GetHashCode(IParticleGroup obj) { return obj.Id.GetHashCode(); }
-		public override int GetHashCode() { return this.Id.GetHashCode(); }
-		public override string ToString() { return string.Format("{0}[ID {1}]", nameof(AParticleGroup<TParticle, TNode>), this.Id); }
 	}
+
+	protected virtual void InitGroupPositionVelocity() {
+		this.Position = VectorFunctions.New(
+			Enumerable.Range(0, Parameters.DIM)
+				.Select(d => (float)(Parameters.WORLD_SIZE[d] * Program.Random.NextDouble() * (1d - Parameters.WORLD_PADDING_PCT/50d)
+				                     + Parameters.WORLD_LEFT[d]
+				                     + Parameters.WORLD_SIZE[d] * Parameters.WORLD_PADDING_PCT/100d)));
+		this.Velocity = Parameters.GALAXY_SPEED_RAND
+		                * VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);
+	}
+
+	protected abstract void InitializeParticle(TParticle particle);
+
+	private static int _globalID = 0;
+	private readonly int _id = _globalID++;
+	public int Id => this._id;
+
+	public readonly int NumParticles = Parameters.PARTICLES_GROUP_MIN + (int)Math.Round(Math.Pow(Program.Random.NextDouble(), Parameters.PARTICLES_GROUP_SIZE_POW) * (Parameters.PARTICLES_GROUP_MAX - Parameters.PARTICLES_GROUP_MIN));
+
+	public Vector<float> Position { get; protected set; } = Vector<float>.Zero;
+	public Vector<float> Velocity { get; protected set; } = Vector<float>.Zero;
+
+	public TParticle[] InitialParticles { get; private set; }
+	IParticle[] IParticleGroup.InitialParticles => this.InitialParticles;
+
+	public bool Equals(IParticleGroup other) { return other is not null && this.Id == other.Id; }
+	public override bool Equals(object other) { return other is not null && other is AParticleGroup<TParticle, TNode> && this.Id == (other as AParticleGroup<TParticle, TNode>).Id; }
+	public bool Equals(IParticleGroup x, IParticleGroup y) { return x.Id == y.Id; }
+	public int GetHashCode(IParticleGroup obj) { return obj.Id.GetHashCode(); }
+	public override int GetHashCode() { return this.Id.GetHashCode(); }
+	public override string ToString() { return string.Format("{0}[ID {1}]", nameof(AParticleGroup<TParticle, TNode>), this.Id); }
 }

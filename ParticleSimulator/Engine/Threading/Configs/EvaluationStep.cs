@@ -1,24 +1,24 @@
 ﻿using System;
 
-namespace ParticleSimulator.Engine.Threading {
-	public struct EvaluationStep {
-		public string Name;
+namespace ParticleSimulator.Engine.Threading;
 
-		public Action InitFn;
-		public Func<object> GeneratorFn;
-		public Action PreProcessFn;
-		public Action<EvalResult, object[]> EvaluatorFn;
-		public Func<EvalResult, object[], object> CalculatorFn;
+public struct EvaluationStep {
+	public string Name;
 
-		public ISynchronousConsumedResource OutputResource;
-		public Action<EvalResult> CallbackFn;//whether calculation was punctual
-		public bool IsOutputOverwrite;
-		public int OutputSkips;
+	public Action InitFn;
+	public Func<object> GeneratorFn;
+	public Action PreProcessFn;
+	public Action<EvalResult, object[]> EvaluatorFn;
+	public Func<EvalResult, object[], object> CalculatorFn;
 
-		public IIngestedResource[] InputResourceUses;
-		public TimeSpan? DataLoadingTimeout;
-		public TimeSynchronizer Synchronizer;
+	public ISynchronousConsumedResource OutputResource;
+	public Action<EvalResult> CallbackFn;//whether calculation was punctual
+	public bool IsOutputOverwrite;
+	public int OutputSkips;
 
-		public override string ToString() => string.Format("EvaluationStep[{0}]", this.Name);
-	}
+	public IIngestedResource[] InputResourceUses;
+	public TimeSpan? DataLoadingTimeout;
+	public TimeSynchronizer Synchronizer;
+
+	public override string ToString() => string.Format("EvaluationStep[{0}]", this.Name);
 }
