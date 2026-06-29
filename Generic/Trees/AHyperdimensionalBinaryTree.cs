@@ -92,7 +92,7 @@ public abstract class AHyperdimensionalBinaryTree<TSelf, TItem, TCorner> : ABina
 				(left, right) = newParent.NewNodeCorners(i, false);
 				childNode = InstantiateNode(left, right, newParent);//static use
 			}
-			newParent.Children[i] = childNode;
+			newParent.SetChild(i, childNode);
 		}
 
 		return newParent;

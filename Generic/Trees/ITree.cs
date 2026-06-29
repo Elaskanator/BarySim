@@ -6,7 +6,7 @@ namespace Generic.Trees;
 public interface ITree : IEnumerable {
 	ITree Parent { get; }
 	IEnumerable<ITree> Children { get; }
-	int ParentChildIndex { get; }
+	int? ParentChildIndex { get; }
 		
 	bool IsRoot { get; }
 	bool IsLeaf { get; }

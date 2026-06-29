@@ -64,16 +64,22 @@ public class BaryonSimulator(int dim) : ABinaryTreeSimulator<MatterClump, Barnes
 	public static Vector<float> DetermineNeighbors(BarnesHutTree leaf, List<MatterClump> nearField) {
 		//apply the Barnes Hut proximity criterion to partition the tree into nearby leaves and distance approximations
 		Vector<float> farFieldAcceleration = Vector<float>.Zero;
-
+		
 		Stack<int> pathDown = new();
 		BarnesHutTree parent = leaf, child = null;//STFU compiler
+
+		//get path thru the tree
+		while (!parent.IsRoot) {
+			pathDown.Push(parent.ParentChildIndex.Value);//relative position
+			parent = parent.Parent;
+		}
 
 		//evaluate from top nodes down to compute furthest (and weakest) interactions first, to reduce floating point errors when aggregating
 		Stack<BarnesHutTree> remaining = new();
 		BarnesHutTree neighbor, tail;
 		Vector<float> subTotal1, subTotal2, toOther;
 		float distanceSquared, invSqRt, invR2, invR3;
-		while (pathDown.TryPop(out int idx)) {
+		while (pathDown.TryPop(out var idx)) {
 			subTotal1 = Vector<float>.Zero;
 			for (int i = 0; i < parent.Children.Length; i++) {
 				if (i == idx) {

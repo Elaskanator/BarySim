@@ -52,7 +52,7 @@ public abstract class ABinaryTree<TSelf, T>(TSelf parent = null) : ITree, IColle
 	public ICollection<T> Bin;
 
 	public abstract bool DoesEncompass(T item);
-	public int ParentChildIndex { get; private set; }
+	public int? ParentChildIndex { get; private set; }
 
 	protected abstract TSelf[] FormSubnodes();
 	protected abstract TSelf Expand(T item);
@@ -207,6 +207,11 @@ public abstract class ABinaryTree<TSelf, T>(TSelf parent = null) : ITree, IColle
 		}
 		this.Bin = null;
 	}
+	protected void SetChild(int i, TSelf child) {
+		this.Children[i] = child;
+		child.Parent = (TSelf)this;
+		child.ParentChildIndex = i;
+	}
 		
 	//finds the first sub node with more than one child
 	public virtual TSelf PruneTop() {
@@ -224,6 +229,7 @@ public abstract class ABinaryTree<TSelf, T>(TSelf parent = null) : ITree, IColle
 			else break;
 		}
 		node.Parent = null;
+		node.ParentChildIndex = null;
 
 		return node;
 	}
