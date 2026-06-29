@@ -54,6 +54,8 @@ namespace Generic.Trees {
 		public ICollection<T> Bin;
 
 		public abstract bool DoesEncompass(T item);
+		public int ParentChildIndex { get; private set; }
+
 		protected abstract ABinaryTree<T>[] FormSubnodes();
 		protected abstract ABinaryTree<T> Expand(T item);
 
@@ -189,6 +191,9 @@ namespace Generic.Trees {
 
 		private void Refine() {
 			this.Children = this.FormSubnodes();
+			for (int i = 0; i < this.Children.Length; i++)
+				this.Children[i].ParentChildIndex = i;
+
 			ABinaryTree<T> node;
 			if (this.ItemCount == 1) {
 				node = this.Children[this.ChildIndex(this.Bin.First())];

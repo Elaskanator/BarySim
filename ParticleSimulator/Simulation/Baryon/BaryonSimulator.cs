@@ -71,19 +71,7 @@ namespace ParticleSimulator.Simulation.Baryon {
 			Stack<int> pathDown = new();
 			ABinaryTree<MatterClump> parent = leaf,
 				child = null;//STFU compiler
-			int idx = 0;//shut up the compiler
-			//get path thru the tree
-			while (!parent.IsRoot) {
-				//determine relative position
-				for (int i = 0; i < parent.Parent.Children.Length; i++) {
-					if (ReferenceEquals(parent, parent.Parent.Children[i])) {//guaranteed exactly once
-						idx = i;
-						break;
-					}
-				}
-				pathDown.Push(idx);
-				parent = parent.Parent;
-			}
+			int idx = parent.ParentChildIndex;
 			//evaluate from top nodes down to compute furthest (and weakest) interactions first, to reduce floating point errors when aggregating
 			Stack<BarnesHutTree> remaining = new();
 			BarnesHutTree neighbor, tail;

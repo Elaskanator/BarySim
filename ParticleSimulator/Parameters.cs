@@ -35,7 +35,7 @@ namespace ParticleSimulator {
 		public const int PARTICLES_GROUP_MAX		= 100000;
 		public const float PARTICLES_GROUP_SIZE_POW	= 0f;//0 for max size
 		//particle features
-		public const float TIME_SCALE				= 0f;
+		public const float TIME_SCALE				= 5f;
 		public const bool COLLISION_ENABLE			= true;
 		public const float COLLISION_OVERLAP_BUFFER	= 1f;
 		public const float DRAG_CONSTANT			= 0.003f;//TODO large clumps form, which tweak out for larger values
