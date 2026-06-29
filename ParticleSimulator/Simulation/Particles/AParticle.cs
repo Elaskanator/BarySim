@@ -62,7 +62,7 @@ namespace ParticleSimulator.Simulation.Particles {
 		public abstract void Consume(TSelf other);
 		protected virtual void AfterMove() { }
 		public bool IsInRange(BaryCenter center) {
-			Vector<float> toCenter = (center.Position - this._position) * (1f / Parameters.WORLD_SCALE);
+			Vector<float> toCenter = (center.Position - this._position) * (1f / Parameters.VIEWPORT_WIDTH);
 			float distanceSquared = Vector.Dot(toCenter, toCenter);
 			return distanceSquared <= Parameters.WORLD_PRUNE_RADII2//near enough the center
 				|| this.SurviveOutOfBounds(center, distanceSquared);

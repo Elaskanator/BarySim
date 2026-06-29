@@ -22,18 +22,20 @@ namespace ParticleSimulator {
 		public const int SUPERSAMPLING				= 2;
 		public const float PIXEL_ROUNDOFF			= 0.5f;
 		//camera
-		public const float WORLD_SCALE				= 512f;
+		//public const 
+		public const float WORLD_SCALE				= 1f;//1 = fit to galaxy
 		public const bool AUTOFOCUS_DEFAULT			= true;
-		public const float ROT_DEG_PER_FRAME		= 0.33333f;
-		public const float ZOOM_RATIO_PER_FRAME		= 0.04f;
+
 		public const float PAN_RATIO_PER_FRAME		= 0.04f;
+		public const float ZOOM_RATIO_PER_FRAME		= 0.04f;
+		public const float ROT_DEG_PER_FRAME		= 0.33333f;
 		//particle count
 		public const int PARTICLES_GROUP_COUNT		= 1;
 		public const int PARTICLES_GROUP_MIN		= 1;
-		public const int PARTICLES_GROUP_MAX		= 25000;
+		public const int PARTICLES_GROUP_MAX		= 100000;
 		public const float PARTICLES_GROUP_SIZE_POW	= 0f;//0 for max size
 		//particle features
-		public const float TIME_SCALE				= 5f;
+		public const float TIME_SCALE				= 0f;
 		public const bool COLLISION_ENABLE			= true;
 		public const float COLLISION_OVERLAP_BUFFER	= 1f;
 		public const float DRAG_CONSTANT			= 0.003f;//TODO large clumps form, which tweak out for larger values
@@ -72,21 +74,21 @@ namespace ParticleSimulator {
 		public const float AUTOSCALE_CUTOFF_PCT		= 0f;
 		public const float AUTOSCALE_MIN_STEP		= 1f;
 		public const float AUTOSCALE_DIFF_THRESH	= 0f;
-		//render exporting
+		//render exporting (TODO)
 		public const bool EXPORT_FRAMES = false;//TODO
 		public const string EXPORT_DIR = null;//TODO
 		#endregion Primary
 
 		#region Gravity
 		public const float GRAVITATIONAL_CONSTANT	= 1E-5f;
-		//TODO add electrostatic force
+		//TODO add electrostatic force?
 
 		public const float MASS_SCALAR				= 1f;
 		public const float MASS_DENSITY_SCALAR		= 1f;
 		public const float MASS_DENSITY_POW			= 0.4f;//lower = smaller proportional size increase
 		public const float MASS_RADIUS_SCALAR		= 1f;
 		public const float MASS_LUMINOSITY_SCALAR	= 1f;
-		public const float MASS_LUMINOSITY_POW		= 1f;
+		public const float MASS_LUMINOSITY_POW		= 0.8f;
 
 		public const float GALAXY_PLUMMER_RADIUS	= 200f;
 
@@ -94,19 +96,20 @@ namespace ParticleSimulator {
 		public const float GALAXY_SPEED_ANGULAR		= 0.02f;//relative to centerpoint of simulation, for initial radial velocity
 		public const float GALAXY_SPEED_RAND		= 0.01f;
 
-		public const float GALAXY_RADIUS			= 256f;
-		public const float GALAXY_INNER_DIFFUSENESS	= 0.55f;
+		public const float GALAXY_STAR_VEL_RAND		= 0f;//proportional random direction
+		public const float GALAXY_STAR_RAND_VEL_BIAS= 0.65f;//lower = proportionally faster toward center
+
+		public const float GALAXY_STAR_DENSITY		= 0.02f;
+		public const float GALAXY_INNER_DIFFUSENESS	= 0.65f;//smaller = tighter center clumping
 		public const float GALAXY_THINNESS_RATIO	= 2.2f;//higher = thinner
 		public const float GALAXY_THINNESS_BIAS		= 2f;//higher = toward middle
 
-		public const float GALAXY_SPIN_ANGULAR		= 0.025f;
-		public const float GALAXY_PARTICLE_VEL_RAND	= 0.1f;//proportional random direction
-		public const float GALAXY_SPIN_POW_TORTION	= 0.65f;//lower = proportionally faster toward center
+		public const float GALAXY_SPIN_FACTOR		= 1f;//should be quasi-stable at 1
 
 		public const bool SUPERNOVA_ENABLE			= true;
-		public const float SUPERNOVA_CRITICAL_MASS	= 10000f;
+		public const float SUPERNOVA_CRITICAL_MASS	= 12800f;
 		public const float SUPERNOVA_EJECTA_MASS	= 1f;
-		public const float SUPERNOVA_EJECTA_SPEED	= 0.075f;
+		public const float SUPERNOVA_EJECTA_SPEED	= 0.08f;
 		public const float SUPERNOVA_RADIUS_SCALAR	= 3f;
 
 		public const bool BLACKHOLE_ENABLE			= true;
@@ -139,16 +142,18 @@ namespace ParticleSimulator {
 		public static readonly float INACCURACY2 = ACCURACY_CRITERION * ACCURACY_CRITERION;
 		public static readonly float NODE_APPROX_CUTOFF2 = NODE_APPROX_CUTOFF * NODE_APPROX_CUTOFF;
 		public static readonly float COLLISION_OVERLAP = 1f + COLLISION_OVERLAP_BUFFER;
-		public static readonly float WORLD_PRUNE_RADII2 = WORLD_PRUNE_RADII*WORLD_PRUNE_RADII;
 		public static readonly float TIME_SCALE_HALF = TIME_SCALE / 2f;
 		public static readonly float TIME_SCALE_SQUARED_SIXTH = TIME_SCALE*TIME_SCALE / 6f;
-
-		public static readonly float STARTING_ZOOM = 1f / WORLD_SCALE;
-		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-WORLD_X_ASPECT * WORLD_SCALE / 2f, -WORLD_Y_ASPECT * WORLD_SCALE / 2f, -WORLD_Z_ASPECT * WORLD_SCALE / 2f);
+		
+		public static readonly float VIEWPORT_WIDTH	= WORLD_SCALE * 1.14f * MathF.Sqrt(PARTICLES_GROUP_MAX / GALAXY_STAR_DENSITY);
+		public static readonly float STARTING_ZOOM = 1f / VIEWPORT_WIDTH;
+		public static readonly Vector<float> WORLD_LEFT = VectorFunctions.New(-WORLD_X_ASPECT * VIEWPORT_WIDTH / 2f, -WORLD_Y_ASPECT * VIEWPORT_WIDTH / 2f, -WORLD_Z_ASPECT * VIEWPORT_WIDTH / 2f);
 		public static readonly Vector<float> WORLD_LEFT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_LEFT, new Vector<float>(float.NegativeInfinity));
-		public static readonly Vector<float> WORLD_RIGHT = VectorFunctions.New(WORLD_X_ASPECT * WORLD_SCALE / 2f, WORLD_Y_ASPECT * WORLD_SCALE / 2f, WORLD_Z_ASPECT * WORLD_SCALE / 2f);
+		public static readonly Vector<float> WORLD_RIGHT = VectorFunctions.New(WORLD_X_ASPECT * VIEWPORT_WIDTH / 2f, WORLD_Y_ASPECT * VIEWPORT_WIDTH / 2f, WORLD_Z_ASPECT * VIEWPORT_WIDTH / 2f);
 		public static readonly Vector<float> WORLD_RIGHT_INF = Vector.ConditionalSelect(VectorFunctions.DimensionSignals[DIM], WORLD_RIGHT, new Vector<float>(float.PositiveInfinity));
 		public static readonly Vector<float> WORLD_SIZE = WORLD_RIGHT - WORLD_LEFT;
+
+		public static readonly float WORLD_PRUNE_RADII2 = WORLD_PRUNE_RADII*WORLD_PRUNE_RADII;
 		#endregion Precomputed constants
 	}
 }

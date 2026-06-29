@@ -6,8 +6,8 @@ using ParticleSimulator.Simulation.Baryon;
 
 namespace ParticleSimulator.Simulation.Particles {
 	public class PlummerGalaxy: AParticleGroup<MatterClump> {
-		public PlummerGalaxy(Func<Vector<float>, Vector<float>, MatterClump> initializer, float radius)
-		: base(initializer, radius) {
+		public PlummerGalaxy(Func<Vector<float>, Vector<float>, MatterClump> initializer)
+		: base(initializer) {
 			//this.GlobalDirection = Program.Engine.Random.NextDouble() < 0.5d;
 			this.InternalDirection = Program.Random.NextDouble() < 0.5d;
 		}

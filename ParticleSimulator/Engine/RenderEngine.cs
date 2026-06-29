@@ -25,7 +25,7 @@ namespace ParticleSimulator.Engine {
 
 			this.Simulator = new BaryonSimulator(Parameters.DIM);
 
-			float zoomLevel = 1f / Parameters.WORLD_SCALE;
+			float zoomLevel = 1f / Parameters.VIEWPORT_WIDTH;
 			this.Camera = new();
 
 			this.Rasterizer = new(
