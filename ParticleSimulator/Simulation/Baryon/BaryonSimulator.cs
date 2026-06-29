@@ -37,8 +37,10 @@ public class BaryonSimulator(int dim) : ABinaryTreeSimulator<MatterClump, Barnes
 		}
 	}
 
+	private readonly ThreadLocal<List<MatterClump>> _nearFieldScratch = new(() => new List<MatterClump>(1024));
 	protected override void ComputeInteractions(NodeParticles leafParticles) {
-		List<MatterClump> nearField = [];
+		var nearField = this._nearFieldScratch.Value;
+		nearField.Clear();
 		Vector<float> farFieldAcceleration = DetermineNeighbors(leafParticles.Node, nearField);
 
 		Vector<float> influence;
@@ -70,7 +72,7 @@ public class BaryonSimulator(int dim) : ABinaryTreeSimulator<MatterClump, Barnes
 
 		//get path thru the tree
 		while (!parent.IsRoot) {
-			pathDown.Push(parent.ParentChildIndex.Value);//relative position
+			pathDown.Push(parent.ParentChildIndex);//relative position
 			parent = parent.Parent;
 		}
 

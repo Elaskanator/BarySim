@@ -13,14 +13,9 @@ namespace ParticleSimulator.Simulation;
 public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParticle, TTree>
 	where TParticle : AParticle<TParticle, TTree>
 	where TTree : ABinaryTree<TTree, TParticle> {
-	protected struct NodeParticles {
-		public readonly TTree Node;
-		public readonly TParticle[] Particles;
-
-		public NodeParticles(TTree node, IEnumerable<TParticle> particles) {
-			this.Node = node;
-			this.Particles = [.. particles];
-		}
+	protected readonly struct NodeParticles(TTree node, TParticle[] particles) {
+		public readonly TTree Node = node;
+		public readonly TParticle[] Particles = particles;
 	}
 
 	private readonly CountdownEvent _cde = new(0);

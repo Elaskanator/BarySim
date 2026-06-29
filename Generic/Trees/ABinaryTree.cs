@@ -49,15 +49,13 @@ public abstract class ABinaryTree<TSelf, T>(TSelf parent = null) : ITree, IColle
 		}
 	} }
 
-	public ICollection<T> Bin;
+	public List<T> Bin = null;
 
 	public abstract bool DoesEncompass(T item);
-	public int? ParentChildIndex { get; private set; }
+	public int ParentChildIndex { get; private set; } = -1;
 
 	protected abstract TSelf[] FormSubnodes();
 	protected abstract TSelf Expand(T item);
-
-	protected virtual ICollection<T> NewBin() => new HashSet<T>();//new HashedContainer<T>();
 
 	public virtual int ChildIndex(T item) {
 		for (int i = 0; i < this.Children.Length; i++)
@@ -96,9 +94,10 @@ public abstract class ABinaryTree<TSelf, T>(TSelf parent = null) : ITree, IColle
 		}
 	}
 
-	public TSelf Add(IEnumerable<T> items) {
+	public TSelf Add(T[] items) {
 		var parent = this.Root;
-		foreach (T item in items) {
+		for (int i = 0; i < items.Length; ++i) {
+			var item = items[i];
 			parent.Add(item);
 			while (!parent.IsRoot)
 				parent = parent.Parent;
@@ -181,7 +180,7 @@ public abstract class ABinaryTree<TSelf, T>(TSelf parent = null) : ITree, IColle
 			++node.ItemCount;
 			node = node.Children[node.ChildIndex(item)];
 		}
-		node.Bin ??= this.NewBin();
+		node.Bin ??= [];
 		node.Bin.Add(item);
 		++node.ItemCount;
 		return (TSelf)node;
@@ -194,14 +193,15 @@ public abstract class ABinaryTree<TSelf, T>(TSelf parent = null) : ITree, IColle
 
 		TSelf node;
 		if (this.ItemCount == 1) {
-			node = this.Children[this.ChildIndex(this.Bin.First())];
+			node = this.Children[this.ChildIndex(this.Bin[0])];
 			++node.ItemCount;
 			node.Bin = this.Bin;
 		} else if (this.ItemCount > 1) {
-			foreach (T item in this.Bin) {
+			for (int i = 0; i < this.Bin.Count; i++) {
+				var item = this.Bin[i];
 				node = this.Children[this.ChildIndex(item)];
 				++node.ItemCount;
-				node.Bin ??= node.NewBin();
+				node.Bin ??= [];
 				node.Bin.Add(item);
 			}
 		}
@@ -229,7 +229,7 @@ public abstract class ABinaryTree<TSelf, T>(TSelf parent = null) : ITree, IColle
 			else break;
 		}
 		node.Parent = null;
-		node.ParentChildIndex = null;
+		node.ParentChildIndex = -1;
 
 		return node;
 	}
