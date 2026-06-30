@@ -7,11 +7,11 @@ using ParticleSimulator.Rendering.Rasterization;
 namespace ParticleSimulator.Rendering;
 
 public abstract class ARenderer {
-	public ARenderer(RenderEngine engine) {
+	public ARenderer(MainEngine engine) {
 		this.Engine = engine;
 	}
 		
-	public readonly RenderEngine Engine;
+	public readonly MainEngine Engine;
 
 	public readonly AIncrementalAverage<TimeSpan> SimTimings = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
 	public readonly AIncrementalAverage<TimeSpan> FpsTimings = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
@@ -32,16 +32,14 @@ public abstract class ARenderer {
 	}
 
 	public void UpdateFullTime(EvalResult prepResults) {
-		if (prepResults.PrepPunctual && !this.Engine.IsPaused) {
+		if (prepResults.PrepPunctual && this.Engine.IsActive) {
 			this.FpsTimings.Update(prepResults.TotalTimePunctual.Value);
 			this.UpdateMonitor(
 				this.FramesCompleted,
 				this.SimTimings.LastUpdate,
 				this.FpsTimings.LastUpdate);
 
-			if (Parameters.FRAME_LIMIT > 0 && this.FramesCompleted >= Parameters.FRAME_LIMIT)
-				Program.CancelAction(null, null);
-			else this.FramesCompleted++;
+			this.FramesCompleted++;
 		}
 	}
 

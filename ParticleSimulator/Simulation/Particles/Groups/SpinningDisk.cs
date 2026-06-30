@@ -8,7 +8,7 @@ namespace ParticleSimulator.Simulation.Particles.Groups;
 
 public class SpinningDisk : AParticleGroup<MatterClump, BarnesHutTree>{
 	public SpinningDisk(Func<Vector<float>, Vector<float>, MatterClump> initializer)
-		: base(initializer) {
+	: base(initializer) {
 		//this.GlobalDirection = Program.Engine.Random.NextDouble() < 0.5d;
 		this.InternalDirection = Program.Random.NextDouble() < 0.5d;
 
@@ -58,10 +58,18 @@ public class SpinningDisk : AParticleGroup<MatterClump, BarnesHutTree>{
 					.Select(x => offset*x),
 				.. Enumerable.Repeat(0f, Vector<float>.Count - 2),
 			];
-			float offset2 = proportionalOffset * proportionalOffset;
-			//float rand2 = MathF.Pow((float)Program.Random.NextDouble(), Parameters.GALAXY_CONCENTRATION);
-			float rand2 = this.InitialRadius * MathF.Pow((float)Program.Random.NextDouble(), Parameters.GALAXY_THINNESS_BIAS);;
-			offset2 *= rand2 / Parameters.GALAXY_THINNESS_RATIO;
+			// Inverse hyperbolic secant term (1/cosh(kx)): Models the central bulge, producing a high central thickness that decays smoothly with radius
+			// Superellipse term ((1 - x^p)^(1/p)): Shapes the outer disk profile, controlling how rounded the disk remains as it approaches the galactic edge
+			float offset2 =
+				1f / MathF.Cosh(Parameters.GALAXY_BULGE_STEEPNESS * proportionalOffset)
+				+ Parameters.GALAXY_MIDRANGE_FLOOR
+				* (1f - 1f / MathF.Cosh(Parameters.GALAXY_BULGE_STEEPNESS * proportionalOffset))
+				* MathF.Pow(
+					1f - MathF.Pow(proportionalOffset, Parameters.GALAXY_EDGE_POWER),
+					1f / Parameters.GALAXY_EDGE_POWER);
+			offset2 *= this.InitialRadius * Parameters.GALAXY_THINNESS
+				* MathF.Pow((float)Program.Random.NextDouble(), Parameters.GALAXY_THINNESS_BIAS);
+
 			float[] offsetV2 = [.. VectorFunctions
 				.RandomDirectionVector(Parameters.DIM - 2, Program.Random)
 				.ToArray()
@@ -80,7 +88,7 @@ public class SpinningDisk : AParticleGroup<MatterClump, BarnesHutTree>{
 			  * MathF.Pow(1f - proportionalOffset, Parameters.GALAXY_STAR_RAND_VEL_BIAS)
 			  * VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);
 
-		float diffusionScaledOffset = proportionalOffset / Parameters.GALAXY_INNER_DIFFUSENESS;
+		float diffusionScaledOffset = proportionalOffset / Parameters.GALAXY_OUTER_BIAS;
 		float enclosedMassFraction = 1f - MathF.Exp(-diffusionScaledOffset) * (1f + diffusionScaledOffset);
 		float tangentialSpeed = MathF.Sqrt(
 			this.NumParticles
@@ -103,9 +111,8 @@ public class SpinningDisk : AParticleGroup<MatterClump, BarnesHutTree>{
 	//	float v = MathF.Pow((float)Program.Random.NextDouble(), outerBias);
 	//	return u / (u + v);
 	//}
-	private static float RandomExponentialDiskRadius(float gammaRadius)
-	{
-		float scaleRadius = gammaRadius * Parameters.GALAXY_INNER_DIFFUSENESS;
+	private static float RandomExponentialDiskRadius(float gammaRadius) {
+		float scaleRadius = gammaRadius * Parameters.GALAXY_OUTER_BIAS;
 		float r;
 		do
 		{

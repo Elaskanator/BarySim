@@ -15,36 +15,14 @@ public static class Parameters {
 	public const int DIM						= 3;
 	public const int RANDOM_SEED				= 1;//-1 for random
 	//evaluation
-	public const float TIME_SCALE				= 5f;
+	public const float TIME_SCALE				= 4f;//degrades accuracy
 	public const float TARGET_FPS				= 30f;
-	public const int FRAME_LIMIT				= -1;
-	public const bool VSYNC						= false;
-	public const bool SYNC_SIMULATION			= true;//controls synchronization of rendering to simulation (e.g. faster rotation)
 	//rendering size (using top and bottom halves of each character to get double the verticle resolution)
-	public const ushort FONT_HEIGHT_PX			= 0;//0 to use the default (of 8); minimum of 2
+	public const bool SYNC_SIMULATION			= false;//controls synchronization of rendering to simulation (e.g. faster rotation)
 
-	public static int WINDOW_WIDTH { get; private set; }
-	public static int WINDOW_HEIGHT { get; private set; }
-	public static float RENDER_ASPECT { get; private set; } = 1f;
-	public static void InitConsoleDimensions() {
-		int maxRows = Console.LargestWindowHeight - 1;
-		int maxCols = Console.LargestWindowWidth - 1;
-
-		float cellAspect = ConsoleExtensions.GetActualConsoleCellAspect();
-		int colsFromRows = (int)(maxRows * cellAspect);
-
-		if (colsFromRows <= maxCols) {
-			WINDOW_HEIGHT = maxRows;
-			WINDOW_WIDTH = colsFromRows;
-		} else {
-			WINDOW_WIDTH = maxCols;
-			WINDOW_HEIGHT = (int)(maxCols / cellAspect);
-		}
-
-		RENDER_ASPECT = cellAspect / 2f;
-	}
-
-	public const int SUPERSAMPLING = 1;
+	public const ushort FONT_HEIGHT_PX			= 2;//effectively the resolution - 0 to use the default (of 8); minimum of 2 - dramatically affects render speed
+	public const bool VSYNC						= false;
+	public const int SUPERSAMPLING				= 1;
 	public const float PIXEL_ROUNDOFF			= 0.5f;
 	//camera
 	//public const 
@@ -57,7 +35,7 @@ public static class Parameters {
 	//particle count
 	public const int PARTICLES_GROUP_COUNT		= 1;
 	public const int PARTICLES_GROUP_MIN		= 1;
-	public const int PARTICLES_GROUP_MAX		= 100000;
+	public const int PARTICLES_GROUP_MAX		= 250000;
 	public const float PARTICLES_GROUP_SIZE_POW	= 0f;//0 for max size
 	//particle features
 	public const bool COLLISION_ENABLE			= true;
@@ -103,7 +81,7 @@ public static class Parameters {
 	#endregion Primary
 
 	#region Gravity
-	public const float GRAVITATIONAL_CONSTANT	= 1E-5f;
+	public const float GRAVITATIONAL_CONSTANT	= 2E-5f;
 	//TODO add electrostatic force?
 
 	public const float MASS_SCALAR				= 1f;
@@ -122,17 +100,22 @@ public static class Parameters {
 	public const float GALAXY_STAR_VEL_RAND		= 0f;//proportional random direction
 	public const float GALAXY_STAR_RAND_VEL_BIAS= 0.65f;//lower = proportionally faster toward center
 
-	public const float GALAXY_STAR_DENSITY		= 0.02f;
-	public const float GALAXY_INNER_DIFFUSENESS	= 0.65f;//smaller = tighter center clumping
-	public const float GALAXY_THINNESS_RATIO	= 2.2f;//higher = thinner
+	public const float GALAXY_STAR_DENSITY		= 0.015f;
+	public const float GALAXY_OUTER_BIAS		= 0.65f;//smaller = tighter center clumping
+
+	public const float GALAXY_THINNESS			= 0.4f;
+	public const float GALAXY_BULGE_STEEPNESS	= 9f;
+	public const float GALAXY_MIDRANGE_FLOOR	= 0.5f;
+	public const float GALAXY_EDGE_POWER		= 2.5f;
+
 	public const float GALAXY_THINNESS_BIAS		= 2f;//higher = toward middle
 
-	public const float GALAXY_SPIN_FACTOR		= 1f;//should be quasi-stable at 1
+	public const float GALAXY_SPIN_FACTOR		= 2.25f;
 
 	public const bool SUPERNOVA_ENABLE			= true;
 	public const float SUPERNOVA_CRITICAL_MASS	= 12800f;
 	public const float SUPERNOVA_EJECTA_MASS	= 1f;
-	public const float SUPERNOVA_EJECTA_SPEED	= 0.08f;
+	public const float SUPERNOVA_EJECTA_SPEED	= 0.065f;
 	public const float SUPERNOVA_RADIUS_SCALAR	= 3f;
 
 	public const bool BLACKHOLE_ENABLE			= true;
@@ -161,6 +144,27 @@ public static class Parameters {
 		                       && COLORING != ParticleColoringMethod.Group
 		                       && COLORING != ParticleColoringMethod.Random;
 	public static readonly float WORLD_ROTATION_RAD_PER_FRAME = MathF.PI * ROT_DEG_PER_FRAME / 180f;
+
+	public static int WINDOW_WIDTH { get; private set; }
+	public static int WINDOW_HEIGHT { get; private set; }
+	public static float RENDER_ASPECT { get; private set; } = 1f;
+	public static void InitConsoleDimensions() {
+		int maxRows = Console.LargestWindowHeight - 1;
+		int maxCols = Console.LargestWindowWidth - 1;
+
+		float cellAspect = ConsoleExtensions.GetActualConsoleCellAspect();
+		int colsFromRows = (int)(maxRows * cellAspect);
+
+		if (colsFromRows <= maxCols) {
+			WINDOW_HEIGHT = maxRows;
+			WINDOW_WIDTH = colsFromRows;
+		} else {
+			WINDOW_WIDTH = maxCols;
+			WINDOW_HEIGHT = (int)(maxCols / cellAspect);
+		}
+
+		RENDER_ASPECT = cellAspect / 2f;
+	}
 
 	public static readonly float INACCURACY2 = ACCURACY_CRITERION * ACCURACY_CRITERION;
 	public static readonly float NODE_APPROX_CUTOFF2 = NODE_APPROX_CUTOFF * NODE_APPROX_CUTOFF;

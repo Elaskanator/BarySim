@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Generic.Extensions;
 using ParticleSimulator.Engine.Threading;
 using ParticleSimulator.Rendering;
@@ -13,11 +14,11 @@ using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Engine;
 
-public class RenderEngine : IRunnable {
+public class MainEngine : IRunnable {
 	private static int _globalId = 0;
 	private readonly int _id = ++_globalId;
 
-	public RenderEngine() {
+	public MainEngine() {
 		this.KeyListeners = [.. this.BuildKeyListeners()];
 
 		this.Evaluators = [.. this.BuildEvaluators()];
@@ -44,12 +45,23 @@ public class RenderEngine : IRunnable {
 				Parameters.WINDOW_WIDTH,
 				Parameters.WINDOW_HEIGHT * 2,
 				Parameters.EXPORT_DIR);
+
+		this._keyReaderThread = this.NewKeyReaderThread();
+		this._keyReaderThread.Start();
+	}
+	~MainEngine() => this.Dispose(false);
+	public void Dispose() => this.Dispose(true);
+	public void Dispose(bool fromDispose) {
+		if (!fromDispose) return;
+
+		this._alive = false;
+
+		for (int i = 0; i < this.Evaluators.Length; i++)
+			this.Evaluators[i].Dispose(fromDispose);
 	}
 
-	~RenderEngine() => this.Dispose(false);
-
 	public override string ToString() {
-		return string.Format("{0}<{1}>[{2}]", nameof(RenderEngine),
+		return string.Format("{0}<{1}>[{2}]", nameof(MainEngine),
 			this.Evaluators.Length.Pluralize("step"),
 			string.Join(", ", this.Evaluators.AsEnumerable()));//string.Join ambiguous without AsEnumerable() (C# you STOOOPID)
 	}
@@ -57,8 +69,11 @@ public class RenderEngine : IRunnable {
 	public int Id => this._id;
 	public string Name => "Run Manager";
 	public bool IsOpen { get; private set; }
-	public bool IsPaused { get; private set; }
+	private readonly ManualResetEventSlim _active = new(false);
+	public bool IsActive { get => this._active.IsSet; }
+	public bool IsPaused { get => !this._active.IsSet; }
 	public bool OverlaysEnabled { get; set; }
+	private bool _alive = true;
 
 	public DateTime? StartTimeUtc { get; private set; }
 	public DateTime? EndTimeUtc { get; private set; }
@@ -72,6 +87,8 @@ public class RenderEngine : IRunnable {
 	public Camera Camera { get; private set; }
 		
 	internal ACalculationHandler[] Evaluators { get; private set; }
+	
+	private readonly Thread _keyReaderThread;
 
 	private ProcessThread _stepEval_Simulate;
 	private ProcessThread _stepEval_Autoscale;
@@ -93,7 +110,8 @@ public class RenderEngine : IRunnable {
 			throw new InvalidOperationException("Already open");
 		} else {
 			this.IsOpen = true;
-			this.IsPaused = !enable;
+			if (enable) this._active.Set();
+			else this._active.Reset();
 			this.StartTimeUtc = DateTime.UtcNow;
 				
 			this._particleResourceUse.ReadType = enable ? this._particleResourceReadType : ConsumptionType.ConsumeReady;
@@ -111,7 +129,7 @@ public class RenderEngine : IRunnable {
 
 	public void Pause() {
 		if (this.IsOpen) {
-			this.IsPaused = true;
+			this._active.Reset();
 			for (int i = 0; i < this.Evaluators.Length; i++) {
 				this._stepsStartingPaused[this.Evaluators[i].Id] = this.Evaluators[i].IsPaused;
 				if (this.Evaluators[i] != this._stepEval_Render)
@@ -125,7 +143,7 @@ public class RenderEngine : IRunnable {
 			for (int i = 0; i < this.Evaluators.Length; i++)
 				if (!this._stepsStartingPaused[this.Evaluators[i].Id])
 					this.Evaluators[i].Resume();
-			this.IsPaused = false;
+			this._active.Set();
 		} else throw new InvalidOperationException("Not open");
 	}
 
@@ -168,13 +186,6 @@ public class RenderEngine : IRunnable {
 		} else throw new InvalidOperationException("Not open");
 	}
 
-	public void Dispose() => this.Dispose(true);
-	public void Dispose(bool fromDispose) {
-		if (fromDispose)
-			for (int i = 0; i < this.Evaluators.Length; i++)
-				this.Evaluators[i].Dispose(fromDispose);
-	}
-
 	private IEnumerable<ACalculationHandler> BuildEvaluators() {
 		this._stepEval_Simulate = ProcessThread.New(new() {
 			Name = "Simulate",
@@ -190,7 +201,6 @@ public class RenderEngine : IRunnable {
 		this._particleResourceUse = new(this._particleResource, this._particleResourceReadType);
 		this._stepEval_Rasterize = ProcessThread.New(new() {
 			Name = "Rasterize",
-			PreProcessFn = () => KeyListener.HandleConsoleInputs(this.KeyListeners),
 			CalculatorFn = (r, p) => { return this.Rasterizer.Rasterize(r, p); },
 			OutputResource = this._rasterResource,
 			InputResourceUses = new IIngestedResource[] {
@@ -250,7 +260,7 @@ public class RenderEngine : IRunnable {
 				() => { return this.OverlaysEnabled; },
 				s => { this.OverlaysEnabled = s; }),
 			new(ConsoleKey.F2, "Main",
-				() => { return !this.IsPaused; },
+				() => { return this.IsActive; },
 				s => { this.SetRunningState(s); },
 				() => { this.Restart(false); }),
 			new(ConsoleKey.F3, "Sim",
@@ -346,16 +356,25 @@ public class RenderEngine : IRunnable {
 		result = result.Concat(rotationFunctions).Concat(positionFunctions);
 		return result;
 	}
+	
+	private Thread NewKeyReaderThread() {
+		return new Thread(() => {
+			while (this._alive) {
+				KeyListener.HandleConsoleInputs(this.KeyListeners);
+				Thread.Sleep(10);
+			}
+		}) { IsBackground = true };
+	}
 
 	private void SetAutoscaleState(bool enable) {
 		this._stepsStartingPaused[this._stepEval_Autoscale.Id] |= !enable;
-		if (!enable || !this.IsPaused)
+		if (!enable || this.IsActive)
 			this._stepEval_Autoscale.SetRunningState(enable);
 	}
 
 	private void SetSimulationState(bool enable) {
 		this._stepsStartingPaused[this._stepEval_Simulate.Id] |= !enable;
-		if (!enable || !this.IsPaused) {
+		if (!enable || this.IsActive) {
 			this._stepEval_Simulate.SetRunningState(enable);
 			this._particleResourceUse.ReadType = enable ? this._particleResourceReadType : ConsumptionType.ConsumeReady;
 		}

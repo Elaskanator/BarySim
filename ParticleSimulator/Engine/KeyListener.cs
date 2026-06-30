@@ -63,7 +63,7 @@ public class KeyListener {
 			foreach (KeyListener listener in listeners)
 				if (listener.Key != keyInfo.Key)
 					continue;
-				else if (listener.Resetter is not null && (keyInfo.Modifiers & ConsoleModifiers.Control) != 0)
+				else if (listener.Resetter is not null && (keyInfo.Modifiers & ConsoleModifiers.Shift) != 0)
 					reset.Add(listener.Key);
 				else pressed.Add(keyInfo.Key);
 		}

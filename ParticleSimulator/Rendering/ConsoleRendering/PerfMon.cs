@@ -13,7 +13,7 @@ public class PerfMon {
 	public PerfGraph Graph { get; private set; }
 	public int HeaderWidth { get; private set; }
 		
-	private readonly RenderEngine _engine;
+	private readonly MainEngine _engine;
 	private HeaderValue[] _statsHeaderValues;
 
 	public void Init() {

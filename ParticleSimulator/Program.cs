@@ -6,7 +6,7 @@ using ParticleSimulator.Engine;
 namespace ParticleSimulator;
 
 public class Program {
-	public static RenderEngine Engine { get; private set; }
+	public static MainEngine Engine { get; private set; }
 	public static Random Random { get; private set; }
 	public static int RandomSeed { get; private set; }
 
@@ -37,7 +37,7 @@ public class Program {
 		Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelAction);//ctrl+c and alt+f4 etc
 
 		ResetRandom();
-		Engine = new RenderEngine();
+		Engine = new MainEngine();
 		//ConsoleExtensions.WaitForEnter("Press enter to start");
 		Engine.Start();
 	}

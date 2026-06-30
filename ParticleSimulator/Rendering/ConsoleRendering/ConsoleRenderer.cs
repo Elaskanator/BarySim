@@ -14,7 +14,7 @@ public class ConsoleRenderer : ARenderer {
 	public const char CHAR_BOTH = '\u2588';//█
 	public const char CHAR_TOP  = '\u2580';//▀
 
-	public ConsoleRenderer(RenderEngine engine) : base(engine) {
+	public ConsoleRenderer(MainEngine engine) : base(engine) {
 		SetWindowSize();
 
 		this.NumChars = Parameters.WINDOW_WIDTH * Parameters.WINDOW_HEIGHT;
@@ -130,8 +130,11 @@ public class ConsoleRenderer : ARenderer {
 		}
 	}
 
-	protected override void UpdateMonitor(int framesCompleted, TimeSpan frameTime, TimeSpan fpsTime) =>
+	private int _stepsCompleted = 0;
+	protected override void UpdateMonitor(int framesCompleted, TimeSpan frameTime, TimeSpan fpsTime) {
+		this._stepsCompleted = this.Engine.Simulator.IterationCount;
 		this._perfMon.Graph.Update(framesCompleted % Parameters.MON_GRAPH_COLUMN_FRAMES, frameTime, fpsTime);
+	}
 
 	private void Watchdog(EvalResult prepResults, ConsoleExtensions.CharInfo[] buffer) {
 		if (!this.Engine.IsPaused && !this.Engine.OverlaysEnabled) {
@@ -149,40 +152,21 @@ public class ConsoleRenderer : ARenderer {
 
 	private void ConsoleTitleUpdate() {
 		while (this.Engine.IsOpen) {
-			string result = string.Format("Baryon Simulator {0}D - Seed {1} - Frame {2} - {3}",
+			string result = string.Format("Baryon Simulator {0}D - Seed {1} - Step {2}{3} (Age {4:0.##}) - Frame {5}{6} - {7}",
 				Parameters.DIM,
 				Program.RandomSeed,
-				this.Engine.Simulator.IterationCount,
+				_stepsCompleted,
+				this.SimTimings.NumUpdates > 0 ? $" ({(1d / this.SimTimings.Current.TotalSeconds).ToStringBetter(2, false)} Hz)" : string.Empty,
+				Parameters.TIME_SCALE * _stepsCompleted,
+				this.Engine.Renderer.FpsTimings.NumUpdates,
+				this.FpsTimings.NumUpdates > 0 ? $" ({(1d / this.FpsTimings.Current.TotalSeconds).ToStringBetter(2, false)} FPS)" : string.Empty,
 				this.Engine.Simulator.ParticleCount.Pluralize("Particle"));
-			result += this.GetCalculationRateString();
 			if (this.Engine.IsPaused)
 				result += " (paused)";
 
 			Console.Title = result;
 			Thread.Sleep(500);
 		}
-	}
-	private string GetCalculationRateString() {
-		string result = "";
-
-		bool hasSim = this.SimTimings.NumUpdates > 1;
-		bool hasFps = this.FpsTimings.NumUpdates > 1;
-		if (hasSim || hasFps) {
-			result += " (";
-
-			if (hasSim)
-				result += $"{(1d / this.SimTimings.Current.TotalSeconds).ToStringBetter(2, false)} Hz";
-
-			if (hasSim && hasFps)
-				result += ", ";
-
-			if (hasFps)
-				result += $"{(1d / this.FpsTimings.Current.TotalSeconds).ToStringBetter(2, false)} FPS";
-
-			result += ")";
-		}
-
-		return result;
 	}
 
 	private static void DrawLegend(float[] scaling, ConsoleExtensions.CharInfo[] buffer) {
