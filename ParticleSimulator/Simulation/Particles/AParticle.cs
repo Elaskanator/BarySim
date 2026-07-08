@@ -59,7 +59,7 @@ public abstract class AParticle<TSelf, TNode> : IParticle
 	public Queue<TSelf> NewParticles = null;
 	public TNode Node = null;
 
-	protected abstract Vector<float> ComputeInfluence(TSelf other, Vector<float> toOther, float distance, float distance2);
+	public abstract Vector<float> ComputeInfluence(TSelf other, Vector<float> toOther, float distance, float distance2);
 	public abstract Vector<float> ComputeCollisionImpulse(TSelf other, float engulfRelativeDistance);
 	public abstract void Consume(TSelf other);
 	protected virtual void AfterMove() { }

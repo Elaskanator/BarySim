@@ -40,6 +40,8 @@ public abstract class AParticleGroup<TParticle, TNode>(Func<Vector<float>, Vecto
 					this.InitialParticles[i].WrapPosition();
 				else this.InitialParticles[i].BoundPosition();
 		}
+
+		this.FinalizeInitialParticles();
 	}
 
 	protected virtual void InitGroupPositionVelocity() {
@@ -53,6 +55,7 @@ public abstract class AParticleGroup<TParticle, TNode>(Func<Vector<float>, Vecto
 	}
 
 	protected abstract void InitializeParticle(TParticle particle);
+	protected virtual void FinalizeInitialParticles() { }
 
 	private static int _globalID = 0;
 	private readonly int _id = _globalID++;

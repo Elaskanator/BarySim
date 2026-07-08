@@ -20,13 +20,13 @@ public static class Parameters {
 	//rendering size (using top and bottom halves of each character to get double the verticle resolution)
 	public const bool SYNC_SIMULATION			= false;//controls synchronization of rendering to simulation (e.g. faster rotation)
 
-	public const ushort FONT_HEIGHT_PX			= 2;//effectively the resolution - 0 to use the default (of 8); minimum of 2 - dramatically affects render speed
+	public const ushort FONT_HEIGHT_PX			= 4;//effectively the resolution - 0 to use the default (of 8); minimum of 2 - dramatically affects render speed
 	public const bool VSYNC						= false;
 	public const int SUPERSAMPLING				= 1;
 	public const float PIXEL_ROUNDOFF			= 0.5f;
 	//camera
 	//public const 
-	public const float WORLD_SCALE				= 1f;//1 = fit to galaxy
+	public const float WORLD_SCALE				= 1f;//1 = fit to galaxy, bigger = fit more content
 	public const bool AUTOFOCUS_DEFAULT			= true;
 
 	public const float PAN_RATIO_PER_FRAME		= 0.04f;
@@ -35,7 +35,7 @@ public static class Parameters {
 	//particle count
 	public const int PARTICLES_GROUP_COUNT		= 1;
 	public const int PARTICLES_GROUP_MIN		= 1;
-	public const int PARTICLES_GROUP_MAX		= 250000;
+	public const int PARTICLES_GROUP_MAX		= 500000;
 	public const float PARTICLES_GROUP_SIZE_POW	= 0f;//0 for max size
 	//particle features
 	public const bool COLLISION_ENABLE			= true;
@@ -97,20 +97,22 @@ public static class Parameters {
 	public const float GALAXY_SPEED_ANGULAR		= 0.02f;//relative to centerpoint of simulation, for initial radial velocity
 	public const float GALAXY_SPEED_RAND		= 0.01f;
 
-	public const float GALAXY_STAR_VEL_RAND		= 0f;//proportional random direction
+	public const float GALAXY_STAR_VEL_RAND		= 0f;
 	public const float GALAXY_STAR_RAND_VEL_BIAS= 0.65f;//lower = proportionally faster toward center
 
 	public const float GALAXY_STAR_DENSITY		= 0.015f;
 	public const float GALAXY_OUTER_BIAS		= 0.65f;//smaller = tighter center clumping
+	public const float GALAXY_EDGE_TAPER_START	= 0.7f;
 
 	public const float GALAXY_THINNESS			= 0.4f;
 	public const float GALAXY_BULGE_STEEPNESS	= 9f;
 	public const float GALAXY_MIDRANGE_FLOOR	= 0.5f;
-	public const float GALAXY_EDGE_POWER		= 2.5f;
+	public const float GALAXY_VERTICLE_POWER	= 2.5f;
 
 	public const float GALAXY_THINNESS_BIAS		= 2f;//higher = toward middle
 
-	public const float GALAXY_SPIN_FACTOR		= 2.25f;
+	public const float GALAXY_SPIN_CURVE_STEEP	= 1.5f;
+	public const float GALAXY_SPIN_MULTIPLIER	= 0.75f;
 
 	public const bool SUPERNOVA_ENABLE			= true;
 	public const float SUPERNOVA_CRITICAL_MASS	= 12800f;

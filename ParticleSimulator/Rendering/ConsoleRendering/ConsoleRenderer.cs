@@ -152,12 +152,12 @@ public class ConsoleRenderer : ARenderer {
 
 	private void ConsoleTitleUpdate() {
 		while (this.Engine.IsOpen) {
-			string result = string.Format("Baryon Simulator {0}D - Seed {1} - Step {2}{3} (Age {4:0.##}) - Frame {5}{6} - {7}",
+			string result = string.Format("Baryon Simulator {0}D - Seed {1} - Step {2} (Age {3:0.##}){4} - Frame {5}{6} - {7}",
 				Parameters.DIM,
 				Program.RandomSeed,
 				_stepsCompleted,
-				this.SimTimings.NumUpdates > 0 ? $" ({(1d / this.SimTimings.Current.TotalSeconds).ToStringBetter(2, false)} Hz)" : string.Empty,
 				Parameters.TIME_SCALE * _stepsCompleted,
+				this.SimTimings.NumUpdates > 0 ? $" ({(1d / this.SimTimings.Current.TotalSeconds).ToStringBetter(2, false)} Hz)" : string.Empty,
 				this.Engine.Renderer.FpsTimings.NumUpdates,
 				this.FpsTimings.NumUpdates > 0 ? $" ({(1d / this.FpsTimings.Current.TotalSeconds).ToStringBetter(2, false)} FPS)" : string.Empty,
 				this.Engine.Simulator.ParticleCount.Pluralize("Particle"));

@@ -43,7 +43,7 @@ public class MatterClump : AParticle<MatterClump, BarnesHutTree> {
 		get => this.DragAcceleration * this.Mass;
 		set { this.DragAcceleration = value * (1f / this.Mass); } }
 
-	protected override Vector<float> ComputeInfluence(MatterClump other, Vector<float> toOther, float distance, float distance2) {
+	public override Vector<float> ComputeInfluence(MatterClump other, Vector<float> toOther, float distance, float distance2) {
 		float largerRadius = this._radius > other._radius ? this._radius : other._radius;
 		distance = distance >= largerRadius ? distance : largerRadius;
 		return toOther * (Parameters.GRAVITATIONAL_CONSTANT / (distance2 * distance));
@@ -66,6 +66,7 @@ public class MatterClump : AParticle<MatterClump, BarnesHutTree> {
 		Vector<float> weightedAcceleration2 = ((this.Mass*this._acceleration2) + (other.Mass*other._acceleration2)) * totalMassInv;
 		Vector<float> totalMomentum = this.Momentum + other.Momentum;
 		Vector<float> totalImpulse = this.Impulse + other.Impulse;
+		Vector<float> totalDragImpulse = this.DragImpulse + other.DragImpulse;
 
 		this.SetMass(totalMass);
 
@@ -73,6 +74,7 @@ public class MatterClump : AParticle<MatterClump, BarnesHutTree> {
 		this._position = weightedPosition;
 		this.Momentum = totalMomentum;
 		this.Impulse = totalImpulse;
+		this.DragImpulse = totalDragImpulse;
 		this._acceleration1 = weightedAcceleration1;
 		this._acceleration2 = weightedAcceleration2;
 	}
