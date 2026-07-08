@@ -75,11 +75,14 @@ public class Rasterizer {
 			float[] densities = new float[this.InternalNumPixels];
 			Subsample[] nearest = new Subsample[this.InternalNumPixels];
 
-			Queue<Subsample> resamplings = new();
+			List<Subsample> resamplings = [];
 			int idx;
+			Subsample resampling;
 			for (int i = 0; i < particles.Count; i++) {
+				resamplings.Clear();
 				this.Resample(particles[i], resamplings);
-				while (resamplings.TryDequeue(out Subsample resampling)) {
+				for (int r = 0; r < resamplings.Count; r++) {
+					resampling = resamplings[r];
 					idx = resampling.X + this.InternalWidth * resampling.Y;
 					densities[idx] += resampling.H;
 
@@ -95,7 +98,7 @@ public class Rasterizer {
 				bool any2;
 				int idx2, count, totalCount, y2, x2, y3;
 				float totalDensity;
-				Queue<Subsample> bin = new();
+				List<Subsample> bin = [];
 				for (int x = 0; x < this.OutWidth; x++) {
 					x2 = x * this.Supersampling;
 					for (int y = 0; y < this.OutHeight; y++) {
@@ -111,7 +114,7 @@ public class Rasterizer {
 								idx2 = (sx + x2) + y2;
 								if (counts[idx2] > 0) {
 									count++;
-									bin.Enqueue(nearest[idx2]);
+									bin.Add(nearest[idx2]);
 									any = any2 = true;
 									totalCount += counts[idx2];
 									totalDensity += densities[idx2];
@@ -151,7 +154,7 @@ public class Rasterizer {
 		};
 
 	//TODO rewrite to not use Sqrt
-	private void Resample(ParticleData particle, Queue<Subsample> result) {
+	private void Resample(ParticleData particle, List<Subsample> result) {
 		//Vector<float> position = this.InternalOffset + (this.InternalScaleFactor * this.Camera.Rotate(particle.Position));
 		Vector<float> rotated = this.Camera.Rotate(particle.Position);
 
@@ -166,14 +169,13 @@ public class Rasterizer {
 
 		if (0f <= position[0] + radius && position[0] - radius < this.InternalWidthF
 		                               && 0f <= position[1] + radius && position[1] - radius < this.InternalHeightF) {//visible
-			result.Clear();
 			int xRounded = (int)position[0],
 				yRounded = (int)position[1];
 			float radiusSquared = radius * radius;
 
 			if (0 <= xRounded && xRounded < this.InternalWidth
 			                  && 0 <= yRounded && yRounded < this.InternalHeight)
-				result.Enqueue(new(particle, xRounded, yRounded, position[2], radiusSquared));
+				result.Add(new(particle, xRounded, yRounded, position[2], radiusSquared));
 				
 			//draw verticle lines inward toward center
 			if (radius > Parameters.PIXEL_ROUNDOFF) {
@@ -196,14 +198,14 @@ public class Rasterizer {
 						dy = position[1] - (y + 1);//near side
 						squareRemainingRadiusY = radiusSquared - dy*dy;
 
-						result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY));
+						result.Add(new(particle, xRounded, y, position[2], squareRemainingRadiusY));
 					}
 					//top half
 					for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 						dy = y - position[1];
 						squareRemainingRadiusY = radiusSquared - dy*dy;
 
-						result.Enqueue(new(particle, xRounded, y, position[2], squareRemainingRadiusY));
+						result.Add(new(particle, xRounded, y, position[2], squareRemainingRadiusY));
 					}
 				}
 				//left half
@@ -216,20 +218,20 @@ public class Rasterizer {
 								
 					//y middle
 					if (0 <= yRounded && yRounded < this.InternalHeight)
-						result.Enqueue(new(particle, x, yRounded, position[2], squareRemainingRadiusX));
+						result.Add(new(particle, x, yRounded, position[2], squareRemainingRadiusX));
 					//bottom half
 					for (int y = yMin < 0 ? 0 : yMin; y < yRounded && y < this.InternalHeight; y++) {
 						dy = position[1] - (y + 1);//near side
 						squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-						result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY));
+						result.Add(new(particle, x, y, position[2], squareRemainingRadiusY));
 					}
 					//top half
 					for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 						dy = y - position[1];
 						squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-						result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY));
+						result.Add(new(particle, x, y, position[2], squareRemainingRadiusY));
 					}
 				}
 				//right half
@@ -242,20 +244,20 @@ public class Rasterizer {
 								
 					//y middle
 					if (0 <= yRounded && yRounded < this.InternalHeight)
-						result.Enqueue(new(particle, x, yRounded, position[2], squareRemainingRadiusX));
+						result.Add(new(particle, x, yRounded, position[2], squareRemainingRadiusX));
 					//bottom half
 					for (int y = yMin < 0 ? 0 : yMin; y < yRounded && y < this.InternalHeight; y++) {
 						dy = position[1] - (y + 1);//near side
 						squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-						result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY));
+						result.Add(new(particle, x, y, position[2], squareRemainingRadiusY));
 					}
 					//top half
 					for (int y = yMax >= this.InternalHeight ? this.InternalHeight - 1 : yMax; y > yRounded && y >= 0; y--) {
 						dy = y - position[1];
 						squareRemainingRadiusY = squareRemainingRadiusX - dy*dy;
 
-						result.Enqueue(new(particle, x, y, position[2], squareRemainingRadiusY));
+						result.Add(new(particle, x, y, position[2], squareRemainingRadiusY));
 					}
 				}
 			}
