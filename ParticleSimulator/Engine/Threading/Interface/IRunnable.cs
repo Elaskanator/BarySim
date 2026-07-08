@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace ParticleSimulator.Engine.Threading;
+namespace ParticleSimulator.Engine.Threading.Interface;
 
 public interface IRunnable : IDisposable, IEquatable<IRunnable>, IEqualityComparer<IRunnable> {
 	int Id { get; }
-	string Name { get; }
+	string? Name { get; }
 
 	bool IsOpen { get; }
 	DateTime? StartTimeUtc { get; }
@@ -20,7 +20,7 @@ public interface IRunnable : IDisposable, IEquatable<IRunnable>, IEqualityCompar
 
 	void Dispose(bool fromDispose);
 
-	bool IEquatable<IRunnable>.Equals(IRunnable other) => !(other is null) && this.Id == other.Id;
-	bool IEqualityComparer<IRunnable>.Equals(IRunnable x, IRunnable y) => x.Id == y.Id;
+	bool IEquatable<IRunnable>.Equals(IRunnable? other) => other is not null && this.Id == other.Id;
+	bool IEqualityComparer<IRunnable>.Equals(IRunnable? x, IRunnable? y) => (x is null && y is null) || (x is not null && y is not null && x.Id == y.Id);
 	int IEqualityComparer<IRunnable>.GetHashCode(IRunnable obj) => obj.Id.GetHashCode();
 }

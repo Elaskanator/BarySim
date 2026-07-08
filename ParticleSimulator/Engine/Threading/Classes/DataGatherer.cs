@@ -1,43 +1,38 @@
 ﻿using System;
 using System.Threading;
+using ParticleSimulator.Engine.Threading.Configs;
+using ParticleSimulator.Engine.Threading.Interface;
 
-namespace ParticleSimulator.Engine.Threading;
+namespace ParticleSimulator.Engine.Threading.Classes;
 
 public static class DataGatherer {
 	public static IDataGatherer New(IIngestedResource config, AutoResetEvent readySignal, AutoResetEvent doneSignal, AutoResetEvent refreshSignal) =>
 		(IDataGatherer)Activator.CreateInstance(
 			typeof(DataGatherer<>).MakeGenericType(config.Resource.DataType),
-			config, readySignal, doneSignal, refreshSignal);
+			config, readySignal, doneSignal, refreshSignal)!;
 }
 
-public class DataGatherer<T> : ACalculationHandler, IDataGatherer {
-	public DataGatherer(IngestedResource<T> config, AutoResetEvent readySignal, AutoResetEvent doneSignal, AutoResetEvent refreshSignal)
-		: base (readySignal, doneSignal) {
-		this.Config = config;
-		this._refreshSignal = refreshSignal;
-	}
-
+public class DataGatherer<T>(IngestedResource<T> config, AutoResetEvent readySignal, AutoResetEvent doneSignal, AutoResetEvent refreshSignal) : ACalculationHandler(readySignal, doneSignal), IDataGatherer {
 	public T Value => this._myValue;
-	object IDataGatherer.Value => this.Value;
+	object IDataGatherer.Value => this.Value!;
 
-	public IngestedResource<T> Config { get; private set; }
+	public IngestedResource<T> Config { get; private set; } = config;
 	public int Skips { get; private set; }
 	public int Reuses { get; private set; }
 		
 	public override string Name => this.Config.Resource.Name;
 	public override TimeSpan? SignalTimeout => null;
-	public override TimeSynchronizer Synchronizer => null;
+	public override TimeSynchronizer? Synchronizer => null;
 
-	private readonly AutoResetEvent _refreshSignal;
-	private T _myValue;
+	private readonly AutoResetEvent _refreshSignal = refreshSignal;
+	private T _myValue = default!;
 
 	protected override void Init(bool running) {
 		this.Skips = 0;
 		this.Reuses = 0;
-		this._myValue = default;
+		this._myValue = default!;
 
-		if (!(this._refreshSignal is null))
-			this._refreshSignal.Reset();
+		this._refreshSignal?.Reset();
 	}
 
 	protected override void Process(EvalResult prepResult) {

@@ -2,19 +2,17 @@
 using Generic.Extensions;
 using ParticleSimulator.Engine;
 using ParticleSimulator.Engine.Threading;
+using ParticleSimulator.Rendering.SystemConsole;
 
-namespace ParticleSimulator.Rendering.SystemConsole;
+namespace ParticleSimulator.Rendering.ConsoleRendering;
 
-public class PerfMon {
-	public PerfMon(ARenderer renderer) {
-		this._engine = renderer.Engine;
-	}
-
-	public PerfGraph Graph { get; private set; }
-	public int HeaderWidth { get; private set; }
+public class PerfMon(ARenderer renderer)
+{
+	public PerfGraph Graph { get; private set; } = null!;
+	public int HeaderWidth { get; private set; } = default!;
 		
-	private readonly MainEngine _engine;
-	private HeaderValue[] _statsHeaderValues;
+	private readonly MainEngine _engine = renderer.Engine;
+	private HeaderValue[] _statsHeaderValues = null!;
 
 	public void Init() {
 		this._statsHeaderValues = new HeaderValue[1 + this._engine.Evaluators.Length];
@@ -22,8 +20,8 @@ public class PerfMon {
 		this.Graph = new PerfGraph(this.HeaderWidth);
 	}
 
-	public void DrawStatsOverlay(EvalResult prepResults, ConsoleExtensions.CharInfo[] frameBuffer) {
-		this.RefreshStatsHeader(prepResults);
+	public void DrawStatsOverlay(ConsoleExtensions.CharInfo[] frameBuffer) {
+		this.RefreshStatsHeader();
 
 		int position = 0;
 		string numberStr;
@@ -40,7 +38,7 @@ public class PerfMon {
 		this.Graph.DrawFpsGraph(frameBuffer, this._engine.Renderer.SimTimings, this._engine.Renderer.FpsTimings);
 	}
 
-	private void RefreshStatsHeader(EvalResult prepResults) {
+	private void RefreshStatsHeader() {
 		if (this._engine.Renderer.FpsTimings.NumUpdates > 0)
 			_statsHeaderValues[0] = new("FPS",
 				1d / this._engine.Renderer.FpsTimings.Current.TotalSeconds,
@@ -51,11 +49,11 @@ public class PerfMon {
 		string label;
 		TimeSpan duration;
 		for (int i = 0; i < this._engine.Evaluators.Length; i++) {
-			label = this._engine.Evaluators[i].Name[0].ToString();
+			label = (this._engine.Evaluators[i].Name ?? "Uknown")[0].ToString();
 			duration = TimeSpan.Zero;
 
 			if (this._engine.Evaluators[i].IsComputing) {
-				duration = DateTime.UtcNow.Subtract(this._engine.Evaluators[i].LastIterationStartUtc ?? this._engine.StartTimeUtc.Value);
+				duration = DateTime.UtcNow.Subtract(this._engine.Evaluators[i].LastIterationStartUtc ?? this._engine.StartTimeUtc!.Value);
 				duration = this._engine.Evaluators[i].ExclusiveTime.NumUpdates > 0 && this._engine.Evaluators[i].ExclusiveTime.LastUpdate > duration
 					? this._engine.Evaluators[i].ExclusiveTime.LastUpdate
 					: duration;
@@ -81,22 +79,17 @@ public class PerfMon {
 		}
 	}
 
-	private struct HeaderValue {
-		public readonly string Label;
-		public readonly double Value;
-		public readonly ConsoleColor ForegroundColor;
-		public readonly ConsoleColor BackgroundColor;
-		public HeaderValue(string label, double value, ConsoleColor fg, ConsoleColor bg) {
-			this.Label = label;
-			this.Value = value;
-			this.ForegroundColor = fg;
-			this.BackgroundColor = bg;
-		}
+	private readonly struct HeaderValue(string label, double value, ConsoleColor fg, ConsoleColor bg)
+	{
+		public readonly string Label = label;
+		public readonly double Value = value;
+		public readonly ConsoleColor ForegroundColor = fg;
+		public readonly ConsoleColor BackgroundColor = bg;
 
 		public override string ToString() => string.Format("{0} {1}", this.Label, this.Value);
 	}
 
-	private ConsoleColor ChooseFrameIntervalColor(double timeMs) {
+	private static ConsoleColor ChooseFrameIntervalColor(double timeMs) {
 		double ratioToDesired = 1000d / (Parameters.TARGET_FPS > 0f ? Parameters.TARGET_FPS : Parameters.MON_FPS_DEFAULT) / timeMs;
 		for (int i = 0; i < ColoringScales.RatioColors.Length; i++)
 			if (ratioToDesired >= ColoringScales.RatioColors[i].Item1)

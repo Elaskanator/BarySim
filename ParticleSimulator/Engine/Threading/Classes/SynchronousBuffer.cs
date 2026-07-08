@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Threading;
 using Generic.Extensions;
+using ParticleSimulator.Engine.Threading.Interface;
 
-namespace ParticleSimulator.Engine.Threading;
+namespace ParticleSimulator.Engine.Threading.Classes;
 
 public class SynchronousBuffer<T> : ISynchronousConsumedResource {
 	private static int _globalId = 0;
@@ -14,7 +15,7 @@ public class SynchronousBuffer<T> : ISynchronousConsumedResource {
 		this.BufferSize = size;
 
 		//this.RefreshReleaseListeners = Array.Empty<AutoResetEvent>();
-		this.RefreshListeners = new();
+		this.RefreshListeners = [];
 		this._queue = new T[this.BufferSize];
 		this._latch_canReturnFromAdd = new(size > 0);
 	}
@@ -34,15 +35,15 @@ public class SynchronousBuffer<T> : ISynchronousConsumedResource {
 	public int TotalDequeues { get; private set; }
 	public bool IsReadOnly => false;
 
-	public T Current { get; private set; }
-	object ISynchronousConsumedResource.Current => this.Current;
+	public T Current { get; private set; } = default!;
+	object ISynchronousConsumedResource.Current => this.Current!;
 
-	private AutoResetEvent _latch_canReturnFromAdd;
-	private AutoResetEvent _latch_canAdd = new(true);
-	private AutoResetEvent _latch_canPop = new(false);
-	private ManualResetEvent _latch_hasAny = new(false);
-	private object _lock = new();
-	private T[] _queue;
+	private readonly AutoResetEvent _latch_canReturnFromAdd;
+	private readonly AutoResetEvent _latch_canAdd = new(true);
+	private readonly AutoResetEvent _latch_canPop = new(false);
+	private readonly ManualResetEvent _latch_hasAny = new(false);
+	private readonly Lock _lock = new();
+	private readonly T[] _queue;
 
 	public AutoResetEvent AddRefreshListener() {
 		AutoResetEvent signal = new(false);
@@ -63,7 +64,7 @@ public class SynchronousBuffer<T> : ISynchronousConsumedResource {
 			this._latch_hasAny.WaitOne();
 		return this.Current;
 	}
-	object ISynchronousConsumedResource.Peek() => this.Peek();
+	object ISynchronousConsumedResource.Peek() => this.Peek()!;
 
 	public bool TryPeek(ref T output) {
 		bool result = false;
@@ -76,7 +77,7 @@ public class SynchronousBuffer<T> : ISynchronousConsumedResource {
 	public bool TryPeek(ref T output, TimeSpan timeout) {
 		bool result = false;
 		if (this.TotalEnqueues > 0
-		    || WaitHandle.WaitAny(new[] { this._latch_hasAny }, timeout) != WaitHandle.WaitTimeout) {
+		    || WaitHandle.WaitAny([this._latch_hasAny], timeout) != WaitHandle.WaitTimeout) {
 			output = this.Current;
 			result = true;
 		}
@@ -120,10 +121,10 @@ public class SynchronousBuffer<T> : ISynchronousConsumedResource {
 
 		return result;
 	}
-	object ISynchronousConsumedResource.Dequeue() => this.Dequeue();
+	object ISynchronousConsumedResource.Dequeue() => this.Dequeue()!;
 	public bool TryDequeue(ref T output, TimeSpan timeout) {
 		bool result = false;
-		if (WaitHandle.WaitAny(new[] { this._latch_canPop }, timeout) != WaitHandle.WaitTimeout) {
+		if (WaitHandle.WaitAny([this._latch_canPop], timeout) != WaitHandle.WaitTimeout) {
 			result = true;
 			lock (this._lock)
 				output = this.CommitPop();

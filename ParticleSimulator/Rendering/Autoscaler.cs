@@ -4,6 +4,8 @@ using System.Linq;
 using Generic.Extensions;
 using Generic.Classes;
 using ParticleSimulator.Engine.Threading;
+using ParticleSimulator.Engine.Threading.Classes;
+using System.Threading;
 
 namespace ParticleSimulator.Rendering;
 
@@ -12,7 +14,7 @@ public class Autoscaler {
 		this._resource = resource;
 
 		if (Parameters.COLOR_USE_FIXED_BANDS)
-			this.Values = Parameters.FIXED_BANDS ?? new float[0];
+			this.Values = Parameters.FIXED_BANDS ?? [];
 		else if (Parameters.COLORING == ParticleColoringMethod.Depth) {
 			int minDim = Parameters.WINDOW_WIDTH > Parameters.WINDOW_HEIGHT ? Parameters.WINDOW_HEIGHT : Parameters.WINDOW_WIDTH;
 			float range = MathF.Sqrt(3f) * minDim / 2f;
@@ -32,10 +34,10 @@ public class Autoscaler {
 	public readonly float[] ValuesInitial;
 	public float[] Values { get; private set; }
 
-	private SimpleExponentialMovingAverage _min = new(Parameters.AUTOSCALE_STRENGTH);
-	private SimpleExponentialMovingAverage _max = new(Parameters.AUTOSCALE_STRENGTH);
+	private readonly SimpleExponentialMovingAverage _min = new(Parameters.AUTOSCALE_STRENGTH);
+	private readonly SimpleExponentialMovingAverage _max = new(Parameters.AUTOSCALE_STRENGTH);
 	private readonly SynchronousBuffer<float[]> _resource;
-	private readonly object _lock = new();
+	private readonly Lock _lock = new();
 
 	public void Reset() {
 		lock (this._lock) {
@@ -46,8 +48,8 @@ public class Autoscaler {
 		}
 	}
 
-	public float[] Update(EvalResult prepResults, object[] parameters) {
-		float[] scalingValues = [.. ((float?[])parameters[0]).Without(t => t is null).Select(t => t.Value)];
+	public float[] Update(object[] parameters) {
+		float[] scalingValues = [.. ((float?[])parameters[0]).Without(t => t is null).Select(t => t!.Value)];
 
 		if (scalingValues.Length > 0) {
 			StatsInfo stats = new(scalingValues.Select(x => (double)x));
@@ -55,7 +57,7 @@ public class Autoscaler {
 			if (Parameters.AUTOSCALE_CUTOFF_PCT > 0f) {
 				stats.FilterData(Parameters.AUTOSCALE_CUTOFF_PCT);
 				if (stats.Data_asc.Length == 0)
-					return Array.Empty<float>();
+					return [];
 			}
 
 			if (Parameters.AUTOSCALE_PERCENTILE) {

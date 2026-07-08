@@ -19,8 +19,8 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 	}
 
 	private readonly CountdownEvent _cde = new(0);
-	private readonly object _cdeLock = new();
-	private readonly ConcurrentBag<Queue<NodeParticles>> _partitionedLeafData = new();
+	private readonly Lock _cdeLock = new();
+	private readonly ConcurrentBag<Queue<NodeParticles>> _partitionedLeafData = [];
 
 	public override ICollection<TParticle> Particles => this.Tree;
 
@@ -82,13 +82,13 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 		//collate all the leaves
 		TParticle particle;
 		TTree leaf;
-		while (this._partitionedLeafData.TryTake(out Queue<NodeParticles> nodeLeaves)) {//random order
+		while (this._partitionedLeafData.TryTake(out Queue<NodeParticles>? nodeLeaves)) {//random order
 			while (nodeLeaves.TryDequeue(out NodeParticles leafParticles)) {
 				leaf = leafParticles.Node;
 				for (int i = 0; i < leafParticles.Particles.Length; i++) {
 					particle = leafParticles.Particles[i];
 					if (particle.Enabled && (Parameters.WORLD_PRUNE_RADII <= 0f || particle.IsInRange(center)))
-						if (!(particle.Collisions is null) && particle.Collisions.Count > 0)
+						if (particle.Collisions is not null && particle.Collisions.Count > 0)
 							collided.Enqueue(particle);
 						else ready.Enqueue(particle);
 					else leaf.RemoveFromLeaf(particle);//prune the particle
@@ -112,13 +112,13 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 				anyConsumed = false;
 				node = particle.Node;
 
-				while (particle.Collisions.TryDequeue(out TParticle other))
+				while (particle.Collisions!.TryDequeue(out TParticle? other))
 					if (other.Enabled) {
 						toOther = other._position - particle._position;
 						distance = MathF.Sqrt(Vector.Dot(toOther, toOther));
 						engulfRelativeDistance = particle.EngulfRelativeDistance(other, distance);
 
-						if (Parameters.MERGE_ENABLE && engulfRelativeDistance + Parameters.MERGE_ENGULF_RATIO <= 1f && !(other as MatterClump).IsCollapsed) {
+						if (Parameters.MERGE_ENABLE && engulfRelativeDistance + Parameters.MERGE_ENGULF_RATIO <= 1f && !(other as MatterClump)!.IsCollapsed) { // TODO type requirement
 							if (!anyConsumed) {
 								anyConsumed = true;
 								while (!node.IsLeaf)
@@ -133,8 +133,8 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 								otherNode = otherNode.Children[otherNode.ChildIndex(other)];
 							otherNode.RemoveFromLeaf(other, false);//defer leaf pruning
 
-							if (!(other.Collisions is null))//have to consider other collided particle(s) again
-								while (other.Collisions.TryDequeue(out TParticle tail))
+							if (other.Collisions is not null)//have to consider other collided particle(s) again
+								while (other.Collisions.TryDequeue(out TParticle? tail))
 									if (tail.Id != particle.Id)
 										particle.Collisions.Enqueue(tail);
 						} else remainder.Enqueue(other);//need to re-check collision again after all merging is complete
@@ -152,14 +152,14 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 
 		//recheck and group remaining collisions
 		if (normalCollisions.Count > 0) {
-			Dictionary<TParticle, Dictionary<TParticle, float>> collisionDistances = new();//exactly one entry per collision pair, but could be split up
+			Dictionary<TParticle, Dictionary<TParticle, float>> collisionDistances = [];//exactly one entry per collision pair, but could be split up
 			TParticle particle;
-			while (normalCollisions.TryDequeue(out Tuple<TParticle, Queue<TParticle>> t)) {
+			while (normalCollisions.TryDequeue(out Tuple<TParticle, Queue<TParticle>>? t)) {
 				particle = t.Item1;
 				if (particle.Enabled) {
 					ready.Enqueue(particle);
 
-					while (t.Item2.TryDequeue(out TParticle other))
+					while (t.Item2.TryDequeue(out TParticle? other))
 						if (other.Enabled)
 							if (!(collisionDistances.ContainsKey(particle) && collisionDistances[particle].ContainsKey(other))
 							    &&  !(collisionDistances.ContainsKey(other) && collisionDistances[other].ContainsKey(particle))) {
@@ -167,7 +167,7 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 								distance = MathF.Sqrt(Vector.Dot(toOther, toOther));
 								engulfRelativeDistance = particle.EngulfRelativeDistance(other, distance);
 
-								collisionDistances.TryAdd(particle, new());
+								collisionDistances.TryAdd(particle, []);
 								collisionDistances[particle][other] = engulfRelativeDistance;
 							}
 				}
@@ -191,7 +191,7 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 		List<ParticleData> results = new(this.Tree.Count);
 
 		TTree leaf;
-		while (ready.TryDequeue(out TParticle particle)) {
+		while (ready.TryDequeue(out TParticle? particle)) {
 			if (particle.Enabled) {//will have already been removed in an earlier iteration if disabled
 				leaf = particle.Node;
 				while (!leaf.IsLeaf)
@@ -201,8 +201,8 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 				leaf.MoveFromLeaf(particle, false);//defer leaf pruning
 				results.Add(new(particle));
 				//add any newborn particles
-				if (!(particle.NewParticles is null))
-					while (particle.NewParticles.TryDequeue(out TParticle birth)) {
+				if (particle.NewParticles is not null)
+					while (particle.NewParticles.TryDequeue(out TParticle? birth)) {
 						leaf.Add(birth);//presumably closer than the root
 						results.Add(new(particle));
 					}
@@ -232,15 +232,15 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 		if (root.IsLeaf) {
 			ResetParticles(root, leaves);
 		} else {
-			Stack<TTree[]> levelStack = this.AccumulateTreeNodeData ? new() : null;
+			Stack<TTree[]>? levelStack = this.AccumulateTreeNodeData ? new() : null;
 			Stack<TTree> pendingNodes = new(), testNodes = new();
 			//work down to leaf nodes with depth-first recursion
 			pendingNodes.Push(root);
-			TTree[] levelNodes; TTree child;
+			TTree[]? levelNodes; TTree child;
 			do {
-				while (pendingNodes.TryPop(out TTree node)) {
+				while (pendingNodes.TryPop(out TTree? node)) {
 					for (int cIdx = 0; cIdx < node.Children.Length; cIdx++) {
-						child = (TTree)node.Children[cIdx];
+						child = node.Children[cIdx];
 						if (child.ItemCount > 0)
 							if (child.IsLeaf) ResetParticles(child, leaves);
 							else testNodes.Push(child);//continue recursion (not at a leaf)
@@ -251,7 +251,7 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 					if (this.AccumulateTreeNodeData) {//copy layer for aggregation later
 						levelNodes = new TTree[testNodes.Count];
 						testNodes.CopyTo(levelNodes, 0);
-						levelStack.Push(levelNodes);
+						levelStack!.Push(levelNodes);
 					}
 					//process next layer deeper in the tree
 					(pendingNodes, testNodes) = (testNodes, pendingNodes);
@@ -259,7 +259,7 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 			} while (pendingNodes.Count > 0);
 			//aggregate barycenters from bottom-up
 			if (this.AccumulateTreeNodeData) {
-				while (levelStack.TryPop(out levelNodes))
+				while (levelStack!.TryPop(out levelNodes))
 					for (int i = 0; i < levelNodes.Length; i++)
 						this.AccumulateInnerNode(levelNodes[i]);
 				//finish him
@@ -268,7 +268,7 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 		}
 	}
 
-	private bool IsBelowPartitioningThreshold(int filled, int testAddend) =>
+	private static bool IsBelowPartitioningThreshold(int filled, int testAddend) =>
 		filled + testAddend <= Parameters.TREE_BATCH_SIZE
 		|| (double)((filled + testAddend) - Parameters.TREE_BATCH_SIZE) / Parameters.TREE_BATCH_SIZE < Parameters.TREE_BATCH_SLACK;
 
@@ -281,17 +281,17 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 			this._cde.Wait();
 		} else {
 			int numFilled = 0;
-			Stack<TTree[]> levelStack = this.AccumulateTreeNodeData ? new() : null;
+			Stack<TTree[]>? levelStack = this.AccumulateTreeNodeData ? new() : null;
 			Stack<TTree> pendingNodes = new(), testNodes = new();
 			//work down to leaf nodes with depth-first recursion
 			pendingNodes.Push(root);
-			TTree[] levelNodes; TTree child;
+			TTree[]? levelNodes; TTree child;
 			do {
-				while (pendingNodes.TryPop(out TTree node)) {
+				while (pendingNodes.TryPop(out TTree? node)) {
 					for (int cIdx = 0; cIdx < node.Children.Length; cIdx++) {
 						child = (TTree)node.Children[cIdx];
 						if (child.ItemCount > 0) {
-							if (child.IsLeaf || IsBelowPartitioningThreshold(numFilled, child.Count))
+							if (child.IsLeaf || ABinaryTreeSimulator<TParticle, TTree>.IsBelowPartitioningThreshold(numFilled, child.Count))
 							{//split further when too far over capacity
 								work.Enqueue(child);
 								numFilled += child.ItemCount;
@@ -308,7 +308,7 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 					if (this.AccumulateTreeNodeData) {//copy layer for aggregation later
 						levelNodes = new TTree[testNodes.Count];
 						testNodes.CopyTo(levelNodes, 0);
-						levelStack.Push(levelNodes);
+						levelStack!.Push(levelNodes);
 					}
 					//process next layer deeper in the tree
 					(pendingNodes, testNodes) = (testNodes, pendingNodes);
@@ -320,7 +320,7 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 			this._cde.Wait();
 			//aggregate barycenters from bottom-up
 			if (this.AccumulateTreeNodeData) {
-				while (levelStack.TryPop(out levelNodes))
+				while (levelStack!.TryPop(out levelNodes))
 					for (int i = 0; i < levelNodes.Length; i++)
 						this.AccumulateInnerNode(levelNodes[i]);
 				//finish him
@@ -337,11 +337,11 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 		ThreadPool.QueueUserWorkItem(this.SubtreeAggregationWorker, work);
 	}
 
-	private void SubtreeAggregationWorker(object work) {
+	private void SubtreeAggregationWorker(object? work) {
 		Queue<NodeParticles> result = new((int)(Parameters.TREE_BATCH_SIZE * (1f + Parameters.TREE_BATCH_SLACK)));
 
-		Queue<TTree> nodes = (Queue<TTree>)work;
-		while (nodes.TryDequeue(out TTree node))
+		Queue<TTree> nodes = (Queue<TTree>)work!;
+		while (nodes.TryDequeue(out TTree? node))
 			this.AggregateSubtreeBarycenters(node, result);
 
 		this._partitionedLeafData.Add(result);
@@ -350,8 +350,8 @@ public abstract class ABinaryTreeSimulator<TParticle, TTree> : ASimulator<TParti
 			this._cde.Signal();
 	}
 
-	private void LeafInteractionWorker(object work) {
-		Queue<NodeParticles> nodeLeaves = (Queue<NodeParticles>)work;
+	private void LeafInteractionWorker(object? work) {
+		Queue<NodeParticles> nodeLeaves = (Queue<NodeParticles>)work!;
 		foreach (NodeParticles leaf in nodeLeaves)//do not consume the queue
 			this.ComputeInteractions(leaf);
 

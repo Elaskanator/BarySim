@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace ParticleSimulator.Engine.Threading;
+namespace ParticleSimulator.Engine.Threading.Interface;
 
 public interface ISynchronousConsumedResource : IDisposable, IEquatable<ISynchronousConsumedResource>, IEqualityComparer<ISynchronousConsumedResource>
 //ICollection, IEnumerable,
@@ -23,10 +23,10 @@ public interface ISynchronousConsumedResource : IDisposable, IEquatable<ISynchro
 	AutoResetEvent AddRefreshListener();
 	//AutoResetEvent[] RefreshListeners { get; }
 
-	bool Equals(object other) => !(other is null) && (other is ISynchronousConsumedResource) && this.Id == (other as ISynchronousConsumedResource).Id;
+	bool Equals(object other) => other is not null && (other is ISynchronousConsumedResource resource) && this.Id == resource.Id;
 	int GetHashCode() => this.Id.GetHashCode();
 
-	bool IEquatable<ISynchronousConsumedResource>.Equals(ISynchronousConsumedResource other) => !(other is null) && this.Id == other.Id;
-	bool IEqualityComparer<ISynchronousConsumedResource>.Equals(ISynchronousConsumedResource x, ISynchronousConsumedResource y) => x.Id == y.Id;
+	bool IEquatable<ISynchronousConsumedResource>.Equals(ISynchronousConsumedResource? other) => other is not null && this.Id == other.Id;
+	bool IEqualityComparer<ISynchronousConsumedResource>.Equals(ISynchronousConsumedResource? x, ISynchronousConsumedResource? y) => (x is null && y is null) || (x is not null && y is not null && x.Id == y.Id);
 	int IEqualityComparer<ISynchronousConsumedResource>.GetHashCode(ISynchronousConsumedResource obj) => obj.Id.GetHashCode();
 }

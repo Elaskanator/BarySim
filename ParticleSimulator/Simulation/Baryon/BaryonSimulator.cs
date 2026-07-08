@@ -39,7 +39,7 @@ public class BaryonSimulator(int dim) : ABinaryTreeSimulator<MatterClump, Barnes
 
 	private readonly ThreadLocal<List<MatterClump>> _nearFieldScratch = new(() => new List<MatterClump>(1024));
 	protected override void ComputeInteractions(NodeParticles leafParticles) {
-		var nearField = this._nearFieldScratch.Value;
+		var nearField = this._nearFieldScratch.Value!;
 		nearField.Clear();
 		Vector<float> farFieldAcceleration = DetermineNeighbors(leafParticles.Node, nearField);
 
@@ -68,7 +68,7 @@ public class BaryonSimulator(int dim) : ABinaryTreeSimulator<MatterClump, Barnes
 		Vector<float> farFieldAcceleration = Vector<float>.Zero;
 		
 		Stack<int> pathDown = new();
-		BarnesHutTree parent = leaf, child = null;//STFU compiler
+		BarnesHutTree parent = leaf, child = null!;//STFU compiler
 
 		//get path thru the tree
 		while (!parent.IsRoot) {
@@ -78,7 +78,8 @@ public class BaryonSimulator(int dim) : ABinaryTreeSimulator<MatterClump, Barnes
 
 		//evaluate from top nodes down to compute furthest (and weakest) interactions first, to reduce floating point errors when aggregating
 		Stack<BarnesHutTree> remaining = new();
-		BarnesHutTree neighbor, tail;
+		BarnesHutTree? neighbor;
+		BarnesHutTree tail;
 		Vector<float> subTotal1, subTotal2, toOther;
 		float distanceSquared, invSqRt, invR2, invR3;
 		while (pathDown.TryPop(out var idx)) {

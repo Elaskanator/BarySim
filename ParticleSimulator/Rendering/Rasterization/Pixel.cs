@@ -1,27 +1,30 @@
 ﻿namespace ParticleSimulator.Rendering.Rasterization;
 
-public struct Pixel {
-	public bool IsNotNull;
-	public int X;
-	public int Y;
-	public float Rank;
+public struct Pixel(int x, int y, float rank)
+{
+	public bool IsNotNull = true;
+	public int X = x;
+	public int Y = y;
+	public float Rank = rank;
 
-	public Pixel(int x, int y, float rank) {
-		this.X = x;
-		this.Y = y;
-		this.IsNotNull = true;
-		this.Rank = rank;
-	}
-
-	public override string ToString() =>
+	public override readonly string ToString() =>
 		string.Format("<{0}, {1}>[{2}]", this.X, this.Y, this.Rank);
-
-	public override bool Equals(object obj) {
-		return (obj is Pixel)
-		       && ((Pixel)obj).X == this.X
-		       && ((Pixel)obj).Y == this.Y;
+	
+	public override readonly bool Equals(object? obj) {
+		return (obj is Pixel pixel)
+		    && pixel.X == this.X
+		    && pixel.Y == this.Y;
 	}
-	public override int GetHashCode() {
+	public static bool operator ==(Pixel left, Pixel right)
+	{
+		return left.Equals(right);
+	}
+	public static bool operator !=(Pixel left, Pixel right)
+	{
+		return !(left == right);
+	}
+
+	public override readonly int GetHashCode() {
 		return base.GetHashCode();
 	}
 }

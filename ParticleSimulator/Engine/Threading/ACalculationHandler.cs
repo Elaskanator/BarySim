@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using Generic.Classes;
+using ParticleSimulator.Engine.Threading.Interface;
 
 namespace ParticleSimulator.Engine.Threading;
 
@@ -10,11 +11,12 @@ public abstract class ACalculationHandler : IRunnable {
 	private static int _globalId = 0;
 
 	public ACalculationHandler(AutoResetEvent[] signals, AutoResetEvent[] returns) {
-		this.ReadySignals = signals ?? Array.Empty<AutoResetEvent>();
-		this.DoneSignals = returns ?? Array.Empty<AutoResetEvent>();
+		this.ReadySignals = signals ?? [];
+		this.DoneSignals = returns ?? [];
+		this._thread = new(Runner);
 	}
 	public ACalculationHandler(AutoResetEvent readySignal, AutoResetEvent doneSignal)
-		: this(new AutoResetEvent[] { readySignal }, new AutoResetEvent[] { doneSignal }) { }
+		: this([readySignal], [doneSignal]) { }
 
 	~ACalculationHandler() { this.Dispose(false); }
 
@@ -36,24 +38,24 @@ public abstract class ACalculationHandler : IRunnable {
 	public bool IsWaiting { get; private set; }
 	public bool IsComputing { get; private set; }
 
-	public SimpleExponentialMovingTimeAverage WaitTime { get; private set; }
-	public SimpleExponentialMovingTimeAverage SyncTime { get; private set; }
-	public SimpleExponentialMovingTimeAverage ExclusiveTime { get; private set; }
-	public SimpleExponentialMovingTimeAverage FullTime { get; private set; }
-	public SimpleExponentialMovingTimeAverage FullTimePunctual { get; private set; }
+	public SimpleExponentialMovingTimeAverage WaitTime { get; } = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
+	public SimpleExponentialMovingTimeAverage SyncTime { get; } = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
+	public SimpleExponentialMovingTimeAverage ExclusiveTime { get; } = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
+	public SimpleExponentialMovingTimeAverage FullTime { get; } = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
+	public SimpleExponentialMovingTimeAverage FullTimePunctual { get; } = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
 		
-	public virtual string Name => null;
+	public virtual string? Name => null;
 	public virtual TimeSpan? SignalTimeout => null;
-	public virtual Action<EvalResult> Callback => null;
-	public virtual TimeSynchronizer Synchronizer => null;
+	public virtual Action<EvalResult>? Callback => null;
+	public virtual TimeSynchronizer? Synchronizer => null;
 	public virtual bool ReleaseEarly => false;
 	protected virtual int StopWarnTimeMs => 1000;
 
-	private Thread _thread;
-	private ManualResetEvent _pauseSignal = new ManualResetEvent(true);
-	private Stopwatch _timer = new Stopwatch();
-	private Stopwatch _timerFull = new Stopwatch();
-	private Stopwatch _timerFullPunctual = new Stopwatch();
+	private readonly Thread _thread;
+	private readonly ManualResetEvent _pauseSignal = new(true);
+	private readonly Stopwatch _timer = new();
+	private readonly Stopwatch _timerFull = new();
+	private readonly Stopwatch _timerFullPunctual = new();
 
 	protected virtual void PreProcess(EvalResult prepResult) { }
 	protected abstract void Process(EvalResult prepResult);
@@ -71,12 +73,6 @@ public abstract class ACalculationHandler : IRunnable {
 			this.FullIterationCount = 0;
 			this.IsComputing = false;
 
-			this.WaitTime = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
-			this.SyncTime = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
-			this.ExclusiveTime = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
-			this.FullTime = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
-			this.FullTimePunctual = new SimpleExponentialMovingTimeAverage(Parameters.MON_SMA_ALPHA);
-
 			this.IsOpen = true;
 			this.StartTimeUtc = DateTime.UtcNow;
 
@@ -84,7 +80,6 @@ public abstract class ACalculationHandler : IRunnable {
 
 			this.SetRunningState(running);
 
-			this._thread = new Thread(Runner);
 			this._thread.Start();
 		}
 	}
@@ -165,9 +160,9 @@ public abstract class ACalculationHandler : IRunnable {
 				this._timer.Stop();
 				evalResult.PauseDelay = this._timer.Elapsed;
 
-				if (!(this.Synchronizer is null)) {
+				if (this.Synchronizer is not null) {
 					this.Synchronizer.Synchronize();
-					evalResult.SyncDelay = this.Synchronizer.LastSyncDuration.Value;
+					evalResult.SyncDelay = this.Synchronizer.LastSyncDuration!.Value;
 					this.SyncTime.Update(this.Synchronizer.LastSyncDuration.Value);
 				}
 						
@@ -199,7 +194,7 @@ public abstract class ACalculationHandler : IRunnable {
 					if (isPunctual)
 						this.FullIterationCount++;
 
-					if (!(this.Callback is null))
+					if (this.Callback is not null)
 						this.Callback(evalResult);
 				
 					if (!this.ReleaseEarly)
@@ -218,9 +213,6 @@ public abstract class ACalculationHandler : IRunnable {
 			if (this.IsOpen) {
 				this.IsOpen = false;
 				this._thread.Interrupt();
-				this._thread = null;
-				this._pauseSignal.Dispose();
-				this._pauseSignal = null;
 			}
 			this._pauseSignal.Dispose();
 		}

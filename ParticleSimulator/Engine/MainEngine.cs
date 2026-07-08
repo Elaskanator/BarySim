@@ -4,6 +4,9 @@ using System.Linq;
 using System.Threading;
 using Generic.Extensions;
 using ParticleSimulator.Engine.Threading;
+using ParticleSimulator.Engine.Threading.Classes;
+using ParticleSimulator.Engine.Threading.Configs;
+using ParticleSimulator.Engine.Threading.Interface;
 using ParticleSimulator.Rendering;
 using ParticleSimulator.Rendering.ConsoleRendering;
 using ParticleSimulator.Rendering.Exporter;
@@ -83,23 +86,23 @@ public class MainEngine : IRunnable {
 	public ARenderer Renderer { get; private set; }
 	public Autoscaler Scaling { get; private set; }
 	public Rasterizer Rasterizer { get; private set; }
-	public BitmapGenerator Exporter { get; private set; }
+	public BitmapGenerator? Exporter { get; private set; }
 	public Camera Camera { get; private set; }
 		
 	internal ACalculationHandler[] Evaluators { get; private set; }
 	
 	private readonly Thread _keyReaderThread;
 
-	private ProcessThread _stepEval_Simulate;
-	private ProcessThread _stepEval_Autoscale;
-	private ProcessThread _stepEval_Rasterize;
-	private ProcessThread _stepEval_Render;
-	private ProcessThread _stepEval_Export;
+	private ProcessThread _stepEval_Simulate = null!;
+	private ProcessThread _stepEval_Autoscale = null!;
+	private ProcessThread _stepEval_Rasterize = null!;
+	private ProcessThread _stepEval_Render = null!;
+	private ProcessThread _stepEval_Export = null!;
 	private readonly Dictionary<int, bool> _stepsStartingPaused;
 		
 	private readonly SynchronousBuffer<List<ParticleData>> _particleResource = new("Locations", Parameters.SYNC_SIMULATION ? Parameters.PRECALCULATION_LIMIT : 0);
 	private readonly ConsumptionType _particleResourceReadType = Parameters.SYNC_SIMULATION ? ConsumptionType.Consume : ConsumptionType.ConsumeReady;
-	private IngestedResource<List<ParticleData>> _particleResourceUse;
+	private IngestedResource<List<ParticleData>> _particleResourceUse = null!;
 	private readonly SynchronousBuffer<float?[]> _rankingsResource = new("Ranks", 0);
 	private readonly ConsumptionType _rasterResourceRenderReadType = Parameters.EXPORT_FRAMES ? ConsumptionType.ReadReady : ConsumptionType.Consume;
 	private readonly SynchronousBuffer<PixelRank[]> _rasterResource = new("Rasterization", Parameters.SYNC_SIMULATION ? Parameters.PRECALCULATION_LIMIT : 0);
@@ -201,12 +204,12 @@ public class MainEngine : IRunnable {
 		this._particleResourceUse = new(this._particleResource, this._particleResourceReadType);
 		this._stepEval_Rasterize = ProcessThread.New(new() {
 			Name = "Rasterize",
-			CalculatorFn = (r, p) => { return this.Rasterizer.Rasterize(r, p); },
+			CalculatorFn = (r, p) => { return this.Rasterizer.Rasterize(p); },
 			OutputResource = this._rasterResource,
-			InputResourceUses = new IIngestedResource[] {
+			InputResourceUses = [
 				this._particleResourceUse,
 				new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
-			}
+			]
 		});
 		yield return this._stepEval_Rasterize;
 			
@@ -219,24 +222,24 @@ public class MainEngine : IRunnable {
 				? new TimeSynchronizer(Parameters.TARGET_FPS, Parameters.VSYNC)
 				: null,
 			DataLoadingTimeout = TimeSpan.FromMilliseconds(Parameters.MON_WARN_MS),
-			InputResourceUses = new IIngestedResource[] {
+			InputResourceUses = [
 				new IngestedResource<PixelRank[]>(this._rasterResource, this._rasterResourceRenderReadType),
 				new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
-			}});
+			]});
 		yield return this._stepEval_Render;
 			
 		if (Parameters.AUTOSCALER_ENABLE) {
 			this._stepEval_Autoscale = ProcessThread.New(new() {
 				Name = "Autoscale",
-				CalculatorFn = (r, p) => { return this.Scaling.Update(r, p); },
+				CalculatorFn = (r, p) => { return this.Scaling.Update(p); },
 				Synchronizer = Parameters.AUTOSCALE_INTERVAL_MS > 0
 					? new TimeSynchronizer(TimeSpan.FromMilliseconds(Parameters.AUTOSCALE_INTERVAL_MS), false)
 					: null,
 				OutputResource = this._scalingResource,
 				IsOutputOverwrite = true,
-				InputResourceUses = new IIngestedResource[] {
+				InputResourceUses = [
 					new IngestedResource<float?[]>(this._rankingsResource, ConsumptionType.Consume),
-				}
+				]
 			});
 			yield return this._stepEval_Autoscale;
 		}
@@ -244,18 +247,18 @@ public class MainEngine : IRunnable {
 		if (Parameters.EXPORT_FRAMES) {
 			this._stepEval_Export = ProcessThread.New(new() {
 				Name = "Exporter",
-				EvaluatorFn = (r, p) => { this.Exporter.RenderOut(r, p); },
-				InputResourceUses = new IIngestedResource[] {
+				EvaluatorFn = (r, p) => { this.Exporter.RenderOut(p); },
+				InputResourceUses = [
 					new IngestedResource<PixelRank[]>(this._rasterResource, ConsumptionType.Consume),
 					new IngestedResource<float[]>(this._scalingResource, ConsumptionType.ReadReady),
-				}
+				]
 			});
 			yield return this._stepEval_Export;
 		}
 	}
 
 	private IEnumerable<KeyListener> BuildKeyListeners() {
-		KeyListener[] standardFunctions = new KeyListener[] {
+		KeyListener[] standardFunctions = [
 			new(ConsoleKey.F1, "Stats",
 				() => { return this.OverlaysEnabled; },
 				s => { this.OverlaysEnabled = s; }),
@@ -268,13 +271,13 @@ public class MainEngine : IRunnable {
 				s => { this.SetSimulationState(s); },
 				() => { this.ResetSimulation(); },
 				() => { return !this._stepsStartingPaused[this._stepEval_Simulate.Id]; }),
-		};
+		];
 		KeyListener autoscale = new(ConsoleKey.F4, "Scale",
 			() => { return !this._stepEval_Autoscale.IsPaused; },
 			s => { this.SetAutoscaleState(s); },
 			() => { this._stepEval_Autoscale.Pause(); this.Scaling.Reset(); },
 			() => { return !this._stepsStartingPaused[this._stepEval_Autoscale.Id]; });
-		KeyListener[] rotationFunctions = new KeyListener[] {
+		KeyListener[] rotationFunctions = [
 			new(ConsoleKey.F5, "Rotate",
 				() => { return this.Camera.IsAutoIncrementActive; },
 				s => { this.Camera.IsAutoIncrementActive = s; },
@@ -291,8 +294,8 @@ public class MainEngine : IRunnable {
 				() => { return this.Camera.IsRollRotationActive; },
 				s => { this.Camera.IsRollRotationActive = s; },
 				() => { this.Camera.IsRollRotationActive = false; this.Camera.RotationStepsRoll = 0; }),
-		};
-		KeyListener[] positionFunctions = new KeyListener[] {
+		];
+		KeyListener[] positionFunctions = [
 			new(ConsoleKey.F9, "Focus",
 				() => { return this.Camera.AutoCentering; },
 				s => { this.Camera.AutoCentering = s; },
@@ -348,7 +351,7 @@ public class MainEngine : IRunnable {
 					},
 					() => { this.Camera.Zoom = Parameters.STARTING_ZOOM; })
 				{ IsToggle = false },
-		};
+		];
 
 		IEnumerable<KeyListener> result = standardFunctions;
 		if (Parameters.AUTOSCALER_ENABLE)

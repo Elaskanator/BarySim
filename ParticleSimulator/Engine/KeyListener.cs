@@ -4,24 +4,16 @@ using Generic.Extensions;
 
 namespace ParticleSimulator.Engine;
 
-public class KeyListener {
-	public KeyListener(ConsoleKey key, string label, Func<bool> getter, Action<bool> setter, Action resetter = null, Func<bool> suspendStateGetter = null) {
-		this.Key = key;
-		this.Label = label;
-		this.Getter = getter;
-		this.Setter = setter;
-		this.Resetter = resetter;//bugged still
-		this.SuspendStateGetter = suspendStateGetter;
-	}
-
-	public ConsoleKey Key { get; private set; }
-	public string Label { get; private set; }
+public class KeyListener(ConsoleKey key, string label, Func<bool> getter, Action<bool> setter, Action? resetter = null, Func<bool>? suspendStateGetter = null)
+{
+	public ConsoleKey Key { get; private set; } = key;
+	public string Label { get; private set; } = label;
 
 	public bool IsToggle = true;
-	public readonly Func<bool> Getter;
-	public readonly Action<bool> Setter;
-	public readonly Func<bool> SuspendStateGetter;
-	public readonly Action Resetter;
+	public readonly Func<bool> Getter = getter;
+	public readonly Action<bool> Setter = setter;
+	public readonly Func<bool>? SuspendStateGetter = suspendStateGetter;
+	public readonly Action? Resetter = resetter;
 
 	public ConsoleColor ForegroundActive = ConsoleColor.Black;
 	public ConsoleColor ForegroundInactive = ConsoleColor.Gray;
@@ -36,12 +28,12 @@ public class KeyListener {
 
 	public ConsoleExtensions.CharInfo[] ToConsoleCharString() {
 		bool state = this.Getter();
-		ConsoleColor foreground = state || (!(this.SuspendStateGetter is null) && this.SuspendStateGetter())
+		ConsoleColor foreground = state || (this.SuspendStateGetter is not null && this.SuspendStateGetter())
 			? Program.Engine.IsPaused
 				? this.ForegroundSuspended
 				: this.ForegroundActive
 			: this.ForegroundInactive;
-		ConsoleColor background = state || (!(this.SuspendStateGetter is null) && this.SuspendStateGetter())
+		ConsoleColor background = state || (this.SuspendStateGetter is not null && this.SuspendStateGetter())
 			? Program.Engine.IsPaused
 				? this.BackgroundSuspended
 				: this.BackgroundActive
@@ -54,8 +46,8 @@ public class KeyListener {
 	}
 
 	public static void HandleConsoleInputs(KeyListener[] listeners) {
-		HashSet<ConsoleKey> pressed = new();
-		HashSet<ConsoleKey> reset = new();
+		HashSet<ConsoleKey> pressed = [];
+		HashSet<ConsoleKey> reset = [];
 
 		while (Console.KeyAvailable) {
 			ConsoleKeyInfo keyInfo = Console.ReadKey(true);
@@ -70,7 +62,7 @@ public class KeyListener {
 
 		foreach (KeyListener listener in listeners)
 			if (reset.Contains(listener.Key))
-				listener.Resetter();
+				(listener.Resetter ?? throw new InvalidOperationException())();
 			else if (!listener.IsToggle)
 				listener.SetState(pressed.Contains(listener.Key));
 			else if (pressed.Contains(listener.Key))

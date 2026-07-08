@@ -1,19 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0-windows7.0</TargetFramework>
-    <UseWpf>false</UseWpf>
-    <UseWindowsForms>false</UseWindowsForms>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net10.0-windows7.0</TargetFramework>
+		<UseWpf>false</UseWpf>
+		<UseWindowsForms>false</UseWindowsForms>
+		<Nullable>enable</Nullable>
+		<NoWarn>$(NoWarn);0162</NoWarn>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <WarningsAsErrors>;NU1605</WarningsAsErrors>
-    <NoWarn>1701,1702,1416</NoWarn>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<WarningsAsErrors>;NU1605</WarningsAsErrors>
+		<NoWarn>1701,1702,1416</NoWarn>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Generic\Generic.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Generic\Generic.csproj" />
+	</ItemGroup>
 
 </Project>

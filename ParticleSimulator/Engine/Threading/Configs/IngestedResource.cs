@@ -1,6 +1,8 @@
 ﻿using System;
+using ParticleSimulator.Engine.Threading.Classes;
+using ParticleSimulator.Engine.Threading.Interface;
 
-namespace ParticleSimulator.Engine.Threading;
+namespace ParticleSimulator.Engine.Threading.Configs;
 
 public interface IIngestedResource {
 	ISynchronousConsumedResource Resource { get; }
@@ -11,16 +13,11 @@ public interface IIngestedResource {
 	int ReuseTolerance { get; set; }
 }
 
-public class IngestedResource<T> : IIngestedResource {
-	public IngestedResource(SynchronousBuffer<T> resource, ConsumptionType readType) {
-		this.Resource = resource;
-		this.ReadType = readType;
-	}
-
-	public SynchronousBuffer<T> Resource { get; private set; }
+public class IngestedResource<T>(SynchronousBuffer<T> resource, ConsumptionType readType) : IIngestedResource {
+	public SynchronousBuffer<T> Resource { get; private set; } = resource;
 	ISynchronousConsumedResource IIngestedResource.Resource => this.Resource;
-		
-	public ConsumptionType ReadType { get; set; }
+
+	public ConsumptionType ReadType { get; set; } = readType;
 	public TimeSpan? ReadTimeout { get; set; }
 	//negative means unlimited
 	public int ReuseAmount { get; set; }

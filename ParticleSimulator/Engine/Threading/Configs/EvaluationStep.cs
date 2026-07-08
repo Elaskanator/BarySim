@@ -1,6 +1,7 @@
 ﻿using System;
+using ParticleSimulator.Engine.Threading.Interface;
 
-namespace ParticleSimulator.Engine.Threading;
+namespace ParticleSimulator.Engine.Threading.Configs;
 
 public struct EvaluationStep {
 	public string Name;
@@ -16,9 +17,9 @@ public struct EvaluationStep {
 	public bool IsOutputOverwrite;
 	public int OutputSkips;
 
-	public IIngestedResource[] InputResourceUses;
+	public IIngestedResource[]? InputResourceUses;
 	public TimeSpan? DataLoadingTimeout;
-	public TimeSynchronizer Synchronizer;
+	public TimeSynchronizer? Synchronizer;
 
-	public override string ToString() => string.Format("EvaluationStep[{0}]", this.Name);
+	public override readonly string ToString() => string.Format("EvaluationStep[{0}]", this.Name);
 }

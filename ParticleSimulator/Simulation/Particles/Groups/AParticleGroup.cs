@@ -66,13 +66,13 @@ public abstract class AParticleGroup<TParticle, TNode>(Func<Vector<float>, Vecto
 	public Vector<float> Position { get; protected set; } = Vector<float>.Zero;
 	public Vector<float> Velocity { get; protected set; } = Vector<float>.Zero;
 
-	public TParticle[] InitialParticles { get; private set; }
+	public TParticle[] InitialParticles { get; private set; } = null!;
 	IParticle[] IParticleGroup.InitialParticles => this.InitialParticles;
 
-	public bool Equals(IParticleGroup other) { return other is not null && this.Id == other.Id; }
-	public override bool Equals(object other) { return other is not null && other is AParticleGroup<TParticle, TNode> && this.Id == (other as AParticleGroup<TParticle, TNode>).Id; }
-	public bool Equals(IParticleGroup x, IParticleGroup y) { return x.Id == y.Id; }
+	public bool Equals(IParticleGroup? other) { return other is not null && this.Id == other.Id; }
+	public override bool Equals(object? other) { return other is not null && other is AParticleGroup<TParticle, TNode> otherP && this.Id == otherP.Id; }
+	public bool Equals(IParticleGroup? x, IParticleGroup? y) { return (x is null && y is null) || (x is not null && y is not null && x.Id == y.Id); }
 	public int GetHashCode(IParticleGroup obj) { return obj.Id.GetHashCode(); }
 	public override int GetHashCode() { return this.Id.GetHashCode(); }
-	public override string ToString() { return string.Format("{0}[ID {1}]", nameof(AParticleGroup<TParticle, TNode>), this.Id); }
+	public override string ToString() { return string.Format("{0}[ID {1}]", nameof(AParticleGroup<,>), this.Id); }
 }

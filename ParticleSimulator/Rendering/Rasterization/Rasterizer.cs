@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using ParticleSimulator.Engine.Threading;
+using ParticleSimulator.Engine.Threading.Classes;
 using ParticleSimulator.Simulation.Particles;
 
 namespace ParticleSimulator.Rendering.Rasterization;
@@ -60,7 +60,7 @@ public class Rasterizer {
 	private readonly int _randOffset = 0;
 		
 	//orthographic projection
-	public PixelRank[] Rasterize(EvalResult prepResults, object[] parameters) {//top down view (smaller Z values = closer)
+	public PixelRank[] Rasterize(object[] parameters) {//top down view (smaller Z values = closer)
 		List<ParticleData> particles = (List<ParticleData>)parameters[0];
 		if (particles is null) {
 			return [];
@@ -122,7 +122,7 @@ public class Rasterizer {
 							ranks[idx] = Parameters.COLORING == ParticleColoringMethod.Density
 								? bin.Sum(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count))
 								: bin.Max(sample => this.GetRank(scalings, sample, (float)totalCount / count, totalDensity / count));
-							results[idx] = new(x, y, ranks[idx].Value);//TODO alpha
+							results[idx] = new(x, y, ranks[idx]!.Value);//TODO alpha
 						}
 					}
 				}
@@ -130,7 +130,7 @@ public class Rasterizer {
 				if (counts[i] > 0) {
 					any = true;
 					ranks[i] = this.GetRank(scalings, nearest[i], counts[i], densities[i]);
-					results[i] = new(nearest[i].X, nearest[i].Y, ranks[i].Value);//TODO alpha
+					results[i] = new(nearest[i].X, nearest[i].Y, ranks[i]!.Value);//TODO alpha
 				}
 
 			if (any) this._rawRankingsResource.Overwrite(ranks);

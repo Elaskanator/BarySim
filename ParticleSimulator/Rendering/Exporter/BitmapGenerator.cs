@@ -7,7 +7,7 @@ using ParticleSimulator.Rendering.Rasterization;
 namespace ParticleSimulator.Rendering.Exporter;
 
 public class BitmapGenerator {
-	public BitmapGenerator(int width, int height, string rootDir = null) {
+	public BitmapGenerator(int width, int height, string? rootDir = null) {
 		this.Width = width;
 		this.Height = height;
 		this.RootDir = new(
@@ -23,10 +23,10 @@ public class BitmapGenerator {
 	public int FrameNumber { get; private set; }
 
 	public readonly DirectoryInfo RootDir;
-	public DirectoryInfo DirectoryInfo { get; private set; }
+	public DirectoryInfo DirectoryInfo { get; private set; } = null!;
 	public int NumSaved { get; private set; }
 
-	public void RenderOut(EvalResult prepResults, object[] parameters) {
+	public void RenderOut(object[] parameters) {
 		Bitmap bitmap = new((PixelRank[])parameters[0]);
 		string path = Path.Join(
 			this.DirectoryInfo.ToString(),

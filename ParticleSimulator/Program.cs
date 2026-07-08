@@ -6,18 +6,16 @@ using ParticleSimulator.Engine;
 namespace ParticleSimulator;
 
 public class Program {
-	public static MainEngine Engine { get; private set; }
-	public static Random Random { get; private set; }
+	public static MainEngine Engine { get; private set; } = null!;
+	public static Random Random { get; private set; } = null!;
 	public static int RandomSeed { get; private set; }
 
 	public static void ResetRandom() {
-		if (Parameters.RANDOM_SEED == -1)
-			RandomSeed = new Random().Next();
-		else RandomSeed = Parameters.RANDOM_SEED;
+		RandomSeed = Parameters.RANDOM_SEED == -1 ? new Random().Next() : Parameters.RANDOM_SEED;
 		Random = new(RandomSeed);
 	}
 
-	public static void Main(string[] args) {
+	public static void Main() {
 		Console.Title = string.Format("Particle Simulator ({0}D) - Initializing", Parameters.DIM);
 
 		if (Vector<float>.Count < Parameters.DIM) {
@@ -42,16 +40,16 @@ public class Program {
 		Engine.Start();
 	}
 
-	public static void CancelAction(object sender, ConsoleCancelEventArgs args) {//ctrl+c and alt+f4 etc
+	public static void CancelAction(object? sender, ConsoleCancelEventArgs args) {//ctrl+c and alt+f4 etc
 		//keep master thread alive for results output (if enabled)
 		//also necessary to cleanup the application, otherwise any threading calls would immediately kill this thread
-		if (!(args is null))
-			args.Cancel = true;
+		args?.Cancel = true;
 
 		Console.ResetColor();
 		Console.CursorLeft = 0;
 		Console.CursorTop = Engine.OverlaysEnabled ? 1 + Parameters.MON_GRAPH_HEIGHT : 0;
-		Console.WriteLine("{0} simulated in {1}", Engine.Simulator.IterationCount.Pluralize("frame"), DateTime.UtcNow.Subtract(Engine.StartTimeUtc.Value));
+		if (Engine.StartTimeUtc is not null)
+			Console.WriteLine("{0} simulated in {1}", Engine.Simulator.IterationCount.Pluralize("frame"), DateTime.UtcNow.Subtract(Engine.StartTimeUtc.Value));
 
 		ConsoleExtensions.WaitForEnter("Press enter to exit");
 

@@ -12,6 +12,6 @@ public interface IParticle : IPosition<Vector<float>>, IEquatable<IParticle> {
 	float Luminosity { get; }
 		
 	bool Equals(object other) => (other is IParticle data) && this.Id == data.Id;
-	bool IEquatable<IParticle>.Equals(IParticle other) => this.Id == other.Id;
+	bool IEquatable<IParticle>.Equals(IParticle? other) => other is not null && this.Id == other.Id;
 	int GetHashCode() => this.Id;
 }

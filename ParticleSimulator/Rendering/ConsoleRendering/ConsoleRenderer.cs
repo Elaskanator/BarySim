@@ -5,7 +5,6 @@ using Generic.Extensions;
 using ParticleSimulator.Engine;
 using ParticleSimulator.Engine.Threading;
 using ParticleSimulator.Rendering.Rasterization;
-using ParticleSimulator.Rendering.SystemConsole;
 
 namespace ParticleSimulator.Rendering.ConsoleRendering;
 
@@ -78,7 +77,7 @@ public class ConsoleRenderer : ARenderer {
 		ConsoleExtensions.WriteConsoleOutput((ConsoleExtensions.CharInfo[])buffer);
 
 	protected override object PrepareBuffer(float[] scaling, PixelRank[] buffer) {
-		if (!(buffer is null)) {
+		if (buffer is not null) {
 			ConsoleExtensions.CharInfo[] chars = new ConsoleExtensions.CharInfo[this.NumChars];
 			int col = 0, row = 0, i1, i2;
 			for (int i = 0; i < this.NumChars; i++) {
@@ -106,7 +105,7 @@ public class ConsoleRenderer : ARenderer {
 		ConsoleExtensions.CharInfo[] buffer = (ConsoleExtensions.CharInfo[])bufferData;
 		this.Watchdog(prepResults, buffer);
 		if (this.Engine.OverlaysEnabled) {
-			this._perfMon.DrawStatsOverlay(prepResults, buffer);
+			this._perfMon.DrawStatsOverlay(buffer);
 			if (Parameters.COLORING != ParticleColoringMethod.Random
 			&& Parameters.COLORING != ParticleColoringMethod.Group)
 				DrawLegend(scaling, buffer);
@@ -170,7 +169,7 @@ public class ConsoleRenderer : ARenderer {
 	}
 
 	private static void DrawLegend(float[] scaling, ConsoleExtensions.CharInfo[] buffer) {
-		if (!(scaling is null) && scaling.Length > 0) {
+		if (scaling is not null && scaling.Length > 0) {
 			int numColors = scaling.Length;
 			bool isDiscrete = false;//Parameters.DIM < 3 && Parameters.SIM_TYPE == SimulationType.Boid;
 			string header = Parameters.COLORING.ToString();

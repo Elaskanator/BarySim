@@ -55,9 +55,9 @@ public abstract class AParticle<TSelf, TNode> : IParticle
 		get => this.DragAcceleration;
 		set { this.DragAcceleration = value; } }
 
-	public Queue<TSelf> Collisions = null;
-	public Queue<TSelf> NewParticles = null;
-	public TNode Node = null;
+	public Queue<TSelf>? Collisions = null;
+	public Queue<TSelf>? NewParticles = null;
+	public TNode Node = null!;
 
 	public abstract Vector<float> ComputeInfluence(TSelf other, Vector<float> toOther, float distance, float distance2);
 	public abstract Vector<float> ComputeCollisionImpulse(TSelf other, float engulfRelativeDistance);

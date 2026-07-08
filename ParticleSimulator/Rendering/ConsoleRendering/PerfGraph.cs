@@ -2,9 +2,9 @@
 using System.Linq;
 using Generic.Extensions;
 using Generic.Classes;
-using ParticleSimulator.Rendering.ConsoleRendering;
+using System.Threading;
 
-namespace ParticleSimulator.Rendering.SystemConsole;
+namespace ParticleSimulator.Rendering.ConsoleRendering;
 
 public class PerfGraph {
 	public PerfGraph(int width) {
@@ -16,12 +16,12 @@ public class PerfGraph {
 	}
 
 	public readonly int Width;
-	private readonly object _columnStatsLock = new object();
+	private readonly Lock _columnStatsLock = new();
 		
 	private StatsInfo[] _columnSimTimeStatsMs;
 	private StatsInfo[] _columnFpsStatsMs;
-	private double[] _currentColumnFrameTimeDataMs;
-	private double[] _currentColumnFpsDataMs;
+	private double[] _currentColumnFrameTimeDataMs = null!;
+	private double[] _currentColumnFpsDataMs = null!;
 
 	private double _graphMin = 0;
 	private double _graphMax = 0;
@@ -186,7 +186,7 @@ public class PerfGraph {
 		ConsoleExtensions.CharInfo[] result = new ConsoleExtensions.CharInfo[Parameters.MON_GRAPH_HEIGHT];
 
 		double
-			yFps000 = fpsStatsMs.Min,
+			//yFps000 = fpsStatsMs.Min,
 			yFps010 = fpsStatsMs.GetPercentileValue(10d, false),
 			yFps025 = fpsStatsMs.GetPercentileValue(25d, false),
 			yFps040 = fpsStatsMs.GetPercentileValue(40d, false),
@@ -194,7 +194,7 @@ public class PerfGraph {
 			yFps060 = fpsStatsMs.GetPercentileValue(60d, false),
 			yFps075 = fpsStatsMs.GetPercentileValue(75d, false),
 			yFps090 = fpsStatsMs.GetPercentileValue(90d, false),
-			yFps100 = fpsStatsMs.Max,
+			//yFps100 = fpsStatsMs.Max,
 			yTime000 = simTimeStatsMs.Min,
 			yTime010 = simTimeStatsMs.GetPercentileValue(10d, false),
 			yTime025 = simTimeStatsMs.GetPercentileValue(25d, false),
@@ -202,13 +202,13 @@ public class PerfGraph {
 			yTime050 = simTimeStatsMs.GetPercentileValue(50d, false),
 			yTime060 = simTimeStatsMs.GetPercentileValue(60d, false),
 			yTime075 = simTimeStatsMs.GetPercentileValue(75d, false),
-			yTime090 = simTimeStatsMs.GetPercentileValue(90d, false),
-			yTime100 = simTimeStatsMs.Max;
+			yTime090 = simTimeStatsMs.GetPercentileValue(90d, false);
+			//yTime100 = simTimeStatsMs.Max;
 		double fps = Parameters.TARGET_FPS > 0
 			? Parameters.TARGET_FPS
 			: Parameters.MON_FPS_DEFAULT;
 		double
-			yFps000Scaled =		2d*Parameters.MON_GRAPH_HEIGHT * (yFps000 - _graphMin) / (_graphMax - _graphMin),
+			//yFps000Scaled =		2d*Parameters.MON_GRAPH_HEIGHT * (yFps000 - _graphMin) / (_graphMax - _graphMin),
 			yFps010Scaled =		2d*Parameters.MON_GRAPH_HEIGHT * (yFps010 - _graphMin) / (_graphMax - _graphMin),
 			yFps025Scaled =		2d*Parameters.MON_GRAPH_HEIGHT * (yFps025 - _graphMin) / (_graphMax - _graphMin),
 			yFps040Scaled =		2d*Parameters.MON_GRAPH_HEIGHT * (yFps040 - _graphMin) / (_graphMax - _graphMin),
@@ -216,7 +216,7 @@ public class PerfGraph {
 			yFps060Scaled =		2d*Parameters.MON_GRAPH_HEIGHT * (yFps060 - _graphMin) / (_graphMax - _graphMin),
 			yFps075Scaled =		2d*Parameters.MON_GRAPH_HEIGHT * (yFps075 - _graphMin) / (_graphMax - _graphMin),
 			yFps090Scaled =		2d*Parameters.MON_GRAPH_HEIGHT * (yFps090 - _graphMin) / (_graphMax - _graphMin),
-			yFps100Scaled =		2d*Parameters.MON_GRAPH_HEIGHT * (yFps100 - _graphMin) / (_graphMax - _graphMin),
+			//yFps100Scaled =		2d*Parameters.MON_GRAPH_HEIGHT * (yFps100 - _graphMin) / (_graphMax - _graphMin),
 			yTime000Scaled =	2d*Parameters.MON_GRAPH_HEIGHT * (yTime000 - _graphMin) / (_graphMax - _graphMin),
 			yTime010Scaled =	2d*Parameters.MON_GRAPH_HEIGHT * (yTime010 - _graphMin) / (_graphMax - _graphMin),
 			yTime025Scaled =	2d*Parameters.MON_GRAPH_HEIGHT * (yTime025 - _graphMin) / (_graphMax - _graphMin),
@@ -225,7 +225,7 @@ public class PerfGraph {
 			yTime060Scaled =	2d*Parameters.MON_GRAPH_HEIGHT * (yTime060 - _graphMin) / (_graphMax - _graphMin),
 			yTime075Scaled =	2d*Parameters.MON_GRAPH_HEIGHT * (yTime075 - _graphMin) / (_graphMax - _graphMin),
 			yTime090Scaled =	2d*Parameters.MON_GRAPH_HEIGHT * (yTime090 - _graphMin) / (_graphMax - _graphMin),
-			yTime100Scaled =	2d*Parameters.MON_GRAPH_HEIGHT * (yTime100 - _graphMin) / (_graphMax - _graphMin),
+			//yTime100Scaled =	2d*Parameters.MON_GRAPH_HEIGHT * (yTime100 - _graphMin) / (_graphMax - _graphMin),
 			yTargetTimeScaled = 2d*Parameters.MON_GRAPH_HEIGHT * ((1000d / fps) - _graphMin) / (_graphMax - _graphMin);
 				
 		ConsoleColor[] colors = new ConsoleColor[2*Parameters.MON_GRAPH_HEIGHT];
@@ -240,11 +240,10 @@ public class PerfGraph {
 			else if (yIdx >= (int)yTime040Scaled && yIdx <= (int)yTime060Scaled)
 				colors[yIdx] = ConsoleColor.Cyan;
 				
-			else if (fps > 0d && yIdx >= (int)yTargetTimeScaled && yIdx < (int)yTime025Scaled) {
+			else if (fps > 0d && yIdx >= (int)yTargetTimeScaled && yIdx < (int)yTime025Scaled)
 				if (yIdx < (int)yTime000Scaled)
 					colors[yIdx] = ConsoleColor.DarkYellow;
 				else colors[yIdx] = ConsoleColor.Yellow;
-			}
 
 			else if (yIdx >= (int)yFps025Scaled && yIdx <= (int)yFps075Scaled)
 				colors[yIdx] = ConsoleColor.White;
@@ -261,7 +260,7 @@ public class PerfGraph {
 			//else if (yIdx >= (int)yTime000Scaled && yIdx <= (int)yTime100Scaled)
 			//	colors[yIdx] = ConsoleColor.DarkGray;
 
-			else if (fps > 0d && yIdx >= (int)yTargetTimeScaled && yIdx < (int)yFps050Scaled) {
+			else if (fps > 0d && yIdx >= (int)yTargetTimeScaled && yIdx < (int)yFps050Scaled)
 				if (yIdx <= (int)yFps010Scaled)
 					colors[yIdx] = ConsoleColor.Red;
 				else if (yIdx <= (int)yFps025Scaled)
@@ -269,7 +268,6 @@ public class PerfGraph {
 				else if (yIdx <= (int)yFps040Scaled)
 					colors[yIdx] = ConsoleColor.Magenta;
 				else colors[yIdx] = ConsoleColor.DarkMagenta;
-			}
 
 			else colors[yIdx] = ConsoleColor.Black;
 		}

@@ -41,13 +41,12 @@ public class SpinningDisk : AParticleGroup<MatterClump, BarnesHutTree>{
 		var offset = RandomExponentialDiskRadius(this.InitialRadius);
 		var proportionalOffset = offset / this.InitialRadius;
 
-		var radialOffsetDirection = RandomRadialDirection(offset);
+		var radialOffsetDirection = RandomRadialDirection();
 		var radialOffset = radialOffsetDirection * offset;
 
-		Vector<float> verticalOffset;
-		if (Parameters.DIM > 2)
-			verticalOffset = RandomVerticalOffset(proportionalOffset, this.InitialRadius);
-		else verticalOffset = Vector<float>.Zero;
+		Vector<float> verticalOffset = Parameters.DIM > 2
+			? RandomVerticalOffset(proportionalOffset, this.InitialRadius)
+			: Vector<float>.Zero;
 		particle._position += radialOffset + verticalOffset;
 
 		var rotationalSpeed =
@@ -66,11 +65,8 @@ public class SpinningDisk : AParticleGroup<MatterClump, BarnesHutTree>{
 			  * VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);
 		particle.Velocity += randomVelocity;
 	}
-	private static Vector<float> RandomRadialDirection(float offset) {
-		if (Parameters.DIM <= 2)
-			return VectorFunctions.RandomDirectionVector(Parameters.DIM, Program.Random);
-		else return VectorFunctions.RandomDirectionVector(2, Program.Random);
-	}
+	private static Vector<float> RandomRadialDirection() =>
+			VectorFunctions.RandomDirectionVector(Parameters.DIM <= 2 ? Parameters.DIM : 2, Program.Random);
 	private static float GetStableEdgeSpeed(int particleCount) {
 		float radius = MathF.Sqrt(
 			particleCount
